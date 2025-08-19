@@ -1,0 +1,33 @@
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    networks:
+      - test-network
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          memory: 50M
+      restart_policy:
+        condition: on-failure
+        delay: 2s
+        window: 120s
+
+  db:
+    image: postgre:latest
+    networks:
+      - test-network
+    environment:
+      POSTGRES_PASSWORD: postgre
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 2s
+        window: 120s
+
+
+networks:
+  test-network:
