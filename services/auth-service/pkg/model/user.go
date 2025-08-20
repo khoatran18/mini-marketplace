@@ -9,3 +9,13 @@ type User struct {
 	Username string `gorm:"unique;not null"`
 	Password string `gorm:"not null"`
 }
+
+type RegisterRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type LoginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
