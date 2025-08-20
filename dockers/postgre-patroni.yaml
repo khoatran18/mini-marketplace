@@ -1,33 +1,43 @@
 services:
-  web:
-    image: nginx:latest
-    ports:
-      - "8080:80"
-    networks:
-      - test-network
-    deploy:
-      mode: replicated
-      replicas: 2
-      resources:
-        limits:
-          memory: 50M
-      restart_policy:
-        condition: on-failure
-        delay: 2s
-        window: 120s
 
-  db:
-    image: postgre:latest
+  etcd:
+    image: bitnami/etcd
     networks:
       - test-network
+    ports:
+      - "2379:2379"
+      - "2380:2380"
     environment:
-      POSTGRES_PASSWORD: postgre
+      ALLOW_NONE_AUTHENTICATION: yes
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
     deploy:
       restart_policy:
         condition: on-failure
-        delay: 2s
-        window: 120s
+        delay: 3s
+        window: 30s
+
+  patroni-postgresql:
+    image: registry.opensource.zalan.do/acid/spilo-15
+    networks:
+      - test-network
+    ports:
+      - "5432:5432"
+    environment:
+      SCOPE: pg-cluster
+      PGUSER_STANDBY: admin
+      PGPASSWORD_STANDBY: admin
+      PGHOME: /home/postgres
+      ETCD3_HOST: etcd:2379
+    depends_on:
+      - etcd
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        window: 30s
 
 
 networks:
   test-network:
+      driver: overlay

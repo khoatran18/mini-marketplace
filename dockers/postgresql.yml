@@ -1,0 +1,19 @@
+services:
+  postgresql:
+    image: postgres:13.22-alpine3.22
+    restart: always
+    ports:
+      - "5432:5432"
+    networks:
+      test-network:
+    volumes:
+      - postgre-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+
+networks:
+  test-network:
+
+volumes:
+  postgre-data:
