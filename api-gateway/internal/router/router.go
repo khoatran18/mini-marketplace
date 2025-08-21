@@ -9,7 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(router *gin.Engine, serviceConfig *config.ServiceConfig) {
+// SetupRouter setup middleware, router for engine
+func SetupRouter(router *gin.Engine, serviceConfig *config.ServiceConfig, envConfig *config.EnvConfig) {
 
 	router.Use(middleware.RequestLoggingMiddleware(serviceConfig.ZapLogger))
 	router.Use(middleware.RateLimitingMiddleware(100, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
@@ -17,7 +18,7 @@ func SetupRouter(router *gin.Engine, serviceConfig *config.ServiceConfig) {
 
 	protectedAPI := router.Group("/protected")
 	protectedAPI.Use(
-		middleware.AuthMiddleware(serviceConfig.ZapLogger),
+		middleware.AuthMiddleware(serviceConfig.ZapLogger, envConfig.JWTSecret),
 		middleware.AuthorizationMiddleware([]string{"user"}, serviceConfig.ZapLogger),
 	)
 	{

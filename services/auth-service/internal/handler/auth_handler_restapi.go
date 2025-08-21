@@ -16,7 +16,8 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{AuthService: authService}
 }
 
-func (h *AuthHandler) Register(c *gin.Context) {
+// RegisterRestAPI handle register logic for Rest API
+func (h *AuthHandler) RegisterRestAPI(c *gin.Context) {
 	var req model.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -31,7 +32,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Register successfully!"})
 }
 
-func (h *AuthHandler) Login(c *gin.Context) {
+// LoginRestAPI handle Login request with Rest API
+func (h *AuthHandler) LoginRestAPI(c *gin.Context) {
 	var req model.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

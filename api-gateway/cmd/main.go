@@ -12,11 +12,20 @@ func main() {
 	godotenv.Load(".env")
 
 	// Load config for redis, zap logger, ...
-	serviceConfig := config.NewServiceConfig()
+	serviceConfig, err := config.NewServiceConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	// Load env for jwt, ...
+	envConfig, err := config.NewEnvConfig()
+	if err != nil {
+		panic(err)
+	}
 
 	// Setup router
 	engine := gin.New()
-	router.SetupRouter(engine, serviceConfig)
+	router.SetupRouter(engine, serviceConfig, envConfig)
 
 	// Run
 	engine.Run(":8080")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +20,7 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
+// RequestLoggingMiddleware write logs for middleware
 func RequestLoggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		startTime := time.Now()
@@ -51,6 +51,7 @@ func RequestLoggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	}
 }
 
+// RateLimitingMiddleware solve problem about CORS
 func RateLimitingMiddleware(limit int, period time.Duration, logger *zap.Logger, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		key := fmt.Sprintf("rate_limit_ip:%s", c.ClientIP())
@@ -94,15 +95,8 @@ func RateLimitingMiddleware(limit int, period time.Duration, logger *zap.Logger,
 	}
 }
 
-func AuthMiddleware(logger *zap.Logger) gin.HandlerFunc {
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		return func(c *gin.Context) {
-			logger.Fatal("Error cannot load JWT_SECRET in .env")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "JWT_SECRET is not configured"})
-			c.Abort()
-		}
-	}
+// AuthMiddleware solve problem about jwt
+func AuthMiddleware(logger *zap.Logger, jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -152,6 +146,7 @@ func AuthMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	}
 }
 
+// AuthorizationMiddleware solve problem about role user
 func AuthorizationMiddleware(requiredRoles []string, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRole, exist := c.Get("userRole")

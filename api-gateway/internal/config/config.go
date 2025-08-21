@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -15,6 +16,11 @@ type ServiceConfig struct {
 	RedisClient *redis.Client
 }
 
+type EnvConfig struct {
+	JWTSecret string
+}
+
+// InitZapLogger init Zap Logger
 func InitZapLogger() (*zap.Logger, error) {
 	cfg := zap.Config{
 		Level:             zap.NewAtomicLevelAt(zap.InfoLevel),
@@ -38,6 +44,7 @@ func InitZapLogger() (*zap.Logger, error) {
 	return logger, nil
 }
 
+// InitRedisClient init Redis Client
 func InitRedisClient() (*redis.Client, error) {
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
@@ -57,19 +64,41 @@ func InitRedisClient() (*redis.Client, error) {
 	return rdb, nil
 }
 
-func NewServiceConfig() *ServiceConfig {
+// InitJWTSecret load env about jwt
+func InitJWTSecret() (string, error) {
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		return "", errors.New("JWT secret not set")
+	}
+	return jwtSecret, nil
+}
+
+// NewServiceConfig init services: redis, database, zap logger, ...
+func NewServiceConfig() (*ServiceConfig, error) {
 	zapLogger, err := InitZapLogger()
 	if err != nil {
-		panic(fmt.Sprintf("Can not init zap logger: %v", err))
+		return nil, err
 	}
 
 	redisClient, err := InitRedisClient()
 	if err != nil {
-		panic(fmt.Sprintf("Can not init redis client: %v", err))
+		return nil, err
 	}
 
 	return &ServiceConfig{
 		ZapLogger:   zapLogger,
 		RedisClient: redisClient,
+	}, nil
+}
+
+// NewEnvConfig load env config
+func NewEnvConfig() (*EnvConfig, error) {
+	jwtSecret, err := InitJWTSecret()
+	if err != nil {
+		return nil, err
 	}
+
+	return &EnvConfig{
+		JWTSecret: jwtSecret,
+	}, nil
 }

@@ -12,27 +12,29 @@ import (
 )
 
 type AuthService struct {
-	UserRepo      *repository.UserRepository
+	AccountRepo   *repository.AccountRepository
 	JWTSecret     string
 	JWTExpireTime time.Duration
 }
 
-func NewAuthService(userRepo *repository.UserRepository, jwtSecret string, jwtExpireTime time.Duration) *AuthService {
+// NewAuthService create new AuthService
+func NewAuthService(accountRepo *repository.AccountRepository, jwtSecret string, jwtExpireTime time.Duration) *AuthService {
 	return &AuthService{
-		UserRepo:      userRepo,
+		AccountRepo:   accountRepo,
 		JWTSecret:     jwtSecret,
 		JWTExpireTime: jwtExpireTime,
 	}
 }
 
+// Register handle logic register
 func (s *AuthService) Register(req model.RegisterRequest) error {
 
-	existingUser, err := s.UserRepo.GetUserByUsername(req.Username)
+	existingAccount, err := s.AccountRepo.GetAccountByUsername(req.Username)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
-	if existingUser != nil {
-		return errors.New("User already exists")
+	if existingAccount != nil {
+		return errors.New("Account already exists")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -40,29 +42,32 @@ func (s *AuthService) Register(req model.RegisterRequest) error {
 		return err
 	}
 
-	newUser := &model.User{
+	newAccount := &model.Account{
 		Username: req.Username,
 		Password: string(hashedPassword),
+		Role:     req.Role,
 	}
 
-	return s.UserRepo.CreateUser(newUser)
+	return s.AccountRepo.CreateAccount(newAccount)
 }
 
+// Login handle logic login
 func (s *AuthService) Login(req model.LoginRequest) (string, error) {
-	user, err := s.UserRepo.GetUserByUsername(req.Username)
+	account, err := s.AccountRepo.GetAccountByUsername(req.Username)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", errors.New("Username or password is incorrect")
 	}
-	if user == nil {
+	if account == nil {
 		return "", err
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(req.Password)); err != nil || account.Role != req.Role {
 		return "", errors.New("Username or password is incorrect")
 	}
 
 	claims := &model.AuthClaim{
-		Username: user.Username,
+		Username: account.Username,
+		Role:     account.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.JWTExpireTime)),
 		},
