@@ -3,16 +3,16 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/redis/go-redis/v9"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type UserClaims struct {
@@ -21,54 +21,7 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
-var (
-	rdb    *redis.Client
-	logger *zap.Logger
-)
-
-// InitMiddleware setup zap logger and redis
-func InitMiddleware() {
-
-	// Zap logger setup
-	cfg := zap.Config{
-		Level:             zap.NewAtomicLevelAt(zap.InfoLevel),
-		Development:       true,
-		DisableCaller:     false,
-		DisableStacktrace: true,
-		Encoding:          "json",
-		EncoderConfig:     zap.NewProductionEncoderConfig(),
-		OutputPaths:       []string{"stderr"},
-		ErrorOutputPaths:  []string{"stderr"},
-	}
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	cfg.EncoderConfig.TimeKey = "timestamp"
-
-	var err error
-	logger, err = cfg.Build()
-	if err != nil {
-		panic(fmt.Sprintf("cannot initialize zap logger: %v", err))
-	}
-
-	logger.Info("Initialize zap successfully!")
-
-	// Redis setup
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-		logger.Info("Redis address not set, using defaul localhost:6379")
-	}
-	rdb = redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-	})
-
-	_, err = rdb.Ping(context.Background()).Result()
-	if err != nil {
-		logger.Fatal("Failed to connect to redis", zap.Error(err))
-	}
-	logger.Info("Connect successfully to Redis")
-}
-
-func RequestLoggingMiddleware() gin.HandlerFunc {
+func RequestLoggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		startTime := time.Now()
 		c.Next()
@@ -98,7 +51,7 @@ func RequestLoggingMiddleware() gin.HandlerFunc {
 	}
 }
 
-func RateLimitingMiddleware(limit int, period time.Duration) gin.HandlerFunc {
+func RateLimitingMiddleware(limit int, period time.Duration, logger *zap.Logger, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		key := fmt.Sprintf("rate_limit_ip:%s", c.ClientIP())
 		count, err := rdb.Incr(context.Background(), key).Result()
@@ -141,7 +94,7 @@ func RateLimitingMiddleware(limit int, period time.Duration) gin.HandlerFunc {
 	}
 }
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		return func(c *gin.Context) {
@@ -199,7 +152,7 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-func AuthorizationMiddleware(requiredRoles ...string) gin.HandlerFunc {
+func AuthorizationMiddleware(requiredRoles []string, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRole, exist := c.Get("userRole")
 		if !exist {

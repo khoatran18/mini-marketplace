@@ -25,8 +25,8 @@ services:
       - "5432:5432"
     environment:
       SCOPE: pg-cluster
-      PGUSER_STANDBY: admin
-      PGPASSWORD_STANDBY: admin
+      PGUSER_SUPERUSER: admin
+      PGPASSWORD_SUPERUSER: admin
       PGHOME: /home/postgres
       ETCD3_HOST: etcd:2379
     depends_on:
