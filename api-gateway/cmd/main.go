@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ProjectPhase2/api-gateway/internal/config"
-	"ProjectPhase2/api-gateway/internal/router"
+	"api-gateway/internal/config"
+	"api-gateway/internal/router"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lpernett/godotenv"

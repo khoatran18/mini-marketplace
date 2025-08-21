@@ -1,10 +1,10 @@
 package main
 
 import (
-	"account-service/internal/config"
-	"account-service/internal/handler"
-	"account-service/internal/repository"
-	"account-service/internal/service"
+	"auth-service/internal/config"
+	"auth-service/internal/handler"
+	"auth-service/internal/repository"
+	"auth-service/internal/service"
 	"log"
 
 	"github.com/gin-gonic/gin"

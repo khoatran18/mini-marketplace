@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"account-service/pkg/model"
+	"auth-service/pkg/model"
 
 	"gorm.io/gorm"
 )

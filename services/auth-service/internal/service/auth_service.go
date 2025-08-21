@@ -1,8 +1,8 @@
 package service
 
 import (
-	"account-service/internal/repository"
-	"account-service/pkg/model"
+	"auth-service/internal/repository"
+	"auth-service/pkg/model"
 	"errors"
 	"time"
 

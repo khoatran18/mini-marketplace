@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"ProjectPhase2/api-gateway/internal/middleware"
+	"api-gateway/internal/middleware"
 	"net/http"
 	"os"
 

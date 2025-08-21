@@ -1,9 +1,9 @@
 package router
 
 import (
-	"ProjectPhase2/api-gateway/internal/config"
-	"ProjectPhase2/api-gateway/internal/handler"
-	"ProjectPhase2/api-gateway/internal/middleware"
+	"api-gateway/internal/config"
+	"api-gateway/internal/handler"
+	"api-gateway/internal/middleware"
 	"time"
 
 	"github.com/gin-gonic/gin"

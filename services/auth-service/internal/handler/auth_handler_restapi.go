@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"account-service/internal/service"
-	"account-service/pkg/model"
+	"auth-service/internal/service"
+	"auth-service/pkg/model"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
