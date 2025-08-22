@@ -43,8 +43,6 @@ services:
       - "6379:6379"
     networks:
       test-network:
-    volumes:
-      - redis-data:/data
     deploy:
       restart_policy:
         condition: on-failure

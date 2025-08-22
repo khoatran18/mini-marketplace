@@ -33,8 +33,8 @@ func main() {
 
 	router := gin.Default()
 
-	router.POST("/register", authHandler.RegisterRestAPI)
-	router.POST("/login", authHandler.LoginRestAPI)
+	router.POST("/register", authHandler.Register)
+	router.POST("/login", authHandler.Login)
 
 	// Ghi log trước khi chạy server
 	log.Println("Server is starting on port 8080...")

@@ -27,7 +27,7 @@ func NewAuthService(accountRepo *repository.AccountRepository, jwtSecret string,
 }
 
 // Register handle logic register
-func (s *AuthService) Register(req model.RegisterRequest) error {
+func (s *AuthService) Register(req *model.RegisterRequest) error {
 
 	existingAccount, err := s.AccountRepo.GetAccountByUsername(req.Username)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -52,7 +52,7 @@ func (s *AuthService) Register(req model.RegisterRequest) error {
 }
 
 // Login handle logic login
-func (s *AuthService) Login(req model.LoginRequest) (string, error) {
+func (s *AuthService) Login(req *model.LoginRequest) (string, error) {
 	account, err := s.AccountRepo.GetAccountByUsername(req.Username)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", errors.New("Username or password is incorrect")
