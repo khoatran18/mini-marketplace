@@ -167,7 +167,7 @@ func CreateAuthService() (*service.AuthService, error) {
 	}
 
 	accountRepo := repository.NewAccountRepository(serviceConfig.PostgresDB)
-	authService := service.NewAuthService(accountRepo, envConfig.JWTSecret, envConfig.JWTExpireTime)
+	authService := service.NewAuthService(accountRepo, envConfig.JWTSecret, envConfig.JWTExpireTime, serviceConfig.ZapLogger)
 
 	return authService, nil
 }
@@ -184,7 +184,7 @@ func CreateAuthHandler() (*handler.AuthHandler, error) {
 	}
 
 	accountRepo := repository.NewAccountRepository(serviceConfig.PostgresDB)
-	authService := service.NewAuthService(accountRepo, envConfig.JWTSecret, envConfig.JWTExpireTime)
+	authService := service.NewAuthService(accountRepo, envConfig.JWTSecret, envConfig.JWTExpireTime, serviceConfig.ZapLogger)
 	authHandler := handler.NewAuthHandler(authService)
 
 	return authHandler, nil

@@ -10,18 +10,11 @@ import (
 )
 
 // SetupRouter setup middleware, router for engine
-func SetupRouter(router *gin.Engine, serviceConfig *config.ServiceConfig, envConfig *config.EnvConfig) {
+func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *config.ServiceConfig, envConfig *config.EnvConfig) {
 
 	router.Use(middleware.RequestLoggingMiddleware(serviceConfig.ZapLogger))
 	router.Use(middleware.RateLimitingMiddleware(100, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
-	router.POST("/login", handler.Login)
+	router.POST("/login", h.AuthHandler.Login)
+	router.POST("/register", h.AuthHandler.Register)
 
-	protectedAPI := router.Group("/protected")
-	protectedAPI.Use(
-		middleware.AuthMiddleware(serviceConfig.ZapLogger, envConfig.JWTSecret),
-		middleware.AuthorizationMiddleware([]string{"user"}, serviceConfig.ZapLogger),
-	)
-	{
-		protectedAPI.GET("/profile", handler.ProtectedEndpoint)
-	}
 }

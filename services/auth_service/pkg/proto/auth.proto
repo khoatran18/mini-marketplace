@@ -2,33 +2,49 @@ syntax = "proto3";
 
 package auth_service.pkb.pb;
 
-option go_package = "auth_service/pkg/pb";
+option go_package = "auth-service/pkg/pb";
 
 import "buf/validate/validate.proto";
 
 message Account {
   string id = 1;
-  string username = 2 [(buf.validate.field).string.min_len = 1];
-  string password = 3 [(buf.validate.field).string.min_len = 1];
+  string username = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string password = 3 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string role = 4 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
 }
 
+// Request
+
 message LoginRequest {
-  string username = 1 [(buf.validate.field).string.min_len = 1];
-  string password = 2 [(buf.validate.field).string.min_len = 1];
+  string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string role = 3 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
 }
 
 message RegisterRequest {
-  string username = 1 [(buf.validate.field).string.min_len = 1];
-  string password = 2 [(buf.validate.field).string.min_len = 1];
+  string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string role = 3 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
 }
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message ChangePasswordRequest {
+  string username = 1 [(buf.validate.field).string.min_len = 1];
+  string old_password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string new_password = 3 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string role = 4 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
+}
+
+// Response
 
 message LoginResponse {
   string message = 1;
   string access_token = 2;
-  bool success = 3;
+  string refresh_token = 3;
+  bool success = 4;
 }
 
 message RegisterResponse {
@@ -36,9 +52,25 @@ message RegisterResponse {
   bool success = 2;
 }
 
+message RefreshTokenResponse {
+  string message = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  bool success = 4;
+}
+
+message ChangePasswordResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+// Service
+
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
 }
 
 

@@ -57,9 +57,8 @@ func RateLimitingMiddleware(limit int, period time.Duration, logger *zap.Logger,
 		key := fmt.Sprintf("rate_limit_ip:%s", c.ClientIP())
 		count, err := rdb.Incr(context.Background(), key).Result()
 		if err != nil {
-			logger.Error("Error incrementing rate limit",
+			logger.Error("Middleware: error incrementing rate limit",
 				zap.Error(err),
-				zap.String("key", key),
 			)
 			c.Next()
 			return
@@ -69,7 +68,7 @@ func RateLimitingMiddleware(limit int, period time.Duration, logger *zap.Logger,
 		if count == 1 {
 			_, err := rdb.Expire(context.Background(), key, period).Result()
 			if err != nil {
-				logger.Error("Error setting expired key",
+				logger.Error("Middleware: warn error setting expired key",
 					zap.Error(err),
 					zap.String("key", key),
 				)
@@ -79,7 +78,7 @@ func RateLimitingMiddleware(limit int, period time.Duration, logger *zap.Logger,
 
 		// Limit
 		if count > int64(limit) {
-			logger.Warn("Warn too many requests",
+			logger.Warn("Middleware: warn too many requests",
 				zap.String("key", key),
 				zap.Int("limit", limit),
 				zap.Int64("count", count),
@@ -100,7 +99,7 @@ func AuthMiddleware(logger *zap.Logger, jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			logger.Warn("Warm Authorization header is required")
+			logger.Warn("Middleware: warn authorization header is required")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
 			c.Abort()
 			return
@@ -108,7 +107,7 @@ func AuthMiddleware(logger *zap.Logger, jwtSecret string) gin.HandlerFunc {
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			logger.Warn("Warn wrong Authorization header format")
+			logger.Warn("Middleware: warn wrong Authorization header format")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Wrong authorization header"})
 			c.Abort()
 			return
@@ -117,7 +116,7 @@ func AuthMiddleware(logger *zap.Logger, jwtSecret string) gin.HandlerFunc {
 		tokenString := parts[1]
 		token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				logger.Error("Error unexpected signing method",
+				logger.Error("Middleware: error unexpected signing method",
 					zap.String("alg", token.Header["alg"].(string)),
 				)
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -126,7 +125,7 @@ func AuthMiddleware(logger *zap.Logger, jwtSecret string) gin.HandlerFunc {
 		})
 
 		if err != nil {
-			logger.Warn("Warn invalid or expired token")
+			logger.Warn("Middleware: warn invalid or expired token")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return
@@ -137,7 +136,7 @@ func AuthMiddleware(logger *zap.Logger, jwtSecret string) gin.HandlerFunc {
 			c.Set("userRole", claims.Role)
 			c.Next()
 		} else {
-			logger.Warn("Warn invalid token claims")
+			logger.Warn("Middleware: warn invalid token claims")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 			c.Abort()
 			return
@@ -151,7 +150,7 @@ func AuthorizationMiddleware(requiredRoles []string, logger *zap.Logger) gin.Han
 	return func(c *gin.Context) {
 		userRole, exist := c.Get("userRole")
 		if !exist {
-			logger.Warn("Warn role is required")
+			logger.Warn("Middleware: warn role is required")
 			c.JSON(http.StatusForbidden, gin.H{"error": "Role is required"})
 			c.Abort()
 			return
@@ -166,7 +165,7 @@ func AuthorizationMiddleware(requiredRoles []string, logger *zap.Logger) gin.Han
 		}
 
 		if !hasPermission {
-			logger.Warn("Warn role does not have permission")
+			logger.Warn("Middleware: warn role does not have permission")
 			c.JSON(http.StatusForbidden, gin.H{"error": "Do not have permission to access"})
 			c.Abort()
 			return

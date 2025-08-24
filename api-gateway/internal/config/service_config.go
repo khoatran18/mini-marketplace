@@ -2,7 +2,6 @@ package config
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 
@@ -14,10 +13,6 @@ import (
 type ServiceConfig struct {
 	ZapLogger   *zap.Logger
 	RedisClient *redis.Client
-}
-
-type EnvConfig struct {
-	JWTSecret string
 }
 
 // InitZapLogger init Zap Logger
@@ -64,15 +59,6 @@ func InitRedisClient() (*redis.Client, error) {
 	return rdb, nil
 }
 
-// InitJWTSecret load env about jwt
-func InitJWTSecret() (string, error) {
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		return "", errors.New("JWT secret not set")
-	}
-	return jwtSecret, nil
-}
-
 // NewServiceConfig init services: redis, database, zap logger, ...
 func NewServiceConfig() (*ServiceConfig, error) {
 	zapLogger, err := InitZapLogger()
@@ -88,17 +74,5 @@ func NewServiceConfig() (*ServiceConfig, error) {
 	return &ServiceConfig{
 		ZapLogger:   zapLogger,
 		RedisClient: redisClient,
-	}, nil
-}
-
-// NewEnvConfig load env config
-func NewEnvConfig() (*EnvConfig, error) {
-	jwtSecret, err := InitJWTSecret()
-	if err != nil {
-		return nil, err
-	}
-
-	return &EnvConfig{
-		JWTSecret: jwtSecret,
 	}, nil
 }

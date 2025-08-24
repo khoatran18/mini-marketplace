@@ -13,6 +13,7 @@ import (
 
 	"github.com/lpernett/godotenv"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 	}
 
 	accountRepo := repository.NewAccountRepository(serviceConfig.PostgresDB)
-	authService := service.NewAuthService(accountRepo, envConfig.JWTSecret, envConfig.JWTExpireTime)
+	authService := service.NewAuthService(accountRepo, envConfig.JWTSecret, envConfig.JWTExpireTime, serviceConfig.ZapLogger)
 
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
@@ -44,11 +45,17 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterAuthServiceServer(s, &server.AuthServer{AuthService: authService})
+	pb.RegisterAuthServiceServer(s, &server.AuthServer{
+		AuthService: authService,
+		ZapLogger:   serviceConfig.ZapLogger,
+	})
 
 	log.Printf("Server listening at %v", lis.Addr())
+
+	reflection.Register(s)
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Can not servce: %v", err)
 	}
+
 }

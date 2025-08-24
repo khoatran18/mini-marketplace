@@ -8,6 +8,14 @@ plugins:
   - remote: buf.build/grpc/go
     out: pkg/pb
     opt: paths=source_relative
+
+  # For API Gateway
+  - remote: buf.build/protocolbuffers/go
+    out: ../../api-gateway/pkg/pb/auth_service
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: ../../api-gateway/pkg/pb/auth_service
+    opt: paths=source_relative
 #managed:
 #  enabled: true
 #  override:

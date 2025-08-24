@@ -2,10 +2,12 @@ package repository
 
 import (
 	"auth-service/pkg/model"
+	"fmt"
 
 	"gorm.io/gorm"
 )
 
+// AccountRepository is responsible for interacting with account Database
 type AccountRepository struct {
 	DB *gorm.DB
 }
@@ -20,14 +22,14 @@ func (r *AccountRepository) CreateAccount(user *model.Account) error {
 	return r.DB.Create(user).Error
 }
 
-// GetAccountByUsername get account by username
-func (r *AccountRepository) GetAccountByUsername(username string) (*model.Account, error) {
-	var user model.Account
-	if err := r.DB.Where("Username = ?", username).First(&user).Error; err != nil {
+// GetAccountByUsernameRole get account by username and role
+func (r *AccountRepository) GetAccountByUsernameRole(username string, role string) (*model.Account, error) {
+	var acc model.Account
+	if err := r.DB.Where("Username = ? and Role = ?", username, role).First(&acc).Error; err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return &acc, nil
 }
 
 // GetAccountByUsernamePasswordRole get account, mainly for logic login
@@ -37,4 +39,17 @@ func (r *AccountRepository) GetAccountByUsernamePasswordRole(username, password,
 		return nil, err
 	}
 	return &user, nil
+}
+
+// UpdatePassword update password
+func (r *AccountRepository) UpdatePassword(acc *model.Account, newPassword string, pwdVersion int) error {
+	res := r.DB.Model(acc).Select("Password", "PwdVersion").Updates(map[string]interface{}{"Password": newPassword, "PwdVersion": pwdVersion})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return fmt.Errorf("no rows affected")
+	}
+
+	return nil
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"api-gateway/internal/config"
+	"api-gateway/internal/grpc_client"
+	"api-gateway/internal/handler"
 	"api-gateway/internal/router"
 
 	"github.com/gin-gonic/gin"
@@ -23,9 +25,14 @@ func main() {
 		panic(err)
 	}
 
+	grpcClientManager := grpc_client.NewClientManager()
+	defer grpcClientManager.CloseAll()
+
+	managerHandler := handler.NewHandlerManager(grpcClientManager, serviceConfig.ZapLogger)
+
 	// Setup router
 	engine := gin.New()
-	router.SetupRouter(engine, serviceConfig, envConfig)
+	router.SetupRouter(engine, managerHandler, serviceConfig, envConfig)
 
 	// Run
 	engine.Run(":8080")

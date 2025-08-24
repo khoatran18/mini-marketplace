@@ -40,14 +40,15 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	signedToken, err := h.AuthService.Login(&req)
+	signedAccessToken, signedRefreshToken, err := h.AuthService.Login(&req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Login successfully!",
-		"token":   signedToken,
+		"message":       "Login successfully!",
+		"access_token":  signedAccessToken,
+		"refresh_token": signedRefreshToken,
 	})
 }
