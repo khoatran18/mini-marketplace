@@ -29,7 +29,7 @@ func main() {
 		log.Fatal("Error NewEnvConfig")
 	}
 
-	err = serviceConfig.PostgresDB.AutoMigrate(&model.Account{})
+	err = serviceConfig.PostgresDB.Migrator().AutoMigrate(&model.Account{})
 	if err != nil {
 		log.Fatalf("Không thể tự động migrate database: %v", err)
 	} else {

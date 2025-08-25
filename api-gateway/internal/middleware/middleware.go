@@ -15,8 +15,11 @@ import (
 )
 
 type UserClaims struct {
-	UserId string `json:"user_id"`
-	Role   string `json:"role"`
+	UserID     uint
+	Username   string
+	Role       string
+	PwdVersion int
+	Type       string
 	jwt.RegisteredClaims
 }
 
@@ -132,7 +135,7 @@ func AuthMiddleware(logger *zap.Logger, jwtSecret string) gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
-			c.Set("userID", claims.UserId)
+			c.Set("userID", claims.UserID)
 			c.Set("userRole", claims.Role)
 			c.Next()
 		} else {

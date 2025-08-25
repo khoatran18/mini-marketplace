@@ -25,7 +25,7 @@ func (r *AccountRepository) CreateAccount(user *model.Account) error {
 // GetAccountByUsernameRole get account by username and role
 func (r *AccountRepository) GetAccountByUsernameRole(username string, role string) (*model.Account, error) {
 	var acc model.Account
-	if err := r.DB.Where("Username = ? and Role = ?", username, role).First(&acc).Error; err != nil {
+	if err := r.DB.Model(&model.Account{}).Where("Username = ? and Role = ?", username, role).First(&acc).Error; err != nil {
 		return nil, err
 	}
 
@@ -35,7 +35,7 @@ func (r *AccountRepository) GetAccountByUsernameRole(username string, role strin
 // GetAccountByUsernamePasswordRole get account, mainly for logic login
 func (r *AccountRepository) GetAccountByUsernamePasswordRole(username, password, role string) (*model.Account, error) {
 	var user model.Account
-	if err := r.DB.Where("Username = ? and Password = ? and Role = ?", username, password, role).First(&user).Error; err != nil {
+	if err := r.DB.Model(&model.Account{}).Where("Username = ? and Password = ? and Role = ?", username, password, role).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

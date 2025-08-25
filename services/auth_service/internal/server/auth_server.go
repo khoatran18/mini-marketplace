@@ -123,7 +123,10 @@ func (s *AuthServer) ChangePassword(ctx context.Context, req *pb.ChangePasswordR
 	// Validate proto request
 	if err := protovalidate.Validate(req); err != nil {
 		s.ZapLogger.Warn("AuthServer: invalid argument", zap.Error(err))
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return &pb.ChangePasswordResponse{
+			Message: "Invalid argument!",
+			Success: false,
+		}, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
 	// Check account, password and update
