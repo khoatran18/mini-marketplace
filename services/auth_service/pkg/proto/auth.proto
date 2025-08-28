@@ -7,39 +7,18 @@ option go_package = "auth-service/pkg/pb";
 import "buf/validate/validate.proto";
 
 message Account {
-  string id = 1;
+  uint64 id = 1;
   string username = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string password = 3 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string role = 4 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
 }
 
-// Request
-
+// Login
 message LoginRequest {
   string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string role = 3 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
 }
-
-message RegisterRequest {
-  string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string role = 3 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
-}
-
-message RefreshTokenRequest {
-  string refresh_token = 1;
-}
-
-message ChangePasswordRequest {
-  string username = 1 [(buf.validate.field).string.min_len = 1];
-  string old_password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string new_password = 3 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string role = 4 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
-}
-
-// Response
-
 message LoginResponse {
   string message = 1;
   string access_token = 2;
@@ -47,11 +26,21 @@ message LoginResponse {
   bool success = 4;
 }
 
+// Register
+message RegisterRequest {
+  string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string role = 3 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
+}
 message RegisterResponse {
   string message = 1;
   bool success = 2;
 }
 
+// RefreshToken
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
 message RefreshTokenResponse {
   string message = 1;
   string access_token = 2;
@@ -59,13 +48,19 @@ message RefreshTokenResponse {
   bool success = 4;
 }
 
+// ChangePassword
+message ChangePasswordRequest {
+  string username = 1 [(buf.validate.field).string.min_len = 1];
+  string old_password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string new_password = 3 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string role = 4 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
+}
 message ChangePasswordResponse {
   string message = 1;
   bool success = 2;
 }
 
 // Service
-
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc Register(RegisterRequest) returns (RegisterResponse);
