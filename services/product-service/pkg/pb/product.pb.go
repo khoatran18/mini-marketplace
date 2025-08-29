@@ -27,7 +27,7 @@ type Product struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Price         float32                `protobuf:"fixed32,3,opt,name=price,proto3" json:"price,omitempty"`
+	Price         float64                `protobuf:"fixed64,3,opt,name=price,proto3" json:"price,omitempty"`
 	SellerId      uint64                 `protobuf:"varint,4,opt,name=seller_id,json=sellerId,proto3" json:"seller_id,omitempty"`
 	Inventory     int64                  `protobuf:"varint,5,opt,name=inventory,proto3" json:"inventory,omitempty"`
 	Attributes    *structpb.Struct       `protobuf:"bytes,6,opt,name=attributes,proto3" json:"attributes,omitempty"`
@@ -79,7 +79,7 @@ func (x *Product) GetName() string {
 	return ""
 }
 
-func (x *Product) GetPrice() float32 {
+func (x *Product) GetPrice() float64 {
 	if x != nil {
 		return x.Price
 	}
@@ -111,7 +111,7 @@ func (x *Product) GetAttributes() *structpb.Struct {
 type CreateProductRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Price         float32                `protobuf:"fixed32,2,opt,name=price,proto3" json:"price,omitempty"`
+	Price         float64                `protobuf:"fixed64,2,opt,name=price,proto3" json:"price,omitempty"`
 	SellerId      uint64                 `protobuf:"varint,3,opt,name=seller_id,json=sellerId,proto3" json:"seller_id,omitempty"`
 	Inventory     int64                  `protobuf:"varint,4,opt,name=inventory,proto3" json:"inventory,omitempty"`
 	Attributes    *structpb.Struct       `protobuf:"bytes,5,opt,name=attributes,proto3" json:"attributes,omitempty"`
@@ -156,7 +156,7 @@ func (x *CreateProductRequest) GetName() string {
 	return ""
 }
 
-func (x *CreateProductRequest) GetPrice() float32 {
+func (x *CreateProductRequest) GetPrice() float64 {
 	if x != nil {
 		return x.Price
 	}
@@ -239,12 +239,8 @@ func (x *CreateProductResponse) GetSuccess() bool {
 // UpdateProduct
 type UpdateProductRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Price         float32                `protobuf:"fixed32,3,opt,name=price,proto3" json:"price,omitempty"`
-	SellerId      uint64                 `protobuf:"varint,4,opt,name=seller_id,json=sellerId,proto3" json:"seller_id,omitempty"`
-	Inventory     int64                  `protobuf:"varint,5,opt,name=inventory,proto3" json:"inventory,omitempty"`
-	Attributes    *structpb.Struct       `protobuf:"bytes,6,opt,name=attributes,proto3" json:"attributes,omitempty"`
+	Product       *Product               `protobuf:"bytes,1,opt,name=Product,proto3" json:"Product,omitempty"`
+	UserId        uint64                 `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -279,46 +275,18 @@ func (*UpdateProductRequest) Descriptor() ([]byte, []int) {
 	return file_product_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *UpdateProductRequest) GetId() uint64 {
+func (x *UpdateProductRequest) GetProduct() *Product {
 	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-func (x *UpdateProductRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *UpdateProductRequest) GetPrice() float32 {
-	if x != nil {
-		return x.Price
-	}
-	return 0
-}
-
-func (x *UpdateProductRequest) GetSellerId() uint64 {
-	if x != nil {
-		return x.SellerId
-	}
-	return 0
-}
-
-func (x *UpdateProductRequest) GetInventory() int64 {
-	if x != nil {
-		return x.Inventory
-	}
-	return 0
-}
-
-func (x *UpdateProductRequest) GetAttributes() *structpb.Struct {
-	if x != nil {
-		return x.Attributes
+		return x.Product
 	}
 	return nil
+}
+
+func (x *UpdateProductRequest) GetUserId() uint64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
 }
 
 type UpdateProductResponse struct {
@@ -376,7 +344,7 @@ func (x *UpdateProductResponse) GetSuccess() bool {
 // GetProductByID
 type GetProductByIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SellerId      uint64                 `protobuf:"varint,1,opt,name=seller_id,json=sellerId,proto3" json:"seller_id,omitempty"` // only seller of product can view it
+	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"` // only owner of product can view it
 	Id            uint64                 `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -412,9 +380,9 @@ func (*GetProductByIDRequest) Descriptor() ([]byte, []int) {
 	return file_product_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *GetProductByIDRequest) GetSellerId() uint64 {
+func (x *GetProductByIDRequest) GetUserId() uint64 {
 	if x != nil {
-		return x.SellerId
+		return x.UserId
 	}
 	return 0
 }
@@ -595,7 +563,7 @@ func (x *GetProductsBySellerIDResponse) GetProducts() []*Product {
 type GetInventoryByIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	SellerId      uint64                 `protobuf:"varint,2,opt,name=seller_id,json=sellerId,proto3" json:"seller_id,omitempty"`
+	UserId        uint64                 `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -637,9 +605,9 @@ func (x *GetInventoryByIDRequest) GetId() uint64 {
 	return 0
 }
 
-func (x *GetInventoryByIDRequest) GetSellerId() uint64 {
+func (x *GetInventoryByIDRequest) GetUserId() uint64 {
 	if x != nil {
-		return x.SellerId
+		return x.UserId
 	}
 	return 0
 }
@@ -709,7 +677,7 @@ type GetAndDecreaseInventoryByIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Quantity      int64                  `protobuf:"varint,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	BuyerId       uint64                 `protobuf:"varint,3,opt,name=buyer_id,json=buyerId,proto3" json:"buyer_id,omitempty"`
+	UserId        uint64                 `protobuf:"varint,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -758,9 +726,9 @@ func (x *GetAndDecreaseInventoryByIDRequest) GetQuantity() int64 {
 	return 0
 }
 
-func (x *GetAndDecreaseInventoryByIDRequest) GetBuyerId() uint64 {
+func (x *GetAndDecreaseInventoryByIDRequest) GetUserId() uint64 {
 	if x != nil {
-		return x.BuyerId
+		return x.UserId
 	}
 	return 0
 }
@@ -821,23 +789,19 @@ var File_product_proto protoreflect.FileDescriptor
 
 const file_product_proto_rawDesc = "" +
 	"\n" +
-	"\rproduct.proto\x12\x16product_service.pkg.pb\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xd5\x01\n" +
+	"\rproduct.proto\x12\x16product_service.pkg.pb\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xd9\x01\n" +
 	"\aProduct\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1b\n" +
-	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12 \n" +
-	"\x05price\x18\x03 \x01(\x02B\n" +
-	"\xbaH\a\n" +
-	"\x05-\x00\x00\x00\x00R\x05price\x12\x1b\n" +
+	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12$\n" +
+	"\x05price\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x05price\x12\x1b\n" +
 	"\tseller_id\x18\x04 \x01(\x04R\bsellerId\x12%\n" +
 	"\tinventory\x18\x05 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\tinventory\x127\n" +
 	"\n" +
 	"attributes\x18\x06 \x01(\v2\x17.google.protobuf.StructR\n" +
-	"attributes\"\xd2\x01\n" +
+	"attributes\"\xd6\x01\n" +
 	"\x14CreateProductRequest\x12\x1b\n" +
-	"\x04name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12 \n" +
-	"\x05price\x18\x02 \x01(\x02B\n" +
-	"\xbaH\a\n" +
-	"\x05-\x00\x00\x00\x00R\x05price\x12\x1b\n" +
+	"\x04name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12$\n" +
+	"\x05price\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x05price\x12\x1b\n" +
 	"\tseller_id\x18\x03 \x01(\x04R\bsellerId\x12%\n" +
 	"\tinventory\x18\x04 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\tinventory\x127\n" +
 	"\n" +
@@ -845,23 +809,15 @@ const file_product_proto_rawDesc = "" +
 	"attributes\"K\n" +
 	"\x15CreateProductResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess\"\xe2\x01\n" +
-	"\x14UpdateProductRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1b\n" +
-	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12 \n" +
-	"\x05price\x18\x03 \x01(\x02B\n" +
-	"\xbaH\a\n" +
-	"\x05-\x00\x00\x00\x00R\x05price\x12\x1b\n" +
-	"\tseller_id\x18\x04 \x01(\x04R\bsellerId\x12%\n" +
-	"\tinventory\x18\x05 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\tinventory\x127\n" +
-	"\n" +
-	"attributes\x18\x06 \x01(\v2\x17.google.protobuf.StructR\n" +
-	"attributes\"K\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\"j\n" +
+	"\x14UpdateProductRequest\x129\n" +
+	"\aProduct\x18\x01 \x01(\v2\x1f.product_service.pkg.pb.ProductR\aProduct\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x04R\x06userId\"K\n" +
 	"\x15UpdateProductResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess\"D\n" +
-	"\x15GetProductByIDRequest\x12\x1b\n" +
-	"\tseller_id\x18\x01 \x01(\x04R\bsellerId\x12\x0e\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\"@\n" +
+	"\x15GetProductByIDRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x04R\x06userId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\x04R\x02id\"\x87\x01\n" +
 	"\x16GetProductByIDResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
@@ -872,27 +828,27 @@ const file_product_proto_rawDesc = "" +
 	"\x1dGetProductsBySellerIDResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12;\n" +
-	"\bproducts\x18\x03 \x03(\v2\x1f.product_service.pkg.pb.ProductR\bproducts\"F\n" +
+	"\bproducts\x18\x03 \x03(\v2\x1f.product_service.pkg.pb.ProductR\bproducts\"B\n" +
 	"\x17GetInventoryByIDRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1b\n" +
-	"\tseller_id\x18\x02 \x01(\x04R\bsellerId\"u\n" +
+	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x04R\x06userId\"l\n" +
 	"\x18GetInventoryByIDResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess\x12%\n" +
-	"\tinventory\x18\x03 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\tinventory\"t\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x1c\n" +
+	"\tinventory\x18\x03 \x01(\x03R\tinventory\"r\n" +
 	"\"GetAndDecreaseInventoryByIDRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12#\n" +
-	"\bquantity\x18\x02 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\bquantity\x12\x19\n" +
-	"\bbuyer_id\x18\x03 \x01(\x04R\abuyerId\"Y\n" +
+	"\bquantity\x18\x02 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\bquantity\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\x04R\x06userId\"Y\n" +
 	"#GetAndDecreaseInventoryByIDResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess2\xf9\x05\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess2\xf4\x05\n" +
 	"\x0eProductService\x12l\n" +
 	"\rCreateProduct\x12,.product_service.pkg.pb.CreateProductRequest\x1a-.product_service.pkg.pb.CreateProductResponse\x12l\n" +
 	"\rUpdateProduct\x12,.product_service.pkg.pb.UpdateProductRequest\x1a-.product_service.pkg.pb.UpdateProductResponse\x12o\n" +
 	"\x0eGetProductByID\x12-.product_service.pkg.pb.GetProductByIDRequest\x1a..product_service.pkg.pb.GetProductByIDResponse\x12\x84\x01\n" +
-	"\x15GetProductsBySellerID\x124.product_service.pkg.pb.GetProductsBySellerIDRequest\x1a5.product_service.pkg.pb.GetProductsBySellerIDResponse\x12z\n" +
-	"\x10GetInventoryByID\x12/.product_service.pkg.pb.GetInventoryByIDRequest\x1a5.product_service.pkg.pb.GetProductsBySellerIDResponse\x12\x96\x01\n" +
+	"\x15GetProductsBySellerID\x124.product_service.pkg.pb.GetProductsBySellerIDRequest\x1a5.product_service.pkg.pb.GetProductsBySellerIDResponse\x12u\n" +
+	"\x10GetInventoryByID\x12/.product_service.pkg.pb.GetInventoryByIDRequest\x1a0.product_service.pkg.pb.GetInventoryByIDResponse\x12\x96\x01\n" +
 	"\x1bGetAndDecreaseInventoryByID\x12:.product_service.pkg.pb.GetAndDecreaseInventoryByIDRequest\x1a;.product_service.pkg.pb.GetAndDecreaseInventoryByIDResponseB\x18Z\x16product-service/pkg/pbb\x06proto3"
 
 var (
@@ -927,7 +883,7 @@ var file_product_proto_goTypes = []any{
 var file_product_proto_depIdxs = []int32{
 	13, // 0: product_service.pkg.pb.Product.attributes:type_name -> google.protobuf.Struct
 	13, // 1: product_service.pkg.pb.CreateProductRequest.attributes:type_name -> google.protobuf.Struct
-	13, // 2: product_service.pkg.pb.UpdateProductRequest.attributes:type_name -> google.protobuf.Struct
+	0,  // 2: product_service.pkg.pb.UpdateProductRequest.Product:type_name -> product_service.pkg.pb.Product
 	0,  // 3: product_service.pkg.pb.GetProductByIDResponse.product:type_name -> product_service.pkg.pb.Product
 	0,  // 4: product_service.pkg.pb.GetProductsBySellerIDResponse.products:type_name -> product_service.pkg.pb.Product
 	1,  // 5: product_service.pkg.pb.ProductService.CreateProduct:input_type -> product_service.pkg.pb.CreateProductRequest
@@ -940,7 +896,7 @@ var file_product_proto_depIdxs = []int32{
 	4,  // 12: product_service.pkg.pb.ProductService.UpdateProduct:output_type -> product_service.pkg.pb.UpdateProductResponse
 	6,  // 13: product_service.pkg.pb.ProductService.GetProductByID:output_type -> product_service.pkg.pb.GetProductByIDResponse
 	8,  // 14: product_service.pkg.pb.ProductService.GetProductsBySellerID:output_type -> product_service.pkg.pb.GetProductsBySellerIDResponse
-	8,  // 15: product_service.pkg.pb.ProductService.GetInventoryByID:output_type -> product_service.pkg.pb.GetProductsBySellerIDResponse
+	10, // 15: product_service.pkg.pb.ProductService.GetInventoryByID:output_type -> product_service.pkg.pb.GetInventoryByIDResponse
 	12, // 16: product_service.pkg.pb.ProductService.GetAndDecreaseInventoryByID:output_type -> product_service.pkg.pb.GetAndDecreaseInventoryByIDResponse
 	11, // [11:17] is the sub-list for method output_type
 	5,  // [5:11] is the sub-list for method input_type

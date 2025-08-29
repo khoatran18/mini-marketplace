@@ -29,9 +29,9 @@ func main() {
 		log.Fatal("Error NewEnvConfig")
 	}
 
-	err = serviceConfig.PostgresDB.Migrator().AutoMigrate(&model.Account{})
+	err = serviceConfig.PostgresDB.AutoMigrate(&model.Account{})
 	if err != nil {
-		log.Fatalf("Không thể tự động migrate database: %v", err)
+		log.Fatalf("Can not migrate database: %v", err)
 	} else {
 		fmt.Println("Migration successfully!")
 	}
@@ -50,12 +50,12 @@ func main() {
 		ZapLogger:   serviceConfig.ZapLogger,
 	})
 
-	log.Printf("Server listening at %v", lis.Addr())
+	log.Printf("Auth Server listening at %v", lis.Addr())
 
 	reflection.Register(s)
 
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("Can not servce: %v", err)
+		log.Fatalf("Failed to serve: %v", err)
 	}
 
 }

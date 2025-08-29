@@ -37,7 +37,7 @@ type ProductServiceClient interface {
 	UpdateProduct(ctx context.Context, in *UpdateProductRequest, opts ...grpc.CallOption) (*UpdateProductResponse, error)
 	GetProductByID(ctx context.Context, in *GetProductByIDRequest, opts ...grpc.CallOption) (*GetProductByIDResponse, error)
 	GetProductsBySellerID(ctx context.Context, in *GetProductsBySellerIDRequest, opts ...grpc.CallOption) (*GetProductsBySellerIDResponse, error)
-	GetInventoryByID(ctx context.Context, in *GetInventoryByIDRequest, opts ...grpc.CallOption) (*GetProductsBySellerIDResponse, error)
+	GetInventoryByID(ctx context.Context, in *GetInventoryByIDRequest, opts ...grpc.CallOption) (*GetInventoryByIDResponse, error)
 	GetAndDecreaseInventoryByID(ctx context.Context, in *GetAndDecreaseInventoryByIDRequest, opts ...grpc.CallOption) (*GetAndDecreaseInventoryByIDResponse, error)
 }
 
@@ -89,9 +89,9 @@ func (c *productServiceClient) GetProductsBySellerID(ctx context.Context, in *Ge
 	return out, nil
 }
 
-func (c *productServiceClient) GetInventoryByID(ctx context.Context, in *GetInventoryByIDRequest, opts ...grpc.CallOption) (*GetProductsBySellerIDResponse, error) {
+func (c *productServiceClient) GetInventoryByID(ctx context.Context, in *GetInventoryByIDRequest, opts ...grpc.CallOption) (*GetInventoryByIDResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetProductsBySellerIDResponse)
+	out := new(GetInventoryByIDResponse)
 	err := c.cc.Invoke(ctx, ProductService_GetInventoryByID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ type ProductServiceServer interface {
 	UpdateProduct(context.Context, *UpdateProductRequest) (*UpdateProductResponse, error)
 	GetProductByID(context.Context, *GetProductByIDRequest) (*GetProductByIDResponse, error)
 	GetProductsBySellerID(context.Context, *GetProductsBySellerIDRequest) (*GetProductsBySellerIDResponse, error)
-	GetInventoryByID(context.Context, *GetInventoryByIDRequest) (*GetProductsBySellerIDResponse, error)
+	GetInventoryByID(context.Context, *GetInventoryByIDRequest) (*GetInventoryByIDResponse, error)
 	GetAndDecreaseInventoryByID(context.Context, *GetAndDecreaseInventoryByIDRequest) (*GetAndDecreaseInventoryByIDResponse, error)
 	mustEmbedUnimplementedProductServiceServer()
 }
@@ -143,7 +143,7 @@ func (UnimplementedProductServiceServer) GetProductByID(context.Context, *GetPro
 func (UnimplementedProductServiceServer) GetProductsBySellerID(context.Context, *GetProductsBySellerIDRequest) (*GetProductsBySellerIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProductsBySellerID not implemented")
 }
-func (UnimplementedProductServiceServer) GetInventoryByID(context.Context, *GetInventoryByIDRequest) (*GetProductsBySellerIDResponse, error) {
+func (UnimplementedProductServiceServer) GetInventoryByID(context.Context, *GetInventoryByIDRequest) (*GetInventoryByIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInventoryByID not implemented")
 }
 func (UnimplementedProductServiceServer) GetAndDecreaseInventoryByID(context.Context, *GetAndDecreaseInventoryByIDRequest) (*GetAndDecreaseInventoryByIDResponse, error) {

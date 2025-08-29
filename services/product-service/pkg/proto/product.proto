@@ -10,7 +10,7 @@ option go_package = "product-service/pkg/pb";
 message Product {
   uint64 id = 1;
   string name = 2 [(buf.validate.field).string.min_len = 1];
-  float price = 3 [(buf.validate.field).float = {gte: 0.0}];
+  double price = 3 [(buf.validate.field).double = {gte: 0.0}];
   uint64 seller_id = 4;
   int64 inventory = 5 [(buf.validate.field).int64 = {gte: 0}];
   google.protobuf.Struct attributes = 6;
@@ -19,7 +19,7 @@ message Product {
 // CreateProduct
 message CreateProductRequest {
   string name = 1 [(buf.validate.field).string.min_len = 1];
-  float price = 2 [(buf.validate.field).float = {gte: 0.0}];
+  double price = 2 [(buf.validate.field).double = {gte: 0.0}];
   uint64 seller_id = 3;
   int64 inventory = 4 [(buf.validate.field).int64 = {gte: 0}];
   google.protobuf.Struct attributes = 5;
@@ -31,12 +31,8 @@ message CreateProductResponse {
 
 // UpdateProduct
 message UpdateProductRequest {
-  uint64 id = 1;
-  string name = 2 [(buf.validate.field).string.min_len = 1];
-  float price = 3 [(buf.validate.field).float = {gte: 0.0}];
-  uint64 seller_id = 4;
-  int64 inventory = 5 [(buf.validate.field).int64 = {gte: 0}];
-  google.protobuf.Struct attributes = 6;
+  Product Product = 1;
+  uint64 user_id= 2;
 }
 message UpdateProductResponse {
   string message = 1;
@@ -45,7 +41,7 @@ message UpdateProductResponse {
 
 // GetProductByID
 message GetProductByIDRequest {
-  uint64 seller_id = 1; // only seller of product can view it
+  uint64 user_id = 1; // only owner of product can view it
   uint64 id = 2;
 }
 message GetProductByIDResponse {
@@ -67,7 +63,7 @@ message GetProductsBySellerIDResponse {
 // GetInventoryByID
 message GetInventoryByIDRequest {
   uint64 id = 1;
-  uint64 seller_id = 2;
+  uint64 user_id = 2;
 }
 message GetInventoryByIDResponse {
   string message = 1;
@@ -79,7 +75,7 @@ message GetInventoryByIDResponse {
 message GetAndDecreaseInventoryByIDRequest {
   uint64 id = 1;
   int64 quantity = 2 [(buf.validate.field).int64 = {gte: 0}];
-  uint64 buyer_id = 3;
+  uint64 user_id = 3;
 }
 message GetAndDecreaseInventoryByIDResponse {
   string message = 1;
@@ -92,6 +88,6 @@ service ProductService {
   rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
   rpc GetProductByID(GetProductByIDRequest) returns (GetProductByIDResponse);
   rpc GetProductsBySellerID(GetProductsBySellerIDRequest) returns (GetProductsBySellerIDResponse);
-  rpc GetInventoryByID(GetInventoryByIDRequest) returns (GetProductsBySellerIDResponse);
+  rpc GetInventoryByID(GetInventoryByIDRequest) returns (GetInventoryByIDResponse);
   rpc GetAndDecreaseInventoryByID(GetAndDecreaseInventoryByIDRequest) returns (GetAndDecreaseInventoryByIDResponse);
 }

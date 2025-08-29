@@ -8,6 +8,7 @@ import (
 	"product-service/internal/repository"
 	"product-service/internal/server"
 	"product-service/internal/service"
+	"product-service/pkg/model"
 	"product-service/pkg/pb"
 
 	"github.com/lpernett/godotenv"
@@ -20,17 +21,26 @@ func main() {
 
 	serviceConfig, err := config.NewServiceConfig()
 	if err != nil {
-		log.Fatal("Error NewServiceConfig", err.Error())
+		log.Fatal("Error NewServiceConfig: ", err.Error())
 	}
 
 	_, err = config.NewEnvConfig()
 	if err != nil {
-		log.Fatal("Error NewEnvConfig", err.Error())
+		log.Fatal("Error NewEnvConfig: ", err.Error())
 	}
 
-	// err = serviceConfig.PostgresDB.AutoMigrate(&model.Product{})
+	// ✅ test kết nối trước khi migrate
+	sqlDB, _ := serviceConfig.PostgresDB.DB()
+	if pingErr := sqlDB.Ping(); pingErr != nil {
+		log.Fatalf("[DB ERROR] Cannot connect to Postgres: %v", pingErr)
+	} else {
+		log.Println("[DB] Connected to Postgres successfully")
+	}
+
+	// ✅ migrate model
+	err = serviceConfig.PostgresDB.AutoMigrate(&model.Product{})
 	if err != nil {
-		log.Fatalf("Can not migrate database: %v", err)
+		log.Fatalf("[DB ERROR] Can not migrate database: %v", err)
 	} else {
 		fmt.Println("Migration successfully!")
 	}
