@@ -1,9 +1,6 @@
 package config
 
 import (
-	"auth-service/internal/handler"
-	"auth-service/internal/repository"
-	"auth-service/internal/service"
 	"context"
 	"errors"
 	"fmt"
@@ -153,39 +150,4 @@ func NewEnvConfig() (*EnvConfig, error) {
 		JWTSecret:     jwtSecret,
 		JWTExpireTime: jwtExpireTime,
 	}, nil
-}
-
-func CreateAuthService() (*service.AuthService, error) {
-	serviceConfig, err := NewServiceConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	envConfig, err := NewEnvConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	accountRepo := repository.NewAccountRepository(serviceConfig.PostgresDB)
-	authService := service.NewAuthService(accountRepo, envConfig.JWTSecret, envConfig.JWTExpireTime, serviceConfig.ZapLogger)
-
-	return authService, nil
-}
-
-func CreateAuthHandler() (*handler.AuthHandler, error) {
-	serviceConfig, err := NewServiceConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	envConfig, err := NewEnvConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	accountRepo := repository.NewAccountRepository(serviceConfig.PostgresDB)
-	authService := service.NewAuthService(accountRepo, envConfig.JWTSecret, envConfig.JWTExpireTime, serviceConfig.ZapLogger)
-	authHandler := handler.NewAuthHandler(authService)
-
-	return authHandler, nil
 }
