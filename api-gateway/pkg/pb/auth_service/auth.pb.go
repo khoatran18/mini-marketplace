@@ -4,7 +4,7 @@
 // 	protoc        (unknown)
 // source: auth.proto
 
-package pb
+package authpb
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
@@ -612,7 +612,7 @@ const file_auth_proto_rawDesc = "" +
 	"\x05Login\x12!.auth_service.pkb.pb.LoginRequest\x1a\".auth_service.pkb.pb.LoginResponse\x12W\n" +
 	"\bRegister\x12$.auth_service.pkb.pb.RegisterRequest\x1a%.auth_service.pkb.pb.RegisterResponse\x12c\n" +
 	"\fRefreshToken\x12(.auth_service.pkb.pb.RefreshTokenRequest\x1a).auth_service.pkb.pb.RefreshTokenResponse\x12i\n" +
-	"\x0eChangePassword\x12*.auth_service.pkb.pb.ChangePasswordRequest\x1a+.auth_service.pkb.pb.ChangePasswordResponseB\x15Z\x13auth-service/pkg/pbb\x06proto3"
+	"\x0eChangePassword\x12*.auth_service.pkb.pb.ChangePasswordRequest\x1a+.auth_service.pkb.pb.ChangePasswordResponseB\x15Z\x13auth-service/authpbb\x06proto3"
 
 var (
 	file_auth_proto_rawDescOnce sync.Once

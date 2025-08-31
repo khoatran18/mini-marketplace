@@ -4,7 +4,7 @@
 // - protoc             (unknown)
 // source: product.proto
 
-package pb
+package productpb
 
 import (
 	context "context"

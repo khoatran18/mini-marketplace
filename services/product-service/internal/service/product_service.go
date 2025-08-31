@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 	"product-service/internal/repository"
+	"product-service/internal/service/adapter"
 	"product-service/pkg/dto"
-	"product-service/pkg/mapper"
 	"product-service/pkg/model"
 
 	"go.uber.org/zap"
@@ -66,7 +66,7 @@ func (s *ProductService) UpdateProduct(input *dto.UpdateProductInput) (*dto.Upda
 	}
 
 	// Parse ProductModel to Product DTO
-	productModel := mapper.ProductDTOToModel(input.Product)
+	productModel := adapter.ProductDTOToModel(input.Product)
 	if err := s.ProductRepo.UpdateProduct(productModel); err != nil {
 		s.ZapLogger.Warn("ProductService: failed to update product", zap.Error(err))
 		return nil, err
@@ -88,7 +88,7 @@ func (s *ProductService) GetProductByID(input *dto.GetProductByIDInput) (*dto.Ge
 	}
 
 	// Parse ProductModel to ProductDTO
-	productDTO := mapper.ProductModelToDTO(product)
+	productDTO := adapter.ProductModelToDTO(product)
 	return &dto.GetProductByIDOutput{
 		Message: fmt.Sprintf("Get product with id %v successfully", productDTO.ID),
 		Success: true,
@@ -107,7 +107,7 @@ func (s *ProductService) GetProductsBySellerID(input *dto.GetProductsBySellerIDI
 	}
 
 	// Parse ProductsModel to ProductsDTO
-	productsDTO := mapper.ProductsModelToDTO(products)
+	productsDTO := adapter.ProductsModelToDTO(products)
 	return &dto.GetProductsBySellerIDOutput{
 		Message:  fmt.Sprintf("Get products by sellerID %v", input.SellerID),
 		Success:  true,

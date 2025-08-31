@@ -7,46 +7,46 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func CreProFailResponse(message string, err error, code codes.Code) (*pb.CreateProductResponse, error) {
-	return &pb.CreateProductResponse{
+func CreProFailResponse(message string, err error, code codes.Code) (*productpb.CreateProductResponse, error) {
+	return &productpb.CreateProductResponse{
 		Message: message,
 		Success: false,
 	}, status.Error(code, err.Error())
 }
 
-func UpdProFailResponse(message string, err error, code codes.Code) (*pb.UpdateProductResponse, error) {
-	return &pb.UpdateProductResponse{
+func UpdProFailResponse(message string, err error, code codes.Code) (*productpb.UpdateProductResponse, error) {
+	return &productpb.UpdateProductResponse{
 		Message: message,
 		Success: false,
 	}, status.Error(code, err.Error())
 }
 
-func GetProsBySelIDFailResponse(message string, err error, code codes.Code) (*pb.GetProductsBySellerIDResponse, error) {
-	return &pb.GetProductsBySellerIDResponse{
+func GetProsBySelIDFailResponse(message string, err error, code codes.Code) (*productpb.GetProductsBySellerIDResponse, error) {
+	return &productpb.GetProductsBySellerIDResponse{
 		Message:  message,
 		Success:  false,
 		Products: nil,
 	}, status.Error(code, err.Error())
 }
 
-func GetProByIDFailResponse(message string, err error, code codes.Code) (*pb.GetProductByIDResponse, error) {
-	return &pb.GetProductByIDResponse{
+func GetProByIDFailResponse(message string, err error, code codes.Code) (*productpb.GetProductByIDResponse, error) {
+	return &productpb.GetProductByIDResponse{
 		Message: message,
 		Success: false,
 		Product: nil,
 	}, status.Error(code, err.Error())
 }
 
-func GetInvByIDFailResponse(message string, err error, code codes.Code) (*pb.GetInventoryByIDResponse, error) {
-	return &pb.GetInventoryByIDResponse{
+func GetInvByIDFailResponse(message string, err error, code codes.Code) (*productpb.GetInventoryByIDResponse, error) {
+	return &productpb.GetInventoryByIDResponse{
 		Message:   message,
 		Success:   false,
 		Inventory: 0,
 	}, status.Error(code, err.Error())
 }
 
-func GetAndDecInvByIDFailResponse(message string, err error, code codes.Code) (*pb.GetAndDecreaseInventoryByIDResponse, error) {
-	return &pb.GetAndDecreaseInventoryByIDResponse{
+func GetAndDecInvByIDFailResponse(message string, err error, code codes.Code) (*productpb.GetAndDecreaseInventoryByIDResponse, error) {
+	return &productpb.GetAndDecreaseInventoryByIDResponse{
 		Message: message,
 		Success: false,
 	}, status.Error(code, err.Error())

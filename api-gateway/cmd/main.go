@@ -1,8 +1,8 @@
 package main
 
 import (
+	"api-gateway/internal/client"
 	"api-gateway/internal/config"
-	"api-gateway/internal/grpc_client"
 	"api-gateway/internal/handler"
 	"api-gateway/internal/router"
 
@@ -25,7 +25,7 @@ func main() {
 		panic(err)
 	}
 
-	grpcClientManager := grpc_client.NewClientManager()
+	grpcClientManager := client.NewClientManager()
 	defer grpcClientManager.CloseAll()
 
 	managerHandler := handler.NewHandlerManager(grpcClientManager, serviceConfig.ZapLogger)

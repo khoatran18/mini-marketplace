@@ -64,7 +64,7 @@ func (r *ProductRepository) GetSellerIDByID(productID uint64) (uint64, error) {
 
 // GetAndDecreaseInventoryByID get and decrease inventory by ProductID (atomic)
 func (r *ProductRepository) GetAndDecreaseInventoryByID(id uint64, quantity int64) error {
-	// Use model.Product to use atomic transaction: get and delete inventory
+	// Use dto.Product to use atomic transaction: get and delete inventory
 	result := r.DB.Model(&model.Product{}).Where("id = ? AND inventory >= ?", id, quantity).UpdateColumn("inventory", gorm.Expr("inventory - ?", quantity))
 	if result.Error != nil {
 		return result.Error

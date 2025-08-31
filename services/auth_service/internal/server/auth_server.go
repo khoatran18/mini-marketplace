@@ -2,7 +2,6 @@ package server
 
 import (
 	"auth-service/internal/service"
-	"auth-service/pkg/mapper"
 	"auth-service/pkg/pb"
 	"context"
 
@@ -13,20 +12,20 @@ import (
 
 // AuthServer is responsible for handle gRPC request
 type AuthServer struct {
-	pb.UnimplementedAuthServiceServer
+	authpb.UnimplementedAuthServiceServer
 	AuthService *service.AuthService
 	ZapLogger   *zap.Logger
 }
 
 // Login handle login request
-func (s *AuthServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+func (s *AuthServer) Login(ctx context.Context, req *authpb.LoginRequest) (*authpb.LoginResponse, error) {
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
 		s.ZapLogger.Warn("AuthServer: invalid request for Login", zap.Error(err))
 		return LoginFailResponse("AuthServer: Invalid request for Login", err, codes.InvalidArgument)
 	}
-	input, err := mapper.LoginProtoToDTO(req)
+	input, err := LoginProtoToDTO(req)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse Login request to input error", zap.Error(err))
 		return LoginFailResponse("Parse Login request error", err, codes.InvalidArgument)
@@ -40,7 +39,7 @@ func (s *AuthServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Login
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
-	res, err := mapper.LoginDTOToProto(output)
+	res, err := LoginDTOToProto(output)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse Login output to response error", zap.Error(err))
 		return LoginFailResponse("Parse Login output to response error", err, codes.Internal)
@@ -55,14 +54,14 @@ func (s *AuthServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Login
 }
 
 // Register handle register request
-func (s *AuthServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) (*authpb.RegisterResponse, error) {
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
 		s.ZapLogger.Warn("AuthServer: invalid request for Register", zap.Error(err))
 		return RegisterFailResponse("Invalid request for Register", err, codes.InvalidArgument)
 	}
-	input, err := mapper.RegisterProtoToDTO(req)
+	input, err := RegisterProtoToDTO(req)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse Register request to input error", zap.Error(err))
 		return RegisterFailResponse("Parse Register request to input error", err, codes.InvalidArgument)
@@ -76,7 +75,7 @@ func (s *AuthServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
-	res, err := mapper.RegisterDTOToProto(output)
+	res, err := RegisterDTOToProto(output)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse Register output to response error", zap.Error(err))
 		return RegisterFailResponse("Parse Register output to response error", err, codes.Internal)
@@ -91,14 +90,14 @@ func (s *AuthServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb
 }
 
 // RefreshToken handle refresh token for expired access token
-func (s *AuthServer) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
+func (s *AuthServer) RefreshToken(ctx context.Context, req *authpb.RefreshTokenRequest) (*authpb.RefreshTokenResponse, error) {
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
 		s.ZapLogger.Warn("AuthServer: invalid request for RefreshToken", zap.Error(err))
 		return RefreshTokenFailResponse("Invalid request for RefreshToken", err, codes.InvalidArgument)
 	}
-	input, err := mapper.RefreshTokenProtoToDTO(req)
+	input, err := RefreshTokenProtoToDTO(req)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse RefreshToken request to input error", zap.Error(err))
 		return RefreshTokenFailResponse("Parse RefreshToken request to input error", err, codes.InvalidArgument)
@@ -112,7 +111,7 @@ func (s *AuthServer) RefreshToken(ctx context.Context, req *pb.RefreshTokenReque
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
-	res, err := mapper.RefreshTokenDTOToProto(output)
+	res, err := RefreshTokenDTOToProto(output)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse RefreshToken output to response error", zap.Error(err))
 		return RefreshTokenFailResponse("parse RefreshToken output to response error", err, codes.Internal)
@@ -127,14 +126,14 @@ func (s *AuthServer) RefreshToken(ctx context.Context, req *pb.RefreshTokenReque
 }
 
 // ChangePassword handle change password request
-func (s *AuthServer) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*pb.ChangePasswordResponse, error) {
+func (s *AuthServer) ChangePassword(ctx context.Context, req *authpb.ChangePasswordRequest) (*authpb.ChangePasswordResponse, error) {
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
 		s.ZapLogger.Warn("AuthServer: invalid request for ChangePassword", zap.Error(err))
 		return ChangePasswordFailResponse("Invalid request for ChangePassword", err, codes.InvalidArgument)
 	}
-	input, err := mapper.ChangePasswordProtoToDTO(req)
+	input, err := ChangePasswordProtoToDTO(req)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse ChangePassword request to input error", zap.Error(err))
 		return ChangePasswordFailResponse("Parse ChangePassword request to input error", err, codes.InvalidArgument)
@@ -148,7 +147,7 @@ func (s *AuthServer) ChangePassword(ctx context.Context, req *pb.ChangePasswordR
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
-	res, err := mapper.ChangePasswordDTOToProto(output)
+	res, err := ChangePasswordDTOToProto(output)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse ChangePassword output to response error", zap.Error(err))
 		return ChangePasswordFailResponse("parse ChangePassword output to response error", err, codes.Internal)

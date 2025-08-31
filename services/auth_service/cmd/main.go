@@ -6,7 +6,7 @@ import (
 	"auth-service/internal/server"
 	"auth-service/internal/service"
 	"auth-service/pkg/model"
-	"auth-service/pkg/pb"
+	authpb "auth-service/pkg/pb"
 	"fmt"
 	"log"
 	"net"
@@ -45,7 +45,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterAuthServiceServer(s, &server.AuthServer{
+	authpb.RegisterAuthServiceServer(s, &server.AuthServer{
 		AuthService: authService,
 		ZapLogger:   serviceConfig.ZapLogger,
 	})
@@ -57,5 +57,4 @@ func main() {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
-
 }

@@ -4,7 +4,7 @@
 // 	protoc        (unknown)
 // source: product.proto
 
-package pb
+package productpb
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
@@ -849,7 +849,7 @@ const file_product_proto_rawDesc = "" +
 	"\x0eGetProductByID\x12-.product_service.pkg.pb.GetProductByIDRequest\x1a..product_service.pkg.pb.GetProductByIDResponse\x12\x84\x01\n" +
 	"\x15GetProductsBySellerID\x124.product_service.pkg.pb.GetProductsBySellerIDRequest\x1a5.product_service.pkg.pb.GetProductsBySellerIDResponse\x12u\n" +
 	"\x10GetInventoryByID\x12/.product_service.pkg.pb.GetInventoryByIDRequest\x1a0.product_service.pkg.pb.GetInventoryByIDResponse\x12\x96\x01\n" +
-	"\x1bGetAndDecreaseInventoryByID\x12:.product_service.pkg.pb.GetAndDecreaseInventoryByIDRequest\x1a;.product_service.pkg.pb.GetAndDecreaseInventoryByIDResponseB\x18Z\x16product-service/pkg/pbb\x06proto3"
+	"\x1bGetAndDecreaseInventoryByID\x12:.product_service.pkg.pb.GetAndDecreaseInventoryByIDRequest\x1a;.product_service.pkg.pb.GetAndDecreaseInventoryByIDResponseB\"Z product-service/pkg/pb;productpbb\x06proto3"
 
 var (
 	file_product_proto_rawDescOnce sync.Once

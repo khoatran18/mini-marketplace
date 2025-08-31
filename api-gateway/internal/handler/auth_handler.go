@@ -1,22 +1,22 @@
 package handler
 
 import (
-	"api-gateway/internal/service"
-	"api-gateway/pkg/model"
+	"api-gateway/internal/client/authclient"
+	"api-gateway/pkg/dto"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
-// AuthHandler: handler for AuthService
+// AuthHandler : handler for AuthClient
 type AuthHandler struct {
-	Service *service.AuthService
+	Service *authclient.AuthClient
 	Logger  *zap.Logger
 }
 
 // NewAuthHandler create new AuthHandler
-func NewAuthHandler(service *service.AuthService, logger *zap.Logger) *AuthHandler {
+func NewAuthHandler(service *authclient.AuthClient, logger *zap.Logger) *AuthHandler {
 	return &AuthHandler{
 		Service: service,
 		Logger:  logger,
@@ -26,8 +26,8 @@ func NewAuthHandler(service *service.AuthService, logger *zap.Logger) *AuthHandl
 // Login is responsible for parse login gin.context request
 func (authHandler *AuthHandler) Login(c *gin.Context) {
 
-	// Parse from gin.context json to request model
-	var req model.LoginRequest
+	// Parse from gin.context json to request dto
+	var req dto.LoginInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		authHandler.Logger.Warn("AuthHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -47,8 +47,8 @@ func (authHandler *AuthHandler) Login(c *gin.Context) {
 // Register is responsible for parse login gin.context request
 func (authHandler *AuthHandler) Register(c *gin.Context) {
 
-	// Parse from gin.context json to request model
-	var req model.RegisterRequest
+	// Parse from gin.context json to request dto
+	var req dto.RegisterInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		authHandler.Logger.Warn("AuthHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -68,8 +68,8 @@ func (authHandler *AuthHandler) Register(c *gin.Context) {
 // ChangePassword is responsible for parse login gin.context request
 func (authHandler *AuthHandler) ChangePassword(c *gin.Context) {
 
-	// Parse from gin.context json to request model
-	var req model.ChangePasswordRequest
+	// Parse from gin.context json to request dto
+	var req dto.ChangePasswordInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		authHandler.Logger.Warn("AuthHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -88,8 +88,8 @@ func (authHandler *AuthHandler) ChangePassword(c *gin.Context) {
 
 func (authHandler *AuthHandler) RefreshToken(c *gin.Context) {
 
-	// Parse from gin.context json to request model
-	var req model.RefreshTokenRequest
+	// Parse from gin.context json to request dto
+	var req dto.RefreshTokenInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}

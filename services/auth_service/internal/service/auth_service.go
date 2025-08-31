@@ -3,7 +3,6 @@ package service
 import (
 	"auth-service/internal/repository"
 	"auth-service/pkg/dto"
-	"auth-service/pkg/mapper"
 	"auth-service/pkg/model"
 	"errors"
 	"time"
@@ -92,7 +91,7 @@ func (s *AuthService) Login(req *dto.LoginInput) (*dto.LoginOutput, error) {
 	}
 
 	// Create token
-	tokenRequest := mapper.AccountModelToTokenRequest(account)
+	tokenRequest := AccountModelToTokenRequest(account)
 	signedAccessToken, signedRefreshToken, err := s.generateToken(tokenRequest)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: token generation failure")

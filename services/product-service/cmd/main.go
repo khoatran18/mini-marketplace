@@ -8,7 +8,7 @@ import (
 	"product-service/internal/repository"
 	"product-service/internal/server"
 	"product-service/internal/service"
-	"product-service/pkg/pb"
+	productpb "product-service/pkg/pb"
 
 	"github.com/lpernett/godotenv"
 	"google.golang.org/grpc"
@@ -28,7 +28,7 @@ func main() {
 		log.Fatal("Error NewEnvConfig", err.Error())
 	}
 
-	// err = serviceConfig.PostgresDB.AutoMigrate(&model.Product{})
+	// err = serviceConfig.PostgresDB.AutoMigrate(&dto.Product{})
 	if err != nil {
 		log.Fatalf("Can not migrate database: %v", err)
 	} else {
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterProductServiceServer(s, &server.ProductServer{
+	productpb.RegisterProductServiceServer(s, &server.ProductServer{
 		ProductService: productService,
 		ZapLogger:      serviceConfig.ZapLogger,
 	})
