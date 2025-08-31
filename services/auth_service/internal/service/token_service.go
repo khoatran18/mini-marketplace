@@ -1,6 +1,7 @@
 package service
 
 import (
+	"auth-service/pkg/dto"
 	"auth-service/pkg/model"
 	"fmt"
 	"time"
@@ -10,7 +11,7 @@ import (
 )
 
 // generateToken generate token from password
-func (s *AuthService) generateToken(tokenRequest *model.TokenRequest) (string, string, error) {
+func (s *AuthService) generateToken(tokenRequest *dto.TokenRequest) (string, string, error) {
 	// Create claims
 	accessClaims := &model.AuthClaim{
 		UserID:   tokenRequest.UserID,
@@ -82,18 +83,18 @@ func (s *AuthService) parseToken(signedToken string) (*model.AuthClaim, error) {
 }
 
 // RefreshToken refresh new token
-func (s *AuthService) RefreshToken(refreshToken string) (string, string, error) {
+func (s *AuthService) RefreshToken(input *dto.RefreshTokenInput) (*dto.RefreshTokenOutput, error) {
 
 	// Parse and validate token
-	authClaim, err := s.parseToken(refreshToken)
+	authClaim, err := s.parseToken(input.RefreshToken)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	if authClaim.Type != "refresh" {
 		s.ZapLogger.Warn("AuthService: refresh token only")
-		return "", "", fmt.Errorf("refresh token only")
+		return nil, fmt.Errorf("refresh token only")
 	}
-	tokenRequest := &model.TokenRequest{
+	tokenRequest := &dto.TokenRequest{
 		UserID:     authClaim.UserID,
 		Username:   authClaim.Username,
 		Role:       authClaim.Role,
@@ -104,7 +105,12 @@ func (s *AuthService) RefreshToken(refreshToken string) (string, string, error) 
 	signedAccessToken, signedRefreshToken, err := s.generateToken(tokenRequest)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: token generation failure")
-		return "", "", err
+		return nil, err
 	}
-	return signedAccessToken, signedRefreshToken, nil
+	return &dto.RefreshTokenOutput{
+		Message:      "Refresh token successfully",
+		AccessToken:  signedAccessToken,
+		RefreshToken: signedRefreshToken,
+		Success:      true,
+	}, nil
 }

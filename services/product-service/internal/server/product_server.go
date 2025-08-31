@@ -22,26 +22,31 @@ func (s *ProductServer) CreateProduct(ctx context.Context, req *pb.CreateProduct
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("ProductService: Invalid request for CreateProduct", zap.Error(err))
-		return CreProFailResponse("Invalid CreateProduct request", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: invalid request for CreateProduct", zap.Error(err))
+		return CreProFailResponse("Invalid request for CreateProduct", err, codes.InvalidArgument)
 	}
 	input, err := mapper.CreProRequestToInput(req)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse CreateProduct request to input error", zap.Error(err))
-		return CreProFailResponse("Parse CreateProduct request error", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: parse CreateProduct request to input error", zap.Error(err))
+		return CreProFailResponse("Parse CreateProduct request to input error", err, codes.InvalidArgument)
 	}
 
 	// Get ServiceOutput
-	output := s.ProductService.CreateProduct(input)
+	output, err := s.ProductService.CreateProduct(input)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: CreateProduct error in ProductService", zap.Error(err))
+		return CreProFailResponse("CreateProduct error in ProductService", err, codes.Internal)
+	}
 
 	// Parse ServiceOutput to ServerResponse and validate
 	res, err := mapper.CreProOutputToResponse(output)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse CreateProduct output to response error", zap.Error(err))
+		s.ZapLogger.Error("ProductServer: parse CreateProduct output to response error", zap.Error(err))
 		return CreProFailResponse("Parse CreateProduct output to response error", err, codes.Unknown)
 	}
 	if err := protovalidate.Validate(res); err != nil {
-		return CreProFailResponse("Invalid CreateProduct response", err, codes.Internal)
+		s.ZapLogger.Warn("ProductServer: invalid response for CreateProduct", zap.Error(err))
+		return CreProFailResponse("Invalid response for CreateProduct", err, codes.Internal)
 	}
 
 	// Return valid response
@@ -53,26 +58,31 @@ func (s *ProductServer) UpdateProduct(ctx context.Context, req *pb.UpdateProduct
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("ProductService: Invalid request for UpdateProduct", zap.Error(err))
-		return UpdProFailResponse("Invalid UpdateProduct request", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: invalid request for UpdateProduct", zap.Error(err))
+		return UpdProFailResponse("Invalid request for UpdateProduct", err, codes.InvalidArgument)
 	}
 	input, err := mapper.UpdProRequestToInput(req)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse UpdateProduct request to input error", zap.Error(err))
+		s.ZapLogger.Warn("ProductServer: parse UpdateProduct request to input error", zap.Error(err))
 		return UpdProFailResponse("Parse UpdateProduct request to input error", err, codes.InvalidArgument)
 	}
 
 	// Get ServiceOutput
-	output := s.ProductService.UpdateProduct(input)
+	output, err := s.ProductService.UpdateProduct(input)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: UpdateProduct error in ProductService", zap.Error(err))
+		return UpdProFailResponse("UpdateProduct error in ProductService", err, codes.Internal)
+	}
 
 	// Parse ServiceOutput to ServerResponse and validate
 	res, err := mapper.UpdProOutputToResponse(output)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse UpdateProduct output to response error", zap.Error(err))
+		s.ZapLogger.Warn("ProductServer: parse UpdateProduct output to response error", zap.Error(err))
 		return UpdProFailResponse("Parse UpdateProduct output to response error", err, codes.Unknown)
 	}
 	if err := protovalidate.Validate(res); err != nil {
-		return UpdProFailResponse("Invalid UpdateProduct response", err, codes.Internal)
+		s.ZapLogger.Warn("ProductServer: invalid response for UpdateProduct", zap.Error(err))
+		return UpdProFailResponse("Invalid response for UpdateProduct", err, codes.Internal)
 	}
 
 	// Return valid response
@@ -84,27 +94,31 @@ func (s *ProductServer) GetProductByID(ctx context.Context, req *pb.GetProductBy
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("ProductService: Invalid request for GetProByID", zap.Error(err))
-		return GetProByIDFailResponse("Invalid GetProByID request", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: invalid request for GetProByID", zap.Error(err))
+		return GetProByIDFailResponse("Invalid request for GetProByID", err, codes.InvalidArgument)
 	}
 	input, err := mapper.GetProByIDRequestToInput(req)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse GetProByID request to input error", zap.Error(err))
-		return GetProByIDFailResponse("Parse GetProByID request input to request error", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: parse GetProByID request to input error", zap.Error(err))
+		return GetProByIDFailResponse("Parse GetProByID request to input error", err, codes.InvalidArgument)
 	}
 
 	// Get ServiceOutput
-	output := s.ProductService.GetProductByID(input)
+	output, err := s.ProductService.GetProductByID(input)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: GetProByID error in ProductService", zap.Error(err))
+		return GetProByIDFailResponse("GetProByID error in ProductService", err, codes.Internal)
+	}
 
 	// Parse ServiceOutput to ServerResponse and validate
 	res, err := mapper.GetProByIDOutputToResponse(output)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse GetProByID output to response error", zap.Error(err))
-		return GetProByIDFailResponse("Parse GetProByID output output to response error", err, codes.Unknown)
+		s.ZapLogger.Warn("ProductServer: parse GetProByID output to response error", zap.Error(err))
+		return GetProByIDFailResponse("Parse GetProByID output to response error", err, codes.Unknown)
 	}
 	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("ProductService: invalid GetProByID response", zap.Error(err))
-		return GetProByIDFailResponse("Invalid GetProByID response", err, codes.Internal)
+		s.ZapLogger.Warn("ProductServer: invalid response for GetProByID", zap.Error(err))
+		return GetProByIDFailResponse("Invalid response for GetProByID", err, codes.Internal)
 	}
 
 	// Return valid response
@@ -116,27 +130,31 @@ func (s *ProductServer) GetProductsBySellerID(ctx context.Context, req *pb.GetPr
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("ProductService: Invalid request for GetProsBySelID", zap.Error(err))
-		return GetProsBySelIDFailResponse("Invalid GetProsBySelID request", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: invalid request for GetProsBySelID", zap.Error(err))
+		return GetProsBySelIDFailResponse("Invalid request for GetProsBySelID", err, codes.InvalidArgument)
 	}
 	input, err := mapper.GetProsBySelIDRequestToInput(req)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse GetProsBySelID to input error", zap.Error(err))
-		return GetProsBySelIDFailResponse("Parse GetProsBySelID input to request error", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: parse GetProsBySelID request to input error", zap.Error(err))
+		return GetProsBySelIDFailResponse("Parse GetProsBySelID request to input error", err, codes.InvalidArgument)
 	}
 
 	// Get ServiceOutput
-	output := s.ProductService.GetProductsBySellerID(input)
+	output, err := s.ProductService.GetProductsBySellerID(input)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: GetProsBySelID error in ProductService", zap.Error(err))
+		return GetProsBySelIDFailResponse("GetProsBySelID error in ProductService", err, codes.Internal)
+	}
 
 	// Parse ServiceOutput to ServerResponse and validate
 	res, err := mapper.GetProsBySelIDOutputToResponse(output)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse GetProsBySelID output to response error", zap.Error(err))
+		s.ZapLogger.Warn("ProductServer: parse GetProsBySelID output to response error", zap.Error(err))
 		return GetProsBySelIDFailResponse("Parse GetProsBySelID output to response error", err, codes.Unknown)
 	}
 	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("ProductService: invalid GetProsBySelID response", zap.Error(err))
-		return GetProsBySelIDFailResponse("Invalid GetProsBySelID response", err, codes.Internal)
+		s.ZapLogger.Warn("ProductServer: invalid response for GetProsBySelID", zap.Error(err))
+		return GetProsBySelIDFailResponse("Invalid response for GetProsBySelID", err, codes.Internal)
 	}
 
 	// Return valid response
@@ -148,27 +166,31 @@ func (s *ProductServer) GetInventoryByID(ctx context.Context, req *pb.GetInvento
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("ProductService: Invalid request for GetInvByID", zap.Error(err))
-		return GetInvByIDFailResponse("Invalid GetInvByID request", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: invalid request for GetInvByID", zap.Error(err))
+		return GetInvByIDFailResponse("Invalid request for GetInvByID", err, codes.InvalidArgument)
 	}
 	input, err := mapper.GetInvByIDRequestToInput(req)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse GetInvByID to input error", zap.Error(err))
-		return GetInvByIDFailResponse("Parse GetInvByID input to request error", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: parse GetInvByID request to input error", zap.Error(err))
+		return GetInvByIDFailResponse("Parse GetInvByID request to input error", err, codes.InvalidArgument)
 	}
 
 	// Get ServiceOutput
-	output := s.ProductService.GetInventoryByID(input)
+	output, err := s.ProductService.GetInventoryByID(input)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: GetInvByID error in ProductService", zap.Error(err))
+		return GetInvByIDFailResponse("GetInvByID error in ProductService", err, codes.Internal)
+	}
 
 	// Parse ServiceOutput to ServerResponse and validate
 	res, err := mapper.GetInvByIDOutputToResponse(output)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse GetInvByID to output error", zap.Error(err))
+		s.ZapLogger.Warn("ProductServer: parse GetInvByID output to response error", zap.Error(err))
 		return GetInvByIDFailResponse("Parse GetInvByID output to response error", err, codes.Unknown)
 	}
 	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("ProductService: invalid GetInvByID response", zap.Error(err))
-		return GetInvByIDFailResponse("Invalid GetInvByID response", err, codes.Internal)
+		s.ZapLogger.Warn("ProductServer: invalid response for GetInvByID", zap.Error(err))
+		return GetInvByIDFailResponse("Invalid response for GetInvByID", err, codes.Internal)
 	}
 
 	// Return valid response
@@ -180,27 +202,31 @@ func (s *ProductServer) GetAndDecreaseInventoryByID(ctx context.Context, req *pb
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("ProductService: Invalid request for GetAndDecInvByID", zap.Error(err))
-		return GetAndDecInvByIDFailResponse("Invalid GetAndDecInvByID request", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: invalid request for GetAndDecInvByID", zap.Error(err))
+		return GetAndDecInvByIDFailResponse("Invalid request for GetAndDecInvByID", err, codes.InvalidArgument)
 	}
 	input, err := mapper.GetAndDecInvByIDRequestToInput(req)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse GetAndDecInvByID to input error", zap.Error(err))
-		return GetAndDecInvByIDFailResponse("Parse GetAndDecInvByID input to request error", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("ProductServer: parse GetAndDecInvByID request to input error", zap.Error(err))
+		return GetAndDecInvByIDFailResponse("Parse GetAndDecInvByID request to input error", err, codes.InvalidArgument)
 	}
 
 	// Get ServiceOutput
-	output := s.ProductService.GetAndDecreaseInventoryByID(input)
+	output, err := s.ProductService.GetAndDecreaseInventoryByID(input)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: GetAndDecInvByID error in ProductService", zap.Error(err))
+		return GetAndDecInvByIDFailResponse("GetAndDecInvByID error in ProductService", err, codes.Internal)
+	}
 
 	// Parse ServiceOutput to ServerResponse and validate
 	res, err := mapper.GetAndDecInvByIDOutputToResponse(output)
 	if err != nil {
-		s.ZapLogger.Warn("ProductService: parse GetAndDecInvByID output to response error", zap.Error(err))
+		s.ZapLogger.Warn("ProductServer: parse GetAndDecInvByID output to response error", zap.Error(err))
 		return GetAndDecInvByIDFailResponse("Parse GetAndDecInvByID output to response error", err, codes.Unknown)
 	}
 	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("ProductService: invalid GetAndDecInvByID response", zap.Error(err))
-		return GetAndDecInvByIDFailResponse("Invalid GetAndDecInvByID response", err, codes.Internal)
+		s.ZapLogger.Warn("ProductServer: invalid response for GetAndDecInvByID", zap.Error(err))
+		return GetAndDecInvByIDFailResponse("Invalid response for", err, codes.Internal)
 	}
 
 	// Return valid response

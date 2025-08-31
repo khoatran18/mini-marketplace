@@ -24,80 +24,67 @@ func NewProductService(productRepo *repository.ProductRepository, logger *zap.Lo
 }
 
 // CreateProduct handle logic for Create Product gRPC request in Service
-func (s *ProductService) CreateProduct(req *dto.CreateProductInput) *dto.CreateProductOutput {
+func (s *ProductService) CreateProduct(input *dto.CreateProductInput) (*dto.CreateProductOutput, error) {
 
 	// Create product
 	var product = &model.Product{
-		Name:       req.Name,
-		Price:      req.Price,
-		Inventory:  req.Inventory,
-		SellerID:   req.SellerID,
-		Attributes: req.Attributes,
+		Name:       input.Name,
+		Price:      input.Price,
+		Inventory:  input.Inventory,
+		SellerID:   input.SellerID,
+		Attributes: input.Attributes,
 	}
 
 	// Handle in repository
 	if err := s.ProductRepo.CreateProduct(product); err != nil {
 		s.ZapLogger.Warn("ProductService: failed to create product", zap.Error(err))
-		return &dto.CreateProductOutput{
-			Message: err.Error(),
-			Success: false,
-		}
+		return nil, err
 	}
 	return &dto.CreateProductOutput{
 		Message: "Product created successfully",
 		Success: true,
-	}
+	}, nil
 }
 
 // UpdateProduct handle logic for Update Product gRPC request in Service
-func (s *ProductService) UpdateProduct(req *dto.UpdateProductInput) *dto.UpdateProductOutput {
+func (s *ProductService) UpdateProduct(input *dto.UpdateProductInput) (*dto.UpdateProductOutput, error) {
 
 	// Check if product not existed
-	oldProduct, err := s.ProductRepo.GetProductByID(req.Product.ID)
+	oldProduct, err := s.ProductRepo.GetProductByID(input.Product.ID)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get old product", zap.Error(err))
-		return &dto.UpdateProductOutput{
-			Message: err.Error(),
-			Success: false,
-		}
+		return nil, err
 	}
 
 	// Check user is owner of product
-	if oldProduct.SellerID != req.UserID {
+	if oldProduct.SellerID != input.UserID {
 		s.ZapLogger.Error("ProductService: user is not owner of product", zap.Any("old", oldProduct.SellerID))
 		return &dto.UpdateProductOutput{
 			Message: fmt.Sprintf("Seller is not owner of product"),
 			Success: false,
-		}
+		}, nil
 	}
 
 	// Parse ProductModel to Product DTO
-	productModel := mapper.ProductDTOToModel(req.Product)
+	productModel := mapper.ProductDTOToModel(input.Product)
 	if err := s.ProductRepo.UpdateProduct(productModel); err != nil {
 		s.ZapLogger.Warn("ProductService: failed to update product", zap.Error(err))
-		return &dto.UpdateProductOutput{
-			Message: err.Error(),
-			Success: false,
-		}
+		return nil, err
 	}
 	return &dto.UpdateProductOutput{
 		Message: "Product updated successfully",
 		Success: true,
-	}
+	}, nil
 }
 
 // GetProductByID handle logic for Get Product By ID gRPC request in Service
-func (s *ProductService) GetProductByID(req *dto.GetProductByIDInput) *dto.GetProductByIDOutput {
+func (s *ProductService) GetProductByID(input *dto.GetProductByIDInput) (*dto.GetProductByIDOutput, error) {
 
 	// Get product
-	product, err := s.ProductRepo.GetProductByID(req.ID)
+	product, err := s.ProductRepo.GetProductByID(input.ID)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get product", zap.Error(err))
-		return &dto.GetProductByIDOutput{
-			Message: err.Error(),
-			Success: false,
-			Product: nil,
-		}
+		return nil, err
 	}
 
 	// Parse ProductModel to ProductDTO
@@ -106,65 +93,54 @@ func (s *ProductService) GetProductByID(req *dto.GetProductByIDInput) *dto.GetPr
 		Message: fmt.Sprintf("Get product with id %v successfully", productDTO.ID),
 		Success: true,
 		Product: productDTO,
-	}
+	}, nil
 }
 
 // GetProductsBySellerID handle logic for Get Products By Seller ID gRPC request in Service
-func (s *ProductService) GetProductsBySellerID(req *dto.GetProductsBySellerIDInput) *dto.GetProductsBySellerIDOutput {
+func (s *ProductService) GetProductsBySellerID(input *dto.GetProductsBySellerIDInput) (*dto.GetProductsBySellerIDOutput, error) {
 
 	// Get products
-	products, err := s.ProductRepo.GetProductsBySellerID(req.SellerID)
+	products, err := s.ProductRepo.GetProductsBySellerID(input.SellerID)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get products", zap.Error(err))
-		return &dto.GetProductsBySellerIDOutput{
-			Message:  err.Error(),
-			Success:  false,
-			Products: nil,
-		}
+		return nil, err
 	}
 
 	// Parse ProductsModel to ProductsDTO
 	productsDTO := mapper.ProductsModelToDTO(products)
 	return &dto.GetProductsBySellerIDOutput{
-		Message:  fmt.Sprintf("Get products by sellerID %v", req.SellerID),
+		Message:  fmt.Sprintf("Get products by sellerID %v", input.SellerID),
 		Success:  true,
 		Products: productsDTO,
-	}
+	}, nil
 }
 
 // GetInventoryByID handle logic for Get Inventory By ID gRPC request in Service
-func (s *ProductService) GetInventoryByID(req *dto.GetInventoryByIDInput) *dto.GetInventoryByIDOutput {
+func (s *ProductService) GetInventoryByID(input *dto.GetInventoryByIDInput) (*dto.GetInventoryByIDOutput, error) {
 
 	// Get inventory
-	product, err := s.ProductRepo.GetProductByID(req.ID)
+	product, err := s.ProductRepo.GetProductByID(input.ID)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get product inventory", zap.Error(err))
-		return &dto.GetInventoryByIDOutput{
-			Message:   err.Error(),
-			Success:   false,
-			Inventory: 0,
-		}
+		return nil, err
 	}
 	return &dto.GetInventoryByIDOutput{
 		Message:   fmt.Sprintf("Get product with id %v successfully", product.ID),
 		Success:   true,
 		Inventory: product.Inventory,
-	}
+	}, nil
 }
 
 // GetAndDecreaseInventoryByID handle logic for Get And Decrease Inventory By ID gRPC request in Service
-func (s *ProductService) GetAndDecreaseInventoryByID(req *dto.GetAndDecreaseInventoryByIDInput) *dto.GetAndDecreaseInventoryByIDOutput {
+func (s *ProductService) GetAndDecreaseInventoryByID(input *dto.GetAndDecreaseInventoryByIDInput) (*dto.GetAndDecreaseInventoryByIDOutput, error) {
 
 	// Get and decrease inventory
-	if err := s.ProductRepo.GetAndDecreaseInventoryByID(req.ID, req.Quantity); err != nil {
+	if err := s.ProductRepo.GetAndDecreaseInventoryByID(input.ID, input.Quantity); err != nil {
 		s.ZapLogger.Warn("ProductService: failed to decrease inventory", zap.Error(err))
-		return &dto.GetAndDecreaseInventoryByIDOutput{
-			Message: err.Error(),
-			Success: false,
-		}
+		return nil, err
 	}
 	return &dto.GetAndDecreaseInventoryByIDOutput{
 		Message: "Product decreased successfully",
 		Success: true,
-	}
+	}, nil
 }

@@ -12,10 +12,3 @@ type AuthClaim struct {
 	Type       string
 	jwt.RegisteredClaims
 }
-
-type TokenRequest struct {
-	UserID     uint
-	Username   string
-	Role       string
-	PwdVersion int
-}
