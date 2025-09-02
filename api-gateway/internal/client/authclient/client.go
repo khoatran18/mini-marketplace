@@ -3,7 +3,7 @@ package authclient
 import (
 	"api-gateway/internal/client"
 	"api-gateway/pkg/dto"
-	"api-gateway/pkg/pb/auth_service"
+	"api-gateway/pkg/pb/authservice"
 	"context"
 	"errors"
 	"time"

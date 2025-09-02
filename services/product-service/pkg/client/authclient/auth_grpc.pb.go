@@ -4,7 +4,7 @@
 // - protoc             (unknown)
 // source: auth.proto
 
-package pb
+package authpb
 
 import (
 	context "context"
@@ -25,9 +25,11 @@ const (
 	AuthService_ChangePassword_FullMethodName = "/auth_service.pkb.pb.AuthService/ChangePassword"
 )
 
-// AuthServiceClient is the client API for AuthService client.
+// AuthServiceClient is the client API for AuthService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Service
 type AuthServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
@@ -83,9 +85,11 @@ func (c *authServiceClient) ChangePassword(ctx context.Context, in *ChangePasswo
 	return out, nil
 }
 
-// AuthServiceServer is the server API for AuthService client.
+// AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
+//
+// Service
 type AuthServiceServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
@@ -116,7 +120,7 @@ func (UnimplementedAuthServiceServer) ChangePassword(context.Context, *ChangePas
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
 
-// UnsafeAuthServiceServer may be embedded to opt out of forward compatibility for this client.
+// UnsafeAuthServiceServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to AuthServiceServer will
 // result in compilation errors.
 type UnsafeAuthServiceServer interface {
@@ -206,7 +210,7 @@ func _AuthService_ChangePassword_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-// AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService client.
+// AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AuthService_ServiceDesc = grpc.ServiceDesc{

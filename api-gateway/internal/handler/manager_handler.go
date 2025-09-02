@@ -3,7 +3,7 @@ package handler
 import (
 	"api-gateway/internal/client"
 	"api-gateway/internal/client/authclient"
-	"api-gateway/pkg/pb/auth_service"
+	"api-gateway/pkg/pb/authservice"
 	"log"
 
 	"go.uber.org/zap"

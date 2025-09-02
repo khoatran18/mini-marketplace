@@ -2,8 +2,10 @@ package client
 
 import (
 	"api-gateway/internal/config"
-	"api-gateway/pkg/pb/auth_service"
+	"api-gateway/pkg/pb/authservice"
+	productpb "api-gateway/pkg/pb/productservice"
 	"errors"
+	"fmt"
 	"log"
 
 	"google.golang.org/grpc"
@@ -66,8 +68,9 @@ func (cm *ClientManager) CloseAll() {
 				log.Printf("Close client client failed: %v", name)
 			}
 			log.Printf("Close client client success: %v", name)
+		} else {
+			log.Printf("Client is nil: %v", name)
 		}
-		log.Printf("Client is nil: %v", name)
 	}
 }
 
@@ -93,9 +96,38 @@ func (cm *ClientManager) GetOrCreateAuthClient() (authpb.AuthServiceClient, erro
 		return authpb.NewAuthServiceClient(conn)
 	})
 	if err != nil {
-		return nil, errors.New("AuthClient not existed but init failed")
+		return nil, fmt.Errorf("AuthClient not existed but init failed %v", err)
 	}
 
 	cm.Clients["AuthClient"] = authClient
 	return authClient.Client.(authpb.AuthServiceClient), nil
+}
+
+// GetOrCreateProductClient is responsible for getting AuthClient if existed else creating ProductClient
+func (cm *ClientManager) GetOrCreateProductClient() (productpb.ProductServiceClient, error) {
+
+	// Check if AuthClient existed
+	if cm.Clients["ProductClient"] != nil {
+		client, ok := cm.Clients["ProductClient"].Client.(productpb.ProductServiceClient)
+		if !ok {
+			return nil, errors.New("ProductClient existed but is not a client for ProductService")
+		}
+		return client, nil
+	}
+
+	// Create ProductClient
+	addr := cm.AddrConfig["ProductClientAddr"]
+	if addr == "" {
+		return nil, errors.New("ProductClientAddr (GRPCConfig) is empty")
+	}
+
+	productClient, err := NewServiceClient(addr, func(conn *grpc.ClientConn) interface{} {
+		return productpb.NewProductServiceClient(conn)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("ProductClient not existed but init failed %v", err)
+	}
+
+	cm.Clients["ProductClient"] = productClient
+	return productClient.Client.(productpb.ProductServiceClient), nil
 }

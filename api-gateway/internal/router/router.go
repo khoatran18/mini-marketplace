@@ -17,6 +17,5 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	router.POST("/auth/login", h.AuthHandler.Login)
 	router.POST("/auth/register", h.AuthHandler.Register)
 	router.POST("/auth/change-password", h.AuthHandler.ChangePassword)
-
 	router.POST("/auth/refresh-token", middleware.AuthMiddleware(serviceConfig.ZapLogger, envConfig.JWTSecret), h.AuthHandler.RefreshToken)
 }
