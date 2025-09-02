@@ -7,9 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+)
+
+const (
+	AuthClient    = "authclient"
+	ProductClient = "productclient"
 )
 
 // ServiceClient is a client gRPC connection
@@ -39,6 +45,7 @@ func (c *ServiceClient) CloseService() error {
 type ClientManager struct {
 	Clients    map[string]*ServiceClient
 	AddrConfig map[string]string
+	mu         sync.Mutex
 }
 
 // NewClientManager create all client gRPC connections
@@ -49,7 +56,6 @@ func NewClientManager() *ClientManager {
 
 	// Load config addr
 	addrCfg := config.NewGRPCAddrConfig()
-	clients["AuthClient"] = nil
 
 	// Return ClientManager
 	return &ClientManager{
@@ -77,11 +83,15 @@ func (cm *ClientManager) CloseAll() {
 // GetOrCreateAuthClient is responsible for getting AuthClient if existed else creating AuthClient
 func (cm *ClientManager) GetOrCreateAuthClient() (authpb.AuthServiceClient, error) {
 
+	// Lock to avoid multi-initialization
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	// Check if AuthClient existed
-	if cm.Clients["AuthClient"] != nil {
+	if cm.Clients[AuthClient] != nil {
 		client, ok := cm.Clients["AuthClient"].Client.(authpb.AuthServiceClient)
 		if !ok {
-			return nil, errors.New("AuthClient existed but is not a client for AuthService")
+			return nil, errors.New("AuthClient existed but is not valid")
 		}
 		return client, nil
 	}
@@ -89,7 +99,7 @@ func (cm *ClientManager) GetOrCreateAuthClient() (authpb.AuthServiceClient, erro
 	// Create AuthClient
 	addr := cm.AddrConfig["AuthClientAddr"]
 	if addr == "" {
-		return nil, errors.New("AuthClientAddr (GRPCConfig) is empty")
+		return nil, errors.New("addr for AuthClient (GRPCConfig) is empty")
 	}
 
 	authClient, err := NewServiceClient(addr, func(conn *grpc.ClientConn) interface{} {
@@ -106,8 +116,12 @@ func (cm *ClientManager) GetOrCreateAuthClient() (authpb.AuthServiceClient, erro
 // GetOrCreateProductClient is responsible for getting AuthClient if existed else creating ProductClient
 func (cm *ClientManager) GetOrCreateProductClient() (productpb.ProductServiceClient, error) {
 
+	// Lock to avoid multi-initialization
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	// Check if AuthClient existed
-	if cm.Clients["ProductClient"] != nil {
+	if cm.Clients[ProductClient] != nil {
 		client, ok := cm.Clients["ProductClient"].Client.(productpb.ProductServiceClient)
 		if !ok {
 			return nil, errors.New("ProductClient existed but is not a client for ProductService")
