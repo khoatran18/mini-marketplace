@@ -1,0 +1,34 @@
+version: v2
+inputs:
+  - directory: pkg/proto
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: pkg/pb
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: pkg/pb
+    opt: paths=source_relative
+
+  # For API Gateway
+  - remote: buf.build/protocolbuffers/go
+    out: ../../api-gateway/pkg/pb/userservice
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: ../../api-gateway/pkg/pb/userservice
+    opt: paths=source_relative
+
+  # For Auth Service
+  - remote: buf.build/protocolbuffers/go
+    out: ../auth-service/pkg/client/userclient
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: ../auth-service/pkg/client/userclient
+    opt: paths=source_relative
+#managed:
+#  enabled: true
+#  override:
+#    - file_option: go_package_prefix
+#      value: github.com/bufbuild/buf-examples/protovalidate/grpc-go/start/gen
+#  disable:
+#    - file_option: go_package
+#      module: buf.build/bufbuild/protovalidate
