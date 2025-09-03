@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"product-service/internal/repository"
 	"product-service/internal/service/adapter"
@@ -24,7 +25,7 @@ func NewProductService(productRepo *repository.ProductRepository, logger *zap.Lo
 }
 
 // CreateProduct handle logic for Create Product gRPC request in Service
-func (s *ProductService) CreateProduct(input *dto.CreateProductInput) (*dto.CreateProductOutput, error) {
+func (s *ProductService) CreateProduct(ctx context.Context, input *dto.CreateProductInput) (*dto.CreateProductOutput, error) {
 
 	// Create product
 	var product = &model.Product{
@@ -36,7 +37,7 @@ func (s *ProductService) CreateProduct(input *dto.CreateProductInput) (*dto.Crea
 	}
 
 	// Handle in repository
-	if err := s.ProductRepo.CreateProduct(product); err != nil {
+	if err := s.ProductRepo.CreateProduct(ctx, product); err != nil {
 		s.ZapLogger.Warn("ProductService: failed to create product", zap.Error(err))
 		return nil, err
 	}
@@ -47,10 +48,10 @@ func (s *ProductService) CreateProduct(input *dto.CreateProductInput) (*dto.Crea
 }
 
 // UpdateProduct handle logic for Update Product gRPC request in Service
-func (s *ProductService) UpdateProduct(input *dto.UpdateProductInput) (*dto.UpdateProductOutput, error) {
+func (s *ProductService) UpdateProduct(ctx context.Context, input *dto.UpdateProductInput) (*dto.UpdateProductOutput, error) {
 
 	// Check if product not existed
-	oldProduct, err := s.ProductRepo.GetProductByID(input.Product.ID)
+	oldProduct, err := s.ProductRepo.GetProductByID(ctx, input.Product.ID)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get old product", zap.Error(err))
 		return nil, err
@@ -67,7 +68,7 @@ func (s *ProductService) UpdateProduct(input *dto.UpdateProductInput) (*dto.Upda
 
 	// Parse ProductModel to Product DTO
 	productModel := adapter.ProductDTOToModel(input.Product)
-	if err := s.ProductRepo.UpdateProduct(productModel); err != nil {
+	if err := s.ProductRepo.UpdateProduct(ctx, productModel); err != nil {
 		s.ZapLogger.Warn("ProductService: failed to update product", zap.Error(err))
 		return nil, err
 	}
@@ -78,10 +79,10 @@ func (s *ProductService) UpdateProduct(input *dto.UpdateProductInput) (*dto.Upda
 }
 
 // GetProductByID handle logic for Get Product By ID gRPC request in Service
-func (s *ProductService) GetProductByID(input *dto.GetProductByIDInput) (*dto.GetProductByIDOutput, error) {
+func (s *ProductService) GetProductByID(ctx context.Context, input *dto.GetProductByIDInput) (*dto.GetProductByIDOutput, error) {
 
 	// Get product
-	product, err := s.ProductRepo.GetProductByID(input.ID)
+	product, err := s.ProductRepo.GetProductByID(ctx, input.ID)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get product", zap.Error(err))
 		return nil, err
@@ -97,10 +98,10 @@ func (s *ProductService) GetProductByID(input *dto.GetProductByIDInput) (*dto.Ge
 }
 
 // GetProductsBySellerID handle logic for Get Products By Seller ID gRPC request in Service
-func (s *ProductService) GetProductsBySellerID(input *dto.GetProductsBySellerIDInput) (*dto.GetProductsBySellerIDOutput, error) {
+func (s *ProductService) GetProductsBySellerID(ctx context.Context, input *dto.GetProductsBySellerIDInput) (*dto.GetProductsBySellerIDOutput, error) {
 
 	// Get products
-	products, err := s.ProductRepo.GetProductsBySellerID(input.SellerID)
+	products, err := s.ProductRepo.GetProductsBySellerID(ctx, input.SellerID)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get products", zap.Error(err))
 		return nil, err
@@ -116,10 +117,10 @@ func (s *ProductService) GetProductsBySellerID(input *dto.GetProductsBySellerIDI
 }
 
 // GetInventoryByID handle logic for Get Inventory By ID gRPC request in Service
-func (s *ProductService) GetInventoryByID(input *dto.GetInventoryByIDInput) (*dto.GetInventoryByIDOutput, error) {
+func (s *ProductService) GetInventoryByID(ctx context.Context, input *dto.GetInventoryByIDInput) (*dto.GetInventoryByIDOutput, error) {
 
 	// Get inventory
-	product, err := s.ProductRepo.GetProductByID(input.ID)
+	product, err := s.ProductRepo.GetProductByID(ctx, input.ID)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get product inventory", zap.Error(err))
 		return nil, err
@@ -132,10 +133,10 @@ func (s *ProductService) GetInventoryByID(input *dto.GetInventoryByIDInput) (*dt
 }
 
 // GetAndDecreaseInventoryByID handle logic for Get And Decrease Inventory By ID gRPC request in Service
-func (s *ProductService) GetAndDecreaseInventoryByID(input *dto.GetAndDecreaseInventoryByIDInput) (*dto.GetAndDecreaseInventoryByIDOutput, error) {
+func (s *ProductService) GetAndDecreaseInventoryByID(ctx context.Context, input *dto.GetAndDecreaseInventoryByIDInput) (*dto.GetAndDecreaseInventoryByIDOutput, error) {
 
 	// Get and decrease inventory
-	if err := s.ProductRepo.GetAndDecreaseInventoryByID(input.ID, input.Quantity); err != nil {
+	if err := s.ProductRepo.GetAndDecreaseInventoryByID(ctx, input.ID, input.Quantity); err != nil {
 		s.ZapLogger.Warn("ProductService: failed to decrease inventory", zap.Error(err))
 		return nil, err
 	}

@@ -2,8 +2,10 @@ package service
 
 import (
 	"auth-service/internal/repository"
+	"auth-service/internal/service/adapter"
 	"auth-service/pkg/dto"
 	"auth-service/pkg/model"
+	"context"
 	"errors"
 	"time"
 
@@ -31,10 +33,10 @@ func NewAuthService(accountRepo *repository.AccountRepository, jwtSecret string,
 }
 
 // Register handle logic register
-func (s *AuthService) Register(input *dto.RegisterInput) (*dto.RegisterOutput, error) {
+func (s *AuthService) Register(ctx context.Context, input *dto.RegisterInput) (*dto.RegisterOutput, error) {
 
 	// Check account existed
-	existingAccount, err := s.AccountRepo.GetAccountByUsernameRole(input.Username, input.Role)
+	existingAccount, err := s.AccountRepo.GetAccountByUsernameRole(ctx, input.Username, input.Role)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		s.ZapLogger.Error("AuthService: DB error", zap.Error(err))
 		return nil, err
@@ -58,7 +60,7 @@ func (s *AuthService) Register(input *dto.RegisterInput) (*dto.RegisterOutput, e
 	}
 
 	// Create new account in repository
-	err = s.AccountRepo.CreateAccount(newAccount)
+	err = s.AccountRepo.CreateAccount(ctx, newAccount)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: failed to create account", zap.Error(err))
 		return nil, err
@@ -71,10 +73,10 @@ func (s *AuthService) Register(input *dto.RegisterInput) (*dto.RegisterOutput, e
 }
 
 // Login handle logic login
-func (s *AuthService) Login(req *dto.LoginInput) (*dto.LoginOutput, error) {
+func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.LoginOutput, error) {
 
 	// Check account existed
-	account, err := s.AccountRepo.GetAccountByUsernameRole(req.Username, req.Role)
+	account, err := s.AccountRepo.GetAccountByUsernameRole(ctx, req.Username, req.Role)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		s.ZapLogger.Warn("AuthService: account not found", zap.String("username", req.Username))
 		return nil, errors.New("username or password is incorrect")
@@ -91,7 +93,7 @@ func (s *AuthService) Login(req *dto.LoginInput) (*dto.LoginOutput, error) {
 	}
 
 	// Create token
-	tokenRequest := AccountModelToTokenRequest(account)
+	tokenRequest := adapter.AccountModelToTokenRequest(account)
 	signedAccessToken, signedRefreshToken, err := s.generateToken(tokenRequest)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: token generation failure")

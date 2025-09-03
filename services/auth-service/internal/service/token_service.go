@@ -3,6 +3,7 @@ package service
 import (
 	"auth-service/pkg/dto"
 	"auth-service/pkg/model"
+	"context"
 	"fmt"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 )
 
 // generateToken generate token from password
-func (s *AuthService) generateToken(tokenRequest *dto.TokenRequest) (string, string, error) {
+func (s *AuthService) generateToken(ctx context.Context, tokenRequest *dto.TokenRequest) (string, string, error) {
 	// Create claims
 	accessClaims := &model.AuthClaim{
 		UserID:   tokenRequest.UserID,
@@ -83,7 +84,7 @@ func (s *AuthService) parseToken(signedToken string) (*model.AuthClaim, error) {
 }
 
 // RefreshToken refresh new token
-func (s *AuthService) RefreshToken(input *dto.RefreshTokenInput) (*dto.RefreshTokenOutput, error) {
+func (s *AuthService) RefreshToken(ctx context.Context, input *dto.RefreshTokenInput) (*dto.RefreshTokenOutput, error) {
 
 	// Parse and validate token
 	authClaim, err := s.parseToken(input.RefreshToken)
@@ -102,7 +103,7 @@ func (s *AuthService) RefreshToken(input *dto.RefreshTokenInput) (*dto.RefreshTo
 	}
 
 	// Create and sign new token
-	signedAccessToken, signedRefreshToken, err := s.generateToken(tokenRequest)
+	signedAccessToken, signedRefreshToken, err := s.generateToken(ctx, tokenRequest)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: token generation failure")
 		return nil, err

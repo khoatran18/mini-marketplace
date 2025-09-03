@@ -32,7 +32,7 @@ func (s *ProductServer) CreateProduct(ctx context.Context, req *productpb.Create
 	}
 
 	// Get ServiceOutput
-	output, err := s.ProductService.CreateProduct(input)
+	output, err := s.ProductService.CreateProduct(ctx, input)
 	if err != nil {
 		s.ZapLogger.Warn("ProductServer: CreateProduct error in ProductService", zap.Error(err))
 		return CreProFailResponse("CreateProduct error in ProductService", err, codes.Internal)
@@ -68,7 +68,7 @@ func (s *ProductServer) UpdateProduct(ctx context.Context, req *productpb.Update
 	}
 
 	// Get ServiceOutput
-	output, err := s.ProductService.UpdateProduct(input)
+	output, err := s.ProductService.UpdateProduct(ctx, input)
 	if err != nil {
 		s.ZapLogger.Warn("ProductServer: UpdateProduct error in ProductService", zap.Error(err))
 		return UpdProFailResponse("UpdateProduct error in ProductService", err, codes.Internal)
@@ -104,7 +104,7 @@ func (s *ProductServer) GetProductByID(ctx context.Context, req *productpb.GetPr
 	}
 
 	// Get ServiceOutput
-	output, err := s.ProductService.GetProductByID(input)
+	output, err := s.ProductService.GetProductByID(ctx, input)
 	if err != nil {
 		s.ZapLogger.Warn("ProductServer: GetProByID error in ProductService", zap.Error(err))
 		return GetProByIDFailResponse("GetProByID error in ProductService", err, codes.Internal)
@@ -140,7 +140,7 @@ func (s *ProductServer) GetProductsBySellerID(ctx context.Context, req *productp
 	}
 
 	// Get ServiceOutput
-	output, err := s.ProductService.GetProductsBySellerID(input)
+	output, err := s.ProductService.GetProductsBySellerID(ctx, input)
 	if err != nil {
 		s.ZapLogger.Warn("ProductServer: GetProsBySelID error in ProductService", zap.Error(err))
 		return GetProsBySelIDFailResponse("GetProsBySelID error in ProductService", err, codes.Internal)
@@ -176,7 +176,7 @@ func (s *ProductServer) GetInventoryByID(ctx context.Context, req *productpb.Get
 	}
 
 	// Get ServiceOutput
-	output, err := s.ProductService.GetInventoryByID(input)
+	output, err := s.ProductService.GetInventoryByID(ctx, input)
 	if err != nil {
 		s.ZapLogger.Warn("ProductServer: GetInvByID error in ProductService", zap.Error(err))
 		return GetInvByIDFailResponse("GetInvByID error in ProductService", err, codes.Internal)
@@ -212,7 +212,7 @@ func (s *ProductServer) GetAndDecreaseInventoryByID(ctx context.Context, req *pr
 	}
 
 	// Get ServiceOutput
-	output, err := s.ProductService.GetAndDecreaseInventoryByID(input)
+	output, err := s.ProductService.GetAndDecreaseInventoryByID(ctx, input)
 	if err != nil {
 		s.ZapLogger.Warn("ProductServer: GetAndDecInvByID error in ProductService", zap.Error(err))
 		return GetAndDecInvByIDFailResponse("GetAndDecInvByID error in ProductService", err, codes.Internal)

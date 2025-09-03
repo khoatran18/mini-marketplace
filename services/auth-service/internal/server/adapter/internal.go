@@ -1,4 +1,4 @@
-package server
+package adapter
 
 import (
 	"auth-service/pkg/dto"

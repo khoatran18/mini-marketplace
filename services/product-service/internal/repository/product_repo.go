@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"product-service/pkg/model"
 
@@ -19,13 +20,13 @@ func NewProductRepository(db *gorm.DB) *ProductRepository {
 }
 
 // CreateProduct create new product
-func (r *ProductRepository) CreateProduct(product *model.Product) error {
-	return r.DB.Create(product).Error
+func (r *ProductRepository) CreateProduct(ctx context.Context, product *model.Product) error {
+	return r.DB.WithContext(ctx).Create(product).Error
 }
 
 // UpdateProduct update product
-func (r *ProductRepository) UpdateProduct(product *model.Product) error {
-	result := r.DB.Model(&model.Product{}).Where("id = ?", product.ID).Updates(product)
+func (r *ProductRepository) UpdateProduct(ctx context.Context, product *model.Product) error {
+	result := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", product.ID).Updates(product)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -36,36 +37,36 @@ func (r *ProductRepository) UpdateProduct(product *model.Product) error {
 }
 
 // GetProductByID get product by ProductID
-func (r *ProductRepository) GetProductByID(productID uint64) (*model.Product, error) {
+func (r *ProductRepository) GetProductByID(ctx context.Context, productID uint64) (*model.Product, error) {
 	var product model.Product
-	if err := r.DB.Model(&model.Product{}).Where("id = ?", productID).First(&product).Error; err != nil {
+	if err := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", productID).First(&product).Error; err != nil {
 		return nil, err
 	}
 	return &product, nil
 }
 
 // GetInventoryByID get inventory by ProductID
-func (r *ProductRepository) GetInventoryByID(productID uint64) (int64, error) {
+func (r *ProductRepository) GetInventoryByID(ctx context.Context, productID uint64) (int64, error) {
 	var product model.Product
-	if err := r.DB.Model(&model.Product{}).Where("id = ?", productID).First(&product).Error; err != nil {
+	if err := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", productID).First(&product).Error; err != nil {
 		return 0, err
 	}
 	return product.Inventory, nil
 }
 
 // GetSellerIDByID get SellerID by ProductID
-func (r *ProductRepository) GetSellerIDByID(productID uint64) (uint64, error) {
+func (r *ProductRepository) GetSellerIDByID(ctx context.Context, productID uint64) (uint64, error) {
 	var product model.Product
-	if err := r.DB.Model(&model.Product{}).Where("id = ?", productID).First(&product).Error; err != nil {
+	if err := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", productID).First(&product).Error; err != nil {
 		return 0, err
 	}
 	return product.SellerID, nil
 }
 
 // GetAndDecreaseInventoryByID get and decrease inventory by ProductID (atomic)
-func (r *ProductRepository) GetAndDecreaseInventoryByID(id uint64, quantity int64) error {
+func (r *ProductRepository) GetAndDecreaseInventoryByID(ctx context.Context, id uint64, quantity int64) error {
 	// Use dto.Product to use atomic transaction: get and delete inventory
-	result := r.DB.Model(&model.Product{}).Where("id = ? AND inventory >= ?", id, quantity).UpdateColumn("inventory", gorm.Expr("inventory - ?", quantity))
+	result := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ? AND inventory >= ?", id, quantity).UpdateColumn("inventory", gorm.Expr("inventory - ?", quantity))
 	if result.Error != nil {
 		return result.Error
 	}
@@ -76,9 +77,9 @@ func (r *ProductRepository) GetAndDecreaseInventoryByID(id uint64, quantity int6
 }
 
 // GetProductsBySellerID get product array by SellerID
-func (r *ProductRepository) GetProductsBySellerID(sellerID uint64) ([]*model.Product, error) {
+func (r *ProductRepository) GetProductsBySellerID(ctx context.Context, sellerID uint64) ([]*model.Product, error) {
 	var products []*model.Product
-	if err := r.DB.Where("seller_id = ?", sellerID).Find(&products).Error; err != nil {
+	if err := r.DB.WithContext(ctx).Where("seller_id = ?", sellerID).Find(&products).Error; err != nil {
 		return nil, err
 	}
 	return products, nil

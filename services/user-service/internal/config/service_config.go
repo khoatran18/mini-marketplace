@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"user-service/pkg/model"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -75,7 +76,9 @@ func InitPostgresDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate()
+	db.AutoMigrate(&model.Seller{}, &model.Buyer{})
+
+	fmt.Println("Init Postgres DB successfully!")
 
 	return db, nil
 }

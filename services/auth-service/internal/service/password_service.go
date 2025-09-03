@@ -2,15 +2,16 @@ package service
 
 import (
 	"auth-service/pkg/dto"
+	"context"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 // ChangePassword update new password
-func (s *AuthService) ChangePassword(req *dto.ChangePasswordInput) (*dto.ChangePasswordOutput, error) {
+func (s *AuthService) ChangePassword(ctx context.Context, req *dto.ChangePasswordInput) (*dto.ChangePasswordOutput, error) {
 
 	// Get account
-	acc, err := s.AccountRepo.GetAccountByUsernameRole(req.Username, req.Role)
+	acc, err := s.AccountRepo.GetAccountByUsernameRole(ctx, req.Username, req.Role)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: get account by username role failure")
 		return nil, err
@@ -31,7 +32,7 @@ func (s *AuthService) ChangePassword(req *dto.ChangePasswordInput) (*dto.ChangeP
 	}
 	newPassword := string(hashedNewPassword)
 	newPwdVersion := (acc.PwdVersion + 1) % 100
-	err = s.AccountRepo.UpdatePassword(acc, newPassword, newPwdVersion)
+	err = s.AccountRepo.UpdatePassword(ctx, acc, newPassword, newPwdVersion)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: update account failure")
 		return nil, err
