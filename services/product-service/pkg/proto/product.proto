@@ -32,7 +32,7 @@ message CreateProductResponse {
 // UpdateProduct
 message UpdateProductRequest {
   Product Product = 1;
-  uint64 user_id= 2;
+  uint64 user_id = 2;
 }
 message UpdateProductResponse {
   string message = 1;
@@ -41,13 +41,22 @@ message UpdateProductResponse {
 
 // GetProductByID
 message GetProductByIDRequest {
-  uint64 user_id = 1; // only owner of product can view it
   uint64 id = 2;
 }
 message GetProductByIDResponse {
   string message = 1;
   bool success = 2;
   Product product = 3;
+}
+
+// GetProductsByID
+message GetProductsByIDRequest {
+  repeated uint64 id = 2;
+}
+message GetProductsByIDResponse {
+  string message = 1;
+  bool success = 2;
+  repeated Product product = 3;
 }
 
 // GetProductsBySellerID
@@ -87,6 +96,7 @@ service ProductService {
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
   rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
   rpc GetProductByID(GetProductByIDRequest) returns (GetProductByIDResponse);
+  rpc GetProductsByID(GetProductsByIDRequest) returns (GetProductsByIDResponse);
   rpc GetProductsBySellerID(GetProductsBySellerIDRequest) returns (GetProductsBySellerIDResponse);
   rpc GetInventoryByID(GetInventoryByIDRequest) returns (GetInventoryByIDResponse);
   rpc GetAndDecreaseInventoryByID(GetAndDecreaseInventoryByIDRequest) returns (GetAndDecreaseInventoryByIDResponse);

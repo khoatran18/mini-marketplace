@@ -21,19 +21,27 @@ func UpdProFailResponse(message string, err error, code codes.Code) (*productpb.
 	}, status.Error(code, err.Error())
 }
 
-func GetProsBySelIDFailResponse(message string, err error, code codes.Code) (*productpb.GetProductsBySellerIDResponse, error) {
-	return &productpb.GetProductsBySellerIDResponse{
-		Message:  message,
-		Success:  false,
-		Products: nil,
-	}, status.Error(code, err.Error())
-}
-
 func GetProByIDFailResponse(message string, err error, code codes.Code) (*productpb.GetProductByIDResponse, error) {
 	return &productpb.GetProductByIDResponse{
 		Message: message,
 		Success: false,
 		Product: nil,
+	}, status.Error(code, err.Error())
+}
+
+func GetProsByIDFailResponse(message string, err error, code codes.Code) (*productpb.GetProductsByIDResponse, error) {
+	return &productpb.GetProductsByIDResponse{
+		Message: message,
+		Success: false,
+		Product: nil,
+	}, status.Error(code, err.Error())
+}
+
+func GetProsBySelIDFailResponse(message string, err error, code codes.Code) (*productpb.GetProductsBySellerIDResponse, error) {
+	return &productpb.GetProductsBySellerIDResponse{
+		Message:  message,
+		Success:  false,
+		Products: nil,
 	}, status.Error(code, err.Error())
 }
 

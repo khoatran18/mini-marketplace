@@ -125,6 +125,42 @@ func (s *ProductServer) GetProductByID(ctx context.Context, req *productpb.GetPr
 	return res, nil
 }
 
+// GetProductsByID handle logic for Get Product By ID gRPC request in Server
+func (s *ProductServer) GetProductsByID(ctx context.Context, req *productpb.GetProductsByIDRequest) (*productpb.GetProductsByIDResponse, error) {
+
+	// Validate ServerRequest and parse to ServiceInput
+	if err := protovalidate.Validate(req); err != nil {
+		s.ZapLogger.Warn("ProductServer: invalid request for GetProsByID", zap.Error(err))
+		return GetProsByIDFailResponse("Invalid request for GetProsByID", err, codes.InvalidArgument)
+	}
+	input, err := adapter.GetProsByIDRequestToInput(req)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: parse GetProsByID request to input error", zap.Error(err))
+		return GetProsByIDFailResponse("Parse GetProsByID request to input error", err, codes.InvalidArgument)
+	}
+
+	// Get ServiceOutput
+	output, err := s.ProductService.GetProductsByID(ctx, input)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: GetProsByID error in ProductService", zap.Error(err))
+		return GetProsByIDFailResponse("GetProsByID error in ProductService", err, codes.Internal)
+	}
+
+	// Parse ServiceOutput to ServerResponse and validate
+	res, err := adapter.GetProsByIDOutputToResponse(output)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: parse GetProsByID output to response error", zap.Error(err))
+		return GetProsByIDFailResponse("Parse GetProsByID output to response error", err, codes.Unknown)
+	}
+	if err := protovalidate.Validate(res); err != nil {
+		s.ZapLogger.Warn("ProductServer: invalid response for GetProsByID", zap.Error(err))
+		return GetProsByIDFailResponse("Invalid response for GetProsByID", err, codes.Internal)
+	}
+
+	// Return valid response
+	return res, nil
+}
+
 // GetProductsBySellerID handle logic for Get Products By Seller ID gRPC request in Server
 func (s *ProductServer) GetProductsBySellerID(ctx context.Context, req *productpb.GetProductsBySellerIDRequest) (*productpb.GetProductsBySellerIDResponse, error) {
 

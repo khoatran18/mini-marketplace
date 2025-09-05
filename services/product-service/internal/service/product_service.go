@@ -97,6 +97,25 @@ func (s *ProductService) GetProductByID(ctx context.Context, input *dto.GetProdu
 	}, nil
 }
 
+// GetProductsByID handle logic for Get Products By ID gRPC request in Service
+func (s *ProductService) GetProductsByID(ctx context.Context, input *dto.GetProductsByIDInput) (*dto.GetProductsByIDOutput, error) {
+
+	// Get product
+	products, err := s.ProductRepo.GetProductsByID(ctx, input.IDs)
+	if err != nil {
+		s.ZapLogger.Warn("ProductService: failed to get products", zap.Error(err))
+		return nil, err
+	}
+
+	// Parse ProductModel to ProductDTO
+	productsDTO := adapter.ProductsModelToDTO(products)
+	return &dto.GetProductsByIDOutput{
+		Message:  "Get products by ID successfully",
+		Success:  true,
+		Products: productsDTO,
+	}, nil
+}
+
 // GetProductsBySellerID handle logic for Get Products By Seller ID gRPC request in Service
 func (s *ProductService) GetProductsBySellerID(ctx context.Context, input *dto.GetProductsBySellerIDInput) (*dto.GetProductsBySellerIDOutput, error) {
 

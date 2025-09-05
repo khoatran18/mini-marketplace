@@ -16,6 +16,7 @@ type Order struct {
 
 type OrderItem struct {
 	ID        uint64
+	Name      string
 	OrderID   uint64
 	ProductID int
 	Quantity  int

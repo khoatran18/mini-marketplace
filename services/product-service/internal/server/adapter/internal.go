@@ -117,8 +117,7 @@ func UpdProOutputToResponse(output *dto.UpdateProductOutput) (*productpb.UpdateP
 
 func GetProByIDRequestToInput(req *productpb.GetProductByIDRequest) (*dto.GetProductByIDInput, error) {
 	return &dto.GetProductByIDInput{
-		SellerID: req.GetUserId(),
-		ID:       req.GetId(),
+		ID: req.GetId(),
 	}, nil
 }
 func GetProByIDOutputToResponse(output *dto.GetProductByIDOutput) (*productpb.GetProductByIDResponse, error) {
@@ -130,6 +129,23 @@ func GetProByIDOutputToResponse(output *dto.GetProductByIDOutput) (*productpb.Ge
 		Message: output.Message,
 		Success: output.Success,
 		Product: product,
+	}, nil
+}
+
+func GetProsByIDRequestToInput(req *productpb.GetProductsByIDRequest) (*dto.GetProductsByIDInput, error) {
+	return &dto.GetProductsByIDInput{
+		IDs: req.GetId(),
+	}, nil
+}
+func GetProsByIDOutputToResponse(output *dto.GetProductsByIDOutput) (*productpb.GetProductsByIDResponse, error) {
+	products, err := ProductsDTOToProto(output.Products)
+	if err != nil {
+		return nil, err
+	}
+	return &productpb.GetProductsByIDResponse{
+		Message: output.Message,
+		Success: output.Success,
+		Product: products,
 	}, nil
 }
 

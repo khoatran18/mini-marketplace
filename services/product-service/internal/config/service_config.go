@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"product-service/pkg/model"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type ServiceConfig struct {
@@ -70,12 +72,14 @@ func InitPostgresDB() (*gorm.DB, error) {
 		return nil, errors.New("POSTGRES_DSN env variable not set")
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	db.AutoMigrate()
+	db.AutoMigrate(&model.Product{})
 
 	return db, nil
 }

@@ -39,13 +39,23 @@ type UpdateProductOutput struct {
 // GetProductByID
 
 type GetProductByIDInput struct {
-	SellerID uint64
-	ID       uint64
+	ID uint64
 }
 type GetProductByIDOutput struct {
 	Message string
 	Success bool
 	Product *Product
+}
+
+// GetProductsByID
+
+type GetProductsByIDInput struct {
+	IDs []uint64
+}
+type GetProductsByIDOutput struct {
+	Message  string
+	Success  bool
+	Products []*Product
 }
 
 // GetProductsBySellerID

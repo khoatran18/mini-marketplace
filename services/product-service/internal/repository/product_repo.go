@@ -45,6 +45,18 @@ func (r *ProductRepository) GetProductByID(ctx context.Context, productID uint64
 	return &product, nil
 }
 
+// GetProductsByID get product by ProductID
+func (r *ProductRepository) GetProductsByID(ctx context.Context, productIDs []uint64) ([]*model.Product, error) {
+	var products []*model.Product
+	if len(productIDs) == 0 {
+		return []*model.Product{}, nil
+	}
+	if err := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id IN ?", productIDs).Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
 // GetInventoryByID get inventory by ProductID
 func (r *ProductRepository) GetInventoryByID(ctx context.Context, productID uint64) (int64, error) {
 	var product model.Product
