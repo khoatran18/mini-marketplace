@@ -6,7 +6,7 @@ import (
 
 type Order struct {
 	ID         uint64
-	BuyerID    int
+	BuyerID    uint64
 	Status     string
 	TotalPrice int
 	OrderItems []*OrderItem

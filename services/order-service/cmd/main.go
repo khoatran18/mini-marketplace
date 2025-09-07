@@ -1,1 +1,52 @@
 package main
+
+import (
+	"fmt"
+	"log"
+	"net"
+	"order-service/internal/client/clientmanager"
+	"order-service/internal/client/serviceclientmanager"
+	"order-service/internal/config"
+	"order-service/internal/repository"
+	"order-service/internal/service"
+
+	"github.com/lpernett/godotenv"
+	"google.golang.org/grpc"
+)
+
+func main() {
+	godotenv.Load(".env")
+
+	serviceConfig, err := config.NewServiceConfig()
+	if err != nil {
+		log.Fatal("Error NewServiceConfig", err.Error())
+	}
+
+	_, err = config.NewEnvConfig()
+	if err != nil {
+		log.Fatal("Error NewEnvConfig", err.Error())
+	}
+
+	// err = serviceConfig.PostgresDB.AutoMigrate(&dto.Product{})
+	if err != nil {
+		log.Fatalf("Can not migrate database: %v", err)
+	} else {
+		fmt.Println("Migration successfully!")
+	}
+
+	grpcClientManager := clientmanager.NewClientManager()
+	defer grpcClientManager.CloseAll()
+
+	scm := serviceclientmanager.NewServiceClientManager(grpcClientManager, serviceConfig.ZapLogger)
+
+	orderRepo := repository.NewOrderRepository(serviceConfig.PostgresDB)
+	orderService := service.NewOrderService(orderRepo, serviceConfig.ZapLogger, scm)
+
+	lis, err := net.Listen("tcp", ":50053")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	s := grpc.NewServer()
+	orderpb
+}

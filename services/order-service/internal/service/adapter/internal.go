@@ -81,7 +81,6 @@ func OrderItemModelToDTO(orderItem *model.OrderItem, name string) *dto.OrderItem
 
 func OrderItemsModelToDTO(orderItems []*model.OrderItem, mapName map[uint64]string) []*dto.OrderItem {
 	var orderItemDTOs []*dto.OrderItem
-
 	for _, orderItem := range orderItems {
 		orderItem := OrderItemModelToDTO(orderItem, mapName[orderItem.ID])
 		orderItemDTOs = append(orderItemDTOs, orderItem)
@@ -105,12 +104,22 @@ func MapOrderItemIDToName(products []*productclient.ProductDTOClient) map[uint64
 	return orderItemMap
 }
 
-func FilterOrderItemIDs(orders []*model.Order) []uint64 {
+func FilterItemIDsByOrder(orders []*model.Order) []uint64 {
 	idsMap := map[uint64]struct{}{}
 	for _, order := range orders {
 		for _, orderItem := range order.OrderItems {
 			idsMap[orderItem.ID] = struct{}{}
 		}
+	}
+	ids := slices.Collect(maps.Keys(idsMap))
+	slices.Sort(ids)
+	return ids
+}
+
+func FilterItemIDsByItems(orderItems []*model.OrderItem) []uint64 {
+	idsMap := map[uint64]struct{}{}
+	for _, order := range orderItems {
+		idsMap[order.ID] = struct{}{}
 	}
 	ids := slices.Collect(maps.Keys(idsMap))
 	slices.Sort(ids)

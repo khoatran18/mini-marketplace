@@ -3,7 +3,102 @@ syntax = "proto3";
 package order_service.pkg.pb;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
 
 
 option go_package = "order-service/orderpb";
 
+message Order {
+  uint64 id = 1;
+  uint64 buyer_id = 2;
+  string status = 3;
+  int64 total_price = 4;
+  repeated OrderItem order_item = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message OrderItem {
+  uint64 ID = 1;
+  string name = 2;
+  uint64 order_id = 3;
+  uint64 product_id = 4;
+  int64 quantity = 5;
+  double price = 6;
+  string status = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+
+message CreateOrderRequest {
+  Order order = 1;
+}
+message CreateOrderResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+message GetOrderByIDWithItemsRequest {
+  uint64 id = 1;
+}
+message GetOrderByIDWithItemsResponse {
+  string message = 1;
+  bool success = 2;
+  Order order = 3;
+}
+
+message GetOrderByIDOnlyRequest {
+  uint64 id = 1;
+}
+message GetOrderByIDOnlyResponse {
+  string message = 1;
+  bool success = 2;
+  Order order = 3;
+}
+
+message GetOrdersByBuyerIDStatusRequest {
+  uint64 buyer_id = 1;
+  string status = 2;
+}
+message GetOrdersByBuyerIDStatusResponse {
+  string message = 1;
+  bool success = 2;
+  repeated Order order = 3;
+}
+
+message GetOrderItemsByOrderIDRequest {
+  uint64 order_id = 1;
+}
+message GetOrderItemsByOrderIDResponse {
+  string message = 1;
+  bool success = 2;
+  repeated OrderItem order_item = 3;
+}
+
+message UpdateOrderByIDRequest {
+  repeated OrderItem order_item = 1;
+}
+message UpdateOrderByIDResponse {
+  string massage = 1;
+  bool success = 2;
+}
+
+message CancelOrderByIDRequest {
+  uint64 id = 1;
+}
+message CancelOrderByIDResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+
+service OrderService {
+  rpc CreateOrder (CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrderByIDWithItems(GetOrderByIDWithItemsRequest) returns (GetOrderByIDWithItemsResponse);
+  rpc GetOrderByIDOnly (GetOrderByIDOnlyRequest) returns (GetOrderByIDOnlyResponse);
+  rpc GetOrdersByBuyerIDStatus (GetOrdersByBuyerIDStatusRequest) returns (GetOrdersByBuyerIDStatusResponse);
+  rpc GetOrderItemsByOrderID (GetOrderItemsByOrderIDRequest) returns (GetOrderItemsByOrderIDResponse);
+  rpc UpdateOrderByID (UpdateOrderByIDRequest) returns (UpdateOrderByIDResponse);
+  rpc CancelOrderByID (CancelOrderByIDRequest) returns (CancelOrderByIDResponse);
+}

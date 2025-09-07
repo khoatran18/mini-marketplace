@@ -94,7 +94,7 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.Logi
 
 	// Create token
 	tokenRequest := adapter.AccountModelToTokenRequest(account)
-	signedAccessToken, signedRefreshToken, err := s.generateToken(tokenRequest)
+	signedAccessToken, signedRefreshToken, err := s.generateToken(ctx, tokenRequest)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: token generation failure")
 		return nil, err

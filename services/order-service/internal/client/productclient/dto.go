@@ -7,3 +7,13 @@ type ProductDTOClient struct {
 	SellerID  uint64
 	Inventory int64
 }
+
+type GetProductsByIDInput struct {
+	IDs []uint64
+}
+
+type GetProductsByIDOutput struct {
+	Products []*ProductDTOClient
+	Message  string
+	Success  bool
+}

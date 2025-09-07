@@ -6,7 +6,7 @@ import (
 
 type Order struct {
 	ID         uint64       `gorm:"primaryKey;AutoIncrement"`
-	BuyerID    int          `gorm:"not null;index:order_index"`
+	BuyerID    uint64       `gorm:"not null;index:order_index"`
 	Status     string       `gorm:"not null;default:'PENDING';index:order_index"` // PENDING, ACTIVE (valid inventory), CANCELED, COMPLETED
 	TotalPrice int          `gorm:"not null;default:0"`
 	OrderItems []*OrderItem `gorm:"foreignKey:OrderID"` // 1 to many (in SQL, references often in child table)
