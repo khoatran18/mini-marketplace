@@ -8,10 +8,13 @@ import (
 	"order-service/internal/client/serviceclientmanager"
 	"order-service/internal/config"
 	"order-service/internal/repository"
+	"order-service/internal/server"
 	"order-service/internal/service"
+	orderpb "order-service/pkg/pb"
 
 	"github.com/lpernett/godotenv"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -48,5 +51,16 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	orderpb
+	orderpb.RegisterOrderServiceServer(s, &server.OrderServer{
+		OrderService: orderService,
+		ZapLogger:    serviceConfig.ZapLogger,
+	})
+
+	log.Printf("Order Server Listen at %v", lis.Addr())
+
+	reflection.Register(s)
+
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
 }

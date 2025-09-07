@@ -20,8 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	OrderService_CreateOrder_FullMethodName              = "/order_service.pkg.pb.OrderService/CreateOrder"
-	OrderService_GetOrderByIDWithItems_FullMethodName    = "/order_service.pkg.pb.OrderService/GetOrderByIDWithItems"
-	OrderService_GetOrderByIDOnly_FullMethodName         = "/order_service.pkg.pb.OrderService/GetOrderByIDOnly"
+	OrderService_GetOrderByID_FullMethodName             = "/order_service.pkg.pb.OrderService/GetOrderByID"
 	OrderService_GetOrdersByBuyerIDStatus_FullMethodName = "/order_service.pkg.pb.OrderService/GetOrdersByBuyerIDStatus"
 	OrderService_GetOrderItemsByOrderID_FullMethodName   = "/order_service.pkg.pb.OrderService/GetOrderItemsByOrderID"
 	OrderService_UpdateOrderByID_FullMethodName          = "/order_service.pkg.pb.OrderService/UpdateOrderByID"
@@ -33,8 +32,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OrderServiceClient interface {
 	CreateOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error)
-	GetOrderByIDWithItems(ctx context.Context, in *GetOrderByIDWithItemsRequest, opts ...grpc.CallOption) (*GetOrderByIDWithItemsResponse, error)
-	GetOrderByIDOnly(ctx context.Context, in *GetOrderByIDOnlyRequest, opts ...grpc.CallOption) (*GetOrderByIDOnlyResponse, error)
+	GetOrderByID(ctx context.Context, in *GetOrderByIDRequest, opts ...grpc.CallOption) (*GetOrderByIDResponse, error)
 	GetOrdersByBuyerIDStatus(ctx context.Context, in *GetOrdersByBuyerIDStatusRequest, opts ...grpc.CallOption) (*GetOrdersByBuyerIDStatusResponse, error)
 	GetOrderItemsByOrderID(ctx context.Context, in *GetOrderItemsByOrderIDRequest, opts ...grpc.CallOption) (*GetOrderItemsByOrderIDResponse, error)
 	UpdateOrderByID(ctx context.Context, in *UpdateOrderByIDRequest, opts ...grpc.CallOption) (*UpdateOrderByIDResponse, error)
@@ -59,20 +57,10 @@ func (c *orderServiceClient) CreateOrder(ctx context.Context, in *CreateOrderReq
 	return out, nil
 }
 
-func (c *orderServiceClient) GetOrderByIDWithItems(ctx context.Context, in *GetOrderByIDWithItemsRequest, opts ...grpc.CallOption) (*GetOrderByIDWithItemsResponse, error) {
+func (c *orderServiceClient) GetOrderByID(ctx context.Context, in *GetOrderByIDRequest, opts ...grpc.CallOption) (*GetOrderByIDResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetOrderByIDWithItemsResponse)
-	err := c.cc.Invoke(ctx, OrderService_GetOrderByIDWithItems_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *orderServiceClient) GetOrderByIDOnly(ctx context.Context, in *GetOrderByIDOnlyRequest, opts ...grpc.CallOption) (*GetOrderByIDOnlyResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetOrderByIDOnlyResponse)
-	err := c.cc.Invoke(ctx, OrderService_GetOrderByIDOnly_FullMethodName, in, out, cOpts...)
+	out := new(GetOrderByIDResponse)
+	err := c.cc.Invoke(ctx, OrderService_GetOrderByID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -124,8 +112,7 @@ func (c *orderServiceClient) CancelOrderByID(ctx context.Context, in *CancelOrde
 // for forward compatibility.
 type OrderServiceServer interface {
 	CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error)
-	GetOrderByIDWithItems(context.Context, *GetOrderByIDWithItemsRequest) (*GetOrderByIDWithItemsResponse, error)
-	GetOrderByIDOnly(context.Context, *GetOrderByIDOnlyRequest) (*GetOrderByIDOnlyResponse, error)
+	GetOrderByID(context.Context, *GetOrderByIDRequest) (*GetOrderByIDResponse, error)
 	GetOrdersByBuyerIDStatus(context.Context, *GetOrdersByBuyerIDStatusRequest) (*GetOrdersByBuyerIDStatusResponse, error)
 	GetOrderItemsByOrderID(context.Context, *GetOrderItemsByOrderIDRequest) (*GetOrderItemsByOrderIDResponse, error)
 	UpdateOrderByID(context.Context, *UpdateOrderByIDRequest) (*UpdateOrderByIDResponse, error)
@@ -143,11 +130,8 @@ type UnimplementedOrderServiceServer struct{}
 func (UnimplementedOrderServiceServer) CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateOrder not implemented")
 }
-func (UnimplementedOrderServiceServer) GetOrderByIDWithItems(context.Context, *GetOrderByIDWithItemsRequest) (*GetOrderByIDWithItemsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetOrderByIDWithItems not implemented")
-}
-func (UnimplementedOrderServiceServer) GetOrderByIDOnly(context.Context, *GetOrderByIDOnlyRequest) (*GetOrderByIDOnlyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetOrderByIDOnly not implemented")
+func (UnimplementedOrderServiceServer) GetOrderByID(context.Context, *GetOrderByIDRequest) (*GetOrderByIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOrderByID not implemented")
 }
 func (UnimplementedOrderServiceServer) GetOrdersByBuyerIDStatus(context.Context, *GetOrdersByBuyerIDStatusRequest) (*GetOrdersByBuyerIDStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetOrdersByBuyerIDStatus not implemented")
@@ -200,38 +184,20 @@ func _OrderService_CreateOrder_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _OrderService_GetOrderByIDWithItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetOrderByIDWithItemsRequest)
+func _OrderService_GetOrderByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrderByIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OrderServiceServer).GetOrderByIDWithItems(ctx, in)
+		return srv.(OrderServiceServer).GetOrderByID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: OrderService_GetOrderByIDWithItems_FullMethodName,
+		FullMethod: OrderService_GetOrderByID_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderServiceServer).GetOrderByIDWithItems(ctx, req.(*GetOrderByIDWithItemsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _OrderService_GetOrderByIDOnly_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetOrderByIDOnlyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OrderServiceServer).GetOrderByIDOnly(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: OrderService_GetOrderByIDOnly_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderServiceServer).GetOrderByIDOnly(ctx, req.(*GetOrderByIDOnlyRequest))
+		return srv.(OrderServiceServer).GetOrderByID(ctx, req.(*GetOrderByIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -320,12 +286,8 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _OrderService_CreateOrder_Handler,
 		},
 		{
-			MethodName: "GetOrderByIDWithItems",
-			Handler:    _OrderService_GetOrderByIDWithItems_Handler,
-		},
-		{
-			MethodName: "GetOrderByIDOnly",
-			Handler:    _OrderService_GetOrderByIDOnly_Handler,
+			MethodName: "GetOrderByID",
+			Handler:    _OrderService_GetOrderByID_Handler,
 		},
 		{
 			MethodName: "GetOrdersByBuyerIDStatus",

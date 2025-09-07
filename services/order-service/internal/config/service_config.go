@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"order-service/pkg/model"
 	"os"
 
 	"github.com/redis/go-redis/v9"
@@ -75,7 +76,7 @@ func InitPostgresDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate()
+	db.AutoMigrate(&model.Order{}, &model.OrderItem{})
 
 	return db, nil
 }

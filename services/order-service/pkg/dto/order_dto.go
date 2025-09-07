@@ -8,7 +8,7 @@ type Order struct {
 	ID         uint64
 	BuyerID    uint64
 	Status     string
-	TotalPrice int
+	TotalPrice float64
 	OrderItems []*OrderItem
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
@@ -18,9 +18,9 @@ type OrderItem struct {
 	ID        uint64
 	Name      string
 	OrderID   uint64
-	ProductID int
-	Quantity  int
-	Price     int
+	ProductID uint64
+	Quantity  int64
+	Price     float64
 	Status    string
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -34,23 +34,23 @@ type CreateOrderOutput struct {
 	Success bool
 }
 
-type GetOrderByIDWithItemsInput struct {
+type GetOrderByIDInput struct {
 	ID uint64
 }
-type GetOrderByIDWithItemsOutput struct {
+type GetOrderByIDOutput struct {
 	Message string
 	Success bool
 	Order   *Order
 }
 
-type GetOrderByIDOnlyInput struct {
-	ID uint64
-}
-type GetOrderByIDOnlyOutput struct {
-	Message string
-	Success bool
-	Order   *Order
-}
+//type GetOrderByIDOnlyInput struct {
+//	ID uint64
+//}
+//type GetOrderByIDOnlyOutput struct {
+//	Message string
+//	Success bool
+//	Order   *Order
+//}
 
 type GetOrdersByBuyerIDStatusInput struct {
 	BuyerID uint64

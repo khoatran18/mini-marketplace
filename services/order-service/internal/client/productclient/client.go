@@ -26,10 +26,10 @@ func (p *ProductClient) GetProductsByID(ctx context.Context, input *GetProductsB
 	if p.Client == nil {
 		productClient, err := p.ClientManager.GetOrCreateProductClient()
 		if err != nil {
-			p.ZapLogger.Error("AuthClient: AuthClient is nil and create failed", zap.Error(err))
+			p.ZapLogger.Error("ProductClient: ProductClient is nil and create failed", zap.Error(err))
 			return nil, err
 		}
-		p.ZapLogger.Info("AuthClient: AuthClient is nil and create success")
+		p.ZapLogger.Info("ProductClient: ProductClient is nil and create success")
 		p.Client = productClient
 	}
 

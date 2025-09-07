@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"order-service/internal/client/productclient"
 	"order-service/internal/client/serviceclientmanager"
 	"order-service/internal/repository"
@@ -37,8 +38,8 @@ func (s *OrderService) CreateOrder(ctx context.Context, input *dto.CreateOrderIn
 	}, nil
 }
 
-func (s *OrderService) GetOrderByIDWithItems(ctx context.Context, input *dto.GetOrderByIDWithItemsInput) (*dto.GetOrderByIDWithItemsOutput, error) {
-	orderModel, err := s.OrderRepo.GetOrderByIDWithItems(ctx, input.ID)
+func (s *OrderService) GetOrderByID(ctx context.Context, input *dto.GetOrderByIDInput) (*dto.GetOrderByIDOutput, error) {
+	orderModel, err := s.OrderRepo.GetOrderByID(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -52,36 +53,37 @@ func (s *OrderService) GetOrderByIDWithItems(ctx context.Context, input *dto.Get
 	}
 
 	orderDTO := adapter.OrderModelToDTO(orderModel, clientProductOutput.Products)
-	return &dto.GetOrderByIDWithItemsOutput{
+	return &dto.GetOrderByIDOutput{
 		Message: "Get Order successfully",
 		Success: true,
 		Order:   orderDTO,
 	}, nil
 }
 
-func (s *OrderService) GetOrderByIDOnly(ctx context.Context, input *dto.GetOrderByIDOnlyInput) (*dto.GetOrderByIDOnlyOutput, error) {
-	orderModel, err := s.OrderRepo.GetOrderByIDOnly(ctx, input.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	itemsID := adapter.FilterItemIDsByOrder([]*model.Order{orderModel})
-	clientProductOutput, err := s.SCM.ProductServiceClient.GetProductsByID(ctx, &productclient.GetProductsByIDInput{
-		IDs: itemsID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	orderDTO := adapter.OrderModelToDTO(orderModel, clientProductOutput.Products)
-	return &dto.GetOrderByIDOnlyOutput{
-		Message: "Get Order successfully",
-		Success: true,
-		Order:   orderDTO,
-	}, nil
-}
+//func (s *OrderService) GetOrderByIDOnly(ctx context.Context, input *dto.GetOrderByIDOnlyInput) (*dto.GetOrderByIDOnlyOutput, error) {
+//	orderModel, err := s.OrderRepo.GetOrderByIDOnly(ctx, input.ID)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	itemsID := adapter.FilterItemIDsByOrder([]*model.Order{orderModel})
+//	clientProductOutput, err := s.SCM.ProductServiceClient.GetProductsByID(ctx, &productclient.GetProductsByIDInput{
+//		IDs: itemsID,
+//	})
+//	if err != nil {
+//		return nil, err
+//	}
+//	orderDTO := adapter.OrderModelToDTO(orderModel, clientProductOutput.Products)
+//	return &dto.GetOrderByIDOnlyOutput{
+//		Message: "Get Order successfully",
+//		Success: true,
+//		Order:   orderDTO,
+//	}, nil
+//}
 
 func (s *OrderService) GetOrdersByBuyerIDStatus(ctx context.Context, input *dto.GetOrdersByBuyerIDStatusInput) (*dto.GetOrdersByBuyerIDStatusOutput, error) {
 	orderModels, err := s.OrderRepo.GetOrdersByBuyerIDStatus(ctx, input.BuyerID, input.Status)
+	fmt.Println("Status before: ", input.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +97,7 @@ func (s *OrderService) GetOrdersByBuyerIDStatus(ctx context.Context, input *dto.
 	}
 
 	orderDTOs := adapter.OrdersModelToDTO(orderModels, productClientOutput.Products)
+	fmt.Println(orderDTOs)
 	return &dto.GetOrdersByBuyerIDStatusOutput{
 		Message: "Get Order successfully",
 		Success: true,

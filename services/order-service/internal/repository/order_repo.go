@@ -29,7 +29,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order) e
 
 // For Get function
 
-func (r *OrderRepository) GetOrderByIDWithItems(ctx context.Context, id uint64) (*model.Order, error) {
+func (r *OrderRepository) GetOrderByID(ctx context.Context, id uint64) (*model.Order, error) {
 	var order model.Order
 	if err := r.DB.WithContext(ctx).
 		Preload("OrderItems", func(db *gorm.DB) *gorm.DB {
@@ -41,13 +41,15 @@ func (r *OrderRepository) GetOrderByIDWithItems(ctx context.Context, id uint64) 
 
 	return &order, nil
 }
-func (r *OrderRepository) GetOrderByIDOnly(ctx context.Context, id uint64) (*model.Order, error) {
-	var order model.Order
-	if err := r.DB.WithContext(ctx).Where("id = ?", id).First(&order).Error; err != nil {
-		return nil, err
-	}
-	return &order, nil
-}
+
+//func (r *OrderRepository) GetOrderByIDOnly(ctx context.Context, id uint64) (*model.Order, error) {
+//	var order model.Order
+//	if err := r.DB.WithContext(ctx).Where("id = ?", id).First(&order).Error; err != nil {
+//		return nil, err
+//	}
+//	return &order, nil
+//}
+
 func (r *OrderRepository) GetOrdersByBuyerIDStatus(ctx context.Context, buyerID uint64, status string) ([]*model.Order, error) {
 
 	// Check valid status
@@ -57,7 +59,7 @@ func (r *OrderRepository) GetOrdersByBuyerIDStatus(ctx context.Context, buyerID 
 
 	//
 	var orders []*model.Order
-	if err := r.DB.WithContext(ctx).Preload("Items", func(db *gorm.DB) *gorm.DB {
+	if err := r.DB.WithContext(ctx).Preload("OrderItems", func(db *gorm.DB) *gorm.DB {
 		return db.WithContext(ctx).Where("quantity > 0")
 	}).Where("buyer_id = ? and status = ?", buyerID, status).Find(&orders).Error; err != nil {
 		return nil, err
@@ -82,7 +84,7 @@ func (r *OrderRepository) UpdateOrderByID(ctx context.Context, order *model.Orde
 func (r *OrderRepository) UpdateOrderItemsByID(ctx context.Context, orderItems []*model.OrderItem) error {
 	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, item := range orderItems {
-			if err := r.DB.WithContext(ctx).Where("id = ?", item.ID).Updates(item).Error; err != nil {
+			if err := tx.WithContext(ctx).Where("id = ?", item.ID).Updates(item).Error; err != nil {
 				return err
 			}
 		}

@@ -97,7 +97,7 @@ func OrderItemsDTOToModel(orderItems []*dto.OrderItem) []*model.OrderItem {
 }
 
 func MapOrderItemIDToName(products []*productclient.ProductDTOClient) map[uint64]string {
-	var orderItemMap map[uint64]string
+	orderItemMap := map[uint64]string{}
 	for _, product := range products {
 		orderItemMap[product.ID] = product.Name
 	}
