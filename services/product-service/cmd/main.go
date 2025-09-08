@@ -38,7 +38,7 @@ func main() {
 	productRepo := repository.NewProductRepository(serviceConfig.PostgresDB)
 	productService := service.NewProductService(productRepo, serviceConfig.ZapLogger)
 
-	lis, err := net.Listen("tcp", ":50052")
+	lis, err := net.Listen("tcp", ":50053")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

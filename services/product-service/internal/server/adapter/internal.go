@@ -168,8 +168,7 @@ func GetProsBySelIDOutputToResponse(output *dto.GetProductsBySellerIDOutput) (*p
 
 func GetInvByIDRequestToInput(req *productpb.GetInventoryByIDRequest) (*dto.GetInventoryByIDInput, error) {
 	return &dto.GetInventoryByIDInput{
-		ID:     req.GetId(),
-		UserID: req.GetUserId(),
+		ID: req.GetId(),
 	}, nil
 }
 func GetInvByIDOutputToResponse(output *dto.GetInventoryByIDOutput) (*productpb.GetInventoryByIDResponse, error) {

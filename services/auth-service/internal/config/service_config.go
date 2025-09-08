@@ -1,11 +1,14 @@
 package config
 
 import (
+	"auth-service/internal/config/messagequeue/kafkaimpl"
+	"auth-service/pkg/model"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -16,14 +19,16 @@ import (
 )
 
 type ServiceConfig struct {
-	ZapLogger   *zap.Logger
-	RedisClient *redis.Client
-	PostgresDB  *gorm.DB
+	ZapLogger     *zap.Logger
+	RedisClient   *redis.Client
+	PostgresDB    *gorm.DB
+	KafkaInstance *KafkaInstance
 }
 
-type EnvConfig struct {
-	JWTSecret     string
-	JWTExpireTime time.Duration
+type KafkaInstance struct {
+	KafkaManager  *kafkaimpl.KafkaManager
+	KafkaProducer *kafkaimpl.KafkaProducer
+	KafkaConsumer *kafkaimpl.KafkaConsumer
 }
 
 // InitZapLogger init Zap Logger
@@ -82,32 +87,29 @@ func InitPostgresDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate()
+	db.AutoMigrate(&model.Account{})
 
+	fmt.Println("Init postgres db successfully!")
 	return db, nil
 }
 
-// InitJWTSecret load env about jwt
-func InitJWTSecret() (string, error) {
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		return "", errors.New("JWT secret not set")
+func InitAllKafkaInstance() (*kafkaimpl.KafkaManager, *kafkaimpl.KafkaProducer, *kafkaimpl.KafkaConsumer, error) {
+	brokers := os.Getenv("KAFKA_BROKERS_ADDR")
+	if brokers == "" {
+		return nil, nil, nil, errors.New("KAFKA_BROKERS_ADDR env variable not set")
 	}
-	return jwtSecret, nil
-}
+	brokersList := strings.Split(brokers, ",")
 
-// InitJWTExpireTime load env about jwt expire time
-func InitJWTExpireTime() (time.Duration, error) {
-	jwtExpireTimeStr := os.Getenv("JWT_EXPIRE_TIME")
-	jwtExpireTimeMinute, err := strconv.Atoi(jwtExpireTimeStr)
-	if err != nil {
-		fmt.Println("JWT_EXPIRE_TIME env variable not set, using default 5 minutes")
-		jwtExpireTimeMinute = 5
-	}
+	producerRetry := GetEnvIntWithDefault("KAFKA_PRODUCER_RETRY", 3)
+	producerBackoff := GetEnvIntWithDefault("KAFKA_PRODUCER_BACKOFF", 200)
+	consumerBackoff := GetEnvIntWithDefault("KAFKA_PRODUCER_BACKOFF", 200)
 
-	jwtExpireTime := time.Duration(jwtExpireTimeMinute) * time.Minute
+	kafkaManager := kafkaimpl.NewKafkaManager(brokersList)
+	kafkaProducer := kafkaimpl.NewKafkaProducer(kafkaManager, producerRetry, time.Duration(producerBackoff)*time.Millisecond)
+	kafkaConsumer := kafkaimpl.NewKafkaConsumer(kafkaManager, time.Duration(consumerBackoff)*time.Millisecond)
 
-	return jwtExpireTime, nil
+	fmt.Println("Init KafkaManager, KafkaProducer, KafkaConsumer successfully!")
+	return kafkaManager, kafkaProducer, kafkaConsumer, nil
 }
 
 // NewServiceConfig init services: redis, database, zap logger, ...
@@ -127,27 +129,33 @@ func NewServiceConfig() (*ServiceConfig, error) {
 		return nil, err
 	}
 
+	kafkaManager, kafkaProducer, kafkaConsumer, err := InitAllKafkaInstance()
+	if err != nil {
+		return nil, err
+	}
+
 	return &ServiceConfig{
 		ZapLogger:   zapLogger,
 		RedisClient: redisClient,
 		PostgresDB:  postgresDB,
+		KafkaInstance: &KafkaInstance{
+			KafkaManager:  kafkaManager,
+			KafkaProducer: kafkaProducer,
+			KafkaConsumer: kafkaConsumer,
+		},
 	}, nil
 }
 
-// NewEnvConfig load env config
-func NewEnvConfig() (*EnvConfig, error) {
-	jwtSecret, err := InitJWTSecret()
-	if err != nil {
-		return nil, err
+func GetEnvIntWithDefault(key string, defaultValue int) int {
+	str := os.Getenv(key)
+	if str == "" {
+		fmt.Printf("%s env variable not set, using default %v\n", key, defaultValue)
+		return defaultValue
 	}
-
-	jwtExpireTime, err := InitJWTExpireTime()
+	i, err := strconv.Atoi(str)
 	if err != nil {
-		return nil, err
+		fmt.Printf("%s env variable setted but not valid, using default %v\n", key, defaultValue)
+		return defaultValue
 	}
-
-	return &EnvConfig{
-		JWTSecret:     jwtSecret,
-		JWTExpireTime: jwtExpireTime,
-	}, nil
+	return i
 }

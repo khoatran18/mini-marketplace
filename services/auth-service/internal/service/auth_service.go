@@ -1,6 +1,7 @@
 package service
 
 import (
+	"auth-service/internal/config/messagequeue"
 	"auth-service/internal/repository"
 	"auth-service/internal/service/adapter"
 	"auth-service/pkg/dto"
@@ -19,15 +20,19 @@ type AuthService struct {
 	AccountRepo   *repository.AccountRepository
 	JWTSecret     string
 	JWTExpireTime time.Duration
+	KafkaProducer messagequeue.Producer
+	KafkaConsumer messagequeue.Consumer
 	ZapLogger     *zap.Logger
 }
 
 // NewAuthService create new AuthService
-func NewAuthService(accountRepo *repository.AccountRepository, jwtSecret string, jwtExpireTime time.Duration, logger *zap.Logger) *AuthService {
+func NewAuthService(accountRepo *repository.AccountRepository, jwtSecret string, jwtExpireTime time.Duration, logger *zap.Logger, producer messagequeue.Producer, consumer messagequeue.Consumer) *AuthService {
 	return &AuthService{
 		AccountRepo:   accountRepo,
 		JWTSecret:     jwtSecret,
 		JWTExpireTime: jwtExpireTime,
+		KafkaProducer: producer,
+		KafkaConsumer: consumer,
 		ZapLogger:     logger,
 	}
 }

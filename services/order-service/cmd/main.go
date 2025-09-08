@@ -45,7 +45,7 @@ func main() {
 	orderRepo := repository.NewOrderRepository(serviceConfig.PostgresDB)
 	orderService := service.NewOrderService(orderRepo, serviceConfig.ZapLogger, scm)
 
-	lis, err := net.Listen("tcp", ":50053")
+	lis, err := net.Listen("tcp", ":50052")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

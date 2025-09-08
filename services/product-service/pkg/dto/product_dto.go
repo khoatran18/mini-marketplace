@@ -72,8 +72,7 @@ type GetProductsBySellerIDOutput struct {
 // GetInventoryByID
 
 type GetInventoryByIDInput struct {
-	ID     uint64
-	UserID uint64
+	ID uint64
 }
 type GetInventoryByIDOutput struct {
 	Message   string

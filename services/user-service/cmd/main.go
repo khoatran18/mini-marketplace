@@ -20,7 +20,7 @@ func main() {
 
 	serviceConfig, err := config.NewServiceConfig()
 	if err != nil {
-		log.Fatal("Error NewServiceConfig", err.Error())
+		log.Fatal("Error NewServiceConfig: ", err.Error())
 	}
 	fmt.Println("Create ServiceConfig successfully!")
 
@@ -40,7 +40,7 @@ func main() {
 	userRepo := repository.NewUserRepository(serviceConfig.PostgresDB)
 	userService := service.NewUserService(userRepo, serviceConfig.ZapLogger)
 
-	lis, err := net.Listen("tcp", ":50053")
+	lis, err := net.Listen("tcp", ":50054")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

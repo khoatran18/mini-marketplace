@@ -3,7 +3,9 @@ package service
 import (
 	"auth-service/pkg/dto"
 	"context"
+	"encoding/json"
 
+	"github.com/segmentio/kafka-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -23,7 +25,6 @@ func (s *AuthService) ChangePassword(ctx context.Context, req *dto.ChangePasswor
 		s.ZapLogger.Warn("AuthService: old password compare failure")
 		return nil, err
 	}
-
 	// Update password
 	hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
@@ -36,6 +37,20 @@ func (s *AuthService) ChangePassword(ctx context.Context, req *dto.ChangePasswor
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: update account failure")
 		return nil, err
+	}
+
+	// Publish to Kafka to API Gateway
+	topic := "auth.change_password"
+	value := map[string]interface{}{
+		"id":          acc.ID,
+		"pwd_version": newPwdVersion,
+	}
+	valueMessage, err := json.Marshal(value)
+	if err != nil {
+		s.ZapLogger.Warn("AuthService: new password hash failure")
+	}
+	if err := s.KafkaProducer.Publish(ctx, &kafka.Hash{}, topic, []byte("key"), valueMessage); err != nil {
+		s.ZapLogger.Warn("AuthService: publish to Kafka failure")
 	}
 
 	return &dto.ChangePasswordOutput{
