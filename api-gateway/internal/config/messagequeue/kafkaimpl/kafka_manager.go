@@ -67,7 +67,7 @@ func (m *KafkaManager) newReaderForTopic(topic string, groupID string) *kafka.Re
 		GroupID:  groupID,
 		MinBytes: 10e3,
 		MaxBytes: 10e6,
-		MaxWait:  1 * time.Second,
+		MaxWait:  2 * time.Second,
 	})
 }
 

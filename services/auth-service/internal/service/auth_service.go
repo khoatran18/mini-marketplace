@@ -21,20 +21,22 @@ type AuthService struct {
 	AccountRepo   *repository.AccountRepository
 	JWTSecret     string
 	JWTExpireTime time.Duration
-	KafkaProducer messagequeue.Producer
-	KafkaConsumer messagequeue.Consumer
+	MQProducer    messagequeue.Producer
+	MQConsumer    messagequeue.Consumer
 	KafkaClient   *kafkaimpl.KafkaClient
 	ZapLogger     *zap.Logger
 }
 
 // NewAuthService create new AuthService
-func NewAuthService(accountRepo *repository.AccountRepository, jwtSecret string, jwtExpireTime time.Duration, logger *zap.Logger, producer messagequeue.Producer, consumer messagequeue.Consumer, kafkaClient *kafkaimpl.KafkaClient) *AuthService {
+func NewAuthService(accountRepo *repository.AccountRepository, jwtSecret string, jwtExpireTime time.Duration, logger *zap.Logger,
+	producer messagequeue.Producer, consumer messagequeue.Consumer, kafkaClient *kafkaimpl.KafkaClient) *AuthService {
+
 	return &AuthService{
 		AccountRepo:   accountRepo,
 		JWTSecret:     jwtSecret,
 		JWTExpireTime: jwtExpireTime,
-		KafkaProducer: producer,
-		KafkaConsumer: consumer,
+		MQProducer:    producer,
+		MQConsumer:    consumer,
 		KafkaClient:   kafkaClient,
 		ZapLogger:     logger,
 	}

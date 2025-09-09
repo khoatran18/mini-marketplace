@@ -67,7 +67,7 @@ func main() {
 
 	// Create go routine for publishing PwdVersion Kafka to API Gateway
 	ctx := context.Context(context.Background())
-	authService.ProcedurePwdVerKafkaEventWorker(ctx, 3*time.Second, 100, topic)
+	authService.ProducerPwdVerKafkaEventWorker(ctx, 3*time.Second, 100, topic)
 
 	// Run
 	log.Printf("Auth Server listening at %v", lis.Addr())

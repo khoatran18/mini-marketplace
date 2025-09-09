@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (s *AuthService) ProcedurePwdVerKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
+func (s *AuthService) ProducerPwdVerKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
 	go func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
@@ -24,7 +24,7 @@ func (s *AuthService) ProcedurePwdVerKafkaEventWorker(ctx context.Context, inter
 				return
 			// Interval time
 			case <-ticker.C:
-				if err := s.procedurePwdVersionKafkaEventBatch(ctx, limit, topic); err != nil {
+				if err := s.producerPwdVersionKafkaEventBatch(ctx, limit, topic); err != nil {
 					s.ZapLogger.Warn("AuthService: error in procedure PwdVerKafkaEvent batch", zap.Error(err))
 				}
 			}
@@ -32,7 +32,7 @@ func (s *AuthService) ProcedurePwdVerKafkaEventWorker(ctx context.Context, inter
 	}()
 }
 
-func (s *AuthService) procedurePwdVersionKafkaEventBatch(ctx context.Context, limit int, topic string) error {
+func (s *AuthService) producerPwdVersionKafkaEventBatch(ctx context.Context, limit int, topic string) error {
 	// Create context for function
 	ctxEachEvent, cancel := context.WithTimeout(ctx, 9*time.Second)
 	defer cancel()
@@ -46,14 +46,14 @@ func (s *AuthService) procedurePwdVersionKafkaEventBatch(ctx context.Context, li
 
 	var firstErr error
 	for _, eventModel := range eventsModel {
-		if err := s.procedurePwdVersionKafkaEvent(ctxEachEvent, eventModel, topic); err != nil && firstErr == nil {
+		if err := s.producerPwdVersionKafkaEvent(ctxEachEvent, eventModel, topic); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
 	return firstErr
 }
 
-func (s *AuthService) procedurePwdVersionKafkaEvent(ctx context.Context, eventModel *outbox.PwdVersionKafkaEvent, topic string) error {
+func (s *AuthService) producerPwdVersionKafkaEvent(ctx context.Context, eventModel *outbox.PwdVersionKafkaEvent, topic string) error {
 	// Parse event model to json
 	eventJson, err := json.Marshal(eventModel)
 	if err != nil {
@@ -61,7 +61,7 @@ func (s *AuthService) procedurePwdVersionKafkaEvent(ctx context.Context, eventMo
 		return err
 	}
 	// Publish event
-	if err := s.KafkaProducer.Publish(ctx, &kafka.LeastBytes{}, topic, []byte("key"), eventJson); err != nil {
+	if err := s.MQProducer.Publish(ctx, &kafka.LeastBytes{}, topic, []byte("key"), eventJson); err != nil {
 		s.ZapLogger.Warn("AuthService: publish to Kafka failure", zap.Error(err))
 		if err2 := s.AccountRepo.UpdatePwdVersionEventStatus(ctx, eventModel.UserID, "FAILED"); err2 != nil {
 			s.ZapLogger.Warn("AuthService: publish to Kafka failure and can not update OutboxDB")

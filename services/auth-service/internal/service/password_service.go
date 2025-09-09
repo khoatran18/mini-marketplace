@@ -48,7 +48,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, req *dto.ChangePasswor
 	//if err != nil {
 	//	s.ZapLogger.Warn("AuthService: can not parse to json")
 	//}
-	//if err := s.KafkaProducer.Publish(ctx, &kafka.Hash{}, topic, []byte("key"), valueMessage); err != nil {
+	//if err := s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, []byte("key"), valueMessage); err != nil {
 	//	s.ZapLogger.Warn("AuthService: publish to Kafka failure")
 	//}
 
