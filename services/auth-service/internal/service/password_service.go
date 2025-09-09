@@ -3,9 +3,8 @@ package service
 import (
 	"auth-service/pkg/dto"
 	"context"
-	"encoding/json"
 
-	"github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -35,23 +34,23 @@ func (s *AuthService) ChangePassword(ctx context.Context, req *dto.ChangePasswor
 	newPwdVersion := (acc.PwdVersion + 1) % 100
 	err = s.AccountRepo.UpdatePassword(ctx, acc, newPassword, newPwdVersion)
 	if err != nil {
-		s.ZapLogger.Warn("AuthService: update account failure")
+		s.ZapLogger.Warn("AuthService: update account failure", zap.Error(err))
 		return nil, err
 	}
 
 	// Publish to Kafka to API Gateway
-	topic := "auth.change_password"
-	value := map[string]interface{}{
-		"id":          acc.ID,
-		"pwd_version": newPwdVersion,
-	}
-	valueMessage, err := json.Marshal(value)
-	if err != nil {
-		s.ZapLogger.Warn("AuthService: new password hash failure")
-	}
-	if err := s.KafkaProducer.Publish(ctx, &kafka.Hash{}, topic, []byte("key"), valueMessage); err != nil {
-		s.ZapLogger.Warn("AuthService: publish to Kafka failure")
-	}
+	//topic := "auth.change_password"
+	//value := map[string]interface{}{
+	//	"id":          acc.ID,
+	//	"pwd_version": newPwdVersion,
+	//}
+	//valueMessage, err := json.Marshal(value)
+	//if err != nil {
+	//	s.ZapLogger.Warn("AuthService: can not parse to json")
+	//}
+	//if err := s.KafkaProducer.Publish(ctx, &kafka.Hash{}, topic, []byte("key"), valueMessage); err != nil {
+	//	s.ZapLogger.Warn("AuthService: publish to Kafka failure")
+	//}
 
 	return &dto.ChangePasswordOutput{
 		Message: "Change Password Success",

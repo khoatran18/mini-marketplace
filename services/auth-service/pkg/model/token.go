@@ -5,10 +5,10 @@ import (
 )
 
 type AuthClaim struct {
-	UserID     uint
+	UserID     uint64
 	Username   string
 	Role       string
-	PwdVersion int
+	PwdVersion int64
 	Type       string
 	jwt.RegisteredClaims
 }

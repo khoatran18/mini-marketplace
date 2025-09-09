@@ -84,7 +84,7 @@ func (r *OrderRepository) UpdateOrderByID(ctx context.Context, order *model.Orde
 func (r *OrderRepository) UpdateOrderItemsByID(ctx context.Context, orderItems []*model.OrderItem) error {
 	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, item := range orderItems {
-			if err := tx.WithContext(ctx).Where("id = ?", item.ID).Updates(item).Error; err != nil {
+			if err := tx.Where("id = ?", item.ID).Updates(item).Error; err != nil {
 				return err
 			}
 		}

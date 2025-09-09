@@ -13,8 +13,8 @@ type EnvConfig struct {
 	JWTExpireTime time.Duration
 }
 
-// InitJWTSecret load env about jwt
-func InitJWTSecret() (string, error) {
+// initJWTSecret load env about jwt
+func initJWTSecret() (string, error) {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		return "", errors.New("JWT secret not set")
@@ -22,8 +22,8 @@ func InitJWTSecret() (string, error) {
 	return jwtSecret, nil
 }
 
-// InitJWTExpireTime load env about jwt expire time
-func InitJWTExpireTime() (time.Duration, error) {
+// initJWTExpireTime load env about jwt expire time
+func initJWTExpireTime() (time.Duration, error) {
 	jwtExpireTimeStr := os.Getenv("JWT_EXPIRE_TIME")
 	jwtExpireTimeMinute, err := strconv.Atoi(jwtExpireTimeStr)
 	if err != nil {
@@ -38,12 +38,12 @@ func InitJWTExpireTime() (time.Duration, error) {
 
 // NewEnvConfig load env config
 func NewEnvConfig() (*EnvConfig, error) {
-	jwtSecret, err := InitJWTSecret()
+	jwtSecret, err := initJWTSecret()
 	if err != nil {
 		return nil, err
 	}
 
-	jwtExpireTime, err := InitJWTExpireTime()
+	jwtExpireTime, err := initJWTExpireTime()
 	if err != nil {
 		return nil, err
 	}

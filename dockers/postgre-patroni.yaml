@@ -62,7 +62,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_RETENTION_MS: "9000000"
       KAFKA_LOG_RETENTION_BYTES: "2147483648"
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -71,10 +71,11 @@ services:
       KAFKA_LISTENERS: PLAINTEXT://broker1:29092,CONTROLLER://broker1:29093,PLAINTEXT_HOST://0.0.0.0:9092
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_NUM_PARTITIONS: 1
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs-1
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
     healthcheck:
-      test: [ "CMD", "sh", "-c", "nc -z broker1 29092 || exit 1" ]
+      test: [ "CMD", "sh", "-c", "nc -z broker1 29092 && nc -z broker1 29093 || exit 1" ]
       interval: 5s
       timeout: 3s
       retries: 10

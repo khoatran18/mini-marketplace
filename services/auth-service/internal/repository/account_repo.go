@@ -43,14 +43,38 @@ func (r *AccountRepository) GetAccountByUsernamePasswordRole(ctx context.Context
 }
 
 // UpdatePassword update password
-func (r *AccountRepository) UpdatePassword(ctx context.Context, acc *model.Account, newPassword string, pwdVersion int64) error {
-	res := r.DB.WithContext(ctx).Model(acc).Select("Password", "PwdVersion").Updates(map[string]interface{}{"Password": newPassword, "PwdVersion": pwdVersion})
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("no rows affected")
-	}
+//func (r *AccountRepository) UpdatePassword(ctx context.Context, acc *model.Account, newPassword string, pwdVersion int64) error {
+//	res := r.DB.WithContext(ctx).Model(acc).Select("Password", "PwdVersion").
+//		Updates(map[string]interface{}{"Password": newPassword, "PwdVersion": pwdVersion})
+//	if res.Error != nil {
+//		return res.Error
+//	}
+//	if res.RowsAffected == 0 {
+//		return fmt.Errorf("no rows affected")
+//	}
+//
+//	return nil
+//}
 
-	return nil
+// UpdatePassword update password and insert into OutboxDB for Kafka Producer
+func (r *AccountRepository) UpdatePassword(ctx context.Context, acc *model.Account, newPassword string, pwdVersion int64) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		// Update in Account model
+		res := tx.Model(acc).Select("Password", "PwdVersion").
+			Updates(map[string]interface{}{"Password": newPassword, "PwdVersion": pwdVersion})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return fmt.Errorf("no rows affected")
+		}
+
+		// Update in Outbox DB
+		if err := r.CreateOrUpdatePwdVersionEvent(tx, acc.ID, pwdVersion); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

@@ -3,6 +3,7 @@ package config
 import (
 	"auth-service/internal/config/messagequeue/kafkaimpl"
 	"auth-service/pkg/model"
+	"auth-service/pkg/outbox"
 	"context"
 	"errors"
 	"fmt"
@@ -29,10 +30,11 @@ type KafkaInstance struct {
 	KafkaManager  *kafkaimpl.KafkaManager
 	KafkaProducer *kafkaimpl.KafkaProducer
 	KafkaConsumer *kafkaimpl.KafkaConsumer
+	KafkaClient   *kafkaimpl.KafkaClient
 }
 
-// InitZapLogger init Zap Logger
-func InitZapLogger() (*zap.Logger, error) {
+// initZapLogger init Zap Logger
+func initZapLogger() (*zap.Logger, error) {
 	cfg := zap.Config{
 		Level:             zap.NewAtomicLevelAt(zap.InfoLevel),
 		Development:       true,
@@ -55,8 +57,8 @@ func InitZapLogger() (*zap.Logger, error) {
 	return logger, nil
 }
 
-// InitRedisClient init Redis Client
-func InitRedisClient() (*redis.Client, error) {
+// initRedisClient init Redis Client
+func initRedisClient() (*redis.Client, error) {
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
 		redisAddr = "localhost:6379"
@@ -75,8 +77,8 @@ func InitRedisClient() (*redis.Client, error) {
 	return rdb, nil
 }
 
-// InitPostgresDB init Postgres DB
-func InitPostgresDB() (*gorm.DB, error) {
+// initPostgresDB init Postgres DB
+func initPostgresDB() (*gorm.DB, error) {
 	dsn := os.Getenv("POSTGRES_DSN")
 	if dsn == "" {
 		return nil, errors.New("POSTGRES_DSN env variable not set")
@@ -87,49 +89,48 @@ func InitPostgresDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate(&model.Account{})
+	db.AutoMigrate(&model.Account{}, &outbox.PwdVersionEvent{})
 
 	fmt.Println("Init postgres db successfully!")
 	return db, nil
 }
 
-func InitAllKafkaInstance() (*kafkaimpl.KafkaManager, *kafkaimpl.KafkaProducer, *kafkaimpl.KafkaConsumer, error) {
+func initAllKafkaInstance() (*kafkaimpl.KafkaManager, *kafkaimpl.KafkaProducer, *kafkaimpl.KafkaConsumer, *kafkaimpl.KafkaClient, error) {
 	brokers := os.Getenv("KAFKA_BROKERS_ADDR")
 	if brokers == "" {
-		return nil, nil, nil, errors.New("KAFKA_BROKERS_ADDR env variable not set")
+		return nil, nil, nil, nil, errors.New("KAFKA_BROKERS_ADDR env variable not set")
 	}
 	brokersList := strings.Split(brokers, ",")
 
 	producerRetry := GetEnvIntWithDefault("KAFKA_PRODUCER_RETRY", 3)
-	producerBackoff := GetEnvIntWithDefault("KAFKA_PRODUCER_BACKOFF", 200)
-	consumerBackoff := GetEnvIntWithDefault("KAFKA_PRODUCER_BACKOFF", 200)
+	producerBackoff := GetEnvIntWithDefault("KAFKA_PRODUCER_BACKOFF", 100)
+	consumerBackoff := GetEnvIntWithDefault("KAFKA_PRODUCER_BACKOFF", 100)
 
 	kafkaManager := kafkaimpl.NewKafkaManager(brokersList)
 	kafkaProducer := kafkaimpl.NewKafkaProducer(kafkaManager, producerRetry, time.Duration(producerBackoff)*time.Millisecond)
 	kafkaConsumer := kafkaimpl.NewKafkaConsumer(kafkaManager, time.Duration(consumerBackoff)*time.Millisecond)
-
-	fmt.Println("Init KafkaManager, KafkaProducer, KafkaConsumer successfully!")
-	return kafkaManager, kafkaProducer, kafkaConsumer, nil
+	kafkaClient := kafkaimpl.NewKafkaClient(brokersList)
+	return kafkaManager, kafkaProducer, kafkaConsumer, kafkaClient, nil
 }
 
 // NewServiceConfig init services: redis, database, zap logger, ...
 func NewServiceConfig() (*ServiceConfig, error) {
-	zapLogger, err := InitZapLogger()
+	zapLogger, err := initZapLogger()
 	if err != nil {
 		return nil, err
 	}
 
-	redisClient, err := InitRedisClient()
+	redisClient, err := initRedisClient()
 	if err != nil {
 		return nil, err
 	}
 
-	postgresDB, err := InitPostgresDB()
+	postgresDB, err := initPostgresDB()
 	if err != nil {
 		return nil, err
 	}
 
-	kafkaManager, kafkaProducer, kafkaConsumer, err := InitAllKafkaInstance()
+	kafkaManager, kafkaProducer, kafkaConsumer, kafkaClient, err := initAllKafkaInstance()
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +143,7 @@ func NewServiceConfig() (*ServiceConfig, error) {
 			KafkaManager:  kafkaManager,
 			KafkaProducer: kafkaProducer,
 			KafkaConsumer: kafkaConsumer,
+			KafkaClient:   kafkaClient,
 		},
 	}, nil
 }

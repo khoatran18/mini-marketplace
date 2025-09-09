@@ -2,6 +2,7 @@ package kafkaimpl
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -25,8 +26,10 @@ func (p *KafkaProducer) Publish(ctx context.Context, balance kafka.Balancer, top
 	var writer *kafka.Writer
 	if w, ok := p.km.writers[topic]; ok {
 		writer = w
+		log.Println("writer is created")
 	} else {
-		writer = p.km.NewWriter(topic, balance)
+		writer = p.km.newWriter(topic, balance)
+		log.Println("writer is nil and create")
 	}
 
 	var lastErr error

@@ -7,11 +7,14 @@ import (
 	"auth-service/internal/service"
 	"auth-service/pkg/model"
 	authpb "auth-service/pkg/pb"
+	"context"
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/lpernett/godotenv"
+	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -35,10 +38,13 @@ func main() {
 		fmt.Println("Migration successfully!")
 	}
 
+	defer serviceConfig.KafkaInstance.KafkaManager.CloseWriterAll()
+	defer serviceConfig.KafkaInstance.KafkaManager.CloseReaderAll()
+
 	// Create Repository, Service
 	accountRepo := repository.NewAccountRepository(serviceConfig.PostgresDB)
 	authService := service.NewAuthService(accountRepo, envConfig.JWTSecret, envConfig.JWTExpireTime, serviceConfig.ZapLogger,
-		serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer)
+		serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient)
 
 	// Create Server
 	lis, err := net.Listen("tcp", ":50051")
@@ -50,6 +56,18 @@ func main() {
 		AuthService: authService,
 		ZapLogger:   serviceConfig.ZapLogger,
 	})
+
+	// Test
+	topic := "auth.change_password"
+	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic, 0)
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
+	// Create go routine for publishing PwdVersion Kafka to API Gateway
+	ctx := context.Context(context.Background())
+	authService.ProcedurePwdVerKafkaEventWorker(ctx, 3*time.Second, 100, topic)
 
 	// Run
 	log.Printf("Auth Server listening at %v", lis.Addr())

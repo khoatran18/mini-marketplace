@@ -34,7 +34,7 @@ func (m *KafkaManager) newWriterForTopic(topic string, balancer kafka.Balancer) 
 	}
 }
 
-func (m *KafkaManager) NewWriter(topic string, balancer kafka.Balancer) *kafka.Writer {
+func (m *KafkaManager) newWriter(topic string, balancer kafka.Balancer) *kafka.Writer {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
