@@ -5,9 +5,14 @@ import (
 	"api-gateway/internal/config"
 	"api-gateway/internal/handler"
 	"api-gateway/internal/router"
+	"api-gateway/pkg/dto"
+	"context"
+	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/goccy/go-json"
 	"github.com/lpernett/godotenv"
+	"github.com/segmentio/kafka-go"
 )
 
 func main() {
@@ -29,6 +34,22 @@ func main() {
 	defer grpcClientManager.CloseAll()
 
 	managerHandler := handler.NewHandlerManager(grpcClientManager, serviceConfig.ZapLogger)
+
+	// Chạy consumer trong goroutine
+	ctx := context.Context(context.Background())
+	topic := "auth.change_password"
+	go func() {
+		if err := serviceConfig.KafkaInstance.KafkaConsumer.Consume(ctx, topic, "api-gateway-group-3", func(ctx context.Context, msg *kafka.Message) error {
+			var eventDTO dto.ChangePwdKafkaEvent
+			if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
+				return err
+			}
+			log.Printf("Received message: %s, PwdVersion: %v", string(msg.Value), eventDTO.PwdVersion)
+			return nil
+		}); err != nil {
+			log.Printf("Consumer stopped with error: %v", err)
+		}
+	}()
 
 	// Setup router
 	engine := gin.New()

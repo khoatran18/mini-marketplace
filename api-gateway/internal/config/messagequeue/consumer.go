@@ -1,7 +1,7 @@
 package messagequeue
 
 import (
-	"auth-service/internal/config/messagequeue/kafkaimpl"
+	"api-gateway/internal/config/messagequeue/kafkaimpl"
 	"context"
 )
 
