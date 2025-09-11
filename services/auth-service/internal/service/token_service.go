@@ -15,19 +15,21 @@ import (
 func (s *AuthService) generateToken(ctx context.Context, tokenRequest *dto.TokenRequest) (string, string, error) {
 	// Create claims
 	accessClaims := &model.AuthClaim{
-		UserID:   tokenRequest.UserID,
-		Username: tokenRequest.Username,
-		Role:     tokenRequest.Role,
-		Type:     "access",
+		UserID:     tokenRequest.UserID,
+		Username:   tokenRequest.Username,
+		Role:       tokenRequest.Role,
+		PwdVersion: tokenRequest.PwdVersion,
+		Type:       "access",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.JWTExpireTime)),
 		},
 	}
 	refreshClaims := &model.AuthClaim{
-		UserID:   tokenRequest.UserID,
-		Username: tokenRequest.Username,
-		Role:     tokenRequest.Role,
-		Type:     "refresh",
+		UserID:     tokenRequest.UserID,
+		Username:   tokenRequest.Username,
+		Role:       tokenRequest.Role,
+		PwdVersion: tokenRequest.PwdVersion,
+		Type:       "refresh",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.JWTExpireTime * 2)),
 		},
@@ -95,6 +97,18 @@ func (s *AuthService) RefreshToken(ctx context.Context, input *dto.RefreshTokenI
 		s.ZapLogger.Warn("AuthService: refresh token only")
 		return nil, fmt.Errorf("refresh token only")
 	}
+
+	// Check if password updated
+	acc, err := s.AccountRepo.GetAccountByUsernameRole(ctx, authClaim.Username, authClaim.Role)
+	if err != nil {
+		s.ZapLogger.Warn("AuthService: refresh token failure, can not find account")
+		return nil, fmt.Errorf("can not find account")
+	}
+	if authClaim.PwdVersion != acc.PwdVersion {
+		s.ZapLogger.Warn("AuthService: refresh token failure, password changed")
+		return nil, fmt.Errorf("password changed")
+	}
+
 	tokenRequest := &dto.TokenRequest{
 		UserID:     authClaim.UserID,
 		Username:   authClaim.Username,

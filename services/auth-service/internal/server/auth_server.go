@@ -26,7 +26,7 @@ func (s *AuthServer) Login(ctx context.Context, req *authpb.LoginRequest) (*auth
 		s.ZapLogger.Warn("AuthServer: invalid request for Login", zap.Error(err))
 		return LoginFailResponse("AuthServer: Invalid request for Login", err, codes.InvalidArgument)
 	}
-	input, err := adapter.LoginProtoToDTO(req)
+	input, err := adapter.LoginRequestToInput(req)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse Login request to input error", zap.Error(err))
 		return LoginFailResponse("Parse Login request error", err, codes.InvalidArgument)
@@ -40,7 +40,7 @@ func (s *AuthServer) Login(ctx context.Context, req *authpb.LoginRequest) (*auth
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.LoginDTOToProto(output)
+	res, err := adapter.LoginOutputToResponse(output)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse Login output to response error", zap.Error(err))
 		return LoginFailResponse("Parse Login output to response error", err, codes.Internal)
@@ -62,7 +62,7 @@ func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) 
 		s.ZapLogger.Warn("AuthServer: invalid request for Register", zap.Error(err))
 		return RegisterFailResponse("Invalid request for Register", err, codes.InvalidArgument)
 	}
-	input, err := adapter.RegisterProtoToDTO(req)
+	input, err := adapter.RegisterRequestToInput(req)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse Register request to input error", zap.Error(err))
 		return RegisterFailResponse("Parse Register request to input error", err, codes.InvalidArgument)
@@ -76,7 +76,7 @@ func (s *AuthServer) Register(ctx context.Context, req *authpb.RegisterRequest) 
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.RegisterDTOToProto(output)
+	res, err := adapter.RegisterOutputToResponse(output)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse Register output to response error", zap.Error(err))
 		return RegisterFailResponse("Parse Register output to response error", err, codes.Internal)
@@ -98,7 +98,7 @@ func (s *AuthServer) RefreshToken(ctx context.Context, req *authpb.RefreshTokenR
 		s.ZapLogger.Warn("AuthServer: invalid request for RefreshToken", zap.Error(err))
 		return RefreshTokenFailResponse("Invalid request for RefreshToken", err, codes.InvalidArgument)
 	}
-	input, err := adapter.RefreshTokenProtoToDTO(req)
+	input, err := adapter.RefreshTokenRequestToInput(req)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse RefreshToken request to input error", zap.Error(err))
 		return RefreshTokenFailResponse("Parse RefreshToken request to input error", err, codes.InvalidArgument)
@@ -112,7 +112,7 @@ func (s *AuthServer) RefreshToken(ctx context.Context, req *authpb.RefreshTokenR
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.RefreshTokenDTOToProto(output)
+	res, err := adapter.RefreshTokenOutputToResponse(output)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse RefreshToken output to response error", zap.Error(err))
 		return RefreshTokenFailResponse("parse RefreshToken output to response error", err, codes.Internal)
@@ -134,7 +134,7 @@ func (s *AuthServer) ChangePassword(ctx context.Context, req *authpb.ChangePassw
 		s.ZapLogger.Warn("AuthServer: invalid request for ChangePassword", zap.Error(err))
 		return ChangePasswordFailResponse("Invalid request for ChangePassword", err, codes.InvalidArgument)
 	}
-	input, err := adapter.ChangePasswordProtoToDTO(req)
+	input, err := adapter.ChangePasswordRequestToInput(req)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse ChangePassword request to input error", zap.Error(err))
 		return ChangePasswordFailResponse("Parse ChangePassword request to input error", err, codes.InvalidArgument)
@@ -148,7 +148,7 @@ func (s *AuthServer) ChangePassword(ctx context.Context, req *authpb.ChangePassw
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.ChangePasswordDTOToProto(output)
+	res, err := adapter.ChangePasswordOutputToResponse(output)
 	if err != nil {
 		s.ZapLogger.Warn("AuthServer: parse ChangePassword output to response error", zap.Error(err))
 		return ChangePasswordFailResponse("parse ChangePassword output to response error", err, codes.Internal)
@@ -156,6 +156,78 @@ func (s *AuthServer) ChangePassword(ctx context.Context, req *authpb.ChangePassw
 	if err := protovalidate.Validate(res); err != nil {
 		s.ZapLogger.Warn("AuthServer: invalid response for ChangePassword", zap.Error(err))
 		return ChangePasswordFailResponse("invalid response for ChangePassword", err, codes.Internal)
+	}
+
+	// Return valid response
+	return res, nil
+}
+
+// RegisterSellerRoles handle change password request
+func (s *AuthServer) RegisterSellerRoles(ctx context.Context, req *authpb.RegisterSellerRolesRequest) (*authpb.RegisterSellerRolesResponse, error) {
+
+	// Validate ServerRequest and parse to ServiceInput
+	if err := protovalidate.Validate(req); err != nil {
+		s.ZapLogger.Warn("AuthServer: invalid request for RegisterSellerRoles", zap.Error(err))
+		return RegisterSellerRolesFailResponse("Invalid request for RegisterSellerRoles", err, codes.InvalidArgument)
+	}
+	input, err := adapter.RegisterSellerRolesRequestToInput(req)
+	if err != nil {
+		s.ZapLogger.Warn("AuthServer: parse RegisterSellerRoles request to input error", zap.Error(err))
+		return RegisterSellerRolesFailResponse("Parse RegisterSellerRoles request to input error", err, codes.InvalidArgument)
+	}
+
+	// Get ServiceOutput
+	output, err := s.AuthService.RegisterSellerRoles(ctx, input)
+	if err != nil {
+		s.ZapLogger.Error("AuthServer: RegisterSellerRoles error in AuthService", zap.Error(err))
+		return RegisterSellerRolesFailResponse("RegisterSellerRoles error in AuthService", err, codes.Internal)
+	}
+
+	// Parse ServiceOutput to ServerResponse and validate
+	res, err := adapter.RegisterSellerRolesOutputToResponse(output)
+	if err != nil {
+		s.ZapLogger.Warn("AuthServer: parse RegisterSellerRoles output to response error", zap.Error(err))
+		return RegisterSellerRolesFailResponse("parse RegisterSellerRoles output to response error", err, codes.Internal)
+	}
+	if err := protovalidate.Validate(res); err != nil {
+		s.ZapLogger.Warn("AuthServer: invalid response for RegisterSellerRoles", zap.Error(err))
+		return RegisterSellerRolesFailResponse("invalid response for RegisterSellerRoles", err, codes.Internal)
+	}
+
+	// Return valid response
+	return res, nil
+}
+
+// GetStoreIDRoleById handle change password request
+func (s *AuthServer) GetStoreIDRoleById(ctx context.Context, req *authpb.GetStoreIDRoleByIDRequest) (*authpb.GetStoreIDRoleByIDResponse, error) {
+
+	// Validate ServerRequest and parse to ServiceInput
+	if err := protovalidate.Validate(req); err != nil {
+		s.ZapLogger.Warn("AuthServer: invalid request for GetStoreIDRoleById", zap.Error(err))
+		return GetStoreIDRoleByIdFailResponse("Invalid request for GetStoreIDRoleById", err, codes.InvalidArgument)
+	}
+	input, err := adapter.GetStoreIDRoleByIdRequestToInput(req)
+	if err != nil {
+		s.ZapLogger.Warn("AuthServer: parse GetStoreIDRoleById request to input error", zap.Error(err))
+		return GetStoreIDRoleByIdFailResponse("Parse GetStoreIDRoleById request to input error", err, codes.InvalidArgument)
+	}
+
+	// Get ServiceOutput
+	output, err := s.AuthService.GetStoreIDRoleById(ctx, input)
+	if err != nil {
+		s.ZapLogger.Error("AuthServer: GetStoreIDRoleById error in AuthService", zap.Error(err))
+		return GetStoreIDRoleByIdFailResponse("GetStoreIDRoleById error in AuthService", err, codes.Internal)
+	}
+
+	// Parse ServiceOutput to ServerResponse and validate
+	res, err := adapter.GetStoreIDRoleByIdOutputToResponse(output)
+	if err != nil {
+		s.ZapLogger.Warn("AuthServer: parse GetStoreIDRoleById output to response error", zap.Error(err))
+		return GetStoreIDRoleByIdFailResponse("parse GetStoreIDRoleById output to response error", err, codes.Internal)
+	}
+	if err := protovalidate.Validate(res); err != nil {
+		s.ZapLogger.Warn("AuthServer: invalid response for GetStoreIDRoleById", zap.Error(err))
+		return GetStoreIDRoleByIdFailResponse("invalid response for GetStoreIDRoleById", err, codes.Internal)
 	}
 
 	// Return valid response

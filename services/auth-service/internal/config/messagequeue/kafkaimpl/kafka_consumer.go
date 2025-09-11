@@ -36,7 +36,7 @@ func (c *KafkaConsumer) Consume(ctx context.Context, topic, groupID string, hand
 			log.Printf("Consumer stopped for Topic: %s", topic)
 			return ctx.Err()
 		default:
-			msg, err := reader.ReadMessage(ctx)
+			msg, err := reader.FetchMessage(ctx)
 			if err != nil {
 				if ctx.Err() != nil {
 					return ctx.Err()
@@ -48,7 +48,13 @@ func (c *KafkaConsumer) Consume(ctx context.Context, topic, groupID string, hand
 
 			if err := handler(ctx, &msg); err != nil {
 				log.Printf("Consumer handler error topic: %s, error: %v", topic, err)
+				continue
 			}
+			if err := reader.CommitMessages(ctx, msg); err != nil {
+				log.Printf("Consumer handle action successfully but commit messages topic failed: %s, error: %v", topic, err)
+				continue
+			}
+			log.Printf("Consumer handle action and commit messages topic successfully: %s", topic)
 		}
 	}
 

@@ -29,9 +29,7 @@ func BuyerModelToDTO(buyer *model.Buyer) (*dto.Buyer, error) {
 
 func SellerDTOToModel(seller *dto.Seller) (*model.Seller, error) {
 	return &model.Seller{
-		UserID:      seller.UserID,
 		Name:        seller.Name,
-		Gender:      seller.Gender,
 		BankAccount: seller.BankAccount,
 		TaxCode:     seller.TaxCode,
 		Description: seller.Description,
@@ -43,9 +41,8 @@ func SellerDTOToModel(seller *dto.Seller) (*model.Seller, error) {
 
 func SellerModelToDTO(seller *model.Seller) (*dto.Seller, error) {
 	return &dto.Seller{
-		UserID:      seller.UserID,
+		ID:          seller.ID,
 		Name:        seller.Name,
-		Gender:      seller.Gender,
 		BankAccount: seller.BankAccount,
 		TaxCode:     seller.TaxCode,
 		Description: seller.Description,

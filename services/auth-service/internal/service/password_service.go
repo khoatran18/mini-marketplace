@@ -38,20 +38,6 @@ func (s *AuthService) ChangePassword(ctx context.Context, req *dto.ChangePasswor
 		return nil, err
 	}
 
-	// Publish to Kafka to API Gateway
-	//topic := "auth.change_password"
-	//value := map[string]interface{}{
-	//	"id":          acc.ID,
-	//	"pwd_version": newPwdVersion,
-	//}
-	//valueMessage, err := json.Marshal(value)
-	//if err != nil {
-	//	s.ZapLogger.Warn("AuthService: can not parse to json")
-	//}
-	//if err := s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, []byte("key"), valueMessage); err != nil {
-	//	s.ZapLogger.Warn("AuthService: publish to Kafka failure")
-	//}
-
 	return &dto.ChangePasswordOutput{
 		Message: "Change Password Success",
 		Success: true,

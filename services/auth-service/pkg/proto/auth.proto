@@ -10,14 +10,14 @@ message Account {
   uint64 id = 1;
   string username = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string password = 3 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string role = 4 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
+  string role = 4 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee"];
 }
 
 // Login
 message LoginRequest {
   string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string role = 3 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
+  string role = 3 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee"];
 }
 message LoginResponse {
   string message = 1;
@@ -30,7 +30,7 @@ message LoginResponse {
 message RegisterRequest {
   string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string role = 3 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
+  string role = 3 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee"];
 }
 message RegisterResponse {
   string message = 1;
@@ -53,12 +53,36 @@ message ChangePasswordRequest {
   string username = 1 [(buf.validate.field).string.min_len = 1];
   string old_password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string new_password = 3 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string role = 4 [(buf.validate.field).string.in = "seller", (buf.validate.field).string.in = "buyer"];
+  string role = 4 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee"];
 }
 message ChangePasswordResponse {
   string message = 1;
   bool success = 2;
 }
+
+// Register Seller Roles
+message RegisterSellerRolesRequest {
+  uint64 seller_admin_id = 1;
+  string username = 2;
+  string password = 3;
+  string role = 4;
+}
+message RegisterSellerRolesResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+// Get StoreID Role
+message GetStoreIDRoleByIDRequest {
+  uint64 ID = 1;
+}
+message GetStoreIDRoleByIDResponse {
+  string message = 1;
+  bool success = 2;
+  string role = 3;
+  uint64 store_id = 4;
+}
+
 
 // Service
 service AuthService {
@@ -66,6 +90,8 @@ service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc RegisterSellerRoles(RegisterSellerRolesRequest) returns (RegisterSellerRolesResponse);
+  rpc GetStoreIDRoleById(GetStoreIDRoleByIDRequest) returns (GetStoreIDRoleByIDResponse);
 }
 
 

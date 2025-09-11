@@ -9,4 +9,5 @@ type Account struct {
 	Role       string         `gorm:"not null"`
 	PwdVersion int64          `gorm:"not null"`
 	DeletedAt  gorm.DeletedAt `gorm:"index"`
+	StoreID    uint64         `gorm:"default:0"`
 }

@@ -32,6 +32,15 @@ plugins:
   - remote: buf.build/grpc/go
     out: ../order-service/pkg/client/authclient
     opt: paths=source_relative
+
+  # For User Service
+  - remote: buf.build/protocolbuffers/go
+    out: ../user-service/pkg/client/authclient
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: ../user-service/pkg/client/authclient
+    opt: paths=source_relative
+
 #managed:
 #  enabled: true
 #  override:

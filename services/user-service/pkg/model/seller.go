@@ -7,9 +7,8 @@ import (
 )
 
 type Seller struct {
-	UserID      uint64 `gorm:"primary_key"`
+	ID          uint64 `gorm:"primary_key;AUTO_INCREMENT"`
 	Name        string `gorm:"not null"`
-	Gender      string `gorm:"not null"`
 	BankAccount string `gorm:"not null"`
 	TaxCode     string `gorm:"not null"`
 	Description string `gorm:"not null"`

@@ -18,15 +18,14 @@ message Buyer {
   string address = 6;
 }
 message Seller {
-  uint64 user_id = 1;
+  uint64 id = 1;
   string name = 2;
-  string gender = 3;
-  string bank_account = 4;
-  string tax_code = 5;
-  string description = 6;
-  google.protobuf.Timestamp date_of_birth = 7;
-  string phone = 8;
-  string address = 9;
+  string bank_account = 3;
+  string tax_code = 4;
+  string description = 5;
+  google.protobuf.Timestamp date_of_birth = 6;
+  string phone = 7;
+  string address = 8;
 }
 
 // For Buyer gRPC
@@ -66,6 +65,7 @@ message DelBuyerByUserIDResponse {
 // For Seller gRPC
 message CreateSellerRequest {
   Seller seller = 1;
+  uint64 user_id = 2;
 }
 message CreateSellerResponse{
   string message = 1;

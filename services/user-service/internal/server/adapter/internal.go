@@ -30,9 +30,8 @@ func BuyerDTOToProto(input *dto.Buyer) (*userpb.Buyer, error) {
 
 func SellerProtoToDTO(seller *userpb.Seller) (*dto.Seller, error) {
 	return &dto.Seller{
-		UserID:      seller.GetUserId(),
+		ID:          seller.GetId(),
 		Name:        seller.GetName(),
-		Gender:      seller.GetGender(),
 		BankAccount: seller.GetBankAccount(),
 		TaxCode:     seller.GetTaxCode(),
 		Description: seller.GetDescription(),
@@ -44,9 +43,8 @@ func SellerProtoToDTO(seller *userpb.Seller) (*dto.Seller, error) {
 
 func SellerDTOToProto(input *dto.Seller) (*userpb.Seller, error) {
 	return &userpb.Seller{
-		UserId:      input.UserID,
+		Id:          input.ID,
 		Name:        input.Name,
-		Gender:      input.Gender,
 		BankAccount: input.BankAccount,
 		TaxCode:     input.TaxCode,
 		Description: input.Description,
@@ -126,6 +124,7 @@ func CreSelRequestToInput(req *userpb.CreateSellerRequest) (*dto.CreateSellerInp
 	}
 	return &dto.CreateSellerInput{
 		Seller: buyer,
+		UserID: req.UserId,
 	}, nil
 }
 func CreSelOutputToResponse(output *dto.CreateSellerOutput) (*userpb.CreateSellerResponse, error) {

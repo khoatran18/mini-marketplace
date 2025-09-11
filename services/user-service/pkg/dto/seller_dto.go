@@ -5,9 +5,8 @@ import (
 )
 
 type Seller struct {
-	UserID      uint64
+	ID          uint64
 	Name        string
-	Gender      string
 	BankAccount string
 	TaxCode     string
 	Description string
@@ -20,6 +19,7 @@ type Seller struct {
 
 type CreateSellerInput struct {
 	Seller *Seller
+	UserID uint64
 }
 type CreateSellerOutput struct {
 	Message string

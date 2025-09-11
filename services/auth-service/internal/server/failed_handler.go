@@ -38,3 +38,17 @@ func RefreshTokenFailResponse(message string, err error, code codes.Code) (*auth
 		Success:      false,
 	}, status.Error(code, err.Error())
 }
+
+func RegisterSellerRolesFailResponse(message string, err error, code codes.Code) (*authpb.RegisterSellerRolesResponse, error) {
+	return &authpb.RegisterSellerRolesResponse{
+		Message: message,
+		Success: false,
+	}, status.Error(code, err.Error())
+}
+
+func GetStoreIDRoleByIdFailResponse(message string, err error, code codes.Code) (*authpb.GetStoreIDRoleByIDResponse, error) {
+	return &authpb.GetStoreIDRoleByIDResponse{
+		Message: message,
+		Success: false,
+	}, status.Error(code, err.Error())
+}

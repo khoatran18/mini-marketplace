@@ -58,16 +58,23 @@ func main() {
 	})
 
 	// Test
-	topic := "auth.change_password"
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic, 0)
+	topic1 := "auth.change_password"
+	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic1, 0)
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
+	ctx1 := context.Context(context.Background())
+	authService.ProducerPwdVerKafkaEventWorker(ctx1, 3*time.Second, 100, topic1)
 
-	// Create go routine for publishing PwdVersion Kafka to API Gateway
-	ctx := context.Context(context.Background())
-	authService.ProducerPwdVerKafkaEventWorker(ctx, 3*time.Second, 100, topic)
+	// Chạy consumer trong goroutine
+	ctx2 := context.Context(context.Background())
+	topic2 := "user.create_seller"
+	go func() {
+		if err := serviceConfig.KafkaInstance.KafkaConsumer.Consume(ctx2, topic2, "auth-service-9", authService.UpdateStoreIDFromKafka); err != nil {
+			log.Printf("Consumer stopped with error: %v", err)
+		}
+	}()
 
 	// Run
 	log.Printf("Auth Server listening at %v", lis.Addr())

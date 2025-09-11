@@ -19,10 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_Login_FullMethodName          = "/auth_service.pkb.pb.AuthService/Login"
-	AuthService_Register_FullMethodName       = "/auth_service.pkb.pb.AuthService/Register"
-	AuthService_RefreshToken_FullMethodName   = "/auth_service.pkb.pb.AuthService/RefreshToken"
-	AuthService_ChangePassword_FullMethodName = "/auth_service.pkb.pb.AuthService/ChangePassword"
+	AuthService_Login_FullMethodName               = "/auth_service.pkb.pb.AuthService/Login"
+	AuthService_Register_FullMethodName            = "/auth_service.pkb.pb.AuthService/Register"
+	AuthService_RefreshToken_FullMethodName        = "/auth_service.pkb.pb.AuthService/RefreshToken"
+	AuthService_ChangePassword_FullMethodName      = "/auth_service.pkb.pb.AuthService/ChangePassword"
+	AuthService_RegisterSellerRoles_FullMethodName = "/auth_service.pkb.pb.AuthService/RegisterSellerRoles"
+	AuthService_GetStoreIDRoleById_FullMethodName  = "/auth_service.pkb.pb.AuthService/GetStoreIDRoleById"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -35,6 +37,8 @@ type AuthServiceClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
+	RegisterSellerRoles(ctx context.Context, in *RegisterSellerRolesRequest, opts ...grpc.CallOption) (*RegisterSellerRolesResponse, error)
+	GetStoreIDRoleById(ctx context.Context, in *GetStoreIDRoleByIDRequest, opts ...grpc.CallOption) (*GetStoreIDRoleByIDResponse, error)
 }
 
 type authServiceClient struct {
@@ -85,6 +89,26 @@ func (c *authServiceClient) ChangePassword(ctx context.Context, in *ChangePasswo
 	return out, nil
 }
 
+func (c *authServiceClient) RegisterSellerRoles(ctx context.Context, in *RegisterSellerRolesRequest, opts ...grpc.CallOption) (*RegisterSellerRolesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegisterSellerRolesResponse)
+	err := c.cc.Invoke(ctx, AuthService_RegisterSellerRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) GetStoreIDRoleById(ctx context.Context, in *GetStoreIDRoleByIDRequest, opts ...grpc.CallOption) (*GetStoreIDRoleByIDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetStoreIDRoleByIDResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetStoreIDRoleById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -95,6 +119,8 @@ type AuthServiceServer interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
 	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
+	RegisterSellerRoles(context.Context, *RegisterSellerRolesRequest) (*RegisterSellerRolesResponse, error)
+	GetStoreIDRoleById(context.Context, *GetStoreIDRoleByIDRequest) (*GetStoreIDRoleByIDResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -116,6 +142,12 @@ func (UnimplementedAuthServiceServer) RefreshToken(context.Context, *RefreshToke
 }
 func (UnimplementedAuthServiceServer) ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
+}
+func (UnimplementedAuthServiceServer) RegisterSellerRoles(context.Context, *RegisterSellerRolesRequest) (*RegisterSellerRolesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterSellerRoles not implemented")
+}
+func (UnimplementedAuthServiceServer) GetStoreIDRoleById(context.Context, *GetStoreIDRoleByIDRequest) (*GetStoreIDRoleByIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStoreIDRoleById not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -210,6 +242,42 @@ func _AuthService_ChangePassword_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_RegisterSellerRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterSellerRolesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).RegisterSellerRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_RegisterSellerRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).RegisterSellerRoles(ctx, req.(*RegisterSellerRolesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_GetStoreIDRoleById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStoreIDRoleByIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetStoreIDRoleById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetStoreIDRoleById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetStoreIDRoleById(ctx, req.(*GetStoreIDRoleByIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -232,6 +300,14 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ChangePassword",
 			Handler:    _AuthService_ChangePassword_Handler,
+		},
+		{
+			MethodName: "RegisterSellerRoles",
+			Handler:    _AuthService_RegisterSellerRoles_Handler,
+		},
+		{
+			MethodName: "GetStoreIDRoleById",
+			Handler:    _AuthService_GetStoreIDRoleById_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

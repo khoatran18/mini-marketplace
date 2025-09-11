@@ -4,10 +4,24 @@ import (
 	"context"
 	"fmt"
 	"user-service/pkg/model"
+
+	"gorm.io/gorm"
 )
 
-func (r *UserRepository) CreateSeller(ctx context.Context, seller *model.Seller) error {
-	return r.DB.WithContext(ctx).Create(seller).Error
+func (r *UserRepository) CreateSeller(ctx context.Context, seller *model.Seller, userID uint64) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		// Create seller
+		if err := tx.Create(seller).Error; err != nil {
+			return err
+		}
+
+		// Create event in outboxDB
+		if err := r.CreateCreateSellerEvent(tx, seller.ID, userID); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (r *UserRepository) GetSellerByUserID(ctx context.Context, userID uint64) (*model.Seller, error) {
@@ -19,12 +33,12 @@ func (r *UserRepository) GetSellerByUserID(ctx context.Context, userID uint64) (
 }
 
 func (r *UserRepository) UpdateSellerByUserID(ctx context.Context, seller *model.Seller) error {
-	result := r.DB.WithContext(ctx).Where("user_id = ?", seller.UserID).Updates(seller)
+	result := r.DB.WithContext(ctx).Where("user_id = ?", seller.ID).Updates(seller)
 	switch {
 	case result.Error != nil:
 		return result.Error
 	case result.RowsAffected == 0:
-		return fmt.Errorf("seller with user_id %d not found", seller.UserID)
+		return fmt.Errorf("seller with ID %d not found", seller.ID)
 	}
 	return nil
 }

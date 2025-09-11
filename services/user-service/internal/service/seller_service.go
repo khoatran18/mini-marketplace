@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"user-service/internal/client/authclient"
 	"user-service/internal/service/adapter"
 	"user-service/pkg/dto"
 )
@@ -12,7 +14,19 @@ func (s *UserService) CreateSeller(ctx context.Context, input *dto.CreateSellerI
 		return nil, err
 	}
 
-	if err := s.UserRepo.CreateSeller(ctx, buyer); err != nil {
+	// Validate role and have store
+	accountOutput, err := s.SCM.AuthServiceClient.GetStoreIDRoleByID(ctx, &authclient.GetStoreIDRoleByIDInput{
+		ID: input.UserID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if accountOutput.Role != "seller_admin" || accountOutput.StoreID != 0 {
+		return nil, errors.New("this user_id is not seller_admin or already have seller")
+	}
+
+	// Create seller
+	if err := s.UserRepo.CreateSeller(ctx, buyer, input.UserID); err != nil {
 		return nil, err
 	}
 	return &dto.CreateSellerOutput{

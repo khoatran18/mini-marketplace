@@ -1,9 +1,11 @@
 package dto
 
 type RegisterInput struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	Role     string `json:"role" binding:"required"`
+	Username        string `json:"username" binding:"required"`
+	Password        string `json:"password" binding:"required"`
+	Role            string `json:"role" binding:"required"`
+	StoreID         uint64 `json:"store_id"`
+	RoleNotRegister string `json:"role_not_register"`
 }
 type RegisterOutput struct {
 	Message string `json:"message"`
@@ -48,4 +50,25 @@ type TokenRequest struct {
 	Username   string
 	Role       string
 	PwdVersion int64
+}
+
+type RegisterSellerRolesInput struct {
+	SellerAdminID uint64
+	Username      string
+	Password      string
+	Role          string
+}
+type RegisterSellerRolesOutput struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+}
+
+type GetStoreIDRoleByIdInput struct {
+	ID uint64
+}
+type GetStoreIDRoleByIdOutput struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+	StoreID uint64 `json:"store_id"`
+	Role    string `json:"role"`
 }

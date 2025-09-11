@@ -9,6 +9,8 @@ import (
 	"auth-service/pkg/model"
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"go.uber.org/zap"
@@ -45,6 +47,11 @@ func NewAuthService(accountRepo *repository.AccountRepository, jwtSecret string,
 // Register handle logic register
 func (s *AuthService) Register(ctx context.Context, input *dto.RegisterInput) (*dto.RegisterOutput, error) {
 
+	// Validate role
+	if input.Role == input.RoleNotRegister {
+		return nil, errors.New("can not register role seller_employee")
+	}
+
 	// Check account existed
 	existingAccount, err := s.AccountRepo.GetAccountByUsernameRole(ctx, input.Username, input.Role)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -66,6 +73,7 @@ func (s *AuthService) Register(ctx context.Context, input *dto.RegisterInput) (*
 		Username:   input.Username,
 		Password:   string(hashedPassword),
 		Role:       input.Role,
+		StoreID:    input.StoreID,
 		PwdVersion: 0,
 	}
 
@@ -104,6 +112,7 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.Logi
 
 	// Create token
 	tokenRequest := adapter.AccountModelToTokenRequest(account)
+	fmt.Printf("Account\n: %v", account)
 	signedAccessToken, signedRefreshToken, err := s.generateToken(ctx, tokenRequest)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: token generation failure")
@@ -116,4 +125,60 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.Logi
 		AccessToken:  signedAccessToken,
 		RefreshToken: signedRefreshToken,
 	}, nil
+}
+
+// RegisterSellerRoles handle logic create accounts for seller_admin or seller_employee role
+func (s *AuthService) RegisterSellerRoles(ctx context.Context, input *dto.RegisterSellerRolesInput) (*dto.RegisterSellerRolesOutput, error) {
+
+	// Validate Role and Account
+	acc, err := s.AccountRepo.GetAccountById(ctx, input.SellerAdminID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		s.ZapLogger.Warn("AuthService: account not found")
+		return nil, errors.New("user_id is invalid")
+	}
+	if acc == nil {
+		s.ZapLogger.Error("AuthService: DB error", zap.Error(err))
+		return nil, err
+	}
+
+	// Only SellerAdmin have Store can create this role
+	if acc.Role != "seller_admin" || acc.StoreID == 0 {
+		return nil, errors.New("this account can not take this action")
+	}
+
+	log.Printf("Store ID: %d\n", acc.StoreID)
+	// Register new account
+	subOutput, err := s.Register(ctx, &dto.RegisterInput{
+		Username:        input.Username,
+		Password:        input.Password,
+		Role:            input.Role,
+		StoreID:         acc.StoreID,
+		RoleNotRegister: "buyer",
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !subOutput.Success {
+		return nil, errors.New("register failed with internal error")
+	}
+
+	return &dto.RegisterSellerRolesOutput{
+		Success: true,
+		Message: "Registered successfully",
+	}, nil
+}
+
+func (s *AuthService) GetStoreIDRoleById(ctx context.Context, input *dto.GetStoreIDRoleByIdInput) (*dto.GetStoreIDRoleByIdOutput, error) {
+	acc, err := s.AccountRepo.GetAccountById(ctx, input.ID)
+	if err != nil {
+		s.ZapLogger.Warn("AuthService: Get account error", zap.Error(err))
+		return nil, err
+	}
+	return &dto.GetStoreIDRoleByIdOutput{
+		Message: acc.Username,
+		Success: true,
+		Role:    acc.Role,
+		StoreID: acc.StoreID,
+	}, nil
+
 }

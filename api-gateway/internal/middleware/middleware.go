@@ -15,10 +15,10 @@ import (
 )
 
 type UserClaims struct {
-	UserID     uint
+	UserID     uint64
 	Username   string
 	Role       string
-	PwdVersion int
+	PwdVersion int64
 	Type       string
 	jwt.RegisteredClaims
 }
@@ -98,7 +98,7 @@ func RateLimitingMiddleware(limit int, period time.Duration, logger *zap.Logger,
 }
 
 // AuthMiddleware solve problem about jwt
-func AuthMiddleware(logger *zap.Logger, jwtSecret string) gin.HandlerFunc {
+func AuthMiddleware(logger *zap.Logger, redisClient *redis.Client, jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -137,6 +137,36 @@ func AuthMiddleware(logger *zap.Logger, jwtSecret string) gin.HandlerFunc {
 		if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
 			c.Set("userID", claims.UserID)
 			c.Set("userRole", claims.Role)
+
+			// Check logic for change password
+			keyPwdVersion := fmt.Sprintf("%d:pwd_version", claims.UserID)
+			exist, err := redisClient.Exists(context.Background(), keyPwdVersion).Result()
+			if err != nil {
+				logger.Warn("Middleware: error checking existence of pwdVersion")
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Error checking existence of pwdVersion"})
+				c.Abort()
+				return
+			}
+			if exist > 0 {
+				valueStr := redisClient.Get(context.Background(), keyPwdVersion).Val()
+				value, err := strconv.Atoi(valueStr)
+				if err != nil {
+					logger.Warn("Middleware: warn invalid or expired pwd version", zap.Error(err))
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired pwd version"})
+					c.Abort()
+					return
+				}
+				if value != int(claims.PwdVersion) {
+					fmt.Printf("%d : %d \n", value, claims.PwdVersion)
+					logger.Warn("Middleware: warn invalid or expired pwd version")
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired pwd version"})
+					c.Abort()
+					return
+				}
+
+				logger.Info(fmt.Sprintf("Middleware: auth success with userID %v, pwdVersion %d", claims.UserID, claims.PwdVersion))
+			}
+
 			c.Next()
 		} else {
 			logger.Warn("Middleware: warn invalid token claims")
