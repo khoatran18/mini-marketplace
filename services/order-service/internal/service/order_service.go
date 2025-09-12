@@ -2,34 +2,66 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"order-service/internal/client/productclient"
 	"order-service/internal/client/serviceclientmanager"
+	"order-service/internal/config/messagequeue"
+	"order-service/internal/config/messagequeue/kafkaimpl"
 	"order-service/internal/repository"
 	"order-service/internal/service/adapter"
 	"order-service/pkg/dto"
 	"order-service/pkg/model"
+	"order-service/pkg/outbox"
 
 	"go.uber.org/zap"
 )
 
 type OrderService struct {
-	OrderRepo *repository.OrderRepository
-	ZapLogger *zap.Logger
-	SCM       *serviceclientmanager.ServiceClientManager
+	OrderRepo   *repository.OrderRepository
+	ZapLogger   *zap.Logger
+	MQProducer  messagequeue.Producer
+	MQConsumer  messagequeue.Consumer
+	KafkaClient *kafkaimpl.KafkaClient
+	SCM         *serviceclientmanager.ServiceClientManager
 }
 
-func NewOrderService(repo *repository.OrderRepository, logger *zap.Logger, scm *serviceclientmanager.ServiceClientManager) *OrderService {
+func NewOrderService(repo *repository.OrderRepository, logger *zap.Logger, scm *serviceclientmanager.ServiceClientManager,
+	producer messagequeue.Producer, consumer messagequeue.Consumer, kafkaClient *kafkaimpl.KafkaClient) *OrderService {
 	return &OrderService{
-		OrderRepo: repo,
-		ZapLogger: logger,
-		SCM:       scm,
+		OrderRepo:   repo,
+		ZapLogger:   logger,
+		MQProducer:  producer,
+		MQConsumer:  consumer,
+		KafkaClient: kafkaClient,
+		SCM:         scm,
 	}
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, input *dto.CreateOrderInput) (*dto.CreateOrderOutput, error) {
 	orderModel := adapter.OrderDTOToModel(input.Order)
-	if err := s.OrderRepo.CreateOrder(ctx, orderModel); err != nil {
+
+	// Create OutboxModel
+	items := orderModel.OrderItems
+	var outboxItems []*outbox.ItemEvent
+	for _, item := range items {
+		outboxItem := &outbox.ItemEvent{
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+		}
+		outboxItems = append(outboxItems, outboxItem)
+	}
+	outboxItemsDTO, err := json.Marshal(outboxItems)
+	if err != nil {
+		return nil, err
+	}
+	createOrderEvent := &outbox.CreateOrderEvent{
+		OrderID: orderModel.ID,
+		Items:   outboxItemsDTO,
+		Status:  "PENDING",
+	}
+
+	if err := s.OrderRepo.CreateOrder(ctx, orderModel, createOrderEvent); err != nil {
 		return nil, err
 	}
 	return &dto.CreateOrderOutput{

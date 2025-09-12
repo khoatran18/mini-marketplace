@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"product-service/internal/config/messagequeue"
+	"product-service/internal/config/messagequeue/kafkaimpl"
 	"product-service/internal/repository"
 	"product-service/internal/service/adapter"
 	"product-service/pkg/dto"
@@ -13,13 +15,20 @@ import (
 
 type ProductService struct {
 	ProductRepo *repository.ProductRepository
+	MQProducer  messagequeue.Producer
+	MQConsumer  messagequeue.Consumer
+	KafkaClient *kafkaimpl.KafkaClient
 	ZapLogger   *zap.Logger
 }
 
 // NewProductService create new ProductService
-func NewProductService(productRepo *repository.ProductRepository, logger *zap.Logger) *ProductService {
+func NewProductService(productRepo *repository.ProductRepository, logger *zap.Logger,
+	producer messagequeue.Producer, consumer messagequeue.Consumer, kafkaClient *kafkaimpl.KafkaClient) *ProductService {
 	return &ProductService{
 		ProductRepo: productRepo,
+		MQProducer:  producer,
+		MQConsumer:  consumer,
+		KafkaClient: kafkaClient,
 		ZapLogger:   logger,
 	}
 }

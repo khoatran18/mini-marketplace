@@ -1,4 +1,4 @@
-package repository
+epository
 
 import (
 	"context"
@@ -96,3 +96,4 @@ func (r *ProductRepository) GetProductsBySellerID(ctx context.Context, sellerID 
 	}
 	return products, nil
 }
+

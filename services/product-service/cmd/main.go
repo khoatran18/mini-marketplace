@@ -35,8 +35,11 @@ func main() {
 		fmt.Println("Migration successfully!")
 	}
 
+	defer serviceConfig.KafkaInstance.KafkaManager.CloseWriterAll()
+	defer serviceConfig.KafkaInstance.KafkaManager.CloseReaderAll()
+
 	productRepo := repository.NewProductRepository(serviceConfig.PostgresDB)
-	productService := service.NewProductService(productRepo, serviceConfig.ZapLogger)
+	productService := service.NewProductService(productRepo, serviceConfig.ZapLogger, serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient)
 
 	lis, err := net.Listen("tcp", ":50053")
 	if err != nil {

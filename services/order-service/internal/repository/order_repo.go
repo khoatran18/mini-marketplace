@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"order-service/pkg/model"
+	"order-service/pkg/outbox"
 	"slices"
 
 	"gorm.io/gorm"
@@ -23,8 +24,23 @@ func NewOrderRepository(db *gorm.DB) *OrderRepository {
 
 // For Create function
 
-func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order) error {
-	return r.DB.Create(order).Error
+func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order, createOrderOutbox *outbox.CreateOrderEvent) error {
+
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		// Create order in OrderDB
+		if err := tx.Create(order).Error; err != nil {
+			return err
+		}
+
+		// Create order in outbox
+		if err := r.CreateOrderOutbox(tx, createOrderOutbox); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 }
 
 // For Get function
