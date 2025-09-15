@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -9,8 +10,10 @@ import (
 	"product-service/internal/server"
 	"product-service/internal/service"
 	productpb "product-service/pkg/pb"
+	"time"
 
 	"github.com/lpernett/godotenv"
+	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -40,6 +43,25 @@ func main() {
 
 	productRepo := repository.NewProductRepository(serviceConfig.PostgresDB)
 	productService := service.NewProductService(productRepo, serviceConfig.ZapLogger, serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient)
+
+	// Run consumer in goroutine
+	ctx := context.Context(context.Background())
+	topic := "order.create_order"
+	go func() {
+		if err := serviceConfig.KafkaInstance.KafkaConsumer.Consume(ctx, topic, "order-service-group", productService.ValidateProductInventory); err != nil {
+			log.Printf("Consumer stopped with error: %v", err)
+		}
+	}()
+
+	// Run producer in goroutine
+	topic1 := "product.validate_order"
+	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic1, 0)
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	ctx1 := context.Context(context.Background())
+	productService.ProducerValOrdKafkaEventWorker(ctx1, 10*time.Second, 100, topic1)
 
 	lis, err := net.Listen("tcp", ":50053")
 	if err != nil {

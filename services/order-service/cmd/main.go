@@ -51,6 +51,15 @@ func main() {
 	orderRepo := repository.NewOrderRepository(serviceConfig.PostgresDB)
 	orderService := service.NewOrderService(orderRepo, serviceConfig.ZapLogger, scm, serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient)
 
+	// Run consumer in goroutine
+	ctx := context.Context(context.Background())
+	topic := "product.validate_order"
+	go func() {
+		if err := serviceConfig.KafkaInstance.KafkaConsumer.Consume(ctx, topic, "order-service-group", orderService.UpdateOrderStatusByKafka); err != nil {
+			log.Printf("Consumer stopped with error: %v", err)
+		}
+	}()
+
 	// Test
 	topic1 := "order.create_order"
 	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic1, 0)

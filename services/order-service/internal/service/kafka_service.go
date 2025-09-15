@@ -5,12 +5,35 @@ import (
 	"encoding/json"
 	"log"
 	"order-service/internal/service/adapter"
+	"order-service/pkg/dto"
 	"order-service/pkg/outbox"
 	"time"
 
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
+
+// For Consumer
+
+func (s *OrderService) UpdateOrderStatusByKafka(ctx context.Context, msg *kafka.Message) error {
+	var eventDTO dto.ValidateOrderKafkaEvent
+	if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
+		return err
+	}
+
+	var status string
+	if eventDTO.Success == false {
+		status = "FAILED"
+	} else {
+		status = "SUCCESS"
+	}
+	if err := s.OrderRepo.UpdateOrderStatusByID(ctx, eventDTO.OrderID, status); err != nil {
+		return err
+	}
+	return nil
+}
+
+// For Producer
 
 func (s *OrderService) ProducerCreOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
 	go func() {

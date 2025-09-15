@@ -1,8 +1,10 @@
-epository
+package repository
 
 import (
 	"context"
 	"errors"
+	"fmt"
+	"product-service/pkg/dto"
 	"product-service/pkg/model"
 
 	"gorm.io/gorm"
@@ -88,6 +90,30 @@ func (r *ProductRepository) GetAndDecreaseInventoryByID(ctx context.Context, id 
 	return nil
 }
 
+func (r *ProductRepository) GetAndDecreaseInventoryByIDBatch(ctx context.Context, kafkaEvent *dto.CreateOrderKafkaEvent) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		itemEvents := kafkaEvent.Items
+		for _, item := range itemEvents {
+			result := tx.Model(&model.Product{}).
+				Where("id = ? AND inventory >= ?", item.ProductID, item.Quantity).
+				UpdateColumn("inventory", gorm.Expr("inventory - ?", item.Quantity))
+
+			if result.Error != nil {
+				return fmt.Errorf("errorDB %v in ID: %d", result.Error.Error(), item.ProductID)
+			}
+			if result.RowsAffected == 0 {
+				return fmt.Errorf("no product for product_id = %d", item.ProductID)
+			}
+		}
+
+		// Update in OutboxDB
+		if err := r.CreateOrUpdateValOrdEvent(tx, kafkaEvent.OrderID, true, true); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 // GetProductsBySellerID get product array by SellerID
 func (r *ProductRepository) GetProductsBySellerID(ctx context.Context, sellerID uint64) ([]*model.Product, error) {
 	var products []*model.Product
@@ -96,4 +122,3 @@ func (r *ProductRepository) GetProductsBySellerID(ctx context.Context, sellerID 
 	}
 	return products, nil
 }
-

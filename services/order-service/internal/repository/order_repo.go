@@ -107,6 +107,18 @@ func (r *OrderRepository) UpdateOrderItemsByID(ctx context.Context, orderItems [
 		return nil
 	})
 }
+func (r *OrderRepository) UpdateOrderStatusByID(ctx context.Context, id uint64, status string) error {
+	result := r.DB.WithContext(ctx).Model(&model.Order{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"status": status,
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("no rows affected")
+	}
+	return nil
+}
 
 // For Canceled order function
 

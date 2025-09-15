@@ -7,6 +7,7 @@ import (
 	"os"
 	"product-service/internal/config/messagequeue/kafkaimpl"
 	"product-service/pkg/model"
+	"product-service/pkg/outbox"
 	"strconv"
 	"strings"
 	"time"
@@ -91,7 +92,7 @@ func initPostgresDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate(&model.Product{})
+	db.AutoMigrate(&model.Product{}, &outbox.ValidateOrderEvent{})
 
 	return db, nil
 }
