@@ -2,11 +2,10 @@ syntax = "proto3";
 
 package user_service.pkg.pb;
 
-option go_package = "user-service/userpb";
-
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
+option go_package = "user-service/userpb";
 
 // Core definition
 message Buyer {
@@ -32,7 +31,7 @@ message Seller {
 message CreateBuyerRequest {
   Buyer buyer = 1;
 }
-message CreateBuyerResponse{
+message CreateBuyerResponse {
   string message = 1;
   bool success = 2;
 }
@@ -67,44 +66,45 @@ message CreateSellerRequest {
   Seller seller = 1;
   uint64 user_id = 2;
 }
-message CreateSellerResponse{
+message CreateSellerResponse {
   string message = 1;
   bool success = 2;
 }
 
-message UpdateSellerByUserIDRequest {
+message UpdateSellerByIDRequest {
   Seller seller = 1;
+  uint64 UserID = 2;
 }
-message UpdateSellerByUserIDResponse {
+message UpdateSellerByIDResponse {
   string message = 1;
   bool success = 2;
 }
 
-message GetSellerByUserIDRequest {
+message GetSellerByIDRequest {
   uint64 user_id = 1;
 }
-message GetSellerByUserIDResponse {
+message GetSellerByIDResponse {
   Seller seller = 1;
   string message = 2;
   bool success = 3;
 }
 
-message DelSellerByUserIDRequest {
+message DelSellerByIDRequest {
   uint64 user_id = 1;
 }
-message DelSellerByUserIDResponse {
+message DelSellerByIDResponse {
   string message = 1;
   bool success = 2;
 }
 
 service UserService {
-  rpc CreateBuyer (CreateBuyerRequest) returns (CreateBuyerResponse);
-  rpc UpdateBuyerByUserID (UpdateBuyerByUserIDRequest) returns (UpdateBuyerByUserIDResponse);
-  rpc GetBuyerByUserID (GetBuyerByUserIDRequest) returns (GetBuyerByUserIDResponse);
-  rpc DelBuyerByUserID (DelBuyerByUserIDRequest) returns (DelBuyerByUserIDResponse);
+  rpc CreateBuyer(CreateBuyerRequest) returns (CreateBuyerResponse);
+  rpc UpdateBuyerByUserID(UpdateBuyerByUserIDRequest) returns (UpdateBuyerByUserIDResponse);
+  rpc GetBuyerByUserID(GetBuyerByUserIDRequest) returns (GetBuyerByUserIDResponse);
+  rpc DelBuyerByUserID(DelBuyerByUserIDRequest) returns (DelBuyerByUserIDResponse);
 
-  rpc CreateSeller (CreateSellerRequest) returns (CreateSellerResponse);
-  rpc UpdateSellerByUserID (UpdateSellerByUserIDRequest) returns (UpdateSellerByUserIDResponse);
-  rpc GetSellerByUserID(GetSellerByUserIDRequest) returns (GetSellerByUserIDResponse);
-  rpc DelSellerByUserID (DelSellerByUserIDRequest) returns (DelSellerByUserIDResponse);
+  rpc CreateSeller(CreateSellerRequest) returns (CreateSellerResponse);
+  rpc UpdateSellerByID(UpdateSellerByIDRequest) returns (UpdateSellerByIDResponse);
+  rpc GetSellerByID(GetSellerByIDRequest) returns (GetSellerByIDResponse);
+  rpc DelSellerByID(DelSellerByIDRequest) returns (DelSellerByIDResponse);
 }

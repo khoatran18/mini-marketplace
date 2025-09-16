@@ -19,14 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_CreateBuyer_FullMethodName          = "/user_service.pkg.pb.UserService/CreateBuyer"
-	UserService_UpdateBuyerByUserID_FullMethodName  = "/user_service.pkg.pb.UserService/UpdateBuyerByUserID"
-	UserService_GetBuyerByUserID_FullMethodName     = "/user_service.pkg.pb.UserService/GetBuyerByUserID"
-	UserService_DelBuyerByUserID_FullMethodName     = "/user_service.pkg.pb.UserService/DelBuyerByUserID"
-	UserService_CreateSeller_FullMethodName         = "/user_service.pkg.pb.UserService/CreateSeller"
-	UserService_UpdateSellerByUserID_FullMethodName = "/user_service.pkg.pb.UserService/UpdateSellerByUserID"
-	UserService_GetSellerByUserID_FullMethodName    = "/user_service.pkg.pb.UserService/GetSellerByUserID"
-	UserService_DelSellerByUserID_FullMethodName    = "/user_service.pkg.pb.UserService/DelSellerByUserID"
+	UserService_CreateBuyer_FullMethodName         = "/user_service.pkg.pb.UserService/CreateBuyer"
+	UserService_UpdateBuyerByUserID_FullMethodName = "/user_service.pkg.pb.UserService/UpdateBuyerByUserID"
+	UserService_GetBuyerByUserID_FullMethodName    = "/user_service.pkg.pb.UserService/GetBuyerByUserID"
+	UserService_DelBuyerByUserID_FullMethodName    = "/user_service.pkg.pb.UserService/DelBuyerByUserID"
+	UserService_CreateSeller_FullMethodName        = "/user_service.pkg.pb.UserService/CreateSeller"
+	UserService_UpdateSellerByID_FullMethodName    = "/user_service.pkg.pb.UserService/UpdateSellerByID"
+	UserService_GetSellerByID_FullMethodName       = "/user_service.pkg.pb.UserService/GetSellerByID"
+	UserService_DelSellerByID_FullMethodName       = "/user_service.pkg.pb.UserService/DelSellerByID"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -38,9 +38,9 @@ type UserServiceClient interface {
 	GetBuyerByUserID(ctx context.Context, in *GetBuyerByUserIDRequest, opts ...grpc.CallOption) (*GetBuyerByUserIDResponse, error)
 	DelBuyerByUserID(ctx context.Context, in *DelBuyerByUserIDRequest, opts ...grpc.CallOption) (*DelBuyerByUserIDResponse, error)
 	CreateSeller(ctx context.Context, in *CreateSellerRequest, opts ...grpc.CallOption) (*CreateSellerResponse, error)
-	UpdateSellerByUserID(ctx context.Context, in *UpdateSellerByUserIDRequest, opts ...grpc.CallOption) (*UpdateSellerByUserIDResponse, error)
-	GetSellerByUserID(ctx context.Context, in *GetSellerByUserIDRequest, opts ...grpc.CallOption) (*GetSellerByUserIDResponse, error)
-	DelSellerByUserID(ctx context.Context, in *DelSellerByUserIDRequest, opts ...grpc.CallOption) (*DelSellerByUserIDResponse, error)
+	UpdateSellerByID(ctx context.Context, in *UpdateSellerByIDRequest, opts ...grpc.CallOption) (*UpdateSellerByIDResponse, error)
+	GetSellerByID(ctx context.Context, in *GetSellerByIDRequest, opts ...grpc.CallOption) (*GetSellerByIDResponse, error)
+	DelSellerByID(ctx context.Context, in *DelSellerByIDRequest, opts ...grpc.CallOption) (*DelSellerByIDResponse, error)
 }
 
 type userServiceClient struct {
@@ -101,30 +101,30 @@ func (c *userServiceClient) CreateSeller(ctx context.Context, in *CreateSellerRe
 	return out, nil
 }
 
-func (c *userServiceClient) UpdateSellerByUserID(ctx context.Context, in *UpdateSellerByUserIDRequest, opts ...grpc.CallOption) (*UpdateSellerByUserIDResponse, error) {
+func (c *userServiceClient) UpdateSellerByID(ctx context.Context, in *UpdateSellerByIDRequest, opts ...grpc.CallOption) (*UpdateSellerByIDResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateSellerByUserIDResponse)
-	err := c.cc.Invoke(ctx, UserService_UpdateSellerByUserID_FullMethodName, in, out, cOpts...)
+	out := new(UpdateSellerByIDResponse)
+	err := c.cc.Invoke(ctx, UserService_UpdateSellerByID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *userServiceClient) GetSellerByUserID(ctx context.Context, in *GetSellerByUserIDRequest, opts ...grpc.CallOption) (*GetSellerByUserIDResponse, error) {
+func (c *userServiceClient) GetSellerByID(ctx context.Context, in *GetSellerByIDRequest, opts ...grpc.CallOption) (*GetSellerByIDResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetSellerByUserIDResponse)
-	err := c.cc.Invoke(ctx, UserService_GetSellerByUserID_FullMethodName, in, out, cOpts...)
+	out := new(GetSellerByIDResponse)
+	err := c.cc.Invoke(ctx, UserService_GetSellerByID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *userServiceClient) DelSellerByUserID(ctx context.Context, in *DelSellerByUserIDRequest, opts ...grpc.CallOption) (*DelSellerByUserIDResponse, error) {
+func (c *userServiceClient) DelSellerByID(ctx context.Context, in *DelSellerByIDRequest, opts ...grpc.CallOption) (*DelSellerByIDResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DelSellerByUserIDResponse)
-	err := c.cc.Invoke(ctx, UserService_DelSellerByUserID_FullMethodName, in, out, cOpts...)
+	out := new(DelSellerByIDResponse)
+	err := c.cc.Invoke(ctx, UserService_DelSellerByID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -140,9 +140,9 @@ type UserServiceServer interface {
 	GetBuyerByUserID(context.Context, *GetBuyerByUserIDRequest) (*GetBuyerByUserIDResponse, error)
 	DelBuyerByUserID(context.Context, *DelBuyerByUserIDRequest) (*DelBuyerByUserIDResponse, error)
 	CreateSeller(context.Context, *CreateSellerRequest) (*CreateSellerResponse, error)
-	UpdateSellerByUserID(context.Context, *UpdateSellerByUserIDRequest) (*UpdateSellerByUserIDResponse, error)
-	GetSellerByUserID(context.Context, *GetSellerByUserIDRequest) (*GetSellerByUserIDResponse, error)
-	DelSellerByUserID(context.Context, *DelSellerByUserIDRequest) (*DelSellerByUserIDResponse, error)
+	UpdateSellerByID(context.Context, *UpdateSellerByIDRequest) (*UpdateSellerByIDResponse, error)
+	GetSellerByID(context.Context, *GetSellerByIDRequest) (*GetSellerByIDResponse, error)
+	DelSellerByID(context.Context, *DelSellerByIDRequest) (*DelSellerByIDResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -168,14 +168,14 @@ func (UnimplementedUserServiceServer) DelBuyerByUserID(context.Context, *DelBuye
 func (UnimplementedUserServiceServer) CreateSeller(context.Context, *CreateSellerRequest) (*CreateSellerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSeller not implemented")
 }
-func (UnimplementedUserServiceServer) UpdateSellerByUserID(context.Context, *UpdateSellerByUserIDRequest) (*UpdateSellerByUserIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateSellerByUserID not implemented")
+func (UnimplementedUserServiceServer) UpdateSellerByID(context.Context, *UpdateSellerByIDRequest) (*UpdateSellerByIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSellerByID not implemented")
 }
-func (UnimplementedUserServiceServer) GetSellerByUserID(context.Context, *GetSellerByUserIDRequest) (*GetSellerByUserIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSellerByUserID not implemented")
+func (UnimplementedUserServiceServer) GetSellerByID(context.Context, *GetSellerByIDRequest) (*GetSellerByIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSellerByID not implemented")
 }
-func (UnimplementedUserServiceServer) DelSellerByUserID(context.Context, *DelSellerByUserIDRequest) (*DelSellerByUserIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DelSellerByUserID not implemented")
+func (UnimplementedUserServiceServer) DelSellerByID(context.Context, *DelSellerByIDRequest) (*DelSellerByIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DelSellerByID not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -288,56 +288,56 @@ func _UserService_CreateSeller_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_UpdateSellerByUserID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateSellerByUserIDRequest)
+func _UserService_UpdateSellerByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSellerByIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServiceServer).UpdateSellerByUserID(ctx, in)
+		return srv.(UserServiceServer).UpdateSellerByID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: UserService_UpdateSellerByUserID_FullMethodName,
+		FullMethod: UserService_UpdateSellerByID_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).UpdateSellerByUserID(ctx, req.(*UpdateSellerByUserIDRequest))
+		return srv.(UserServiceServer).UpdateSellerByID(ctx, req.(*UpdateSellerByIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_GetSellerByUserID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSellerByUserIDRequest)
+func _UserService_GetSellerByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSellerByIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServiceServer).GetSellerByUserID(ctx, in)
+		return srv.(UserServiceServer).GetSellerByID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: UserService_GetSellerByUserID_FullMethodName,
+		FullMethod: UserService_GetSellerByID_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).GetSellerByUserID(ctx, req.(*GetSellerByUserIDRequest))
+		return srv.(UserServiceServer).GetSellerByID(ctx, req.(*GetSellerByIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_DelSellerByUserID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DelSellerByUserIDRequest)
+func _UserService_DelSellerByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DelSellerByIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServiceServer).DelSellerByUserID(ctx, in)
+		return srv.(UserServiceServer).DelSellerByID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: UserService_DelSellerByUserID_FullMethodName,
+		FullMethod: UserService_DelSellerByID_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).DelSellerByUserID(ctx, req.(*DelSellerByUserIDRequest))
+		return srv.(UserServiceServer).DelSellerByID(ctx, req.(*DelSellerByIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -370,16 +370,16 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_CreateSeller_Handler,
 		},
 		{
-			MethodName: "UpdateSellerByUserID",
-			Handler:    _UserService_UpdateSellerByUserID_Handler,
+			MethodName: "UpdateSellerByID",
+			Handler:    _UserService_UpdateSellerByID_Handler,
 		},
 		{
-			MethodName: "GetSellerByUserID",
-			Handler:    _UserService_GetSellerByUserID_Handler,
+			MethodName: "GetSellerByID",
+			Handler:    _UserService_GetSellerByID_Handler,
 		},
 		{
-			MethodName: "DelSellerByUserID",
-			Handler:    _UserService_DelSellerByUserID_Handler,
+			MethodName: "DelSellerByID",
+			Handler:    _UserService_DelSellerByID_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

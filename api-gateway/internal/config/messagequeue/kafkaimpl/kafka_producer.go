@@ -23,6 +23,7 @@ func NewKafkaProducer(km *KafkaManager, retry int, backoff time.Duration) *Kafka
 }
 
 func (p *KafkaProducer) Publish(ctx context.Context, balance kafka.Balancer, topic string, key, value []byte) error {
+	// Check if writer is existed
 	var writer *kafka.Writer
 	if w, ok := p.km.writers[topic]; ok {
 		writer = w
@@ -32,6 +33,7 @@ func (p *KafkaProducer) Publish(ctx context.Context, balance kafka.Balancer, top
 		log.Println("writer is nil and create")
 	}
 
+	// Get only first error, but need to publish all events
 	var lastErr error
 	for i := 0; i < p.retry; i++ {
 		if err := writer.WriteMessages(ctx, kafka.Message{

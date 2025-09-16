@@ -35,7 +35,7 @@ func (s *UserService) CreateSeller(ctx context.Context, input *dto.CreateSellerI
 	}, nil
 }
 
-func (s *UserService) GetSellerByUserID(ctx context.Context, input *dto.GetSellerByUserIDInput) (*dto.GetSellerByUserIDOutput, error) {
+func (s *UserService) GetSellerByUserID(ctx context.Context, input *dto.GetSellerByIDInput) (*dto.GetSellerByIDOutput, error) {
 	buyer, err := s.UserRepo.GetSellerByUserID(ctx, input.UserID)
 	if err != nil {
 		return nil, err
@@ -44,32 +44,46 @@ func (s *UserService) GetSellerByUserID(ctx context.Context, input *dto.GetSelle
 	if err != nil {
 		return nil, err
 	}
-	return &dto.GetSellerByUserIDOutput{
+	return &dto.GetSellerByIDOutput{
 		Message: "Get buyer by UserID successfully",
 		Success: true,
 		Seller:  buyerDTO,
 	}, nil
 }
 
-func (s *UserService) UpdateSellerByUserID(ctx context.Context, input *dto.UpdateSellerByUserIDInput) (*dto.UpdateSellerByUserIDOutput, error) {
+func (s *UserService) UpdateSellerByUserID(ctx context.Context, input *dto.UpdateSellerByIDInput) (*dto.UpdateSellerByIDOutput, error) {
+	// Check if seller existed
 	buyer, err := adapter.SellerDTOToModel(input.Seller)
 	if err != nil {
 		return nil, err
 	}
+
+	// Validate role and have store
+	accountOutput, err := s.SCM.AuthServiceClient.GetStoreIDRoleByID(ctx, &authclient.GetStoreIDRoleByIDInput{
+		ID: input.UserID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if accountOutput.Role != "seller_admin" {
+		return nil, errors.New("this user_id is not seller_admin")
+	}
+
+	// Update
 	if err := s.UserRepo.UpdateSellerByUserID(ctx, buyer); err != nil {
 		return nil, err
 	}
-	return &dto.UpdateSellerByUserIDOutput{
+	return &dto.UpdateSellerByIDOutput{
 		Message: "Update buyer successfully",
 		Success: true,
 	}, nil
 }
 
-func (s *UserService) DelSellerByUserID(ctx context.Context, input *dto.DelSellerByUserIDInput) (*dto.DelSellerByUserIDOutput, error) {
+func (s *UserService) DelSellerByUserID(ctx context.Context, input *dto.DelSellerByIDInput) (*dto.DelSellerByIDOutput, error) {
 	if err := s.UserRepo.DelSellerByUserID(ctx, input.UserID); err != nil {
 		return nil, err
 	}
-	return &dto.DelSellerByUserIDOutput{
+	return &dto.DelSellerByIDOutput{
 		Message: "Delete Buyer successfully",
 		Success: true,
 	}, nil

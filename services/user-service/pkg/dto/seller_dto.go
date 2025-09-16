@@ -26,31 +26,32 @@ type CreateSellerOutput struct {
 	Success bool
 }
 
-// UpdateSellerByUserID
+// UpdateSellerByID
 
-type UpdateSellerByUserIDInput struct {
+type UpdateSellerByIDInput struct {
+	UserID uint64
 	Seller *Seller
 }
-type UpdateSellerByUserIDOutput struct {
+type UpdateSellerByIDOutput struct {
 	Message string
 	Success bool
 }
 
-// GetSellerByUserID
+// GetSellerByID
 
-type GetSellerByUserIDInput struct {
+type GetSellerByIDInput struct {
 	UserID uint64
 }
-type GetSellerByUserIDOutput struct {
+type GetSellerByIDOutput struct {
 	Seller  *Seller
 	Message string
 	Success bool
 }
 
-type DelSellerByUserIDInput struct {
+type DelSellerByIDInput struct {
 	UserID uint64
 }
-type DelSellerByUserIDOutput struct {
+type DelSellerByIDOutput struct {
 	Message string
 	Success bool
 }

@@ -36,15 +36,15 @@ func CreSelFailResponse(message string, err error, code codes.Code) (*userpb.Cre
 	}, status.Error(code, err.Error())
 }
 
-func UpdSelByUseIDFailResponse(message string, err error, code codes.Code) (*userpb.UpdateSellerByUserIDResponse, error) {
-	return &userpb.UpdateSellerByUserIDResponse{
+func UpdSelByUseIDFailResponse(message string, err error, code codes.Code) (*userpb.UpdateSellerByIDResponse, error) {
+	return &userpb.UpdateSellerByIDResponse{
 		Message: message,
 		Success: false,
 	}, status.Error(code, err.Error())
 }
 
-func GetSelByUseIDFailResponse(message string, err error, code codes.Code) (*userpb.GetSellerByUserIDResponse, error) {
-	return &userpb.GetSellerByUserIDResponse{
+func GetSelByUseIDFailResponse(message string, err error, code codes.Code) (*userpb.GetSellerByIDResponse, error) {
+	return &userpb.GetSellerByIDResponse{
 		Message: message,
 		Success: false,
 		Seller:  nil,
@@ -58,8 +58,8 @@ func DelBuyByUseIDFailResponse(message string, err error, code codes.Code) (*use
 	}, status.Error(code, err.Error())
 }
 
-func DelSelByUseIDFailResponse(message string, err error, code codes.Code) (*userpb.DelSellerByUserIDResponse, error) {
-	return &userpb.DelSellerByUserIDResponse{
+func DelSelByIDFailResponse(message string, err error, code codes.Code) (*userpb.DelSellerByIDResponse, error) {
+	return &userpb.DelSellerByIDResponse{
 		Message: message,
 		Success: false,
 	}, status.Error(code, err.Error())

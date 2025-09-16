@@ -134,46 +134,47 @@ func CreSelOutputToResponse(output *dto.CreateSellerOutput) (*userpb.CreateSelle
 	}, nil
 }
 
-func UpdSelByUseIDRequestToInput(req *userpb.UpdateSellerByUserIDRequest) (*dto.UpdateSellerByUserIDInput, error) {
+func UpdSelByIDRequestToInput(req *userpb.UpdateSellerByIDRequest) (*dto.UpdateSellerByIDInput, error) {
 	buyer, err := SellerProtoToDTO(req.GetSeller())
 	if err != nil {
 		return nil, err
 	}
-	return &dto.UpdateSellerByUserIDInput{
+	return &dto.UpdateSellerByIDInput{
 		Seller: buyer,
+		UserID: req.GetUserID(),
 	}, nil
 }
-func UpdSelByUseIDOutputToResponse(output *dto.UpdateSellerByUserIDOutput) (*userpb.UpdateSellerByUserIDResponse, error) {
-	return &userpb.UpdateSellerByUserIDResponse{
+func UpdSelByIDOutputToResponse(output *dto.UpdateSellerByIDOutput) (*userpb.UpdateSellerByIDResponse, error) {
+	return &userpb.UpdateSellerByIDResponse{
 		Message: output.Message,
 		Success: output.Success,
 	}, nil
 }
 
-func GetSelByUseIDRequestToInput(req *userpb.GetSellerByUserIDRequest) (*dto.GetSellerByUserIDInput, error) {
-	return &dto.GetSellerByUserIDInput{
+func GetSelByIDRequestToInput(req *userpb.GetSellerByIDRequest) (*dto.GetSellerByIDInput, error) {
+	return &dto.GetSellerByIDInput{
 		UserID: req.GetUserId(),
 	}, nil
 }
-func GetSelByUseIDOutputToResponse(output *dto.GetSellerByUserIDOutput) (*userpb.GetSellerByUserIDResponse, error) {
+func GetSelByIDOutputToResponse(output *dto.GetSellerByIDOutput) (*userpb.GetSellerByIDResponse, error) {
 	buyer, err := SellerDTOToProto(output.Seller)
 	if err != nil {
 		return nil, err
 	}
-	return &userpb.GetSellerByUserIDResponse{
+	return &userpb.GetSellerByIDResponse{
 		Message: output.Message,
 		Success: output.Success,
 		Seller:  buyer,
 	}, nil
 }
 
-func DelSelByUseIDRequestToInput(req *userpb.DelSellerByUserIDRequest) (*dto.DelSellerByUserIDInput, error) {
-	return &dto.DelSellerByUserIDInput{
+func DelSelByIDRequestToInput(req *userpb.DelSellerByIDRequest) (*dto.DelSellerByIDInput, error) {
+	return &dto.DelSellerByIDInput{
 		UserID: req.GetUserId(),
 	}, nil
 }
-func DelSelByUseIDOutputToResponse(output *dto.DelSellerByUserIDOutput) (*userpb.DelSellerByUserIDResponse, error) {
-	return &userpb.DelSellerByUserIDResponse{
+func DelSelByIDOutputToResponse(output *dto.DelSellerByIDOutput) (*userpb.DelSellerByIDResponse, error) {
+	return &userpb.DelSellerByIDResponse{
 		Message: output.Message,
 		Success: output.Success,
 	}, nil

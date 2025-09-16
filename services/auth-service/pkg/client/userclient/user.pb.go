@@ -706,27 +706,28 @@ func (x *CreateSellerResponse) GetSuccess() bool {
 	return false
 }
 
-type UpdateSellerByUserIDRequest struct {
+type UpdateSellerByIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Seller        *Seller                `protobuf:"bytes,1,opt,name=seller,proto3" json:"seller,omitempty"`
+	UserID        uint64                 `protobuf:"varint,2,opt,name=UserID,proto3" json:"UserID,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UpdateSellerByUserIDRequest) Reset() {
-	*x = UpdateSellerByUserIDRequest{}
+func (x *UpdateSellerByIDRequest) Reset() {
+	*x = UpdateSellerByIDRequest{}
 	mi := &file_user_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateSellerByUserIDRequest) String() string {
+func (x *UpdateSellerByIDRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateSellerByUserIDRequest) ProtoMessage() {}
+func (*UpdateSellerByIDRequest) ProtoMessage() {}
 
-func (x *UpdateSellerByUserIDRequest) ProtoReflect() protoreflect.Message {
+func (x *UpdateSellerByIDRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_user_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -738,19 +739,26 @@ func (x *UpdateSellerByUserIDRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateSellerByUserIDRequest.ProtoReflect.Descriptor instead.
-func (*UpdateSellerByUserIDRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateSellerByIDRequest.ProtoReflect.Descriptor instead.
+func (*UpdateSellerByIDRequest) Descriptor() ([]byte, []int) {
 	return file_user_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *UpdateSellerByUserIDRequest) GetSeller() *Seller {
+func (x *UpdateSellerByIDRequest) GetSeller() *Seller {
 	if x != nil {
 		return x.Seller
 	}
 	return nil
 }
 
-type UpdateSellerByUserIDResponse struct {
+func (x *UpdateSellerByIDRequest) GetUserID() uint64 {
+	if x != nil {
+		return x.UserID
+	}
+	return 0
+}
+
+type UpdateSellerByIDResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
@@ -758,20 +766,20 @@ type UpdateSellerByUserIDResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UpdateSellerByUserIDResponse) Reset() {
-	*x = UpdateSellerByUserIDResponse{}
+func (x *UpdateSellerByIDResponse) Reset() {
+	*x = UpdateSellerByIDResponse{}
 	mi := &file_user_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateSellerByUserIDResponse) String() string {
+func (x *UpdateSellerByIDResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateSellerByUserIDResponse) ProtoMessage() {}
+func (*UpdateSellerByIDResponse) ProtoMessage() {}
 
-func (x *UpdateSellerByUserIDResponse) ProtoReflect() protoreflect.Message {
+func (x *UpdateSellerByIDResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_user_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -783,46 +791,46 @@ func (x *UpdateSellerByUserIDResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateSellerByUserIDResponse.ProtoReflect.Descriptor instead.
-func (*UpdateSellerByUserIDResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateSellerByIDResponse.ProtoReflect.Descriptor instead.
+func (*UpdateSellerByIDResponse) Descriptor() ([]byte, []int) {
 	return file_user_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *UpdateSellerByUserIDResponse) GetMessage() string {
+func (x *UpdateSellerByIDResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
-func (x *UpdateSellerByUserIDResponse) GetSuccess() bool {
+func (x *UpdateSellerByIDResponse) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
 	return false
 }
 
-type GetSellerByUserIDRequest struct {
+type GetSellerByIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetSellerByUserIDRequest) Reset() {
-	*x = GetSellerByUserIDRequest{}
+func (x *GetSellerByIDRequest) Reset() {
+	*x = GetSellerByIDRequest{}
 	mi := &file_user_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetSellerByUserIDRequest) String() string {
+func (x *GetSellerByIDRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetSellerByUserIDRequest) ProtoMessage() {}
+func (*GetSellerByIDRequest) ProtoMessage() {}
 
-func (x *GetSellerByUserIDRequest) ProtoReflect() protoreflect.Message {
+func (x *GetSellerByIDRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_user_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -834,19 +842,19 @@ func (x *GetSellerByUserIDRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetSellerByUserIDRequest.ProtoReflect.Descriptor instead.
-func (*GetSellerByUserIDRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetSellerByIDRequest.ProtoReflect.Descriptor instead.
+func (*GetSellerByIDRequest) Descriptor() ([]byte, []int) {
 	return file_user_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *GetSellerByUserIDRequest) GetUserId() uint64 {
+func (x *GetSellerByIDRequest) GetUserId() uint64 {
 	if x != nil {
 		return x.UserId
 	}
 	return 0
 }
 
-type GetSellerByUserIDResponse struct {
+type GetSellerByIDResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Seller        *Seller                `protobuf:"bytes,1,opt,name=seller,proto3" json:"seller,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
@@ -855,20 +863,20 @@ type GetSellerByUserIDResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetSellerByUserIDResponse) Reset() {
-	*x = GetSellerByUserIDResponse{}
+func (x *GetSellerByIDResponse) Reset() {
+	*x = GetSellerByIDResponse{}
 	mi := &file_user_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetSellerByUserIDResponse) String() string {
+func (x *GetSellerByIDResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetSellerByUserIDResponse) ProtoMessage() {}
+func (*GetSellerByIDResponse) ProtoMessage() {}
 
-func (x *GetSellerByUserIDResponse) ProtoReflect() protoreflect.Message {
+func (x *GetSellerByIDResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_user_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -880,53 +888,53 @@ func (x *GetSellerByUserIDResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetSellerByUserIDResponse.ProtoReflect.Descriptor instead.
-func (*GetSellerByUserIDResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetSellerByIDResponse.ProtoReflect.Descriptor instead.
+func (*GetSellerByIDResponse) Descriptor() ([]byte, []int) {
 	return file_user_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *GetSellerByUserIDResponse) GetSeller() *Seller {
+func (x *GetSellerByIDResponse) GetSeller() *Seller {
 	if x != nil {
 		return x.Seller
 	}
 	return nil
 }
 
-func (x *GetSellerByUserIDResponse) GetMessage() string {
+func (x *GetSellerByIDResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
-func (x *GetSellerByUserIDResponse) GetSuccess() bool {
+func (x *GetSellerByIDResponse) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
 	return false
 }
 
-type DelSellerByUserIDRequest struct {
+type DelSellerByIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DelSellerByUserIDRequest) Reset() {
-	*x = DelSellerByUserIDRequest{}
+func (x *DelSellerByIDRequest) Reset() {
+	*x = DelSellerByIDRequest{}
 	mi := &file_user_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DelSellerByUserIDRequest) String() string {
+func (x *DelSellerByIDRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DelSellerByUserIDRequest) ProtoMessage() {}
+func (*DelSellerByIDRequest) ProtoMessage() {}
 
-func (x *DelSellerByUserIDRequest) ProtoReflect() protoreflect.Message {
+func (x *DelSellerByIDRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_user_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -938,19 +946,19 @@ func (x *DelSellerByUserIDRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DelSellerByUserIDRequest.ProtoReflect.Descriptor instead.
-func (*DelSellerByUserIDRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use DelSellerByIDRequest.ProtoReflect.Descriptor instead.
+func (*DelSellerByIDRequest) Descriptor() ([]byte, []int) {
 	return file_user_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *DelSellerByUserIDRequest) GetUserId() uint64 {
+func (x *DelSellerByIDRequest) GetUserId() uint64 {
 	if x != nil {
 		return x.UserId
 	}
 	return 0
 }
 
-type DelSellerByUserIDResponse struct {
+type DelSellerByIDResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
@@ -958,20 +966,20 @@ type DelSellerByUserIDResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DelSellerByUserIDResponse) Reset() {
-	*x = DelSellerByUserIDResponse{}
+func (x *DelSellerByIDResponse) Reset() {
+	*x = DelSellerByIDResponse{}
 	mi := &file_user_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DelSellerByUserIDResponse) String() string {
+func (x *DelSellerByIDResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DelSellerByUserIDResponse) ProtoMessage() {}
+func (*DelSellerByIDResponse) ProtoMessage() {}
 
-func (x *DelSellerByUserIDResponse) ProtoReflect() protoreflect.Message {
+func (x *DelSellerByIDResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_user_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -983,19 +991,19 @@ func (x *DelSellerByUserIDResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DelSellerByUserIDResponse.ProtoReflect.Descriptor instead.
-func (*DelSellerByUserIDResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use DelSellerByIDResponse.ProtoReflect.Descriptor instead.
+func (*DelSellerByIDResponse) Descriptor() ([]byte, []int) {
 	return file_user_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *DelSellerByUserIDResponse) GetMessage() string {
+func (x *DelSellerByIDResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
-func (x *DelSellerByUserIDResponse) GetSuccess() bool {
+func (x *DelSellerByIDResponse) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
@@ -1050,32 +1058,33 @@ const file_user_proto_rawDesc = "" +
 	"\auser_id\x18\x02 \x01(\x04R\x06userId\"J\n" +
 	"\x14CreateSellerResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess\"R\n" +
-	"\x1bUpdateSellerByUserIDRequest\x123\n" +
-	"\x06seller\x18\x01 \x01(\v2\x1b.user_service.pkg.pb.SellerR\x06seller\"R\n" +
-	"\x1cUpdateSellerByUserIDResponse\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\"f\n" +
+	"\x17UpdateSellerByIDRequest\x123\n" +
+	"\x06seller\x18\x01 \x01(\v2\x1b.user_service.pkg.pb.SellerR\x06seller\x12\x16\n" +
+	"\x06UserID\x18\x02 \x01(\x04R\x06UserID\"N\n" +
+	"\x18UpdateSellerByIDResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess\"3\n" +
-	"\x18GetSellerByUserIDRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\x04R\x06userId\"\x84\x01\n" +
-	"\x19GetSellerByUserIDResponse\x123\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\"/\n" +
+	"\x14GetSellerByIDRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x04R\x06userId\"\x80\x01\n" +
+	"\x15GetSellerByIDResponse\x123\n" +
 	"\x06seller\x18\x01 \x01(\v2\x1b.user_service.pkg.pb.SellerR\x06seller\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x03 \x01(\bR\asuccess\"3\n" +
-	"\x18DelSellerByUserIDRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\x04R\x06userId\"O\n" +
-	"\x19DelSellerByUserIDResponse\x12\x18\n" +
+	"\asuccess\x18\x03 \x01(\bR\asuccess\"/\n" +
+	"\x14DelSellerByIDRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x04R\x06userId\"K\n" +
+	"\x15DelSellerByIDResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess2\x95\a\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess2\xf1\x06\n" +
 	"\vUserService\x12`\n" +
 	"\vCreateBuyer\x12'.user_service.pkg.pb.CreateBuyerRequest\x1a(.user_service.pkg.pb.CreateBuyerResponse\x12x\n" +
 	"\x13UpdateBuyerByUserID\x12/.user_service.pkg.pb.UpdateBuyerByUserIDRequest\x1a0.user_service.pkg.pb.UpdateBuyerByUserIDResponse\x12o\n" +
 	"\x10GetBuyerByUserID\x12,.user_service.pkg.pb.GetBuyerByUserIDRequest\x1a-.user_service.pkg.pb.GetBuyerByUserIDResponse\x12o\n" +
 	"\x10DelBuyerByUserID\x12,.user_service.pkg.pb.DelBuyerByUserIDRequest\x1a-.user_service.pkg.pb.DelBuyerByUserIDResponse\x12c\n" +
-	"\fCreateSeller\x12(.user_service.pkg.pb.CreateSellerRequest\x1a).user_service.pkg.pb.CreateSellerResponse\x12{\n" +
-	"\x14UpdateSellerByUserID\x120.user_service.pkg.pb.UpdateSellerByUserIDRequest\x1a1.user_service.pkg.pb.UpdateSellerByUserIDResponse\x12r\n" +
-	"\x11GetSellerByUserID\x12-.user_service.pkg.pb.GetSellerByUserIDRequest\x1a..user_service.pkg.pb.GetSellerByUserIDResponse\x12r\n" +
-	"\x11DelSellerByUserID\x12-.user_service.pkg.pb.DelSellerByUserIDRequest\x1a..user_service.pkg.pb.DelSellerByUserIDResponseB\x15Z\x13user-service/userpbb\x06proto3"
+	"\fCreateSeller\x12(.user_service.pkg.pb.CreateSellerRequest\x1a).user_service.pkg.pb.CreateSellerResponse\x12o\n" +
+	"\x10UpdateSellerByID\x12,.user_service.pkg.pb.UpdateSellerByIDRequest\x1a-.user_service.pkg.pb.UpdateSellerByIDResponse\x12f\n" +
+	"\rGetSellerByID\x12).user_service.pkg.pb.GetSellerByIDRequest\x1a*.user_service.pkg.pb.GetSellerByIDResponse\x12f\n" +
+	"\rDelSellerByID\x12).user_service.pkg.pb.DelSellerByIDRequest\x1a*.user_service.pkg.pb.DelSellerByIDResponseB\x15Z\x13user-service/userpbb\x06proto3"
 
 var (
 	file_user_proto_rawDescOnce sync.Once
@@ -1091,25 +1100,25 @@ func file_user_proto_rawDescGZIP() []byte {
 
 var file_user_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_user_proto_goTypes = []any{
-	(*Buyer)(nil),                        // 0: user_service.pkg.pb.Buyer
-	(*Seller)(nil),                       // 1: user_service.pkg.pb.Seller
-	(*CreateBuyerRequest)(nil),           // 2: user_service.pkg.pb.CreateBuyerRequest
-	(*CreateBuyerResponse)(nil),          // 3: user_service.pkg.pb.CreateBuyerResponse
-	(*UpdateBuyerByUserIDRequest)(nil),   // 4: user_service.pkg.pb.UpdateBuyerByUserIDRequest
-	(*UpdateBuyerByUserIDResponse)(nil),  // 5: user_service.pkg.pb.UpdateBuyerByUserIDResponse
-	(*GetBuyerByUserIDRequest)(nil),      // 6: user_service.pkg.pb.GetBuyerByUserIDRequest
-	(*GetBuyerByUserIDResponse)(nil),     // 7: user_service.pkg.pb.GetBuyerByUserIDResponse
-	(*DelBuyerByUserIDRequest)(nil),      // 8: user_service.pkg.pb.DelBuyerByUserIDRequest
-	(*DelBuyerByUserIDResponse)(nil),     // 9: user_service.pkg.pb.DelBuyerByUserIDResponse
-	(*CreateSellerRequest)(nil),          // 10: user_service.pkg.pb.CreateSellerRequest
-	(*CreateSellerResponse)(nil),         // 11: user_service.pkg.pb.CreateSellerResponse
-	(*UpdateSellerByUserIDRequest)(nil),  // 12: user_service.pkg.pb.UpdateSellerByUserIDRequest
-	(*UpdateSellerByUserIDResponse)(nil), // 13: user_service.pkg.pb.UpdateSellerByUserIDResponse
-	(*GetSellerByUserIDRequest)(nil),     // 14: user_service.pkg.pb.GetSellerByUserIDRequest
-	(*GetSellerByUserIDResponse)(nil),    // 15: user_service.pkg.pb.GetSellerByUserIDResponse
-	(*DelSellerByUserIDRequest)(nil),     // 16: user_service.pkg.pb.DelSellerByUserIDRequest
-	(*DelSellerByUserIDResponse)(nil),    // 17: user_service.pkg.pb.DelSellerByUserIDResponse
-	(*timestamppb.Timestamp)(nil),        // 18: google.protobuf.Timestamp
+	(*Buyer)(nil),                       // 0: user_service.pkg.pb.Buyer
+	(*Seller)(nil),                      // 1: user_service.pkg.pb.Seller
+	(*CreateBuyerRequest)(nil),          // 2: user_service.pkg.pb.CreateBuyerRequest
+	(*CreateBuyerResponse)(nil),         // 3: user_service.pkg.pb.CreateBuyerResponse
+	(*UpdateBuyerByUserIDRequest)(nil),  // 4: user_service.pkg.pb.UpdateBuyerByUserIDRequest
+	(*UpdateBuyerByUserIDResponse)(nil), // 5: user_service.pkg.pb.UpdateBuyerByUserIDResponse
+	(*GetBuyerByUserIDRequest)(nil),     // 6: user_service.pkg.pb.GetBuyerByUserIDRequest
+	(*GetBuyerByUserIDResponse)(nil),    // 7: user_service.pkg.pb.GetBuyerByUserIDResponse
+	(*DelBuyerByUserIDRequest)(nil),     // 8: user_service.pkg.pb.DelBuyerByUserIDRequest
+	(*DelBuyerByUserIDResponse)(nil),    // 9: user_service.pkg.pb.DelBuyerByUserIDResponse
+	(*CreateSellerRequest)(nil),         // 10: user_service.pkg.pb.CreateSellerRequest
+	(*CreateSellerResponse)(nil),        // 11: user_service.pkg.pb.CreateSellerResponse
+	(*UpdateSellerByIDRequest)(nil),     // 12: user_service.pkg.pb.UpdateSellerByIDRequest
+	(*UpdateSellerByIDResponse)(nil),    // 13: user_service.pkg.pb.UpdateSellerByIDResponse
+	(*GetSellerByIDRequest)(nil),        // 14: user_service.pkg.pb.GetSellerByIDRequest
+	(*GetSellerByIDResponse)(nil),       // 15: user_service.pkg.pb.GetSellerByIDResponse
+	(*DelSellerByIDRequest)(nil),        // 16: user_service.pkg.pb.DelSellerByIDRequest
+	(*DelSellerByIDResponse)(nil),       // 17: user_service.pkg.pb.DelSellerByIDResponse
+	(*timestamppb.Timestamp)(nil),       // 18: google.protobuf.Timestamp
 }
 var file_user_proto_depIdxs = []int32{
 	18, // 0: user_service.pkg.pb.Buyer.date_of_birth:type_name -> google.protobuf.Timestamp
@@ -1118,24 +1127,24 @@ var file_user_proto_depIdxs = []int32{
 	0,  // 3: user_service.pkg.pb.UpdateBuyerByUserIDRequest.buyer:type_name -> user_service.pkg.pb.Buyer
 	0,  // 4: user_service.pkg.pb.GetBuyerByUserIDResponse.buyer:type_name -> user_service.pkg.pb.Buyer
 	1,  // 5: user_service.pkg.pb.CreateSellerRequest.seller:type_name -> user_service.pkg.pb.Seller
-	1,  // 6: user_service.pkg.pb.UpdateSellerByUserIDRequest.seller:type_name -> user_service.pkg.pb.Seller
-	1,  // 7: user_service.pkg.pb.GetSellerByUserIDResponse.seller:type_name -> user_service.pkg.pb.Seller
+	1,  // 6: user_service.pkg.pb.UpdateSellerByIDRequest.seller:type_name -> user_service.pkg.pb.Seller
+	1,  // 7: user_service.pkg.pb.GetSellerByIDResponse.seller:type_name -> user_service.pkg.pb.Seller
 	2,  // 8: user_service.pkg.pb.UserService.CreateBuyer:input_type -> user_service.pkg.pb.CreateBuyerRequest
 	4,  // 9: user_service.pkg.pb.UserService.UpdateBuyerByUserID:input_type -> user_service.pkg.pb.UpdateBuyerByUserIDRequest
 	6,  // 10: user_service.pkg.pb.UserService.GetBuyerByUserID:input_type -> user_service.pkg.pb.GetBuyerByUserIDRequest
 	8,  // 11: user_service.pkg.pb.UserService.DelBuyerByUserID:input_type -> user_service.pkg.pb.DelBuyerByUserIDRequest
 	10, // 12: user_service.pkg.pb.UserService.CreateSeller:input_type -> user_service.pkg.pb.CreateSellerRequest
-	12, // 13: user_service.pkg.pb.UserService.UpdateSellerByUserID:input_type -> user_service.pkg.pb.UpdateSellerByUserIDRequest
-	14, // 14: user_service.pkg.pb.UserService.GetSellerByUserID:input_type -> user_service.pkg.pb.GetSellerByUserIDRequest
-	16, // 15: user_service.pkg.pb.UserService.DelSellerByUserID:input_type -> user_service.pkg.pb.DelSellerByUserIDRequest
+	12, // 13: user_service.pkg.pb.UserService.UpdateSellerByID:input_type -> user_service.pkg.pb.UpdateSellerByIDRequest
+	14, // 14: user_service.pkg.pb.UserService.GetSellerByID:input_type -> user_service.pkg.pb.GetSellerByIDRequest
+	16, // 15: user_service.pkg.pb.UserService.DelSellerByID:input_type -> user_service.pkg.pb.DelSellerByIDRequest
 	3,  // 16: user_service.pkg.pb.UserService.CreateBuyer:output_type -> user_service.pkg.pb.CreateBuyerResponse
 	5,  // 17: user_service.pkg.pb.UserService.UpdateBuyerByUserID:output_type -> user_service.pkg.pb.UpdateBuyerByUserIDResponse
 	7,  // 18: user_service.pkg.pb.UserService.GetBuyerByUserID:output_type -> user_service.pkg.pb.GetBuyerByUserIDResponse
 	9,  // 19: user_service.pkg.pb.UserService.DelBuyerByUserID:output_type -> user_service.pkg.pb.DelBuyerByUserIDResponse
 	11, // 20: user_service.pkg.pb.UserService.CreateSeller:output_type -> user_service.pkg.pb.CreateSellerResponse
-	13, // 21: user_service.pkg.pb.UserService.UpdateSellerByUserID:output_type -> user_service.pkg.pb.UpdateSellerByUserIDResponse
-	15, // 22: user_service.pkg.pb.UserService.GetSellerByUserID:output_type -> user_service.pkg.pb.GetSellerByUserIDResponse
-	17, // 23: user_service.pkg.pb.UserService.DelSellerByUserID:output_type -> user_service.pkg.pb.DelSellerByUserIDResponse
+	13, // 21: user_service.pkg.pb.UserService.UpdateSellerByID:output_type -> user_service.pkg.pb.UpdateSellerByIDResponse
+	15, // 22: user_service.pkg.pb.UserService.GetSellerByID:output_type -> user_service.pkg.pb.GetSellerByIDResponse
+	17, // 23: user_service.pkg.pb.UserService.DelSellerByID:output_type -> user_service.pkg.pb.DelSellerByIDResponse
 	16, // [16:24] is the sub-list for method output_type
 	8,  // [8:16] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name

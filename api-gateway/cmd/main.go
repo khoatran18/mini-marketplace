@@ -35,7 +35,7 @@ func main() {
 
 	apiGatewayService := service.NewAPIGatewayService(serviceConfig.RedisClient, serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient, serviceConfig.ZapLogger)
 
-	// Chạy consumer trong goroutine
+	// Run consumer in goroutine
 	ctx := context.Context(context.Background())
 	topic := "auth.change_password"
 	go func() {
