@@ -63,3 +63,18 @@ func RefreshTokenResponseToOutput(response *authpb.RefreshTokenResponse) (*dto.R
 		Success:      response.GetSuccess(),
 	}, nil
 }
+
+func RegisterSellerRolesInputToRequest(input *dto.RegisterSellerRolesInput) (*authpb.RegisterSellerRolesRequest, error) {
+	return &authpb.RegisterSellerRolesRequest{
+		SellerAdminId: input.SellerAdminID,
+		Username:      input.Username,
+		Password:      input.Password,
+		Role:          input.Role,
+	}, nil
+}
+func RegisterSellerRolesResponseToOutput(response *authpb.RegisterSellerRolesResponse) (*dto.RegisterSellerRolesOutput, error) {
+	return &dto.RegisterSellerRolesOutput{
+		Message: response.GetMessage(),
+		Success: response.GetSuccess(),
+	}, nil
+}

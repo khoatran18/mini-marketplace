@@ -8,6 +8,9 @@ import (
 )
 
 func BuyerProtoToDTO(buyer *userpb.Buyer) (*dto.Buyer, error) {
+	if buyer == nil {
+		return nil, nil
+	}
 	return &dto.Buyer{
 		UserID:      buyer.GetUserId(),
 		Name:        buyer.GetName(),
@@ -18,6 +21,9 @@ func BuyerProtoToDTO(buyer *userpb.Buyer) (*dto.Buyer, error) {
 	}, nil
 }
 func BuyerDTOToProto(input *dto.Buyer) (*userpb.Buyer, error) {
+	if input == nil {
+		return nil, nil
+	}
 	return &userpb.Buyer{
 		UserId:      input.UserID,
 		Name:        input.Name,
@@ -29,6 +35,9 @@ func BuyerDTOToProto(input *dto.Buyer) (*userpb.Buyer, error) {
 }
 
 func SellerProtoToDTO(seller *userpb.Seller) (*dto.Seller, error) {
+	if seller == nil {
+		return nil, nil
+	}
 	return &dto.Seller{
 		ID:          seller.GetId(),
 		Name:        seller.GetName(),
@@ -42,6 +51,9 @@ func SellerProtoToDTO(seller *userpb.Seller) (*dto.Seller, error) {
 }
 
 func SellerDTOToProto(input *dto.Seller) (*userpb.Seller, error) {
+	if input == nil {
+		return nil, nil
+	}
 	return &userpb.Seller{
 		Id:          input.ID,
 		Name:        input.Name,
@@ -54,128 +66,128 @@ func SellerDTOToProto(input *dto.Seller) (*userpb.Seller, error) {
 	}, nil
 }
 
-func CreBuyRequestToInput(req *userpb.CreateBuyerRequest) (*dto.CreateBuyerInput, error) {
-	buyer, err := BuyerProtoToDTO(req.GetBuyer())
+func CreBuyInputToRequest(input *dto.CreateBuyerInput) (*userpb.CreateBuyerRequest, error) {
+	buyer, err := BuyerDTOToProto(input.Buyer)
 	if err != nil {
 		return nil, err
 	}
-	return &dto.CreateBuyerInput{
+	return &userpb.CreateBuyerRequest{
 		Buyer: buyer,
 	}, nil
 }
-func CreBuyOutputToResponse(output *dto.CreateBuyerOutput) (*userpb.CreateBuyerResponse, error) {
-	return &userpb.CreateBuyerResponse{
-		Message: output.Message,
-		Success: output.Success,
+func CreBuyResponseToOutput(res *userpb.CreateBuyerResponse) (*dto.CreateBuyerOutput, error) {
+	return &dto.CreateBuyerOutput{
+		Message: res.GetMessage(),
+		Success: res.GetSuccess(),
 	}, nil
 }
 
-func UpdBuyByUseIDRequestToInput(req *userpb.UpdateBuyerByUserIDRequest) (*dto.UpdBuyByUseIDInput, error) {
-	buyer, err := BuyerProtoToDTO(req.GetBuyer())
+func UpdBuyByUseIDInputToRequest(input *dto.UpdBuyByUseIDInput) (*userpb.UpdateBuyerByUserIDRequest, error) {
+	buyer, err := BuyerDTOToProto(input.Buyer)
 	if err != nil {
 		return nil, err
 	}
-	return &dto.UpdBuyByUseIDInput{
+	return &userpb.UpdateBuyerByUserIDRequest{
 		Buyer: buyer,
 	}, nil
 }
-func UpdBuyByUseIDOutputToResponse(output *dto.UpdBuyByUseIDOutput) (*userpb.UpdateBuyerByUserIDResponse, error) {
-	return &userpb.UpdateBuyerByUserIDResponse{
-		Message: output.Message,
-		Success: output.Success,
+func UpdBuyByUseIDResponseToOutput(res *userpb.UpdateBuyerByUserIDResponse) (*dto.UpdBuyByUseIDOutput, error) {
+	return &dto.UpdBuyByUseIDOutput{
+		Message: res.GetMessage(),
+		Success: res.GetSuccess(),
 	}, nil
 }
 
-func GetBuyByUseIDRequestToInput(req *userpb.GetBuyerByUserIDRequest) (*dto.GetBuyByUseIDInput, error) {
-	return &dto.GetBuyByUseIDInput{
-		UserID: req.GetUserId(),
+func GetBuyByUseIDInputToRequest(input *dto.GetBuyByUseIDInput) (*userpb.GetBuyerByUserIDRequest, error) {
+	return &userpb.GetBuyerByUserIDRequest{
+		UserId: input.UserID,
 	}, nil
 }
-func GetBuyByUseIDOutputToResponse(output *dto.GetBuyByUseIDOutput) (*userpb.GetBuyerByUserIDResponse, error) {
-	buyer, err := BuyerDTOToProto(output.Buyer)
+func GetBuyByUseIDResponseToOutput(res *userpb.GetBuyerByUserIDResponse) (*dto.GetBuyByUseIDOutput, error) {
+	buyer, err := BuyerProtoToDTO(res.GetBuyer())
 	if err != nil {
 		return nil, err
 	}
-	return &userpb.GetBuyerByUserIDResponse{
-		Message: output.Message,
-		Success: output.Success,
+	return &dto.GetBuyByUseIDOutput{
+		Message: res.GetMessage(),
+		Success: res.GetSuccess(),
 		Buyer:   buyer,
 	}, nil
 }
 
-func DelBuyByUseIDRequestToInput(req *userpb.DelBuyerByUserIDRequest) (*dto.DelBuyByUseIDInput, error) {
-	return &dto.DelBuyByUseIDInput{
-		UserID: req.GetUserId(),
+func DelBuyByUseIDInputToRequest(input *dto.DelBuyByUseIDInput) (*userpb.DelBuyerByUserIDRequest, error) {
+	return &userpb.DelBuyerByUserIDRequest{
+		UserId: input.UserID,
 	}, nil
 }
-func DelBuyByUseIDOutputToResponse(output *dto.DelBuyByUseIDOutput) (*userpb.DelBuyerByUserIDResponse, error) {
-	return &userpb.DelBuyerByUserIDResponse{
-		Message: output.Message,
-		Success: output.Success,
+func DelBuyByUseIDResponseToOutput(res *userpb.DelBuyerByUserIDResponse) (*dto.DelBuyByUseIDOutput, error) {
+	return &dto.DelBuyByUseIDOutput{
+		Message: res.GetMessage(),
+		Success: res.GetSuccess(),
 	}, nil
 }
 
 // Adapter for Seller
 
-func CreSelRequestToInput(req *userpb.CreateSellerRequest) (*dto.CreateSellerInput, error) {
-	buyer, err := SellerProtoToDTO(req.GetSeller())
+func CreSelInputToRequest(input *dto.CreateSellerInput) (*userpb.CreateSellerRequest, error) {
+	seller, err := SellerDTOToProto(input.Seller)
 	if err != nil {
 		return nil, err
 	}
-	return &dto.CreateSellerInput{
-		Seller: buyer,
-		UserID: req.UserId,
+	return &userpb.CreateSellerRequest{
+		Seller: seller,
+		UserId: input.UserID,
 	}, nil
 }
-func CreSelOutputToResponse(output *dto.CreateSellerOutput) (*userpb.CreateSellerResponse, error) {
-	return &userpb.CreateSellerResponse{
-		Message: output.Message,
-		Success: output.Success,
+func CreSelResponseToOutput(res *userpb.CreateSellerResponse) (*dto.CreateSellerOutput, error) {
+	return &dto.CreateSellerOutput{
+		Message: res.GetMessage(),
+		Success: res.GetSuccess(),
 	}, nil
 }
 
-func UpdSelByIDRequestToInput(req *userpb.UpdateSellerByIDRequest) (*dto.UpdSelByIDInput, error) {
-	buyer, err := SellerProtoToDTO(req.GetSeller())
+func UpdSelByIDInputToRequest(input *dto.UpdSelByIDInput) (*userpb.UpdateSellerByIDRequest, error) {
+	seller, err := SellerDTOToProto(input.Seller)
 	if err != nil {
 		return nil, err
 	}
-	return &dto.UpdSelByIDInput{
-		Seller: buyer,
-		UserID: req.GetUserID(),
+	return &userpb.UpdateSellerByIDRequest{
+		Seller: seller,
+		UserID: input.UserID,
 	}, nil
 }
-func UpdSelByIDOutputToResponse(output *dto.UpdSelByIDOutput) (*userpb.UpdateSellerByIDResponse, error) {
-	return &userpb.UpdateSellerByIDResponse{
-		Message: output.Message,
-		Success: output.Success,
+func UpdSelByIDResponseToOutput(res *userpb.UpdateSellerByIDResponse) (*dto.UpdSelByIDOutput, error) {
+	return &dto.UpdSelByIDOutput{
+		Message: res.GetMessage(),
+		Success: res.GetSuccess(),
 	}, nil
 }
 
-func GetSelByIDRequestToInput(req *userpb.GetSellerByIDRequest) (*dto.GetSelByIDInput, error) {
-	return &dto.GetSelByIDInput{
-		UserID: req.GetUserId(),
+func GetSelByIDInputToRequest(input *dto.GetSelByIDInput) (*userpb.GetSellerByIDRequest, error) {
+	return &userpb.GetSellerByIDRequest{
+		UserId: input.UserID,
 	}, nil
 }
-func GetSelByIDOutputToResponse(output *dto.GetSelByIDOutput) (*userpb.GetSellerByIDResponse, error) {
-	buyer, err := SellerDTOToProto(output.Seller)
+func GetSelByIDResponseToOutput(res *userpb.GetSellerByIDResponse) (*dto.GetSelByIDOutput, error) {
+	seller, err := SellerProtoToDTO(res.GetSeller())
 	if err != nil {
 		return nil, err
 	}
-	return &userpb.GetSellerByIDResponse{
-		Message: output.Message,
-		Success: output.Success,
-		Seller:  buyer,
+	return &dto.GetSelByIDOutput{
+		Message: res.Message,
+		Success: res.Success,
+		Seller:  seller,
 	}, nil
 }
 
-func DelSelByIDRequestToInput(req *userpb.DelSellerByIDRequest) (*dto.DelSelByIDInput, error) {
-	return &dto.DelSelByIDInput{
-		UserID: req.GetUserId(),
+func DelSelByIDInputToRequest(input *dto.DelSelByIDInput) (*userpb.DelSellerByIDRequest, error) {
+	return &userpb.DelSellerByIDRequest{
+		UserId: input.UserID,
 	}, nil
 }
-func DelSelByIDOutputToResponse(output *dto.DelSelByIDOutput) (*userpb.DelSellerByIDResponse, error) {
-	return &userpb.DelSellerByIDResponse{
-		Message: output.Message,
-		Success: output.Success,
+func DelSelByIDResponseToOutput(res *userpb.DelSellerByIDResponse) (*dto.DelSelByIDOutput, error) {
+	return &dto.DelSelByIDOutput{
+		Message: res.GetMessage(),
+		Success: res.GetSuccess(),
 	}, nil
 }

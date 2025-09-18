@@ -103,3 +103,30 @@ func (authHandler *AuthHandler) RefreshToken(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, res)
 }
+
+func (authHandler *AuthHandler) RegisterSellerRoles(c *gin.Context) {
+
+	// Parse from gin.context json to request dto
+	var req dto.RegisterSellerRolesInput
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+	id, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "not valid user_id"})
+	}
+	adminID, ok := id.(uint64)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "not valid user_id"})
+	}
+	req.SellerAdminID = adminID
+
+	// Get response and parse to json
+	res, err := authHandler.Service.RegisterSellerRoles(&req)
+	if err != nil {
+		authHandler.Logger.Warn("AuthHandler RegisterSellerRoles warn", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}

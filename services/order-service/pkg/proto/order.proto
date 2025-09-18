@@ -5,7 +5,6 @@ package order_service.pkg.pb;
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
-
 option go_package = "order-service/orderpb";
 
 message Order {
@@ -29,7 +28,6 @@ message OrderItem {
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
 }
-
 
 message CreateOrderRequest {
   Order order = 1;
@@ -92,15 +90,14 @@ message CancelOrderByIDResponse {
   bool success = 2;
 }
 
-
 service OrderService {
-  rpc CreateOrder (CreateOrderRequest) returns (CreateOrderResponse);
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
   rpc GetOrderByID(GetOrderByIDRequest) returns (GetOrderByIDResponse);
 
-//  rpc GetOrderByIDOnly (GetOrderByIDOnlyRequest) returns (GetOrderByIDOnlyResponse);
+  //  rpc GetOrderByIDOnly (GetOrderByIDOnlyRequest) returns (GetOrderByIDOnlyResponse);
 
-  rpc GetOrdersByBuyerIDStatus (GetOrdersByBuyerIDStatusRequest) returns (GetOrdersByBuyerIDStatusResponse);
-  rpc GetOrderItemsByOrderID (GetOrderItemsByOrderIDRequest) returns (GetOrderItemsByOrderIDResponse);
-  rpc UpdateOrderByID (UpdateOrderByIDRequest) returns (UpdateOrderByIDResponse);
-  rpc CancelOrderByID (CancelOrderByIDRequest) returns (CancelOrderByIDResponse);
+  rpc GetOrdersByBuyerIDStatus(GetOrdersByBuyerIDStatusRequest) returns (GetOrdersByBuyerIDStatusResponse);
+  rpc GetOrderItemsByOrderID(GetOrderItemsByOrderIDRequest) returns (GetOrderItemsByOrderIDResponse);
+  rpc UpdateOrderByID(UpdateOrderByIDRequest) returns (UpdateOrderByIDResponse);
+  rpc CancelOrderByID(CancelOrderByIDRequest) returns (CancelOrderByIDResponse);
 }

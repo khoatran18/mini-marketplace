@@ -53,7 +53,7 @@ func (s *AuthClient) Login(input *dto.LoginInput) (*dto.LoginOutput, error) {
 	defer cancel()
 	res, err := s.Client.Login(ctx, req)
 
-	// Get response, validate and parse to input
+	// Get response, validate and parse to output
 	if err != nil {
 		s.Logger.Warn("AuthClient: Login error", zap.Error(err))
 		return nil, err
@@ -96,7 +96,7 @@ func (s *AuthClient) Register(input *dto.RegisterInput) (*dto.RegisterOutput, er
 	defer cancel()
 	res, err := s.Client.Register(ctx, req)
 
-	// Get response, validate and parse to input
+	// Get response, validate and parse to output
 	if err != nil {
 		s.Logger.Warn("AuthClient: Register error", zap.Error(err))
 		return nil, err
@@ -139,7 +139,7 @@ func (s *AuthClient) ChangePassword(input *dto.ChangePasswordInput) (*dto.Change
 	defer cancel()
 	res, err := s.Client.ChangePassword(ctx, req)
 
-	// Get response, validate and parse to input
+	// Get response, validate and parse to output
 	if err != nil {
 		s.Logger.Warn("AuthClient: ChangePassword error", zap.Error(err))
 		return nil, err
@@ -182,7 +182,7 @@ func (s *AuthClient) RefreshToken(input *dto.RefreshTokenInput) (*dto.RefreshTok
 	defer cancel()
 	res, err := s.Client.RefreshToken(ctx, req)
 
-	// Get response, validate and parse to input
+	// Get response, validate and parse to output
 	if err != nil {
 		s.Logger.Warn("AuthClient: Register error", zap.Error(err))
 		return nil, err
@@ -200,6 +200,51 @@ func (s *AuthClient) RefreshToken(input *dto.RefreshTokenInput) (*dto.RefreshTok
 	// Return valid output
 	return output, nil
 }
+
+// RegisterSellerRoles handle request from AuthHandler to RegisterSellerRoles
+func (s *AuthClient) RegisterSellerRoles(input *dto.RegisterSellerRolesInput) (*dto.RegisterSellerRolesOutput, error) {
+
+	// Check if AuthClient is not connected
+	if s.Client == nil {
+		if err := s.validateClient(); err != nil {
+			return nil, err
+		}
+	}
+
+	// Parse to ServerRequest and validate
+	req, err := RegisterSellerRolesInputToRequest(input)
+	if err != nil {
+		s.Logger.Warn("AuthServer: parse RegisterSellerRoles input to request error", zap.Error(err))
+		return nil, err
+	}
+	if err = protovalidate.Validate(req); err != nil {
+		s.Logger.Warn("AuthServer: invalid request for RegisterSellerRoles", zap.Error(err))
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	res, err := s.Client.RegisterSellerRoles(ctx, req)
+
+	// Get response, validate and parse to output
+	if err != nil {
+		s.Logger.Warn("AuthClient: RegisterSellerRoles error", zap.Error(err))
+		return nil, err
+	}
+	if err = protovalidate.Validate(res); err != nil {
+		s.Logger.Warn("AuthClient: Invalid response for RegisterSellerRoles", zap.Error(err))
+		return nil, err
+	}
+	output, err := RegisterSellerRolesResponseToOutput(res)
+	if err != nil {
+		s.Logger.Warn("AuthClient: parse RegisterSellerRoles response to output error", zap.Error(err))
+		return nil, err
+	}
+
+	// Return valid output
+	return output, nil
+}
+
+// Validate client
 
 func (s *AuthClient) validateClient() error {
 	authClient, err := s.ClientManager.GetOrCreateServiceClient(clientname.AuthClientName)

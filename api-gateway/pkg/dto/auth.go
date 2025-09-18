@@ -42,3 +42,14 @@ type RefreshTokenOutput struct {
 	RefreshToken string `json:"refresh_token"`
 	Success      bool   `json:"success"`
 }
+
+type RegisterSellerRolesInput struct {
+	SellerAdminID uint64 `json:"seller_admin_id"`
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	Role          string `json:"role"`
+}
+type RegisterSellerRolesOutput struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+}

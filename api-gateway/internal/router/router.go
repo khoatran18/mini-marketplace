@@ -18,4 +18,5 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	router.POST("/auth/register", h.AuthHandler.Register)
 	router.POST("/auth/change-password", h.AuthHandler.ChangePassword)
 	router.POST("/auth/refresh-token", h.AuthHandler.RefreshToken)
+	router.POST("/auth/register-seller-roles", h.AuthHandler.RegisterSellerRoles)
 }
