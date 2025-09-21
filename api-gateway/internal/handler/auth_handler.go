@@ -24,20 +24,20 @@ func NewAuthHandler(service *authclient.AuthClient, logger *zap.Logger) *AuthHan
 }
 
 // Login is responsible for parse login gin.context request
-func (authHandler *AuthHandler) Login(c *gin.Context) {
+func (h *AuthHandler) Login(c *gin.Context) {
 
 	// Parse from gin.context json to request dto
 	var req dto.LoginInput
 	if err := c.ShouldBindJSON(&req); err != nil {
-		authHandler.Logger.Warn("AuthHandler invalid request", zap.Error(err))
+		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Get response and parse to json
-	res, err := authHandler.Service.Login(&req)
+	res, err := h.Service.Login(&req)
 	if err != nil {
-		authHandler.Logger.Warn("AuthHandler: Login warn", zap.Error(err))
+		h.Logger.Warn("AuthHandler: Login warn", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -45,20 +45,20 @@ func (authHandler *AuthHandler) Login(c *gin.Context) {
 }
 
 // Register is responsible for parse login gin.context request
-func (authHandler *AuthHandler) Register(c *gin.Context) {
+func (h *AuthHandler) Register(c *gin.Context) {
 
 	// Parse from gin.context json to request dto
 	var req dto.RegisterInput
 	if err := c.ShouldBindJSON(&req); err != nil {
-		authHandler.Logger.Warn("AuthHandler invalid request", zap.Error(err))
+		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Get response and parse to json
-	res, err := authHandler.Service.Register(&req)
+	res, err := h.Service.Register(&req)
 	if err != nil {
-		authHandler.Logger.Warn("AuthHandler Login warn", zap.Error(err))
+		h.Logger.Warn("AuthHandler Login warn", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -66,27 +66,27 @@ func (authHandler *AuthHandler) Register(c *gin.Context) {
 }
 
 // ChangePassword is responsible for parse login gin.context request
-func (authHandler *AuthHandler) ChangePassword(c *gin.Context) {
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
 
 	// Parse from gin.context json to request dto
 	var req dto.ChangePasswordInput
 	if err := c.ShouldBindJSON(&req); err != nil {
-		authHandler.Logger.Warn("AuthHandler invalid request", zap.Error(err))
+		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Get response and parse to json
-	res, err := authHandler.Service.ChangePassword(&req)
+	res, err := h.Service.ChangePassword(&req)
 	if err != nil {
-		authHandler.Logger.Warn("AuthHandler Login warn", zap.Error(err))
+		h.Logger.Warn("AuthHandler Login warn", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, res)
 }
 
-func (authHandler *AuthHandler) RefreshToken(c *gin.Context) {
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 	// Parse from gin.context json to request dto
 	var req dto.RefreshTokenInput
@@ -95,16 +95,16 @@ func (authHandler *AuthHandler) RefreshToken(c *gin.Context) {
 	}
 
 	// Get response and parse to json
-	res, err := authHandler.Service.RefreshToken(&req)
+	res, err := h.Service.RefreshToken(&req)
 	if err != nil {
-		authHandler.Logger.Warn("AuthHandler Login warn", zap.Error(err))
+		h.Logger.Warn("AuthHandler Login warn", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, res)
 }
 
-func (authHandler *AuthHandler) RegisterSellerRoles(c *gin.Context) {
+func (h *AuthHandler) RegisterSellerRoles(c *gin.Context) {
 
 	// Parse from gin.context json to request dto
 	var req dto.RegisterSellerRolesInput
@@ -122,9 +122,9 @@ func (authHandler *AuthHandler) RegisterSellerRoles(c *gin.Context) {
 	req.SellerAdminID = adminID
 
 	// Get response and parse to json
-	res, err := authHandler.Service.RegisterSellerRoles(&req)
+	res, err := h.Service.RegisterSellerRoles(&req)
 	if err != nil {
-		authHandler.Logger.Warn("AuthHandler RegisterSellerRoles warn", zap.Error(err))
+		h.Logger.Warn("AuthHandler RegisterSellerRoles warn", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
