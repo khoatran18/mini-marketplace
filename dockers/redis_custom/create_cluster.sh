@@ -12,7 +12,8 @@ else :
     redis-node-4:6379 \
     redis-node-5:6379 \
     redis-node-6:6379 \
-    --cluster-replica 1
+    --cluster-replicas 1 \
+    --cluster-yes
 fi
 
 exec redis-server /usr/local/etc/redis/redis.conf --appendonly yes

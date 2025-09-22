@@ -38,15 +38,23 @@ services:
 #        window: 30s
 
   redis-node-1:
-    image: redis_custom
+    image: redis:8.2.1-alpine
     ports:
-      - "6380:6379"
+      - target: 6379
+        published: 6380
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16380
+        protocol: tcp
+        mode: host
     command: >
       redis-server
       --port 6379
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-1
       --appendonly yes
     networks:
       test-network:
@@ -56,15 +64,23 @@ services:
         delay: 1s
         window: 10s
   redis-node-2:
-    image: redis_custom
+    image: redis:8.2.1-alpine
     ports:
-      - "6381:6379"
+      - target: 6379
+        published: 6381
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16381
+        protocol: tcp
+        mode: host
     command: >
       redis-server
       --port 6379
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-2
       --appendonly yes
     networks:
       test-network:
@@ -74,15 +90,23 @@ services:
         delay: 1s
         window: 10s
   redis-node-3:
-    image: redis_custom
+    image: redis:8.2.1-alpine
     ports:
-      - "6382:6379"
+      - target: 6379
+        published: 6382
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16382
+        protocol: tcp
+        mode: host
     command: >
       redis-server
       --port 6379
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-3
       --appendonly yes
     networks:
       test-network:
@@ -92,15 +116,23 @@ services:
         delay: 1s
         window: 10s
   redis-node-4:
-    image: redis_custom
+    image: redis:8.2.1-alpine
     ports:
-      - "6383:6379"
+      - target: 6379
+        published: 6383
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16383
+        protocol: tcp
+        mode: host
     command: >
       redis-server
       --port 6379
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-4
       --appendonly yes
     networks:
       test-network:
@@ -110,15 +142,23 @@ services:
         delay: 1s
         window: 10s
   redis-node-5:
-    image: redis_custom
+    image: redis:8.2.1-alpine
     ports:
-      - "6384:6379"
+      - target: 6379
+        published: 6384
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16384
+        protocol: tcp
+        mode: host
     command: >
       redis-server
       --port 6379
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-5
       --appendonly yes
     networks:
       test-network:
@@ -128,15 +168,23 @@ services:
         delay: 1s
         window: 10s
   redis-node-6:
-    image: redis_custom
+    image: redis:8.2.1-alpine
     ports:
-      - "6385:6379"
+      - target: 6379
+        published: 6385
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16385
+        protocol: tcp
+        mode: host
     command: >
       redis-server
       --port 6379
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-6
       --appendonly yes
     networks:
       test-network:
