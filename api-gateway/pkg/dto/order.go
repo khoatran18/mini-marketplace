@@ -11,6 +11,7 @@ type Order struct {
 type OrderItem struct {
 	ID        uint64  `json:"id"`
 	Name      string  `json:"name"`
+	OrderID   uint64  `json:"order_id"`
 	ProductID uint64  `json:"product_id"`
 	Quantity  int64   `json:"quantity"`
 	Price     float64 `json:"price"`

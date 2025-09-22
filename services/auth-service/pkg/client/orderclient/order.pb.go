@@ -835,11 +835,11 @@ var File_order_proto protoreflect.FileDescriptor
 
 const file_order_proto_rawDesc = "" +
 	"\n" +
-	"\vorder.proto\x12\x14order_service.pkg.pb\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa1\x02\n" +
+	"\vorder.proto\x12\x14order_service.pkg.pb\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd3\x02\n" +
 	"\x05Order\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x19\n" +
-	"\bbuyer_id\x18\x02 \x01(\x04R\abuyerId\x12\x16\n" +
-	"\x06status\x18\x03 \x01(\tR\x06status\x12\x1f\n" +
+	"\bbuyer_id\x18\x02 \x01(\x04R\abuyerId\x12H\n" +
+	"\x06status\x18\x03 \x01(\tB0\xbaH-r+R\aPENDINGR\x06FAILEDR\aSUCCESSR\x05VALIDR\bCANCELEDR\x06status\x12\x1f\n" +
 	"\vtotal_price\x18\x04 \x01(\x01R\n" +
 	"totalPrice\x12>\n" +
 	"\n" +

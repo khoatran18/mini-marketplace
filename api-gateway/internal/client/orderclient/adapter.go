@@ -6,12 +6,13 @@ import (
 )
 
 func OrderItemDTOToProto(orderItem *dto.OrderItem) (*orderpb.OrderItem, error) {
-	if orderItem == nil {
-		return nil, nil
-	}
+	//if orderItem == nil {
+	//	return nil, nil
+	//}
 	return &orderpb.OrderItem{
 		ID:        orderItem.ID,
 		Name:      orderItem.Name,
+		OrderId:   orderItem.OrderID,
 		ProductId: orderItem.ProductID,
 		Quantity:  orderItem.Quantity,
 		Price:     orderItem.Price,
@@ -22,11 +23,12 @@ func OrderItemProtoToDTO(orderItem *orderpb.OrderItem) (*dto.OrderItem, error) {
 		return nil, nil
 	}
 	return &dto.OrderItem{
-		ID:        orderItem.ID,
-		Name:      orderItem.Name,
-		ProductID: orderItem.ProductId,
-		Quantity:  orderItem.Quantity,
-		Price:     orderItem.Price,
+		ID:        orderItem.GetID(),
+		Name:      orderItem.GetName(),
+		OrderID:   orderItem.GetOrderId(),
+		ProductID: orderItem.GetProductId(),
+		Quantity:  orderItem.GetQuantity(),
+		Price:     orderItem.GetPrice(),
 	}, nil
 }
 
@@ -54,6 +56,9 @@ func OrderItemsProtoToDTO(orderItems []*orderpb.OrderItem) ([]*dto.OrderItem, er
 }
 
 func OrderDTOToProto(order *dto.Order) (*orderpb.Order, error) {
+	//if order == nil {
+	//	return nil, nil
+	//}
 	orderItems, err := OrderItemsDTOToProto(order.OrderItems)
 	if err != nil {
 		return nil, err
@@ -67,6 +72,9 @@ func OrderDTOToProto(order *dto.Order) (*orderpb.Order, error) {
 	}, nil
 }
 func OrderProtoToDTO(order *orderpb.Order) (*dto.Order, error) {
+	if order == nil {
+		return nil, nil
+	}
 	orderItems, err := OrderItemsProtoToDTO(order.GetOrderItem())
 	if err != nil {
 		return nil, err

@@ -56,12 +56,12 @@ func (s *ProductService) ProducerValOrdKafkaEventWorker(ctx context.Context, int
 			select {
 			// Cancel by context
 			case <-ctx.Done():
-				s.ZapLogger.Info("AuthService: Worker send CreateSeller Kafka event stop by context")
+				s.ZapLogger.Info("ProductService: Worker send ValidOrder Kafka event stop by context")
 				return
 			// Interval time
 			case <-ticker.C:
 				if err := s.producerValOrdKafkaEventBatch(ctx, limit, topic); err != nil {
-					s.ZapLogger.Warn("AuthService: error in procedure CreSelKafkaEvent batch", zap.Error(err))
+					s.ZapLogger.Warn("ProductService: error in procedure ValOrdKafkaEvent batch", zap.Error(err))
 				}
 			}
 		}
@@ -99,21 +99,21 @@ func (s *ProductService) producerValOrdKafkaEvent(ctx context.Context, eventMode
 	}
 	// Publish event
 	if err := s.MQProducer.Publish(ctx, &kafka.LeastBytes{}, topic, []byte("key"), eventJson); err != nil {
-		s.ZapLogger.Warn("AuthService: publish to Kafka failure", zap.Error(err))
+		s.ZapLogger.Warn("ProductService: publish to Kafka failure", zap.Error(err))
 		if err2 := s.ProductRepo.UpdateValOrdEventStatus(ctx, eventModel.OrderID, "FAILED"); err2 != nil {
-			s.ZapLogger.Warn("AuthService: publish to Kafka failure and can not update OutboxDB")
+			s.ZapLogger.Warn("ProductService: publish to Kafka failure and can not update OutboxDB")
 			return err2
 		}
-		s.ZapLogger.Info("AuthService: publish to Kafka failure and update OutboxDB success")
+		s.ZapLogger.Info("ProductService: publish to Kafka failure and update OutboxDB success")
 		return err
 	}
 	// Update OutboxDB if procedure successfully
 	if err := s.ProductRepo.UpdateValOrdEventStatus(ctx, eventModel.OrderID, "SUCCESS"); err != nil {
-		s.ZapLogger.Warn("AuthService: publish to Kafka success but update to OutboxDB failed")
+		s.ZapLogger.Warn("ProductService: publish to Kafka success but update to OutboxDB failed")
 		return err
 	}
 
-	s.ZapLogger.Info("AuthService: publish to Kafka success")
+	s.ZapLogger.Info("ProductService: publish to Kafka success")
 	return nil
 }
 
@@ -123,14 +123,14 @@ func (s *ProductService) producerValOrdKafkaEvent(ctx context.Context, eventMode
 //	var eventDTO dto.CreateOrderKafkaEvent
 //	fmt.Printf("Msg value : %v\n", string(msg.Value))
 //	if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
-//		s.ZapLogger.Warn("AuthService: update store id error", zap.Error(err))
+//		s.ZapLogger.Warn("ProductService: update store id error", zap.Error(err))
 //		return err
 //	}
 //	fmt.Printf("%+v\n", eventDTO)
 //	if err := s.ProductRepo.UpdateStoreID(ctx, eventDTO.UserID, eventDTO.SellerID); err != nil {
-//		s.ZapLogger.Warn("AuthService: update store id error", zap.Error(err))
+//		s.ZapLogger.Warn("ProductService: update store id error", zap.Error(err))
 //		return err
 //	}
-//	s.ZapLogger.Info("AuthService: update store id successfully")
+//	s.ZapLogger.Info("ProductService: update store id successfully")
 //	return nil
 //}

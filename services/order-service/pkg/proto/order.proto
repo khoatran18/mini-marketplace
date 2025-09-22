@@ -10,7 +10,7 @@ option go_package = "order-service/orderpb";
 message Order {
   uint64 id = 1;
   uint64 buyer_id = 2;
-  string status = 3;
+  string status = 3 [(buf.validate.field).string.in = "PENDING", (buf.validate.field).string.in = "FAILED", (buf.validate.field).string.in = "SUCCESS", (buf.validate.field).string.in = "VALID", (buf.validate.field).string.in = "CANCELED"];
   double total_price = 4;
   repeated OrderItem order_item = 5;
   google.protobuf.Timestamp created_at = 6;

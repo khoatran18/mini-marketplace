@@ -45,47 +45,47 @@ func (s *UserServer) CreateSeller(ctx context.Context, req *userpb.CreateSellerR
 	return res, nil
 }
 
-func (s *UserServer) UpdateSellerByUserID(ctx context.Context, req *userpb.UpdateSellerByIDRequest) (*userpb.UpdateSellerByIDResponse, error) {
+func (s *UserServer) UpdateSellerByID(ctx context.Context, req *userpb.UpdateSellerByIDRequest) (*userpb.UpdateSellerByIDResponse, error) {
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("UserServer: invalid request for UpdateSellerByUserID", zap.Error(err))
-		return UpdSelByUseIDFailResponse("Invalid request for UpdateSellerByUserID", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("UserServer: invalid request for UpdateSellerByID", zap.Error(err))
+		return UpdSelByUseIDFailResponse("Invalid request for UpdateSellerByID", err, codes.InvalidArgument)
 	}
 	input, err := adapter.UpdSelByIDRequestToInput(req)
 	if err != nil {
-		s.ZapLogger.Warn("UserServer: parse UpdateSellerByUserID request to input error", zap.Error(err))
-		return UpdSelByUseIDFailResponse("Parse UpdateSellerByUserID request to input error", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("UserServer: parse UpdateSellerByID request to input error", zap.Error(err))
+		return UpdSelByUseIDFailResponse("Parse UpdateSellerByID request to input error", err, codes.InvalidArgument)
 	}
 
 	// Get ServiceOutput
-	output, err := s.UserService.UpdateSellerByUserID(ctx, input)
+	output, err := s.UserService.UpdateSellerByID(ctx, input)
 	if err != nil {
-		s.ZapLogger.Error("UserServer: UpdateSellerByUserID Error in UserService", zap.Error(err))
-		return UpdSelByUseIDFailResponse("UpdateSellerByUserID Error in UserService", err, codes.Internal)
+		s.ZapLogger.Error("UserServer: UpdateSellerByID Error in UserService", zap.Error(err))
+		return UpdSelByUseIDFailResponse("UpdateSellerByID Error in UserService", err, codes.Internal)
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
 	res, err := adapter.UpdSelByIDOutputToResponse(output)
 	if err != nil {
-		s.ZapLogger.Error("UserServer: parse UpdateSellerByUserID output to response error", zap.Error(err))
-		return UpdSelByUseIDFailResponse("Parse UpdateSellerByUserID output to response error", err, codes.Unknown)
+		s.ZapLogger.Error("UserServer: parse UpdateSellerByID output to response error", zap.Error(err))
+		return UpdSelByUseIDFailResponse("Parse UpdateSellerByID output to response error", err, codes.Unknown)
 	}
 	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("UserServer: invalid response for UpdateSellerByUserID", zap.Error(err))
-		return UpdSelByUseIDFailResponse("Invalid response for UpdateSellerByUserID", err, codes.Internal)
+		s.ZapLogger.Warn("UserServer: invalid response for UpdateSellerByID", zap.Error(err))
+		return UpdSelByUseIDFailResponse("Invalid response for UpdateSellerByID", err, codes.Internal)
 	}
 
 	// Return valid response
 	return res, nil
 }
 
-func (s *UserServer) GetSellerByUserID(ctx context.Context, req *userpb.GetSellerByIDRequest) (*userpb.GetSellerByIDResponse, error) {
+func (s *UserServer) GetSellerByID(ctx context.Context, req *userpb.GetSellerByIDRequest) (*userpb.GetSellerByIDResponse, error) {
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("UserServer: invalid request for GetSellerByUserID", zap.Error(err))
-		return GetSelByUseIDFailResponse("Invalid request for GetSellerByUserID", err, codes.InvalidArgument)
+		s.ZapLogger.Warn("UserServer: invalid request for GetSellerByID", zap.Error(err))
+		return GetSelByUseIDFailResponse("Invalid request for GetSellerByID", err, codes.InvalidArgument)
 	}
 	input, err := adapter.GetSelByIDRequestToInput(req)
 	if err != nil {
@@ -94,10 +94,10 @@ func (s *UserServer) GetSellerByUserID(ctx context.Context, req *userpb.GetSelle
 	}
 
 	// Get ServiceOutput
-	output, err := s.UserService.GetSellerByUserID(ctx, input)
+	output, err := s.UserService.GetSellerByID(ctx, input)
 	if err != nil {
-		s.ZapLogger.Error("UserServer: GetSellerByUserID error in UserService", zap.Error(err))
-		return GetSelByUseIDFailResponse("GetSellerByUserID error in UserService", err, codes.Internal)
+		s.ZapLogger.Error("UserServer: GetSellerByID error in UserService", zap.Error(err))
+		return GetSelByUseIDFailResponse("GetSellerByID error in UserService", err, codes.Internal)
 	}
 
 	// Parse ServiceOutput to ServerResponse and validate
@@ -115,7 +115,7 @@ func (s *UserServer) GetSellerByUserID(ctx context.Context, req *userpb.GetSelle
 	return res, nil
 }
 
-func (s *UserServer) DelSellerByUserID(ctx context.Context, req *userpb.DelSellerByIDRequest) (*userpb.DelSellerByIDResponse, error) {
+func (s *UserServer) DelSellerByID(ctx context.Context, req *userpb.DelSellerByIDRequest) (*userpb.DelSellerByIDResponse, error) {
 
 	// Validate ServerRequest and parse to ServiceInput
 	if err := protovalidate.Validate(req); err != nil {
@@ -124,7 +124,7 @@ func (s *UserServer) DelSellerByUserID(ctx context.Context, req *userpb.DelSelle
 	}
 	input, err := adapter.DelSelByIDRequestToInput(req)
 	if err != nil {
-		s.ZapLogger.Warn("UserServer: parse DelSellerByUserID request to input error", zap.Error(err))
+		s.ZapLogger.Warn("UserServer: parse DelSellerByID request to input error", zap.Error(err))
 		return DelSelByIDFailResponse("Parse DelSelByUserID request to input error", err, codes.InvalidArgument)
 	}
 

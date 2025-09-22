@@ -35,8 +35,8 @@ func (s *UserService) CreateSeller(ctx context.Context, input *dto.CreateSellerI
 	}, nil
 }
 
-func (s *UserService) GetSellerByUserID(ctx context.Context, input *dto.GetSellerByIDInput) (*dto.GetSellerByIDOutput, error) {
-	buyer, err := s.UserRepo.GetSellerByUserID(ctx, input.UserID)
+func (s *UserService) GetSellerByID(ctx context.Context, input *dto.GetSellerByIDInput) (*dto.GetSellerByIDOutput, error) {
+	buyer, err := s.UserRepo.GetSellerByID(ctx, input.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -45,13 +45,13 @@ func (s *UserService) GetSellerByUserID(ctx context.Context, input *dto.GetSelle
 		return nil, err
 	}
 	return &dto.GetSellerByIDOutput{
-		Message: "Get buyer by UserID successfully",
+		Message: "Get seller by ID successfully",
 		Success: true,
 		Seller:  buyerDTO,
 	}, nil
 }
 
-func (s *UserService) UpdateSellerByUserID(ctx context.Context, input *dto.UpdateSellerByIDInput) (*dto.UpdateSellerByIDOutput, error) {
+func (s *UserService) UpdateSellerByID(ctx context.Context, input *dto.UpdateSellerByIDInput) (*dto.UpdateSellerByIDOutput, error) {
 	// Check if seller existed
 	buyer, err := adapter.SellerDTOToModel(input.Seller)
 	if err != nil {
@@ -70,21 +70,21 @@ func (s *UserService) UpdateSellerByUserID(ctx context.Context, input *dto.Updat
 	}
 
 	// Update
-	if err := s.UserRepo.UpdateSellerByUserID(ctx, buyer); err != nil {
+	if err := s.UserRepo.UpdateSellerByID(ctx, buyer); err != nil {
 		return nil, err
 	}
 	return &dto.UpdateSellerByIDOutput{
-		Message: "Update buyer successfully",
+		Message: "Update Seller successfully",
 		Success: true,
 	}, nil
 }
 
 func (s *UserService) DelSellerByUserID(ctx context.Context, input *dto.DelSellerByIDInput) (*dto.DelSellerByIDOutput, error) {
-	if err := s.UserRepo.DelSellerByUserID(ctx, input.UserID); err != nil {
+	if err := s.UserRepo.DelSellerByID(ctx, input.UserID); err != nil {
 		return nil, err
 	}
 	return &dto.DelSellerByIDOutput{
-		Message: "Delete Buyer successfully",
+		Message: "Delete Seller successfully",
 		Success: true,
 	}, nil
 }

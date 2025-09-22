@@ -29,6 +29,7 @@ func newServiceClient[T any](addr string, createClient func(conn *grpc.ClientCon
 		return nil, err
 	}
 
+	fmt.Printf("Create client successfully!\n")
 	return &ServiceClient{
 		Conn:   conn,
 		Client: createClient(conn),

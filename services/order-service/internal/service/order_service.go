@@ -157,6 +157,7 @@ func (s *OrderService) GetOrderItemsByOrderID(ctx context.Context, input *dto.Ge
 }
 
 func (s *OrderService) UpdateOrderByID(ctx context.Context, input *dto.UpdateOrderByIDInput) (*dto.UpdateOrderByIDOutput, error) {
+	fmt.Printf("ID: %v", input.Order.ID)
 	orderModel := adapter.OrderDTOToModel(input.Order)
 	if err := s.OrderRepo.UpdateOrderByID(ctx, orderModel); err != nil {
 		return nil, err

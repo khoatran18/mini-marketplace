@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var OrderStatus = []string{"PENDING", "ACTIVE", "CANCELED", "COMPLETED"}
+var OrderStatus = []string{"PENDING", "SUCCESS", "FAILED", "CANCELED", "VALID"}
 
 type OrderRepository struct {
 	DB *gorm.DB

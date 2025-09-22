@@ -71,7 +71,7 @@ func main() {
 	ctx2 := context.Context(context.Background())
 	topic2 := "user.create_seller"
 	go func() {
-		if err := serviceConfig.KafkaInstance.KafkaConsumer.Consume(ctx2, topic2, "auth-service-9", authService.UpdateStoreIDFromKafka); err != nil {
+		if err := serviceConfig.KafkaInstance.KafkaConsumer.Consume(ctx2, topic2, "auth-service", authService.UpdateStoreIDFromKafka); err != nil {
 			log.Printf("Consumer stopped with error: %v", err)
 		}
 	}()

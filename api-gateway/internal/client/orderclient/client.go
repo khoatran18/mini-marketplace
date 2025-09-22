@@ -232,12 +232,12 @@ func (s *OrderClient) CancelOrderByID(input *dto.CancelOrderByIDInput) (*dto.Can
 // Validate client
 
 func (s *OrderClient) validateClient() error {
-	authClient, err := s.ClientManager.GetOrCreateServiceClient(clientname.OrderClientName)
+	orderClient, err := s.ClientManager.GetOrCreateServiceClient(clientname.OrderClientName)
 	if err != nil {
 		s.Logger.Error("OrderClient: OrderClient is nil and create failed", zap.Error(err))
 		return errors.New("OrderClient: OrderClient is nil and create failed")
 	}
-	client, ok := authClient.(orderpb.OrderServiceClient)
+	client, ok := orderClient.(orderpb.OrderServiceClient)
 	if !ok {
 		s.Logger.Error("OrderClient: OrderClient is nil and create success but is not OrderClient", zap.Error(err))
 	}

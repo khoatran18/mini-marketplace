@@ -21,13 +21,18 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		authRoute.POST("/register", h.AuthHandler.Register)
 		authRoute.POST("/change-password", h.AuthHandler.ChangePassword)
 		authRoute.POST("/refresh-token", h.AuthHandler.RefreshToken)
-		authRoute.POST("/register-seller-roles", h.AuthHandler.RegisterSellerRoles)
+		authRoute.POST("/register-seller-roles", middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret),
+			middleware.AuthorizationMiddleware([]string{"seller_admin"}, serviceConfig.ZapLogger),
+			h.AuthHandler.RegisterSellerRoles)
 	}
 
+	router.Use(middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret))
 	userRoute := router.Group("/users")
 	{
+		//userRoute.Use(middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret))
 		buyerRoute := userRoute.Group("/buyers")
 		{
+			buyerRoute.Use(middleware.AuthorizationMiddleware([]string{"buyer"}, serviceConfig.ZapLogger))
 			buyerRoute.POST("", h.UserHandler.CreateBuyer)
 			buyerRoute.GET("/:id", h.UserHandler.GetBuyerByUserID)
 			buyerRoute.PUT("/:id", h.UserHandler.UpdateBuyerByUserID)
@@ -35,17 +40,17 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		}
 		sellerRoute := userRoute.Group("/sellers")
 		{
-			sellerRoute.POST("", h.UserHandler.CreateSeller)
+			sellerRoute.POST("", middleware.AuthorizationMiddleware([]string{"seller_admin"}, serviceConfig.ZapLogger), h.UserHandler.CreateSeller)
 			sellerRoute.GET("/:id", h.UserHandler.GetSellerByID)
-			sellerRoute.PUT("/:id", h.UserHandler.UpdateSellerByID)
-			sellerRoute.DELETE("/:id", h.UserHandler.DelSellerByID)
+			sellerRoute.PUT("/:id", middleware.AuthorizationMiddleware([]string{"seller_admin"}, serviceConfig.ZapLogger), h.UserHandler.UpdateSellerByID)
+			sellerRoute.DELETE("/:id", middleware.AuthorizationMiddleware([]string{"seller_admin"}, serviceConfig.ZapLogger), h.UserHandler.DelSellerByID)
 		}
 	}
 
 	productRoute := router.Group("/products")
 	{
-		productRoute.POST("", h.ProductHandler.CreateProduct)
-		productRoute.PUT("/:id", h.ProductHandler.UpdateProduct)
+		productRoute.POST("", middleware.AuthorizationMiddleware([]string{"seller_admin", "seller_employee"}, serviceConfig.ZapLogger), h.ProductHandler.CreateProduct)
+		productRoute.PUT("/:id", middleware.AuthorizationMiddleware([]string{"seller_admin", "seller_employee"}, serviceConfig.ZapLogger), h.ProductHandler.UpdateProduct)
 		productRoute.GET("/:id", h.ProductHandler.GetProductByID)
 		productRoute.GET("/seller/:seller_id", h.ProductHandler.GetProductsBySellerID)
 	}
