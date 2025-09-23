@@ -10,10 +10,6 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-//func (s *APIGatewayService) ConsumerPwdVerKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
-//
-//}
-
 func (s *APIGatewayService) AddChaPwdVerToRedis(ctx context.Context, msg *kafka.Message) error {
 
 	var eventDTO dto.ChangePwdKafkaEvent
