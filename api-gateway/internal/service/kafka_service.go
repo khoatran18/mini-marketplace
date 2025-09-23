@@ -19,6 +19,7 @@ func (s *APIGatewayService) AddChaPwdVerToRedis(ctx context.Context, msg *kafka.
 	period := 5 * time.Minute
 
 	key := fmt.Sprintf("%d:pwd_version", eventDTO.UserID)
+	fmt.Println("Key for change-password:", key)
 	if err := s.RedisClient.Set(ctx, key, eventDTO.PwdVersion, period).Err(); err != nil {
 		return err
 	}

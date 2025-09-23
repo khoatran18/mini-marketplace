@@ -4,4 +4,6 @@ COPY create_cluster.sh /usr/local/bin/create_cluster.sh
 
 RUN chmod +x /usr/local/bin/create_cluster.sh
 
+#RUN dos2unix /usr/local/bin/create_cluster.sh && chmod +x /usr/local/bin/create_cluster.sh
+
 ENTRYPOINT ["/usr/local/bin/create_cluster.sh"]

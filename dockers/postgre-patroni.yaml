@@ -98,8 +98,8 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
-        delay: 2s
-        window: 20s
+        delay: 15s
+        window: 70s
 
   auth-service:
     image: auth-service:latest
@@ -111,8 +111,8 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
-        delay: 2s
-        window: 20s
+        delay: 15s
+        window: 70s
 
 networks:
   test-network:

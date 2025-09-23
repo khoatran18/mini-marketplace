@@ -1,0 +1,29 @@
+services:
+
+  api-gateway:
+    image: api-gateway:latest
+    hostname: api-gateway
+    networks:
+      test-network:
+    ports:
+      - "8080:8080"
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+  auth-service:
+    image: auth-service:latest
+    hostname: auth-service
+    networks:
+      test-network:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+networks:
+  test-network:
+    driver: overlay

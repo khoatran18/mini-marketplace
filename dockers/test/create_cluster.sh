@@ -1,18 +1,16 @@
 #!/bin/sh
 set -e
 
-# Create redis main
+# Chạy Redis server foreground
 redis-server \
       --port 6379 \
       --cluster-enabled yes \
       --cluster-config-file nodes.conf \
       --cluster-node-timeout 5000 \
       --cluster-announce-ip redis-node-1 \
-      --appendonly yes &
+      --appendonly yes
 
-REDIS_PID=$!
-
-# Create Redis Cluster
+# Sau 30 giây thì tạo cluster (background task)
 (
   sleep 30
     redis-cli --cluster create \
@@ -26,5 +24,5 @@ REDIS_PID=$!
       --cluster-yes
 ) &
 
-# Only exit if redis main crash
-wait $REDIS_PID
+# Giữ tiến trình Redis chạy foreground
+wait -n
