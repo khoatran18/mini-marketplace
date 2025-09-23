@@ -57,7 +57,8 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker1:29092,PLAINTEXT_HOST://localhost:9092
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker1:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker1:29092,PLAINTEXT_HOST://broker1:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_RETENTION_MS: "9000000"
@@ -87,6 +88,31 @@ services:
         delay: 2s
         window: 15s
 
+  api-gateway:
+    image: api-gateway:latest
+    hostname: api-gateway
+    networks:
+      test-network:
+    ports:
+      - "8080:8080"
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 2s
+        window: 20s
+
+  auth-service:
+    image: auth-service:latest
+    hostname: auth-service
+    networks:
+      test-network:
+#    ports:
+#      - "8080:8080"
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 2s
+        window: 20s
 
 networks:
   test-network:

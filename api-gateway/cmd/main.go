@@ -44,6 +44,14 @@ func main() {
 		}
 	}()
 
+	// Test
+	//topic1 := "test_topic"
+	//conn, err := kafka.DialLeader(context.Background(), "tcp", "broker1:9092", topic1, 0)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//defer conn.Close()
+
 	// Setup router
 	engine := gin.New()
 	router.SetupRouter(engine, managerHandler, serviceConfig, envConfig)

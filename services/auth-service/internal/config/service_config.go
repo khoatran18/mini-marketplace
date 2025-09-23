@@ -74,6 +74,21 @@ func initRedisClient() (*redis.Client, error) {
 	}
 
 	fmt.Println("Init redis client successfully!")
+
+	// Test
+	ctx := context.Background()
+	err = rdb.Set(ctx, "test_key", "hello world", 5*time.Second).Err()
+	if err != nil {
+		fmt.Println("Failed to SET:", err)
+	} else {
+		testRes, err := rdb.Get(ctx, "test_key").Result()
+		if err != nil {
+			fmt.Println("Failed to GET key:", err)
+		}
+		fmt.Printf("Test_res:%v\n", testRes)
+		fmt.Println("SET test_key -> hello world")
+	}
+
 	return rdb, nil
 }
 
@@ -100,6 +115,7 @@ func initAllKafkaInstance() (*kafkaimpl.KafkaManager, *kafkaimpl.KafkaProducer, 
 	if brokers == "" {
 		return nil, nil, nil, nil, errors.New("KAFKA_BROKERS_ADDR env variable not set")
 	}
+	fmt.Printf("KAFKA_BROKERS_ADDR: %s\n", brokers)
 	brokersList := strings.Split(brokers, ",")
 
 	producerRetry := GetEnvIntWithDefault("KAFKA_PRODUCER_RETRY", 3)
@@ -110,6 +126,8 @@ func initAllKafkaInstance() (*kafkaimpl.KafkaManager, *kafkaimpl.KafkaProducer, 
 	kafkaProducer := kafkaimpl.NewKafkaProducer(kafkaManager, producerRetry, time.Duration(producerBackoff)*time.Millisecond)
 	kafkaConsumer := kafkaimpl.NewKafkaConsumer(kafkaManager, time.Duration(consumerBackoff)*time.Millisecond)
 	kafkaClient := kafkaimpl.NewKafkaClient(brokersList)
+
+	fmt.Println("Init all kafka instance successfully!")
 	return kafkaManager, kafkaProducer, kafkaConsumer, kafkaClient, nil
 }
 

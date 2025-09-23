@@ -84,13 +84,3 @@ func (c *KafkaClient) EnsureTopicExist(ctx context.Context, topic string) error 
 	log.Printf("Kafka topic %v not exists, created successfully\n", topic)
 	return nil
 }
-
-//func (c *KafkaClient) CreateTopicByLeader(ctx context.Context, topic string) error {
-//	// Test
-//	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic, 0)
-//	defer conn.Close()
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-//}

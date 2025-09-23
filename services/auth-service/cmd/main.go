@@ -25,7 +25,7 @@ func main() {
 	godotenv.Load(".env")
 	serviceConfig, err := config.NewServiceConfig()
 	if err != nil {
-		log.Fatal("Error NewServiceConfig")
+		log.Fatal("Error NewServiceConfig", err)
 	}
 	envConfig, err := config.NewEnvConfig()
 	if err != nil {
@@ -59,7 +59,7 @@ func main() {
 
 	// Test
 	topic1 := "auth.change_password"
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic1, 0)
+	conn, err := kafka.DialLeader(context.Background(), "tcp", "broker1:9092", topic1, 0)
 	if err != nil {
 		panic(err)
 	}
