@@ -24,7 +24,25 @@ type ServiceClient struct {
 
 // newServiceClient create client for each gRPC client
 func newServiceClient[T any](addr string, createClient func(conn *grpc.ClientConn) T) (*ServiceClient, error) {
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	// Test
+	//interceptor := func(
+	//	ctx context.Context,
+	//	method string,
+	//	req, reply interface{},
+	//	cc *grpc.ClientConn,
+	//	invoker grpc.UnaryInvoker,
+	//	opts ...grpc.CallOption,
+	//) error {
+	//	fmt.Println("Calling method:", method, "on server:", cc.Target())
+	//	return invoker(ctx, method, req, reply, cc, opts...)
+	//}
+
+	conn, err := grpc.NewClient(addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
+		//grpc.WithUnaryInterceptor(interceptor),
+	)
 	if err != nil {
 		return nil, err
 	}
