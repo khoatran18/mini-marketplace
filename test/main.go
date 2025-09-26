@@ -29,7 +29,8 @@ func sendPostRequest(client *http.Client, url string, data RegisterRequest, id i
 }
 
 func main() {
-	url := "https://127.0.0.1/auth/register"
+	//url := "https://127.0.0.1/auth/register"
+	url := "http://127.0.0.1:8080/auth/register"
 	requestsPerSecond := 100
 
 	// Tạo HTTP client bỏ qua kiểm tra certificate

@@ -1,34 +1,105 @@
 services:
 
-  etcd:
-    image: bitnami/etcd
+  etcd1: &etcd
+#    image: bitnami/etcd
+    image: patroni
+    hostname: etcd1
     networks:
       - test-network
-    ports:
-      - "2379:2379"
-      - "2380:2380"
     environment:
-      ALLOW_NONE_AUTHENTICATION: yes
-      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
       ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_INITIAL_CLUSTER: etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: arm64
+      ETCD_UNSUPPORTED_ARCH: arm64
+    command: etcd --name etcd1 --initial-advertise-peer-urls http://etcd1:2380
     deploy:
       restart_policy:
         condition: on-failure
         delay: 3s
         window: 30s
+  etcd2:
+    <<: *etcd
+    hostname: etcd2
+    command: etcd --name etcd2 --initial-advertise-peer-urls http://etcd2:2380
+  etcd3:
+    <<: *etcd
+    hostname: etcd3
+    command: etcd --name etcd3 --initial-advertise-peer-urls http://etcd3:2380
 
-  patroni-postgresql:
-    image: registry.opensource.zalan.do/acid/spilo-15
+  haproxy:
+    image: patroni
+    hostname: haproxy
+#    ports:
+#      - target: 5000
+#        published: 5000
+#        protocol: tcp
+#        mode: host
+#      - target: 5001
+#        published: 5001
+#        protocol: tcp
+#        mode: ingress
+    env_file:
+      - postgres_custom/docker/patroni.env
     networks:
       - test-network
-    ports:
-      - "5432:5432"
+    command: haproxy
+    deploy:
+      mode: replicated
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        window: 30s
+    environment: &haproxy_env
+      ### Important: In sample config, it is ETCD_ENDPOINTS
+      ETCDCTL_ENDPOINTS: "http://etcd1:2379,http://etcd2:2379,http://etcd3:2379"
+
+      PATRONI_ETCD3_HOSTS: "'etcd1:2379','etcd2:2379','etcd3:2379'"
+      PATRONI_SCOPE: pg-cluster
+
+  patroni1:
+#    image: registry.opensource.zalan.do/acid/spilo-15
+    image: patroni
+    hostname: patroni1
+    networks:
+      - test-network
     environment:
-      SCOPE: pg-cluster
-      PGUSER_SUPERUSER: admin
-      PGPASSWORD_SUPERUSER: admin
-      PGHOME: /home/postgres
-      ETCD3_HOST: etcd:2379
+      <<: *haproxy_env
+      PATRONI_NAME: patroni1
+    depends_on:
+      - etcd
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        window: 30s
+  patroni2:
+    #    image: registry.opensource.zalan.do/acid/spilo-15
+    image: patroni
+    hostname: patroni2
+    networks:
+      - test-network
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni2
+    depends_on:
+      - etcd
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        window: 30s
+  patroni3:
+    #    image: registry.opensource.zalan.do/acid/spilo-15
+    image: patroni
+    hostname: patroni3
+    networks:
+      - test-network
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni3
     depends_on:
       - etcd
     deploy:

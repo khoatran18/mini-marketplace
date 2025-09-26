@@ -1,87 +1,87 @@
 services:
 
-  traefik:
-    image: traefik:v3.4
-    networks:
-      - test-network
-
-    ports:
-      - target: 80
-        published: 80
-        protocol: tcp
-        mode: ingress
-      - target: 443
-        published: 443
-        protocol: tcp
-        mode: ingress
-
-    volumes:
-      # To access Swarm API (Swarm Provider)
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./certs:/certs:ro
-      - ./traefik_config/dynamic:/dynamic:ro
-
-    command:
-      # HTTP Entrypoint
-      - "--entrypoints.web.address=:80"
-
-      # Redirection HTTP to HTTPS
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-
-      # HTTPS Entrypoint
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.websecure.http.tls=true"
-
-      # Dynamic TLS file
-      - "--providers.file.filename=/dynamic/tls.yml"
-
-      # Enable Docker Swarm Provider
-      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
-
-      # Watch Swarm service change (require Socker)
-      - "--providers.swarm.watch=true"
-
-      # Not expose service by default
-      - "--providers.swarm.exposedbydefault=false"
-
-      # Default network for Traefik to connect to services
-      - "--providers.swarm.network=test_test-network"
-
-      # API & Dashboard
-      - "--api.dashboard=true"
-      - "--api.insecure=false"
-
-      # Log & Metric
-      - "--log.level=DEBUG"
-      - "accesslog=true"
-
-    deploy:
-      mode: replicated
-      replicas: 3
-
-      # Where Traefik task can run
-      placement:
-        constraints:
-          - node.role == manager
-
-      # Traefik dynamic configuration via labels
-      labels:
-        - "traefik.enable=true"
-
-        # Dashboard router
-        - "traefik.http.routers.dashboard.rule=Host(`dashboard.swarm.localhost`)"
-        - "traefik.http.routers.dashboard.entrypoints=websecure"
-        - "traefik.http.routers.dashboard.service=api@internal"
-        - "traefik.http.routers.dashboard.tls=true"
-
-        # Basic-auth middleware
-        - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$1qkpPb/w$$74TPPWZlkcDyLkW.VvZGB0"
-        - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm"
-
-        # Service hint
-        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+#  traefik:
+#    image: traefik:v3.4
+#    networks:
+#      - test-network
+#
+#    ports:
+#      - target: 80
+#        published: 80
+#        protocol: tcp
+#        mode: ingress
+#      - target: 443
+#        published: 443
+#        protocol: tcp
+#        mode: ingress
+#
+#    volumes:
+#      # To access Swarm API (Swarm Provider)
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+#      - ./certs:/certs:ro
+#      - ./traefik_config/dynamic:/dynamic:ro
+#
+#    command:
+#      # HTTP Entrypoint
+#      - "--entrypoints.web.address=:80"
+#
+#      # Redirection HTTP to HTTPS
+#      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+#      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+#      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+#
+#      # HTTPS Entrypoint
+#      - "--entrypoints.websecure.address=:443"
+#      - "--entrypoints.websecure.http.tls=true"
+#
+#      # Dynamic TLS file
+#      - "--providers.file.filename=/dynamic/tls.yml"
+#
+#      # Enable Docker Swarm Provider
+#      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+#
+#      # Watch Swarm service change (require Socker)
+#      - "--providers.swarm.watch=true"
+#
+#      # Not expose service by default
+#      - "--providers.swarm.exposedbydefault=false"
+#
+#      # Default network for Traefik to connect to services
+#      - "--providers.swarm.network=test_test-network"
+#
+#      # API & Dashboard
+#      - "--api.dashboard=true"
+#      - "--api.insecure=false"
+#
+#      # Log & Metric
+#      - "--log.level=DEBUG"
+#      - "accesslog=true"
+#
+#    deploy:
+#      mode: replicated
+#      replicas: 3
+#
+#      # Where Traefik task can run
+#      placement:
+#        constraints:
+#          - node.role == manager
+#
+#      # Traefik dynamic configuration via labels
+#      labels:
+#        - "traefik.enable=true"
+#
+#        # Dashboard router
+#        - "traefik.http.routers.dashboard.rule=Host(`dashboard.swarm.localhost`)"
+#        - "traefik.http.routers.dashboard.entrypoints=websecure"
+#        - "traefik.http.routers.dashboard.service=api@internal"
+#        - "traefik.http.routers.dashboard.tls=true"
+#
+#        # Basic-auth middleware
+#        - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$1qkpPb/w$$74TPPWZlkcDyLkW.VvZGB0"
+#        - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm"
+#
+#        # Service hint
+#        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
 
   api-gateway:
