@@ -1,0 +1,1161 @@
+basePath: /api/v1
+definitions:
+  dto.Buyer:
+    properties:
+      address:
+        type: string
+      date_of_birth:
+        type: string
+      gender:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  dto.CancelOrderByIDOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.ChangePasswordInput:
+    properties:
+      new_password:
+        type: string
+      old_password:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  dto.ChangePasswordOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.CreateBuyerInput:
+    properties:
+      buyer:
+        $ref: '#/definitions/dto.Buyer'
+    type: object
+  dto.CreateBuyerOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.CreateOrderInput:
+    properties:
+      order:
+        $ref: '#/definitions/dto.Order'
+    type: object
+  dto.CreateOrderOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.CreateProductInput:
+    properties:
+      attributes:
+        additionalProperties: {}
+        type: object
+      inventory:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      seller_id:
+        type: integer
+    type: object
+  dto.CreateProductOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.CreateSellerInput:
+    properties:
+      seller:
+        $ref: '#/definitions/dto.Seller'
+      user_id:
+        type: integer
+    type: object
+  dto.CreateSellerOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.DelBuyByUseIDOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.DelSelByIDOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.ErrorResponse:
+    properties:
+      error:
+        example: invalid request
+        type: string
+    type: object
+  dto.GetBuyByUseIDOutput:
+    properties:
+      buyer:
+        $ref: '#/definitions/dto.Buyer'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.GetOrderByIDOutput:
+    properties:
+      message:
+        type: string
+      order:
+        $ref: '#/definitions/dto.Order'
+      success:
+        type: boolean
+    type: object
+  dto.GetOrdersByBuyerIDStatusOutput:
+    properties:
+      message:
+        type: string
+      orders:
+        items:
+          $ref: '#/definitions/dto.Order'
+        type: array
+      success:
+        type: boolean
+    type: object
+  dto.GetProductByIDOutput:
+    properties:
+      message:
+        type: string
+      product:
+        $ref: '#/definitions/dto.Product'
+      success:
+        type: boolean
+    type: object
+  dto.GetProductsBySellerIDOutput:
+    properties:
+      message:
+        type: string
+      products:
+        items:
+          $ref: '#/definitions/dto.Product'
+        type: array
+      success:
+        type: boolean
+    type: object
+  dto.GetProductsOutput:
+    properties:
+      message:
+        type: string
+      products:
+        items:
+          $ref: '#/definitions/dto.Product'
+        type: array
+      success:
+        type: boolean
+    type: object
+  dto.GetSelByIDOutput:
+    properties:
+      message:
+        type: string
+      seller:
+        $ref: '#/definitions/dto.Seller'
+      success:
+        type: boolean
+    type: object
+  dto.LoginInput:
+    properties:
+      password:
+        description: Password of the user
+        example: password1
+        type: string
+      role:
+        description: Role of the user, e.g., admin or buyer
+        example: admin
+        type: string
+      username:
+        description: Username of the user
+        example: user1
+        type: string
+    required:
+    - password
+    - role
+    - username
+    type: object
+  dto.LoginOutput:
+    properties:
+      access_token:
+        description: JWT access token
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      message:
+        description: Response message
+        example: Login successful
+        type: string
+      refresh_token:
+        description: JWT refresh token
+        example: dGhpc2lzcmVmcmVzaHRva2Vu
+        type: string
+      success:
+        description: Indicates if login was successful
+        example: true
+        type: boolean
+    type: object
+  dto.Order:
+    properties:
+      buyer_id:
+        type: integer
+      id:
+        type: integer
+      order_items:
+        items:
+          $ref: '#/definitions/dto.OrderItem'
+        type: array
+      status:
+        type: string
+      total_price:
+        type: number
+    type: object
+  dto.OrderItem:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      order_id:
+        type: integer
+      price:
+        type: number
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+    type: object
+  dto.Product:
+    properties:
+      attributes:
+        additionalProperties: {}
+        type: object
+      id:
+        type: integer
+      inventory:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      seller_id:
+        type: integer
+    type: object
+  dto.RefreshTokenInput:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  dto.RefreshTokenOutput:
+    properties:
+      access_token:
+        type: string
+      message:
+        type: string
+      refresh_token:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.RegisterInput:
+    properties:
+      password:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - role
+    - username
+    type: object
+  dto.RegisterOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.RegisterSellerRolesInput:
+    properties:
+      password:
+        type: string
+      role:
+        type: string
+      seller_admin_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  dto.RegisterSellerRolesOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.Seller:
+    properties:
+      address:
+        type: string
+      bank_account:
+        type: string
+      date_of_birth:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      phone:
+        type: string
+      tax_code:
+        type: string
+    type: object
+  dto.UpdBuyByUseIDInput:
+    properties:
+      buyer:
+        $ref: '#/definitions/dto.Buyer'
+    type: object
+  dto.UpdBuyByUseIDOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.UpdSelByIDInput:
+    properties:
+      seller:
+        $ref: '#/definitions/dto.Seller'
+      user_id:
+        type: integer
+    type: object
+  dto.UpdSelByIDOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.UpdateOrderByIDInput:
+    properties:
+      order:
+        $ref: '#/definitions/dto.Order'
+    type: object
+  dto.UpdateOrderByIDOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.UpdateProductInput:
+    properties:
+      product:
+        $ref: '#/definitions/dto.Product'
+      user_id:
+        type: integer
+    type: object
+  dto.UpdateProductOutput:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: My API-Gateway server celler server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Example API
+  version: "1.0"
+paths:
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change password
+      parameters:
+      - description: Username, old and new password to ChangePassword
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangePasswordInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ChangePasswordOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: ChangePassword
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Get username, password and return token
+      parameters:
+      - description: Username and password to Login
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LoginOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
+  /auth/refresh-token:
+    post:
+      consumes:
+      - application/json
+      description: Refresh token
+      parameters:
+      - description: Refresh Token to refresh
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RefreshTokenInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RefreshTokenOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: RefreshToken
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create account from username, password
+      parameters:
+      - description: Username and password to Register
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RegisterOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Register
+      tags:
+      - auth
+  /auth/register-seller-roles:
+    post:
+      consumes:
+      - application/json
+      description: Create seller role account from username, password
+      parameters:
+      - description: Username and password used to register seller role account
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterSellerRolesInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RegisterSellerRolesOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: RegisterSellerRoles
+      tags:
+      - auth
+  /orders:
+    get:
+      consumes:
+      - application/json
+      description: Get order by buyer_id and status
+      parameters:
+      - description: Buyer ID
+        in: query
+        name: buyer_id
+        required: true
+        type: integer
+      - description: Status of order
+        in: query
+        name: status
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetOrdersByBuyerIDStatusOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: GetOrdersByBuyerIDStatus
+      tags:
+      - order
+    post:
+      consumes:
+      - application/json
+      description: Create new order
+      parameters:
+      - description: Order creation payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateOrderInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CreateOrderOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: CreateOrder
+      tags:
+      - order
+  /orders/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Cancel order by ID
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CancelOrderByIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: CancelOrderByID
+      tags:
+      - order
+    get:
+      consumes:
+      - application/json
+      description: Get order
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetOrderByIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: GetOrderByID
+      tags:
+      - order
+    put:
+      consumes:
+      - application/json
+      description: Update order
+      parameters:
+      - description: Order update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateOrderByIDInput'
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UpdateOrderByIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: UpdateOrderByID
+      tags:
+      - order
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Get products random at home
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetProductsOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: GetProducts
+      tags:
+      - product
+    post:
+      consumes:
+      - application/json
+      description: Create new product
+      parameters:
+      - description: Product DTO to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateProductInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CreateProductOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: CreateProduct
+      tags:
+      - product
+  /products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get product by ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetProductByIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: GetProductByID
+      tags:
+      - product
+    put:
+      consumes:
+      - application/json
+      description: Update product
+      parameters:
+      - description: Product DTO to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProductInput'
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UpdateProductOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: UpdateProduct
+      tags:
+      - product
+  /products/seller/{seller_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get product by seller_id
+      parameters:
+      - description: Seller ID
+        in: path
+        name: seller_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetProductsBySellerIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: GetProductsBySellerID
+      tags:
+      - product
+  /users/buyers:
+    post:
+      consumes:
+      - application/json
+      description: Create new buyer
+      parameters:
+      - description: Buyer DTO to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateBuyerInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CreateBuyerOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: CreateBuyer
+      tags:
+      - user
+  /users/buyers/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: delete buyer by user_id
+      parameters:
+      - description: Buyer ID to delete
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DelBuyByUseIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: DelBuyerByUserID
+      tags:
+      - user
+    get:
+      consumes:
+      - application/json
+      description: Get buyer by user_id
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetBuyByUseIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: GetBuyerByUserID
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      description: Update buyer by user_id
+      parameters:
+      - description: Buyer ID to update
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Buyer DTO to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdBuyByUseIDInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UpdBuyByUseIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: UpdateBuyerByUserID
+      tags:
+      - user
+  /users/sellers:
+    post:
+      consumes:
+      - application/json
+      description: Create new seller
+      parameters:
+      - description: Seller DTO to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateSellerInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CreateSellerOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: CreateSeller
+      tags:
+      - user
+  /users/sellers/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: delete buyer by seller_id
+      parameters:
+      - description: Seller ID to delete
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DelSelByIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: DelSellerByID
+      tags:
+      - user
+    get:
+      consumes:
+      - application/json
+      description: Get seller by ID
+      parameters:
+      - description: Seller ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetSelByIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: GetSellerByID
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      description: Update seller by ID
+      parameters:
+      - description: Seller ID to update
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Seller DTO to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdSelByIDInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UpdSelByIDOutput'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: UpdateSellerByID
+      tags:
+      - user
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization:
+      Bearer {token}"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -1,9 +1,9 @@
 package dto
 
 type LoginInput struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	Role     string `json:"role" binding:"required"`
+	Username string `json:"username" binding:"required" example:"user1"`
+	Password string `json:"password" binding:"required" example:"password1"`
+	Role     string `json:"role" binding:"required" example:"admin"`
 }
 type LoginOutput struct {
 	Message      string `json:"message"`
