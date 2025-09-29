@@ -90,6 +90,17 @@ message GetAndDecreaseInventoryByIDResponse {
   bool success = 2;
 }
 
+// GetListProducts
+message GetProductsRequest {
+  uint64 page = 1;
+  uint64 page_size = 2;
+}
+message GetProductsResponse {
+  string message = 1;
+  bool success = 2;
+  repeated Product product = 3;
+}
+
 // Service
 service ProductService {
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
@@ -99,4 +110,5 @@ service ProductService {
   rpc GetProductsBySellerID(GetProductsBySellerIDRequest) returns (GetProductsBySellerIDResponse);
   rpc GetInventoryByID(GetInventoryByIDRequest) returns (GetInventoryByIDResponse);
   rpc GetAndDecreaseInventoryByID(GetAndDecreaseInventoryByIDRequest) returns (GetAndDecreaseInventoryByIDResponse);
+  rpc GetProducts(GetProductsRequest) returns (GetProductsResponse);
 }

@@ -193,3 +193,22 @@ func GetAndDecInvByIDOutputToResponse(output *dto.GetAndDecreaseInventoryByIDOut
 		Success: output.Success,
 	}, nil
 }
+
+func GetProductsRequestToInput(req *productpb.GetProductsRequest) (*dto.GetProductsInput, error) {
+	return &dto.GetProductsInput{
+		Page:     req.GetPage(),
+		PageSize: req.GetPageSize(),
+	}, nil
+}
+
+func GetProductsOutputToResponse(output *dto.GetProductsOutput) (*productpb.GetProductsResponse, error) {
+	products, err := ProductsDTOToProto(output.Products)
+	if err != nil {
+		return nil, err
+	}
+	return &productpb.GetProductsResponse{
+		Message: output.Message,
+		Success: output.Success,
+		Product: products,
+	}, nil
+}

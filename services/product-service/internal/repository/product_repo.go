@@ -122,3 +122,13 @@ func (r *ProductRepository) GetProductsBySellerID(ctx context.Context, sellerID 
 	}
 	return products, nil
 }
+
+func (r *ProductRepository) GetProducts(ctx context.Context, page, pageSize uint64) ([]*model.Product, error) {
+	var products []*model.Product
+	pageSizeInt := int(pageSize)
+	offset := int((page - 1) * pageSize)
+	if err := r.DB.WithContext(ctx).Limit(pageSizeInt).Offset(offset).Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
+}

@@ -47,3 +47,13 @@ type GetProductsBySellerIDOutput struct {
 	Success  bool       `json:"success"`
 	Products []*Product `json:"products"`
 }
+
+type GetProductsInput struct {
+	Page     uint64 `json:"page"`
+	PageSize uint64 `json:"page_size"`
+}
+type GetProductsOutput struct {
+	Message  string     `json:"message"`
+	Success  bool       `json:"success"`
+	Products []*Product `json:"products"`
+}

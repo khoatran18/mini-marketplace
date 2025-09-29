@@ -173,3 +173,20 @@ func (s *ProductService) GetAndDecreaseInventoryByID(ctx context.Context, input 
 		Success: true,
 	}, nil
 }
+
+// GetProducts handle logic for Get Products gRPC request in Service
+func (s *ProductService) GetProducts(ctx context.Context, input *dto.GetProductsInput) (*dto.GetProductsOutput, error) {
+
+	// Get Products
+	products, err := s.ProductRepo.GetProducts(ctx, input.Page, input.PageSize)
+	if err != nil {
+		s.ZapLogger.Warn("ProductService: failed to get products", zap.Error(err))
+		return nil, err
+	}
+	productsDTO := adapter.ProductsModelToDTO(products)
+	return &dto.GetProductsOutput{
+		Message:  "Get products successfully",
+		Success:  true,
+		Products: productsDTO,
+	}, nil
+}

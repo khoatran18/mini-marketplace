@@ -874,6 +874,119 @@ func (x *GetAndDecreaseInventoryByIDResponse) GetSuccess() bool {
 	return false
 }
 
+// GetListProducts
+type GetProductsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          uint64                 `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize      uint64                 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProductsRequest) Reset() {
+	*x = GetProductsRequest{}
+	mi := &file_product_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProductsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProductsRequest) ProtoMessage() {}
+
+func (x *GetProductsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_product_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProductsRequest.ProtoReflect.Descriptor instead.
+func (*GetProductsRequest) Descriptor() ([]byte, []int) {
+	return file_product_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetProductsRequest) GetPage() uint64 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *GetProductsRequest) GetPageSize() uint64 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+type GetProductsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	Product       []*Product             `protobuf:"bytes,3,rep,name=product,proto3" json:"product,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProductsResponse) Reset() {
+	*x = GetProductsResponse{}
+	mi := &file_product_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProductsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProductsResponse) ProtoMessage() {}
+
+func (x *GetProductsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_product_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProductsResponse.ProtoReflect.Descriptor instead.
+func (*GetProductsResponse) Descriptor() ([]byte, []int) {
+	return file_product_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetProductsResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *GetProductsResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *GetProductsResponse) GetProduct() []*Product {
+	if x != nil {
+		return x.Product
+	}
+	return nil
+}
+
 var File_product_proto protoreflect.FileDescriptor
 
 const file_product_proto_rawDesc = "" +
@@ -935,7 +1048,14 @@ const file_product_proto_rawDesc = "" +
 	"\auser_id\x18\x03 \x01(\x04R\x06userId\"Y\n" +
 	"#GetAndDecreaseInventoryByIDResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess2\xe8\x06\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\"E\n" +
+	"\x12GetProductsRequest\x12\x12\n" +
+	"\x04page\x18\x01 \x01(\x04R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x04R\bpageSize\"\x84\x01\n" +
+	"\x13GetProductsResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x129\n" +
+	"\aproduct\x18\x03 \x03(\v2\x1f.product_service.pkg.pb.ProductR\aproduct2\xd0\a\n" +
 	"\x0eProductService\x12l\n" +
 	"\rCreateProduct\x12,.product_service.pkg.pb.CreateProductRequest\x1a-.product_service.pkg.pb.CreateProductResponse\x12l\n" +
 	"\rUpdateProduct\x12,.product_service.pkg.pb.UpdateProductRequest\x1a-.product_service.pkg.pb.UpdateProductResponse\x12o\n" +
@@ -943,7 +1063,8 @@ const file_product_proto_rawDesc = "" +
 	"\x0fGetProductsByID\x12..product_service.pkg.pb.GetProductsByIDRequest\x1a/.product_service.pkg.pb.GetProductsByIDResponse\x12\x84\x01\n" +
 	"\x15GetProductsBySellerID\x124.product_service.pkg.pb.GetProductsBySellerIDRequest\x1a5.product_service.pkg.pb.GetProductsBySellerIDResponse\x12u\n" +
 	"\x10GetInventoryByID\x12/.product_service.pkg.pb.GetInventoryByIDRequest\x1a0.product_service.pkg.pb.GetInventoryByIDResponse\x12\x96\x01\n" +
-	"\x1bGetAndDecreaseInventoryByID\x12:.product_service.pkg.pb.GetAndDecreaseInventoryByIDRequest\x1a;.product_service.pkg.pb.GetAndDecreaseInventoryByIDResponseB\x1bZ\x19product-service/productpbb\x06proto3"
+	"\x1bGetAndDecreaseInventoryByID\x12:.product_service.pkg.pb.GetAndDecreaseInventoryByIDRequest\x1a;.product_service.pkg.pb.GetAndDecreaseInventoryByIDResponse\x12f\n" +
+	"\vGetProducts\x12*.product_service.pkg.pb.GetProductsRequest\x1a+.product_service.pkg.pb.GetProductsResponseB\x1bZ\x19product-service/productpbb\x06proto3"
 
 var (
 	file_product_proto_rawDescOnce sync.Once
@@ -957,7 +1078,7 @@ func file_product_proto_rawDescGZIP() []byte {
 	return file_product_proto_rawDescData
 }
 
-var file_product_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_product_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_product_proto_goTypes = []any{
 	(*Product)(nil),                             // 0: product_service.pkg.pb.Product
 	(*CreateProductRequest)(nil),                // 1: product_service.pkg.pb.CreateProductRequest
@@ -974,34 +1095,39 @@ var file_product_proto_goTypes = []any{
 	(*GetInventoryByIDResponse)(nil),            // 12: product_service.pkg.pb.GetInventoryByIDResponse
 	(*GetAndDecreaseInventoryByIDRequest)(nil),  // 13: product_service.pkg.pb.GetAndDecreaseInventoryByIDRequest
 	(*GetAndDecreaseInventoryByIDResponse)(nil), // 14: product_service.pkg.pb.GetAndDecreaseInventoryByIDResponse
-	(*structpb.Struct)(nil),                     // 15: google.protobuf.Struct
+	(*GetProductsRequest)(nil),                  // 15: product_service.pkg.pb.GetProductsRequest
+	(*GetProductsResponse)(nil),                 // 16: product_service.pkg.pb.GetProductsResponse
+	(*structpb.Struct)(nil),                     // 17: google.protobuf.Struct
 }
 var file_product_proto_depIdxs = []int32{
-	15, // 0: product_service.pkg.pb.Product.attributes:type_name -> google.protobuf.Struct
-	15, // 1: product_service.pkg.pb.CreateProductRequest.attributes:type_name -> google.protobuf.Struct
+	17, // 0: product_service.pkg.pb.Product.attributes:type_name -> google.protobuf.Struct
+	17, // 1: product_service.pkg.pb.CreateProductRequest.attributes:type_name -> google.protobuf.Struct
 	0,  // 2: product_service.pkg.pb.UpdateProductRequest.Product:type_name -> product_service.pkg.pb.Product
 	0,  // 3: product_service.pkg.pb.GetProductByIDResponse.product:type_name -> product_service.pkg.pb.Product
 	0,  // 4: product_service.pkg.pb.GetProductsByIDResponse.product:type_name -> product_service.pkg.pb.Product
 	0,  // 5: product_service.pkg.pb.GetProductsBySellerIDResponse.products:type_name -> product_service.pkg.pb.Product
-	1,  // 6: product_service.pkg.pb.ProductService.CreateProduct:input_type -> product_service.pkg.pb.CreateProductRequest
-	3,  // 7: product_service.pkg.pb.ProductService.UpdateProduct:input_type -> product_service.pkg.pb.UpdateProductRequest
-	5,  // 8: product_service.pkg.pb.ProductService.GetProductByID:input_type -> product_service.pkg.pb.GetProductByIDRequest
-	7,  // 9: product_service.pkg.pb.ProductService.GetProductsByID:input_type -> product_service.pkg.pb.GetProductsByIDRequest
-	9,  // 10: product_service.pkg.pb.ProductService.GetProductsBySellerID:input_type -> product_service.pkg.pb.GetProductsBySellerIDRequest
-	11, // 11: product_service.pkg.pb.ProductService.GetInventoryByID:input_type -> product_service.pkg.pb.GetInventoryByIDRequest
-	13, // 12: product_service.pkg.pb.ProductService.GetAndDecreaseInventoryByID:input_type -> product_service.pkg.pb.GetAndDecreaseInventoryByIDRequest
-	2,  // 13: product_service.pkg.pb.ProductService.CreateProduct:output_type -> product_service.pkg.pb.CreateProductResponse
-	4,  // 14: product_service.pkg.pb.ProductService.UpdateProduct:output_type -> product_service.pkg.pb.UpdateProductResponse
-	6,  // 15: product_service.pkg.pb.ProductService.GetProductByID:output_type -> product_service.pkg.pb.GetProductByIDResponse
-	8,  // 16: product_service.pkg.pb.ProductService.GetProductsByID:output_type -> product_service.pkg.pb.GetProductsByIDResponse
-	10, // 17: product_service.pkg.pb.ProductService.GetProductsBySellerID:output_type -> product_service.pkg.pb.GetProductsBySellerIDResponse
-	12, // 18: product_service.pkg.pb.ProductService.GetInventoryByID:output_type -> product_service.pkg.pb.GetInventoryByIDResponse
-	14, // 19: product_service.pkg.pb.ProductService.GetAndDecreaseInventoryByID:output_type -> product_service.pkg.pb.GetAndDecreaseInventoryByIDResponse
-	13, // [13:20] is the sub-list for method output_type
-	6,  // [6:13] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	0,  // 6: product_service.pkg.pb.GetProductsResponse.product:type_name -> product_service.pkg.pb.Product
+	1,  // 7: product_service.pkg.pb.ProductService.CreateProduct:input_type -> product_service.pkg.pb.CreateProductRequest
+	3,  // 8: product_service.pkg.pb.ProductService.UpdateProduct:input_type -> product_service.pkg.pb.UpdateProductRequest
+	5,  // 9: product_service.pkg.pb.ProductService.GetProductByID:input_type -> product_service.pkg.pb.GetProductByIDRequest
+	7,  // 10: product_service.pkg.pb.ProductService.GetProductsByID:input_type -> product_service.pkg.pb.GetProductsByIDRequest
+	9,  // 11: product_service.pkg.pb.ProductService.GetProductsBySellerID:input_type -> product_service.pkg.pb.GetProductsBySellerIDRequest
+	11, // 12: product_service.pkg.pb.ProductService.GetInventoryByID:input_type -> product_service.pkg.pb.GetInventoryByIDRequest
+	13, // 13: product_service.pkg.pb.ProductService.GetAndDecreaseInventoryByID:input_type -> product_service.pkg.pb.GetAndDecreaseInventoryByIDRequest
+	15, // 14: product_service.pkg.pb.ProductService.GetProducts:input_type -> product_service.pkg.pb.GetProductsRequest
+	2,  // 15: product_service.pkg.pb.ProductService.CreateProduct:output_type -> product_service.pkg.pb.CreateProductResponse
+	4,  // 16: product_service.pkg.pb.ProductService.UpdateProduct:output_type -> product_service.pkg.pb.UpdateProductResponse
+	6,  // 17: product_service.pkg.pb.ProductService.GetProductByID:output_type -> product_service.pkg.pb.GetProductByIDResponse
+	8,  // 18: product_service.pkg.pb.ProductService.GetProductsByID:output_type -> product_service.pkg.pb.GetProductsByIDResponse
+	10, // 19: product_service.pkg.pb.ProductService.GetProductsBySellerID:output_type -> product_service.pkg.pb.GetProductsBySellerIDResponse
+	12, // 20: product_service.pkg.pb.ProductService.GetInventoryByID:output_type -> product_service.pkg.pb.GetInventoryByIDResponse
+	14, // 21: product_service.pkg.pb.ProductService.GetAndDecreaseInventoryByID:output_type -> product_service.pkg.pb.GetAndDecreaseInventoryByIDResponse
+	16, // 22: product_service.pkg.pb.ProductService.GetProducts:output_type -> product_service.pkg.pb.GetProductsResponse
+	15, // [15:23] is the sub-list for method output_type
+	7,  // [7:15] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_product_proto_init() }
@@ -1015,7 +1141,7 @@ func file_product_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_product_proto_rawDesc), len(file_product_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

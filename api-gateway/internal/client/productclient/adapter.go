@@ -142,3 +142,21 @@ func GetProductsBySellerIDResponseToOutput(res *productpb.GetProductsBySellerIDR
 		Products: products,
 	}, nil
 }
+
+func GetProductsInputToRequest(input *dto.GetProductsInput) (*productpb.GetProductsRequest, error) {
+	return &productpb.GetProductsRequest{
+		Page:     input.Page,
+		PageSize: input.PageSize,
+	}, nil
+}
+func GetProductsResponseToOutput(res *productpb.GetProductsResponse) (*dto.GetProductsOutput, error) {
+	products, err := ProductsProtoToDTO(res.GetProduct())
+	if err != nil {
+		return nil, err
+	}
+	return &dto.GetProductsOutput{
+		Message:  res.GetMessage(),
+		Success:  res.GetSuccess(),
+		Products: products,
+	}, nil
+}

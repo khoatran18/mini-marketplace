@@ -268,3 +268,39 @@ func (s *ProductServer) GetAndDecreaseInventoryByID(ctx context.Context, req *pr
 	// Return valid response
 	return res, nil
 }
+
+// GetProducts handle logic for Get Products gRPC request in Server
+func (s *ProductServer) GetProducts(ctx context.Context, req *productpb.GetProductsRequest) (*productpb.GetProductsResponse, error) {
+
+	// Validate ServerRequest and parse to ServiceInput
+	if err := protovalidate.Validate(req); err != nil {
+		s.ZapLogger.Warn("ProductServer: invalid request for GetProducts", zap.Error(err))
+		return GetProductsFailResponse("Invalid request for GetProducts", err, codes.InvalidArgument)
+	}
+	input, err := adapter.GetProductsRequestToInput(req)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: parse GetProducts request to input error", zap.Error(err))
+		return GetProductsFailResponse("Parse GetProducts request to input error", err, codes.InvalidArgument)
+	}
+
+	// Get ServiceOutput
+	output, err := s.ProductService.GetProducts(ctx, input)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: GetProducts error in ProductService", zap.Error(err))
+		return GetProductsFailResponse("GetProducts error in ProductService", err, codes.Internal)
+	}
+
+	// Parse ServiceOutput to ServerResponse and validate
+	res, err := adapter.GetProductsOutputToResponse(output)
+	if err != nil {
+		s.ZapLogger.Warn("ProductServer: parse GetProducts output to response error", zap.Error(err))
+		return GetProductsFailResponse("Parse GetProducts output to response error", err, codes.Unknown)
+	}
+	if err := protovalidate.Validate(res); err != nil {
+		s.ZapLogger.Warn("ProductServer: invalid response for GetProducts", zap.Error(err))
+		return GetProductsFailResponse("Invalid response for", err, codes.Internal)
+	}
+
+	// Return valid response
+	return res, nil
+}

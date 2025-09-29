@@ -189,6 +189,46 @@ func (s *ProductClient) GetProductsBySellerID(input *dto.GetProductsBySellerIDIn
 	return output, nil
 }
 
+func (s *ProductClient) GetProducts(input *dto.GetProductsInput) (*dto.GetProductsOutput, error) {
+	if s.Client == nil {
+		if err := s.validateClient(); err != nil {
+			return nil, err
+		}
+	}
+
+	// Parse to ServerRequest and validate
+	req, err := GetProductsInputToRequest(input)
+	if err != nil {
+		s.Logger.Warn("ProductClient: parse GetProducts input to request error", zap.Error(err))
+		return nil, err
+	}
+	if err := protovalidate.Validate(req); err != nil {
+		s.Logger.Warn("ProductClient: invalid request for GetProducts", zap.Error(err))
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	res, err := s.Client.GetProducts(ctx, req)
+
+	// Get response, validate and parse to output
+	if err != nil {
+		s.Logger.Warn("ProductClient: GetProducts error", zap.Error(err))
+		return nil, err
+	}
+	if err = protovalidate.Validate(res); err != nil {
+		s.Logger.Warn("ProductClient: invalid response for GetProducts", zap.Error(err))
+		return nil, err
+	}
+	output, err := GetProductsResponseToOutput(res)
+	if err != nil {
+		s.Logger.Warn("ProductClient: invalid response for GetProducts", zap.Error(err))
+		return nil, err
+	}
+
+	// Return valid output
+	return output, nil
+}
+
 // Validate client
 
 func (s *ProductClient) validateClient() error {

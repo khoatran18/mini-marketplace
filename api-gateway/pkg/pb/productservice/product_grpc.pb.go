@@ -26,6 +26,7 @@ const (
 	ProductService_GetProductsBySellerID_FullMethodName       = "/product_service.pkg.pb.ProductService/GetProductsBySellerID"
 	ProductService_GetInventoryByID_FullMethodName            = "/product_service.pkg.pb.ProductService/GetInventoryByID"
 	ProductService_GetAndDecreaseInventoryByID_FullMethodName = "/product_service.pkg.pb.ProductService/GetAndDecreaseInventoryByID"
+	ProductService_GetProducts_FullMethodName                 = "/product_service.pkg.pb.ProductService/GetProducts"
 )
 
 // ProductServiceClient is the client API for ProductService service.
@@ -41,6 +42,7 @@ type ProductServiceClient interface {
 	GetProductsBySellerID(ctx context.Context, in *GetProductsBySellerIDRequest, opts ...grpc.CallOption) (*GetProductsBySellerIDResponse, error)
 	GetInventoryByID(ctx context.Context, in *GetInventoryByIDRequest, opts ...grpc.CallOption) (*GetInventoryByIDResponse, error)
 	GetAndDecreaseInventoryByID(ctx context.Context, in *GetAndDecreaseInventoryByIDRequest, opts ...grpc.CallOption) (*GetAndDecreaseInventoryByIDResponse, error)
+	GetProducts(ctx context.Context, in *GetProductsRequest, opts ...grpc.CallOption) (*GetProductsResponse, error)
 }
 
 type productServiceClient struct {
@@ -121,6 +123,16 @@ func (c *productServiceClient) GetAndDecreaseInventoryByID(ctx context.Context, 
 	return out, nil
 }
 
+func (c *productServiceClient) GetProducts(ctx context.Context, in *GetProductsRequest, opts ...grpc.CallOption) (*GetProductsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetProductsResponse)
+	err := c.cc.Invoke(ctx, ProductService_GetProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProductServiceServer is the server API for ProductService service.
 // All implementations must embed UnimplementedProductServiceServer
 // for forward compatibility.
@@ -134,6 +146,7 @@ type ProductServiceServer interface {
 	GetProductsBySellerID(context.Context, *GetProductsBySellerIDRequest) (*GetProductsBySellerIDResponse, error)
 	GetInventoryByID(context.Context, *GetInventoryByIDRequest) (*GetInventoryByIDResponse, error)
 	GetAndDecreaseInventoryByID(context.Context, *GetAndDecreaseInventoryByIDRequest) (*GetAndDecreaseInventoryByIDResponse, error)
+	GetProducts(context.Context, *GetProductsRequest) (*GetProductsResponse, error)
 	mustEmbedUnimplementedProductServiceServer()
 }
 
@@ -164,6 +177,9 @@ func (UnimplementedProductServiceServer) GetInventoryByID(context.Context, *GetI
 }
 func (UnimplementedProductServiceServer) GetAndDecreaseInventoryByID(context.Context, *GetAndDecreaseInventoryByIDRequest) (*GetAndDecreaseInventoryByIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAndDecreaseInventoryByID not implemented")
+}
+func (UnimplementedProductServiceServer) GetProducts(context.Context, *GetProductsRequest) (*GetProductsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProducts not implemented")
 }
 func (UnimplementedProductServiceServer) mustEmbedUnimplementedProductServiceServer() {}
 func (UnimplementedProductServiceServer) testEmbeddedByValue()                        {}
@@ -312,6 +328,24 @@ func _ProductService_GetAndDecreaseInventoryByID_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProductService_GetProducts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProductsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProductServiceServer).GetProducts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProductService_GetProducts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProductServiceServer).GetProducts(ctx, req.(*GetProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProductService_ServiceDesc is the grpc.ServiceDesc for ProductService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -346,6 +380,10 @@ var ProductService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAndDecreaseInventoryByID",
 			Handler:    _ProductService_GetAndDecreaseInventoryByID_Handler,
+		},
+		{
+			MethodName: "GetProducts",
+			Handler:    _ProductService_GetProducts_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

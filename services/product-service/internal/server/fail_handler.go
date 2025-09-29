@@ -59,3 +59,10 @@ func GetAndDecInvByIDFailResponse(message string, err error, code codes.Code) (*
 		Success: false,
 	}, status.Error(code, err.Error())
 }
+
+func GetProductsFailResponse(message string, err error, code codes.Code) (*productpb.GetProductsResponse, error) {
+	return &productpb.GetProductsResponse{
+		Message: message,
+		Success: false,
+	}, status.Error(code, err.Error())
+}

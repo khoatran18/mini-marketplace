@@ -30,7 +30,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -38,7 +38,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	res, err := h.Service.Login(&req)
 	if err != nil {
 		h.Logger.Warn("AuthHandler: Login warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -51,7 +51,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -59,7 +59,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	res, err := h.Service.Register(&req)
 	if err != nil {
 		h.Logger.Warn("AuthHandler Login warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -72,7 +72,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	var req dto.ChangePasswordInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -80,7 +80,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	res, err := h.Service.ChangePassword(&req)
 	if err != nil {
 		h.Logger.Warn("AuthHandler Login warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -91,14 +91,14 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	// Parse from gin.context json to request dto
 	var req dto.RefreshTokenInput
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 	}
 
 	// Get response and parse to json
 	res, err := h.Service.RefreshToken(&req)
 	if err != nil {
 		h.Logger.Warn("AuthHandler Login warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -109,7 +109,7 @@ func (h *AuthHandler) RegisterSellerRoles(c *gin.Context) {
 	// Parse from gin.context json to request dto
 	var req dto.RegisterSellerRolesInput
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 	}
 	id, ok := c.Get("userID")
 	if !ok {
@@ -125,7 +125,7 @@ func (h *AuthHandler) RegisterSellerRoles(c *gin.Context) {
 	res, err := h.Service.RegisterSellerRoles(&req)
 	if err != nil {
 		h.Logger.Warn("AuthHandler RegisterSellerRoles warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)

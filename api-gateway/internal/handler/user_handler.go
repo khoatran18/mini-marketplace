@@ -30,7 +30,7 @@ func (h *UserHandler) CreateBuyer(c *gin.Context) {
 	var req dto.CreateBuyerInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -38,7 +38,7 @@ func (h *UserHandler) CreateBuyer(c *gin.Context) {
 	res, err := h.Service.CreateBuyer(&req)
 	if err != nil {
 		h.Logger.Warn("UserHandler: CreateBuyer warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -50,7 +50,7 @@ func (h *UserHandler) GetBuyerByUserID(c *gin.Context) {
 	var req dto.GetBuyByUseIDInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -59,7 +59,7 @@ func (h *UserHandler) GetBuyerByUserID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 	}
 	req.UserID = idUint
 
@@ -67,7 +67,7 @@ func (h *UserHandler) GetBuyerByUserID(c *gin.Context) {
 	res, err := h.Service.GetBuyerByUserID(&req)
 	if err != nil {
 		h.Logger.Warn("UserHandler: GetBuyerByUserID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -79,7 +79,7 @@ func (h *UserHandler) UpdateBuyerByUserID(c *gin.Context) {
 	var req dto.UpdBuyByUseIDInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *UserHandler) UpdateBuyerByUserID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 	}
 	req.Buyer.UserID = idUint
 
@@ -96,7 +96,7 @@ func (h *UserHandler) UpdateBuyerByUserID(c *gin.Context) {
 	res, err := h.Service.UpdateBuyerByUserID(&req)
 	if err != nil {
 		h.Logger.Warn("UserHandler: UpdateBuyerByUserID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -108,7 +108,7 @@ func (h *UserHandler) DelBuyerByUserID(c *gin.Context) {
 	var req dto.DelBuyByUseIDInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -117,7 +117,7 @@ func (h *UserHandler) DelBuyerByUserID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 	}
 	req.UserID = idUint
 
@@ -125,7 +125,7 @@ func (h *UserHandler) DelBuyerByUserID(c *gin.Context) {
 	res, err := h.Service.DelBuyerByUserID(&req)
 	if err != nil {
 		h.Logger.Warn("UserHandler: DelBuyerByUserID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -137,7 +137,7 @@ func (h *UserHandler) CreateSeller(c *gin.Context) {
 	var req dto.CreateSellerInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -145,7 +145,7 @@ func (h *UserHandler) CreateSeller(c *gin.Context) {
 	res, err := h.Service.CreateSeller(&req)
 	if err != nil {
 		h.Logger.Warn("UserHandler: CreateSeller warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -157,7 +157,7 @@ func (h *UserHandler) GetSellerByID(c *gin.Context) {
 	var req dto.GetSelByIDInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -166,7 +166,7 @@ func (h *UserHandler) GetSellerByID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 	}
 	req.UserID = idUint
 
@@ -174,7 +174,7 @@ func (h *UserHandler) GetSellerByID(c *gin.Context) {
 	res, err := h.Service.GetSellerByID(&req)
 	if err != nil {
 		h.Logger.Warn("UserHandler: GetSellerByID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -186,7 +186,7 @@ func (h *UserHandler) UpdateSellerByID(c *gin.Context) {
 	var req dto.UpdSelByIDInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -195,7 +195,7 @@ func (h *UserHandler) UpdateSellerByID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 	}
 	req.UserID = idUint
 
@@ -203,7 +203,7 @@ func (h *UserHandler) UpdateSellerByID(c *gin.Context) {
 	res, err := h.Service.UpdateSellerByID(&req)
 	if err != nil {
 		h.Logger.Warn("UserHandler: UpdateSellerByID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -215,7 +215,7 @@ func (h *UserHandler) DelSellerByID(c *gin.Context) {
 	var req dto.DelSelByIDInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 
@@ -224,7 +224,7 @@ func (h *UserHandler) DelSellerByID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
 	}
 	req.UserID = idUint
 
@@ -232,7 +232,7 @@ func (h *UserHandler) DelSellerByID(c *gin.Context) {
 	res, err := h.Service.DelSellerByID(&req)
 	if err != nil {
 		h.Logger.Warn("UserHandler: DelSellerByID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetErrorString(err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, res)

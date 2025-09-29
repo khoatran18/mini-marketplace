@@ -52,6 +52,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		productRoute.POST("", middleware.AuthorizationMiddleware([]string{"seller_admin", "seller_employee"}, serviceConfig.ZapLogger), h.ProductHandler.CreateProduct)
 		productRoute.PUT("/:id", middleware.AuthorizationMiddleware([]string{"seller_admin", "seller_employee"}, serviceConfig.ZapLogger), h.ProductHandler.UpdateProduct)
 		productRoute.GET("/:id", h.ProductHandler.GetProductByID)
+		productRoute.GET("", h.ProductHandler.GetProducts)
 		productRoute.GET("/seller/:seller_id", h.ProductHandler.GetProductsBySellerID)
 	}
 

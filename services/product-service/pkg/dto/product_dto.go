@@ -91,3 +91,15 @@ type GetAndDecreaseInventoryByIDOutput struct {
 	Message string
 	Success bool
 }
+
+// Get List Products
+
+type GetProductsInput struct {
+	Page     uint64
+	PageSize uint64
+}
+type GetProductsOutput struct {
+	Message  string
+	Success  bool
+	Products []*Product
+}
