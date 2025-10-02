@@ -47,7 +47,7 @@ services:
     command: haproxy
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
       restart_policy:
         condition: on-failure
         delay: 3s

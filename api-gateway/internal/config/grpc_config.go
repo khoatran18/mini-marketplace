@@ -8,8 +8,8 @@ type GRPCAddrConfig map[string]string
 func NewGRPCAddrConfig() GRPCAddrConfig {
 	return GRPCAddrConfig{
 		clientname.AuthClientName:    "auth-service:50051",
-		clientname.OrderClientName:   "localhost:50052",
-		clientname.ProductClientName: "localhost:50053",
-		clientname.UserClientName:    "localhost:50054",
+		clientname.OrderClientName:   "order-service:50052",
+		clientname.ProductClientName: "product-service:50053",
+		clientname.UserClientName:    "user-service:50054",
 	}
 }

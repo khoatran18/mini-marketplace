@@ -92,7 +92,7 @@ services:
     ports:
       - "8080:8080"
     deploy:
-      replicas: 2
+      replicas: 1
       restart_policy:
         condition: on-failure
         delay: 15s
@@ -116,8 +116,43 @@ services:
         - "traefik.http.middlewares.secure-headers.headers.stsPreload=true"
         - "traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000"
         
-
   auth-service:
+    image: auth-service:latest
+    hostname: auth-service
+    networks:
+      test-network:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+  order-service:
+    image: auth-service:latest
+    hostname: auth-service
+    networks:
+      test-network:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+  product-service:
+    image: auth-service:latest
+    hostname: auth-service
+    networks:
+      test-network:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+  user-service:
     image: auth-service:latest
     hostname: auth-service
     networks:
