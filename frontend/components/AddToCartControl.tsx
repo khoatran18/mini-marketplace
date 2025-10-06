@@ -13,7 +13,7 @@ interface Props {
 
 export function AddToCartControl({ product, buttonVariant = 'solid' }: Props) {
   const router = useRouter();
-  const { accessToken } = useAuth();
+  const { accessToken, getValidAccessToken } = useAuth();
   const { addItem } = useCart();
   const [isPromptOpen, setPromptOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -29,9 +29,16 @@ export function AddToCartControl({ product, buttonVariant = 'solid' }: Props) {
     return true;
   };
 
-  const openPrompt = () => {
+  const openPrompt = async () => {
     if (!accessToken) {
       setStatus({ message: 'Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.', tone: 'error' });
+      router.push('/login');
+      return;
+    }
+
+    const token = await getValidAccessToken();
+    if (!token) {
+      setStatus({ message: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.', tone: 'error' });
       router.push('/login');
       return;
     }
@@ -70,7 +77,9 @@ export function AddToCartControl({ product, buttonVariant = 'solid' }: Props) {
     <div style={{ display: 'grid', gap: '0.75rem' }}>
       <button
         type="button"
-        onClick={openPrompt}
+        onClick={() => {
+          void openPrompt();
+        }}
         style={{
           padding: '0.5rem 1.25rem',
           borderRadius: '0.75rem',

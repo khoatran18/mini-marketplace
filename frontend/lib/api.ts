@@ -7,6 +7,7 @@ import type {
   GetProductsOutput,
   LoginInput,
   LoginOutput,
+  RefreshTokenOutput,
   RegisterInput,
   RegisterOutput
 } from './types';
@@ -22,15 +23,19 @@ function getBaseUrl() {
 
 interface FetchOptions extends RequestInit {
   token?: string | null;
+  userId?: number | null;
 }
 
 async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
-  const { token, headers, ...rest } = options;
+  const { token, headers, userId, ...rest } = options;
   const response = await fetch(`${getBaseUrl()}${path}`, {
     ...rest,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(typeof userId === 'number' && Number.isFinite(userId) && userId > 0
+        ? { 'X-User-ID': String(userId) }
+        : {}),
       ...headers
     },
     cache: 'no-store'
@@ -64,10 +69,18 @@ export async function registerRequest(input: RegisterInput): Promise<RegisterOut
   });
 }
 
+export async function refreshTokenRequest(refreshToken: string): Promise<RefreshTokenOutput> {
+  return apiFetch<RefreshTokenOutput>('/auth/refresh-token', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: refreshToken })
+  });
+}
+
 export async function getProductsRequest(
   page: number,
   pageSize: number,
-  token?: string | null
+  token?: string | null,
+  userId?: number | null
 ): Promise<GetProductsOutput> {
   const params = new URLSearchParams({
     page: String(page),
@@ -75,38 +88,45 @@ export async function getProductsRequest(
   });
   return apiFetch<GetProductsOutput>(`/products?${params.toString()}`, {
     method: 'GET',
-    token
+    token,
+    userId
   });
 }
 
 export async function getProductByIdRequest(
   id: number,
-  token?: string | null
+  token?: string | null,
+  userId?: number | null
 ): Promise<GetProductByIdOutput> {
   return apiFetch<GetProductByIdOutput>(`/products/${id}`, {
     method: 'GET',
-    token
+    token,
+    userId
   });
 }
 
 export async function createProductRequest(
   input: CreateProductInput,
-  token?: string | null
+  token?: string | null,
+  userId?: number | null
 ): Promise<CreateProductOutput> {
   return apiFetch<CreateProductOutput>('/products', {
     method: 'POST',
     body: JSON.stringify(input),
-    token
+    token,
+    userId
   });
 }
 
 export async function createOrderRequest(
   input: CreateOrderInput,
-  token?: string | null
+  token?: string | null,
+  userId?: number | null
 ): Promise<CreateOrderOutput> {
   return apiFetch<CreateOrderOutput>('/orders', {
     method: 'POST',
     body: JSON.stringify(input),
-    token
+    token,
+    userId
   });
 }

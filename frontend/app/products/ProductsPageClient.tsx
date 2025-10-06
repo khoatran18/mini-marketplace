@@ -7,7 +7,7 @@ import { useAuth } from '../../components/auth/AuthProvider';
 import { ProductCard } from '../../components/ProductCard';
 
 export function ProductsPageClient() {
-  const { accessToken } = useAuth();
+  const { accessToken, userId, getValidAccessToken } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,11 @@ export function ProductsPageClient() {
       setLoading(true);
       setError(null);
       try {
-        const response = await getProductsRequest(page, 12, accessToken);
+        const token = await getValidAccessToken();
+        if (!token) {
+          throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+        }
+        const response = await getProductsRequest(page, 12, token, userId);
         if (!cancelled) {
           setProducts(response.products ?? []);
         }
@@ -39,7 +43,7 @@ export function ProductsPageClient() {
     return () => {
       cancelled = true;
     };
-  }, [page, accessToken]);
+  }, [page, accessToken, getValidAccessToken, userId]);
 
   return (
     <div className="grid" style={{ gap: '1.5rem' }}>

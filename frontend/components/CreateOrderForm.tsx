@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createOrderRequest } from '../lib/api';
 import type { OrderItem } from '../lib/types';
 import { useAuth } from './auth/AuthProvider';
 
 export function CreateOrderForm() {
-  const { accessToken } = useAuth();
+  const { userId, getValidAccessToken } = useAuth();
   const [buyerId, setBuyerId] = useState(0);
   const [status, setStatus] = useState('pending');
   const [items, setItems] = useState<OrderItem[]>([
@@ -14,6 +14,12 @@ export function CreateOrderForm() {
   ]);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (userId && userId > 0) {
+      setBuyerId(userId);
+    }
+  }, [userId]);
 
   const updateItem = (index: number, patch: Partial<OrderItem>) => {
     setItems((prev) => prev.map((item, idx) => (idx === index ? { ...item, ...patch } : item)));
@@ -33,6 +39,10 @@ export function CreateOrderForm() {
     setMessage(null);
 
     try {
+      const token = await getValidAccessToken();
+      if (!token) {
+        throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+      }
       const totalPrice = items.reduce((total, item) => total + item.price * item.quantity, 0);
       const result = await createOrderRequest(
         {
@@ -43,7 +53,8 @@ export function CreateOrderForm() {
             order_items: items
           }
         },
-        accessToken
+        token,
+        userId
       );
       setMessage(result.message ?? 'Tạo đơn hàng thành công');
     } catch (error) {

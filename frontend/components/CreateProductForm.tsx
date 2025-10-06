@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createProductRequest } from '../lib/api';
 import type { CreateProductInput } from '../lib/types';
 import { useAuth } from './auth/AuthProvider';
 
 export function CreateProductForm() {
-  const { accessToken } = useAuth();
+  const { userId, getValidAccessToken } = useAuth();
   const [formState, setFormState] = useState<Pick<CreateProductInput, 'name' | 'price' | 'inventory' | 'seller_id'>>({
     name: '',
     price: 0,
@@ -17,12 +17,22 @@ export function CreateProductForm() {
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (userId && userId > 0) {
+      setFormState((prev) => ({ ...prev, seller_id: userId }));
+    }
+  }, [userId]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setStatus(null);
 
     try {
+      const token = await getValidAccessToken();
+      if (!token) {
+        throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+      }
       let attributes: Record<string, unknown> | undefined;
       if (attributesText.trim().length > 0) {
         try {
@@ -37,7 +47,7 @@ export function CreateProductForm() {
         attributes
       };
 
-      const result = await createProductRequest(payload, accessToken);
+      const result = await createProductRequest(payload, token, userId);
       setStatus(result.message ?? 'Tạo sản phẩm thành công');
     } catch (error) {
       setStatus((error as Error).message);

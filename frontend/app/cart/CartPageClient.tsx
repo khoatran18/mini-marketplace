@@ -114,28 +114,27 @@ function CartItemCard({ entry, onQuantityChange, onRemove, canModify }: {
 
 export function CartPageClient() {
   const router = useRouter();
-  const { accessToken, role } = useAuth();
+  const { accessToken, role, userId, getValidAccessToken } = useAuth();
   const { items, totalPrice, totalQuantity, updateItemQuantity, removeItem, clearCart } = useCart();
-  const [buyerId, setBuyerId] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const missingProductIds = items.some((entry) => typeof entry.product.id !== 'number');
 
   const handleCheckout = async () => {
-    if (!accessToken) {
-      router.push('/login');
-      return;
-    }
-
     if (items.length === 0) {
       setStatus('Giỏ hàng đang trống, hãy thêm sản phẩm trước khi thanh toán.');
       return;
     }
 
-    const buyerIdNumber = Number(buyerId);
-    if (!buyerIdNumber) {
-      setStatus('Vui lòng nhập mã người mua hợp lệ.');
+    if (!accessToken) {
+      router.push('/login');
+      return;
+    }
+
+    if (!userId || userId <= 0) {
+      setStatus('Không thể xác định tài khoản hiện tại. Vui lòng đăng nhập lại.');
+      router.push('/login');
       return;
     }
 
@@ -148,6 +147,12 @@ export function CartPageClient() {
     setStatus(null);
 
     try {
+      const token = await getValidAccessToken();
+      if (!token) {
+        setStatus('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+        router.push('/login');
+        return;
+      }
       const orderItems = items.map((entry) => ({
         product_id: entry.product.id as number,
         quantity: entry.quantity,
@@ -158,18 +163,18 @@ export function CartPageClient() {
       const response = await createOrderRequest(
         {
           order: {
-            buyer_id: buyerIdNumber,
+            buyer_id: userId,
             status: 'pending',
             total_price: orderItems.reduce((total, item) => total + item.price * item.quantity, 0),
             order_items: orderItems
           }
         },
-        accessToken
+        token,
+        userId
       );
 
       setStatus(response.message ?? 'Đặt hàng thành công!');
       clearCart();
-      setBuyerId('');
     } catch (error) {
       setStatus((error as Error).message);
     } finally {
@@ -187,6 +192,9 @@ export function CartPageClient() {
         </p>
         <p style={{ margin: 0, color: '#6b7280' }}>
           Vai trò hiện tại: <strong>{role}</strong>
+        </p>
+        <p style={{ margin: 0, color: '#6b7280' }}>
+          ID người dùng: <strong>{userId ?? 'Không xác định'}</strong>
         </p>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <Link href="/products" style={{ color: '#4338ca', fontWeight: 600 }}>
@@ -233,21 +241,15 @@ export function CartPageClient() {
 
       <section className="card" style={{ display: 'grid', gap: '1rem' }}>
         <h2 style={{ margin: 0 }}>Thanh toán</h2>
-        <label style={{ display: 'inline-flex', flexDirection: 'column', gap: '0.35rem', maxWidth: '240px' }}>
-          Mã người mua
-          <input
-            type="number"
-            min={1}
-            value={buyerId}
-            onChange={(event) => setBuyerId(event.target.value)}
-            placeholder="Nhập ID người mua"
-          />
-        </label>
+        <p style={{ margin: 0 }}>
+          Đơn hàng sẽ được tạo cho tài khoản có ID{' '}
+          <strong>{userId && userId > 0 ? userId : 'Không xác định'}</strong>.
+        </p>
         <button
           className="primary"
           type="button"
           onClick={handleCheckout}
-          disabled={loading || items.length === 0}
+          disabled={loading || items.length === 0 || !userId}
         >
           {loading ? 'Đang xử lý...' : 'Checkout (tạo đơn hàng)'}
         </button>

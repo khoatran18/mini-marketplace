@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function ProductDetailsClient({ productId }: Props) {
-  const { accessToken } = useAuth();
+  const { accessToken, userId, getValidAccessToken } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -23,7 +23,11 @@ export function ProductDetailsClient({ productId }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const response = await getProductByIdRequest(productId, accessToken);
+        const token = await getValidAccessToken();
+        if (!token) {
+          throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+        }
+        const response = await getProductByIdRequest(productId, token, userId);
         if (!cancelled) {
           setProduct(response.product ?? null);
         }
@@ -42,7 +46,7 @@ export function ProductDetailsClient({ productId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [productId, accessToken]);
+  }, [productId, accessToken, getValidAccessToken, userId]);
 
   if (loading) {
     return <p>Đang tải thông tin sản phẩm...</p>;

@@ -13,7 +13,8 @@ npm run dev
 ```
 
 Ứng dụng sử dụng biến môi trường `NEXT_PUBLIC_API_BASE_URL` để xác định địa chỉ API Gateway. Mặc định
-là `http://localhost:8080`.
+là `http://localhost:8080`. Ngoài ra cần khai báo `NEXT_PUBLIC_JWT_SECRET` (hoặc tương đương) để
+frontend có thể giải mã và gia hạn access token dựa trên refresh token.
 
 ## Cấu trúc chính
 
@@ -24,4 +25,5 @@ là `http://localhost:8080`.
 - `lib/api.ts` – wrapper đơn giản cho các endpoint của API Gateway dựa trên tài liệu OpenAPI.
 
 > Lưu ý: Các yêu cầu tới API cần Bearer Token. Sau khi đăng nhập thành công, token sẽ được lưu trong
-> `localStorage` và tự động đính kèm cho các lời gọi kế tiếp.
+> `localStorage`, tự động gia hạn bằng refresh token khi sắp hết hạn và gửi kèm ID người dùng cho các
+> lời gọi kế tiếp.

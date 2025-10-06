@@ -13,6 +13,17 @@ export interface LoginOutput {
   success?: boolean;
 }
 
+export interface RefreshTokenInput {
+  refresh_token: string;
+}
+
+export interface RefreshTokenOutput {
+  access_token?: string;
+  refresh_token?: string;
+  message?: string;
+  success?: boolean;
+}
+
 export interface RegisterInput {
   username: string;
   password: string;
