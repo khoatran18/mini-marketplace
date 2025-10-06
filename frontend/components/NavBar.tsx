@@ -3,16 +3,23 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from './auth/AuthProvider';
+import { useCart } from './cart/CartProvider';
 
-const navLinks = [
-  { href: '/', label: 'Trang chủ' },
-  { href: '/products', label: 'Sản phẩm' },
-  { href: '/dashboard', label: 'Bảng điều khiển' }
+const baseLinks = [
+  { href: '/', label: 'Trang chủ', requiresAuth: false },
+  { href: '/products', label: 'Sản phẩm', requiresAuth: false },
+  { href: '/dashboard', label: 'Bảng điều khiển', requiresAuth: true }
 ];
 
 export function NavBar() {
   const pathname = usePathname();
-  const { accessToken, username, logout } = useAuth();
+  const { accessToken, username, role, logout } = useAuth();
+  const { totalQuantity, clearCart } = useCart();
+
+  const handleLogout = () => {
+    clearCart();
+    logout();
+  };
 
   return (
     <header
@@ -29,28 +36,61 @@ export function NavBar() {
         Mini Marketplace
       </Link>
       <nav style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        {navLinks.map((link) => {
-          const isActive = pathname === link.href;
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '999px',
-                backgroundColor: isActive ? '#e0e7ff' : 'transparent',
-                color: isActive ? '#312e81' : '#1f2937',
-                fontWeight: isActive ? 700 : 500
-              }}
-            >
-              {link.label}
-            </Link>
-          );
-        })}
+        {baseLinks
+          .filter((link) => (link.requiresAuth ? Boolean(accessToken) : true))
+          .map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '999px',
+                  backgroundColor: isActive ? '#e0e7ff' : 'transparent',
+                  color: isActive ? '#312e81' : '#1f2937',
+                  fontWeight: isActive ? 700 : 500
+                }}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        <Link
+          href="/cart"
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: '999px',
+            backgroundColor: pathname === '/cart' ? '#fce7f3' : '#f9fafb',
+            color: '#be185d',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          Giỏ hàng
+          <span
+            style={{
+              backgroundColor: '#be185d',
+              color: 'white',
+              borderRadius: '999px',
+              padding: '0.1rem 0.6rem',
+              fontSize: '0.75rem',
+              minWidth: '1.5rem',
+              textAlign: 'center'
+            }}
+          >
+            {totalQuantity}
+          </span>
+        </Link>
         {accessToken ? (
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <span style={{ fontWeight: 600 }}>Xin chào, {username}</span>
-            <button className="primary" onClick={logout} style={{ padding: '0.5rem 1.25rem' }}>
+            <span style={{ fontWeight: 600 }}>
+              Xin chào, {username}
+              {role ? ` (${role})` : ''}
+            </span>
+            <button className="primary" onClick={handleLogout} style={{ padding: '0.5rem 1.25rem' }}>
               Đăng xuất
             </button>
           </div>

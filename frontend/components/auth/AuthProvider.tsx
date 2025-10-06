@@ -5,7 +5,8 @@ import type {
   LoginInput,
   LoginOutput,
   RegisterInput,
-  RegisterOutput
+  RegisterOutput,
+  Role
 } from '../../lib/types';
 import { loginRequest, registerRequest } from '../../lib/api';
 
@@ -13,7 +14,7 @@ export interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   username: string | null;
-  role: string | null;
+  role: Role | null;
 }
 
 interface AuthContextValue extends AuthState {
@@ -21,6 +22,8 @@ interface AuthContextValue extends AuthState {
   register: (input: RegisterInput) => Promise<RegisterOutput>;
   logout: () => void;
 }
+
+const validRoles: Role[] = ['buyer', 'seller_admin', 'seller_employee'];
 
 const defaultState: AuthState = {
   accessToken: null,
@@ -45,11 +48,15 @@ function loadPersistedState(): AuthState {
     }
 
     const parsed = JSON.parse(raw) as AuthState;
+    const sanitizedRole = validRoles.includes(parsed.role as Role)
+      ? (parsed.role as Role)
+      : null;
+
     return {
       accessToken: parsed.accessToken ?? null,
       refreshToken: parsed.refreshToken ?? null,
       username: parsed.username ?? null,
-      role: parsed.role ?? null
+      role: sanitizedRole
     };
   } catch (error) {
     console.warn('Failed to parse auth state from storage', error);

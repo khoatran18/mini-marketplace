@@ -3,14 +3,16 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
 import { useAuth } from './auth/AuthProvider';
+import type { Role } from '../lib/types';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  allowedRoles?: Role[];
 }
 
-export function ProtectedContent({ children, fallback }: Props) {
-  const { accessToken } = useAuth();
+export function ProtectedContent({ children, fallback, allowedRoles }: Props) {
+  const { accessToken, role } = useAuth();
 
   if (!accessToken) {
     return (
@@ -29,6 +31,15 @@ export function ProtectedContent({ children, fallback }: Props) {
             </div>
           </>
         )}
+      </div>
+    );
+  }
+
+  if (allowedRoles && allowedRoles.length > 0 && (!role || !allowedRoles.includes(role))) {
+    return (
+      <div className="card" style={{ textAlign: 'center' }}>
+        <h2>Bạn không có quyền truy cập</h2>
+        <p>Vui lòng đăng nhập với tài khoản có quyền phù hợp để sử dụng tính năng này.</p>
       </div>
     );
   }

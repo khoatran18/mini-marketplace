@@ -1,7 +1,9 @@
+export type Role = 'buyer' | 'seller_admin' | 'seller_employee';
+
 export interface LoginInput {
   username: string;
   password: string;
-  role: string;
+  role: Role;
 }
 
 export interface LoginOutput {
@@ -14,7 +16,7 @@ export interface LoginOutput {
 export interface RegisterInput {
   username: string;
   password: string;
-  role: string;
+  role: Role;
 }
 
 export interface RegisterOutput {
@@ -29,6 +31,11 @@ export interface Product {
   inventory: number;
   seller_id: number;
   attributes?: Record<string, unknown>;
+}
+
+export interface CartEntry {
+  product: Product;
+  quantity: number;
 }
 
 export interface GetProductsOutput {

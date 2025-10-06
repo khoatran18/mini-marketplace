@@ -52,22 +52,23 @@ export default function HomePage() {
           <article className="card">
             <h3 style={{ marginTop: 0 }}>Đăng nhập & phân quyền</h3>
             <p>
-              Hỗ trợ đăng nhập với các role khác nhau (admin, buyer, seller) theo OpenAPI của API Gateway.
-              Token được lưu trữ an toàn trên trình duyệt cho các yêu cầu bảo mật.
+              Hỗ trợ đăng nhập với đầy đủ vai trò <strong>buyer</strong>, <strong>seller_admin</strong>{' '}
+              và <strong>seller_employee</strong> theo OpenAPI của API Gateway. Phiên đăng nhập được lưu
+              trữ an toàn để sử dụng cho các yêu cầu cần xác thực.
             </p>
           </article>
           <article className="card">
             <h3 style={{ marginTop: 0 }}>Quản lý sản phẩm</h3>
             <p>
-              Tạo mới, xem danh sách và truy cập chi tiết sản phẩm với đầy đủ thông tin thuộc tính, tồn
-              kho và giá bán.
+              Người bán có thể tạo mới, cập nhật và xem chi tiết sản phẩm với phần thuộc tính hiển thị đẹp
+              mắt, dễ đọc.
             </p>
           </article>
           <article className="card">
-            <h3 style={{ marginTop: 0 }}>Xử lý đơn hàng</h3>
+            <h3 style={{ marginTop: 0 }}>Giỏ hàng & đơn hàng</h3>
             <p>
-              Giao diện tạo đơn hàng thân thiện cho phép bạn thêm nhiều sản phẩm, tính tổng giá trị và gửi
-              dữ liệu tới API.
+              Thêm sản phẩm vào giỏ, chỉnh số lượng theo nhu cầu rồi checkout để gọi API tạo đơn hàng chỉ
+              với một cú nhấp chuột.
             </p>
           </article>
         </div>
