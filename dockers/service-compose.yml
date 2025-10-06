@@ -129,8 +129,8 @@ services:
         window: 70s
 
   order-service:
-    image: auth-service:latest
-    hostname: auth-service
+    image: order-service:latest
+    hostname: order-service
     networks:
       test-network:
     deploy:
@@ -141,8 +141,8 @@ services:
         window: 70s
 
   product-service:
-    image: auth-service:latest
-    hostname: auth-service
+    image: product-service:latest
+    hostname: product-service
     networks:
       test-network:
     deploy:
@@ -153,8 +153,8 @@ services:
         window: 70s
 
   user-service:
-    image: auth-service:latest
-    hostname: auth-service
+    image: user-service:latest
+    hostname: user-service
     networks:
       test-network:
     deploy:
