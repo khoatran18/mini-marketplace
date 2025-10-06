@@ -4,11 +4,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from './auth/AuthProvider';
 import { useCart } from './cart/CartProvider';
+import type { Role } from '../lib/types';
 
-const baseLinks = [
+interface NavLink {
+  href: string;
+  label: string;
+  requiresAuth: boolean;
+  hiddenForRoles?: Role[];
+}
+
+const baseLinks: NavLink[] = [
   { href: '/', label: 'Trang chủ', requiresAuth: false },
   { href: '/products', label: 'Sản phẩm', requiresAuth: false },
-  { href: '/dashboard', label: 'Bảng điều khiển', requiresAuth: true }
+  { href: '/dashboard', label: 'Bảng điều khiển', requiresAuth: true, hiddenForRoles: ['buyer'] }
 ];
 
 export function NavBar() {
@@ -20,6 +28,8 @@ export function NavBar() {
     clearCart();
     logout();
   };
+
+  const normalizedRole = role ?? null;
 
   return (
     <header
@@ -37,7 +47,20 @@ export function NavBar() {
       </Link>
       <nav style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
         {baseLinks
-          .filter((link) => (link.requiresAuth ? Boolean(accessToken) : true))
+          .filter((link) => {
+            if (link.requiresAuth && !accessToken) {
+              return false;
+            }
+            if (
+              normalizedRole &&
+              link.hiddenForRoles &&
+              link.hiddenForRoles.length > 0 &&
+              link.hiddenForRoles.includes(normalizedRole)
+            ) {
+              return false;
+            }
+            return true;
+          })
           .map((link) => {
             const isActive = pathname === link.href;
             return (

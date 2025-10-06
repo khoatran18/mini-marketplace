@@ -130,11 +130,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (input: LoginInput) => {
     const output = await loginRequest(input);
+    const resolvedUserIdRaw =
+      typeof output.user_id === 'number'
+        ? output.user_id
+        : typeof output.user_id === 'string'
+          ? Number(output.user_id)
+          : null;
+    const resolvedUserId =
+      typeof resolvedUserIdRaw === 'number' && Number.isFinite(resolvedUserIdRaw)
+        ? resolvedUserIdRaw
+        : null;
     const nextState = deriveAuthState({
       accessToken: output.access_token ?? null,
       refreshToken: output.refresh_token ?? null,
-      username: input.username,
-      role: input.role
+      username: output.username ?? input.username,
+      role: output.role ?? input.role,
+      userId: resolvedUserId
     });
     setState(nextState);
     persistState(nextState);

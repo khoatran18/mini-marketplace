@@ -3,7 +3,7 @@ import { DashboardContent } from './DashboardContent';
 
 export default function DashboardPage() {
   return (
-    <ProtectedContent>
+    <ProtectedContent allowedRoles={['seller_admin', 'seller_employee']}>
       <DashboardContent />
     </ProtectedContent>
   );

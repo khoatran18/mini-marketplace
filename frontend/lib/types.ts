@@ -11,6 +11,9 @@ export interface LoginOutput {
   refresh_token?: string;
   message?: string;
   success?: boolean;
+  role?: Role;
+  username?: string;
+  user_id?: number | string;
 }
 
 export interface RefreshTokenInput {
