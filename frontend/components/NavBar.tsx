@@ -57,13 +57,13 @@ export function NavBar() {
         ) : (
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <Link
-              href="/(auth)/login"
+              href="/login"
               style={{ padding: '0.5rem 1.25rem', fontWeight: 600, color: '#4338ca' }}
             >
               Đăng nhập
             </Link>
             <Link
-              href="/(auth)/register"
+              href="/register"
               style={{ padding: '0.5rem 1.25rem', fontWeight: 600, color: '#4338ca' }}
             >
               Đăng ký

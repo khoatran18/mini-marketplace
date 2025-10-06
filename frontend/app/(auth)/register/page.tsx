@@ -26,7 +26,7 @@ export default function RegisterPage() {
       const response = await register(formState);
       setMessage(response.message ?? 'Đăng ký thành công. Vui lòng đăng nhập.');
       setTimeout(() => {
-        router.push('/(auth)/login');
+        router.push('/login');
       }, 800);
     } catch (err) {
       setMessage((err as Error).message);

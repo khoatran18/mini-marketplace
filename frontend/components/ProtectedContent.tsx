@@ -20,10 +20,10 @@ export function ProtectedContent({ children, fallback }: Props) {
             <h2>Yêu cầu đăng nhập</h2>
             <p>Vui lòng đăng nhập để sử dụng tính năng này.</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-              <Link href="/(auth)/login" style={{ color: '#4338ca', fontWeight: 600 }}>
+              <Link href="/login" style={{ color: '#4338ca', fontWeight: 600 }}>
                 Đăng nhập
               </Link>
-              <Link href="/(auth)/register" style={{ color: '#4338ca', fontWeight: 600 }}>
+              <Link href="/register" style={{ color: '#4338ca', fontWeight: 600 }}>
                 Đăng ký tài khoản
               </Link>
             </div>

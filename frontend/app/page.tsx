@@ -21,7 +21,7 @@ export default function HomePage() {
         </div>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <Link
-            href="/(auth)/register"
+            href="/register"
             style={{
               backgroundColor: '#1f2937',
               color: 'white',
