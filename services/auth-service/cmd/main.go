@@ -47,15 +47,19 @@ func main() {
 		serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient)
 
 	// Create Server
+	authServer := server.AuthServer{
+		AuthService: authService,
+		ZapLogger:   serviceConfig.ZapLogger,
+	}
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	authpb.RegisterAuthServiceServer(s, &server.AuthServer{
-		AuthService: authService,
-		ZapLogger:   serviceConfig.ZapLogger,
-	})
+	authpb.RegisterAuthServiceServer(s, &authServer)
+
+	// Init sample data
+	SeedAccounts(&authServer)
 
 	// Test
 	topic1 := "auth.change_password"

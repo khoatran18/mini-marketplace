@@ -47,6 +47,21 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		return
 	}
 
+	userIDInterface, exists := c.Get("userID")
+	if !exists {
+		c.JSON(400, gin.H{"error": "User ID not found in context"})
+		return
+	}
+	userID, ok := userIDInterface.(uint64)
+	if !ok {
+		// Xử lý trường hợp ép kiểu thất bại (lỗi lập trình)
+		c.JSON(500, gin.H{"error": "User ID format is incorrect"})
+		return
+	}
+
+	req.Order.BuyerID = userID
+	req.Order.Status = "PENDING"
+
 	// Get response and parse to json
 	res, err := h.Service.CreateOrder(&req)
 	if err != nil {

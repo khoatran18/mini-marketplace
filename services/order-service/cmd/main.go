@@ -62,7 +62,7 @@ func main() {
 
 	// Test
 	topic1 := "order.create_order"
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic1, 0)
+	conn, err := kafka.DialLeader(context.Background(), "tcp", "broker1:9092", topic1, 0)
 	if err != nil {
 		panic(err)
 	}
