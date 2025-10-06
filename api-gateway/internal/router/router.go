@@ -6,11 +6,21 @@ import (
 	"api-gateway/internal/middleware"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 // SetupRouter setup middleware, router for engine
 func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *config.ServiceConfig, envConfig *config.EnvConfig) {
+
+	router.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true, // hoặc AllowOrigins: []string{"https://frontend.example.com"}
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	router.Use(middleware.RequestLoggingMiddleware(serviceConfig.ZapLogger))
 	router.Use(middleware.RateLimitingMiddleware(100, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
