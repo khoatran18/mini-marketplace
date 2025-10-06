@@ -67,10 +67,12 @@ export interface OrderItem {
   quantity: number;
 }
 
+export type OrderStatus = 'PENDING' | 'FAILED' | 'SUCCESS' | 'VALID' | 'CANCELED';
+
 export interface Order {
   id?: number;
   buyer_id: number;
-  status?: string;
+  status?: OrderStatus;
   total_price?: number;
   order_items: OrderItem[];
 }
@@ -95,6 +97,12 @@ export interface CreateOrderInput {
 export interface CreateOrderOutput {
   success?: boolean;
   message?: string;
+}
+
+export interface GetOrdersByBuyerStatusOutput {
+  success?: boolean;
+  message?: string;
+  orders?: Order[];
 }
 
 export interface GetProductByIdOutput {

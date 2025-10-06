@@ -16,6 +16,12 @@ interface NavLink {
 const baseLinks: NavLink[] = [
   { href: '/', label: 'Trang chủ', requiresAuth: false },
   { href: '/products', label: 'Sản phẩm', requiresAuth: false },
+  {
+    href: '/orders',
+    label: 'Đơn hàng',
+    requiresAuth: true,
+    hiddenForRoles: ['seller_admin', 'seller_employee']
+  },
   { href: '/dashboard', label: 'Bảng điều khiển', requiresAuth: true, hiddenForRoles: ['buyer'] }
 ];
 

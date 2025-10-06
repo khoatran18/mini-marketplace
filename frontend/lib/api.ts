@@ -5,8 +5,10 @@ import type {
   CreateProductOutput,
   GetProductByIdOutput,
   GetProductsOutput,
+  GetOrdersByBuyerStatusOutput,
   LoginInput,
   LoginOutput,
+  OrderStatus,
   RefreshTokenOutput,
   RegisterInput,
   RegisterOutput
@@ -115,6 +117,21 @@ export async function createOrderRequest(
   return apiFetch<CreateOrderOutput>('/orders', {
     method: 'POST',
     body: JSON.stringify(input),
+    token
+  });
+}
+
+export async function getOrdersByBuyerStatusRequest(
+  buyerId: number,
+  status: OrderStatus,
+  token?: string | null
+): Promise<GetOrdersByBuyerStatusOutput> {
+  const params = new URLSearchParams({
+    buyer_id: String(buyerId),
+    status
+  });
+  return apiFetch<GetOrdersByBuyerStatusOutput>(`/orders?${params.toString()}`, {
+    method: 'GET',
     token
   });
 }
