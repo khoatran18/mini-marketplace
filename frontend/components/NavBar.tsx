@@ -17,6 +17,12 @@ const baseLinks: NavLink[] = [
   { href: '/', label: 'Trang chủ', requiresAuth: false },
   { href: '/products', label: 'Sản phẩm', requiresAuth: false },
   {
+    href: '/products/mine',
+    label: 'Sản phẩm của tôi',
+    requiresAuth: true,
+    hiddenForRoles: ['buyer']
+  },
+  {
     href: '/orders',
     label: 'Đơn hàng',
     requiresAuth: true,

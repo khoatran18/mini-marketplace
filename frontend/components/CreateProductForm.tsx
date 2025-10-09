@@ -1,9 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createProductRequest } from '../lib/api';
 import type { CreateProductInput } from '../lib/types';
 import { useAuth } from './auth/AuthProvider';
+
+type Step = 'form' | 'confirm';
+
+interface AttributeRow {
+  key: string;
+  value: string;
+}
+
+interface StatusState {
+  type: 'success' | 'error';
+  message: string;
+}
+
+function createEmptyAttribute(): AttributeRow {
+  return { key: '', value: '' };
+}
 
 export function CreateProductForm() {
   const { userId, getValidAccessToken } = useAuth();
@@ -13,8 +29,9 @@ export function CreateProductForm() {
     inventory: 0,
     seller_id: 0
   });
-  const [attributesText, setAttributesText] = useState('');
-  const [status, setStatus] = useState<string | null>(null);
+  const [attributes, setAttributes] = useState<AttributeRow[]>([createEmptyAttribute()]);
+  const [step, setStep] = useState<Step>('form');
+  const [status, setStatus] = useState<StatusState | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -23,8 +40,63 @@ export function CreateProductForm() {
     }
   }, [userId]);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const sanitizedAttributes = useMemo(() => {
+    const entries = attributes
+      .map((attribute) => ({
+        key: attribute.key.trim(),
+        value: attribute.value
+      }))
+      .filter((attribute) => attribute.key.length > 0);
+
+    if (entries.length === 0) {
+      return undefined;
+    }
+
+    return entries.reduce<Record<string, string>>((result, attribute) => {
+      result[attribute.key] = attribute.value;
+      return result;
+    }, {});
+  }, [attributes]);
+
+  const resetForm = () => {
+    setFormState((previous) => ({
+      name: '',
+      price: 0,
+      inventory: 0,
+      seller_id: previous.seller_id
+    }));
+    setAttributes([createEmptyAttribute()]);
+  };
+
+  const validateForm = () => {
+    if (!formState.name.trim()) {
+      return 'Vui lòng nhập tên sản phẩm.';
+    }
+    if (!Number.isFinite(formState.price) || formState.price <= 0) {
+      return 'Giá sản phẩm phải lớn hơn 0.';
+    }
+    if (!Number.isFinite(formState.inventory) || formState.inventory < 0) {
+      return 'Số lượng tồn kho phải lớn hơn hoặc bằng 0.';
+    }
+    if (!Number.isFinite(formState.seller_id) || formState.seller_id <= 0) {
+      return 'Mã người bán không hợp lệ.';
+    }
+    return null;
+  };
+
+  const handleReview = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const validationMessage = validateForm();
+    if (validationMessage) {
+      setStatus({ type: 'error', message: validationMessage });
+      return;
+    }
+
+    setStatus(null);
+    setStep('confirm');
+  };
+
+  const handleConfirm = async () => {
     setLoading(true);
     setStatus(null);
 
@@ -33,96 +105,219 @@ export function CreateProductForm() {
       if (!token) {
         throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
       }
-      let attributes: Record<string, unknown> | undefined;
-      if (attributesText.trim().length > 0) {
-        try {
-          attributes = JSON.parse(attributesText) as Record<string, unknown>;
-        } catch (parseError) {
-          throw new Error('Thuộc tính phải là JSON hợp lệ');
-        }
-      }
 
       const payload: CreateProductInput = {
         ...formState,
-        attributes
+        attributes: sanitizedAttributes
       };
 
       const result = await createProductRequest(payload, token);
-      setStatus(result.message ?? 'Tạo sản phẩm thành công');
+      setStatus({ type: 'success', message: result.message ?? 'Tạo sản phẩm thành công.' });
+      resetForm();
+      setStep('form');
     } catch (error) {
-      setStatus((error as Error).message);
+      setStatus({ type: 'error', message: (error as Error).message });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleEdit = () => {
+    setStep('form');
+    setStatus(null);
+  };
+
+  const updateAttribute = (index: number, field: keyof AttributeRow, value: string) => {
+    setAttributes((previous) =>
+      previous.map((attribute, attributeIndex) =>
+        attributeIndex === index ? { ...attribute, [field]: value } : attribute
+      )
+    );
+  };
+
+  const addAttribute = () => {
+    setAttributes((previous) => [...previous, createEmptyAttribute()]);
+  };
+
+  const removeAttribute = (index: number) => {
+    setAttributes((previous) => previous.filter((_, attributeIndex) => attributeIndex !== index));
+  };
+
   return (
-    <form className="card grid gap-4" onSubmit={handleSubmit}>
-      <h2 className="text-2xl font-bold text-slate-900">Tạo sản phẩm mới</h2>
-      <label>
-        Tên sản phẩm
-        <input
-          type="text"
-          value={formState.name}
-          onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
-          required
-        />
-      </label>
-      <label>
-        Giá (VND)
-        <input
-          type="number"
-          value={formState.price}
-          onChange={(event) =>
-            setFormState((prev) => ({ ...prev, price: Number(event.target.value) || 0 }))
-          }
-          min={0}
-          step={1000}
-          required
-        />
-      </label>
-      <label>
-        Số lượng tồn kho
-        <input
-          type="number"
-          value={formState.inventory}
-          onChange={(event) =>
-            setFormState((prev) => ({ ...prev, inventory: Number(event.target.value) || 0 }))
-          }
-          min={0}
-          required
-        />
-      </label>
-      <label>
-        Mã người bán
-        <input
-          type="number"
-          value={formState.seller_id}
-          onChange={(event) =>
-            setFormState((prev) => ({ ...prev, seller_id: Number(event.target.value) || 0 }))
-          }
-          min={1}
-          required
-        />
-      </label>
-      <label>
-        Thuộc tính (JSON)
-        <textarea
-          value={attributesText}
-          onChange={(event) => setAttributesText(event.target.value)}
-          rows={4}
-          placeholder='{"color":"red","size":"L"}'
-          className="min-h-[120px] rounded-xl border border-slate-300 px-3 py-2 text-base shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-        />
-      </label>
-      <button
-        type="submit"
-        disabled={loading}
-        className="rounded-xl bg-indigo-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-70"
-      >
-        {loading ? 'Đang xử lý...' : 'Tạo sản phẩm'}
-      </button>
-      {status ? <p className="text-sm text-slate-700">{status}</p> : null}
-    </form>
+    <div className="card grid gap-4">
+      {step === 'form' ? (
+        <form className="grid gap-4" onSubmit={handleReview}>
+          <h2 className="text-2xl font-bold text-slate-900">Tạo sản phẩm mới</h2>
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
+            Tên sản phẩm
+            <input
+              type="text"
+              value={formState.name}
+              onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
+              required
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
+            Giá (VND)
+            <input
+              type="number"
+              value={formState.price}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, price: Number(event.target.value) || 0 }))
+              }
+              min={0}
+              step={1000}
+              required
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
+            Số lượng tồn kho
+            <input
+              type="number"
+              value={formState.inventory}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, inventory: Number(event.target.value) || 0 }))
+              }
+              min={0}
+              required
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
+            Mã người bán
+            <input
+              type="number"
+              value={formState.seller_id}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, seller_id: Number(event.target.value) || 0 }))
+              }
+              min={1}
+              required
+            />
+          </label>
+          <div className="grid gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-700">Thuộc tính sản phẩm</span>
+              <button
+                type="button"
+                onClick={addAttribute}
+                className="rounded-xl border border-dashed border-indigo-400 px-4 py-2 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50"
+              >
+                Thêm thuộc tính
+              </button>
+            </div>
+            {attributes.map((attribute, index) => (
+              <div key={`attribute-${index}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                  <label className="grid gap-1 text-sm font-medium text-slate-700">
+                    Tên thuộc tính
+                    <input
+                      type="text"
+                      value={attribute.key}
+                      onChange={(event) => updateAttribute(index, 'key', event.target.value)}
+                      placeholder="Ví dụ: Màu sắc"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm font-medium text-slate-700">
+                    Giá trị
+                    <input
+                      type="text"
+                      value={attribute.value}
+                      onChange={(event) => updateAttribute(index, 'value', event.target.value)}
+                      placeholder="Ví dụ: Đỏ"
+                    />
+                  </label>
+                </div>
+                {attributes.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeAttribute(index)}
+                    className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                  >
+                    Xóa thuộc tính
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="submit"
+              className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              Xem lại thông tin
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="grid gap-4">
+          <h2 className="text-2xl font-bold text-slate-900">Xác nhận tạo sản phẩm</h2>
+          <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Tên sản phẩm</span>
+              <span className="font-semibold text-slate-900">{formState.name}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Giá bán</span>
+              <span className="font-semibold text-slate-900">
+                {formState.price.toLocaleString('vi-VN')} VND
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Tồn kho</span>
+              <span className="font-semibold text-slate-900">{formState.inventory}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Mã người bán</span>
+              <span className="font-semibold text-slate-900">{formState.seller_id}</span>
+            </div>
+            <div className="grid gap-2">
+              <span className="text-slate-600">Thuộc tính</span>
+              {sanitizedAttributes ? (
+                <ul className="grid gap-2">
+                  {Object.entries(sanitizedAttributes).map(([key, value]) => (
+                    <li
+                      key={key}
+                      className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2"
+                    >
+                      <span className="font-medium text-slate-700">{key}</span>
+                      <span className="text-right text-slate-600">{String(value)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="text-slate-600">Không có thuộc tính bổ sung.</span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleEdit}
+              disabled={loading}
+              className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Chỉnh sửa
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={loading}
+              className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {loading ? 'Đang tạo...' : 'Xác nhận tạo sản phẩm'}
+            </button>
+          </div>
+        </div>
+      )}
+      {status ? (
+        <p
+          className={`text-sm ${
+            status.type === 'error' ? 'text-rose-600' : 'text-emerald-600'
+          }`}
+        >
+          {status.message}
+        </p>
+      ) : null}
+    </div>
   );
 }

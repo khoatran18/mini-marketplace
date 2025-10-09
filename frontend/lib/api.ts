@@ -99,6 +99,16 @@ export async function getProductByIdRequest(
   });
 }
 
+export async function getProductsBySellerRequest(
+  sellerId: number,
+  token?: string | null
+): Promise<GetProductsOutput> {
+  return apiFetch<GetProductsOutput>(`/products/seller/${sellerId}`, {
+    method: 'GET',
+    token
+  });
+}
+
 export async function createProductRequest(
   input: CreateProductInput,
   token?: string | null
