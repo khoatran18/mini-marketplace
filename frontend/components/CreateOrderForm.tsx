@@ -8,7 +8,7 @@ import { useAuth } from './auth/AuthProvider';
 export function CreateOrderForm() {
   const { userId, getValidAccessToken } = useAuth();
   const [buyerId, setBuyerId] = useState(0);
-  const [status, setStatus] = useState('pending');
+  const [status, setStatus] = useState("pending");
   const [items, setItems] = useState<OrderItem[]>([
     { product_id: 0, quantity: 1, price: 0 }
   ]);

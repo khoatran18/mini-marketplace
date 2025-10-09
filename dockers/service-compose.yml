@@ -83,6 +83,19 @@ services:
 #        # Service hint
 #        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
+  frontend:
+    image: frontend
+    hostname: frontend
+    networks:
+      test-network:
+    ports:
+      - "3000:3000"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
 
   api-gateway:
     image: api-gateway:latest
