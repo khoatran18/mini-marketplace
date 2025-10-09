@@ -60,8 +60,8 @@ export function AddToCartControl({ product, buttonVariant = 'solid' }: Props) {
 
   const buttonClass =
     buttonVariant === 'ghost'
-      ? 'rounded-xl border border-slate-300 px-5 py-2.5 font-semibold text-indigo-600 transition hover:bg-indigo-50'
-      : 'rounded-xl bg-indigo-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600';
+      ? 'w-full rounded-xl border border-slate-300 px-5 py-2.5 font-semibold text-indigo-600 transition hover:bg-indigo-50 sm:w-auto'
+      : 'w-full rounded-xl bg-indigo-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:w-auto';
 
   return (
     <div className="grid gap-3">
@@ -75,7 +75,7 @@ export function AddToCartControl({ product, buttonVariant = 'solid' }: Props) {
         Thêm vào giỏ hàng
       </button>
       {isPromptOpen ? (
-        <div className="card border border-indigo-200 bg-indigo-50 shadow-none">
+        <div className="card grid gap-3 border border-indigo-200 bg-indigo-50 shadow-none">
           <label>
             Số lượng
             <input

@@ -52,7 +52,7 @@ export function ProductsPageClient() {
           <h1 className="text-2xl font-bold text-slate-900">Danh sách sản phẩm</h1>
           <p className="text-sm text-slate-600">Dữ liệu được lấy từ API Gateway. Bạn cần đăng nhập để truy cập.</p>
         </div>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
           <button
             type="button"
             onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
