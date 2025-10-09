@@ -20,20 +20,10 @@ const STATUS_META: Record<OrderStatus, { label: string; description: string; bad
     label: 'Thành công',
     description: 'Đơn hàng đã thanh toán thành công.',
     badgeClass: 'bg-emerald-100 text-emerald-700'
-  },
-  VALID: {
-    label: 'Hợp lệ',
-    description: 'Đơn hàng đã được xác nhận hợp lệ.',
-    badgeClass: 'bg-sky-100 text-sky-700'
-  },
-  CANCELED: {
-    label: 'Đã hủy',
-    description: 'Đơn hàng đã bị hủy.',
-    badgeClass: 'bg-slate-200 text-slate-700'
   }
 };
 
-const statusOptions: OrderStatus[] = ['PENDING', 'FAILED', 'SUCCESS', 'VALID', 'CANCELED'];
+const statusOptions: OrderStatus[] = ['PENDING', 'FAILED', 'SUCCESS'];
 
 const currencyFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
