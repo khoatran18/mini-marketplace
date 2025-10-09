@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply min-h-screen bg-gradient-to-b from-zinc-100 to-white font-sans text-slate-900 antialiased;
+}
+
+a {
+  @apply text-inherit no-underline;
+}
+
+button {
+  @apply cursor-pointer;
+}
+
+main {
+  @apply mx-auto w-full max-w-5xl px-4 py-8 md:px-8 md:py-12;
+}
+
+form {
+  @apply grid gap-4;
+}
+
+label {
+  @apply grid gap-1 text-sm font-semibold text-slate-700;
+}
+
+input,
+select,
+textarea {
+  @apply w-full rounded-xl border border-slate-300 px-3 py-2 text-base shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200;
+}
+
+.card {
+  @apply rounded-2xl bg-white p-6 shadow-xl shadow-slate-900/10;
+}
