@@ -3,14 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"gorm.io/datatypes"
 	"log"
 	"net"
 	"product-service/internal/config"
 	"product-service/internal/repository"
 	"product-service/internal/server"
 	"product-service/internal/service"
-	"product-service/pkg/model"
 	productpb "product-service/pkg/pb"
 	"time"
 
@@ -38,36 +36,6 @@ func main() {
 		log.Fatalf("Can not migrate database: %v", err)
 	} else {
 		fmt.Println("Migration successfully!")
-	}
-
-	// --- Seed sample products ---
-	products := []model.Product{
-		{
-			Name:       "iPhone 15 Pro",
-			Price:      1200.00,
-			SellerID:   2, // seller1 chẳng hạn
-			Inventory:  50,
-			Attributes: datatypes.JSON([]byte(`{"color": "black", "storage": "256GB"}`)),
-		},
-		{
-			Name:       "MacBook Air M3",
-			Price:      1500.00,
-			SellerID:   2,
-			Inventory:  30,
-			Attributes: datatypes.JSON([]byte(`{"color": "silver", "ram": "16GB"}`)),
-		},
-	}
-
-	for _, p := range products {
-		var existing model.Product
-		tx := serviceConfig.PostgresDB.Where("name = ?", p.Name).First(&existing)
-		if tx.Error != nil && tx.Error.Error() == "record not found" {
-			if err := serviceConfig.PostgresDB.Create(&p).Error; err != nil {
-				log.Printf("Failed to insert product %s: %v", p.Name, err)
-			} else {
-				log.Printf("Inserted product: %s", p.Name)
-			}
-		}
 	}
 
 	defer serviceConfig.KafkaInstance.KafkaManager.CloseWriterAll()
@@ -100,12 +68,16 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
-	productpb.RegisterProductServiceServer(s, &server.ProductServer{
+	productServer := server.ProductServer{
 		ProductService: productService,
 		ZapLogger:      serviceConfig.ZapLogger,
-	})
+	}
+	s := grpc.NewServer()
+	productpb.RegisterProductServiceServer(s, &productServer)
 	log.Printf("Product Server Listen at %v", lis.Addr())
+
+	// --- Seed sample products ---
+	SeedProducts(&productServer)
 
 	reflection.Register(s)
 
