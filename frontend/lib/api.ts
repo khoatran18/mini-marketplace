@@ -1,17 +1,29 @@
 import type {
+  ChangePasswordInput,
+  ChangePasswordOutput,
+  CreateBuyerProfileInput,
+  CreateBuyerProfileOutput,
   CreateOrderInput,
   CreateOrderOutput,
   CreateProductInput,
   CreateProductOutput,
+  CreateSellerProfileInput,
+  CreateSellerProfileOutput,
+  GetBuyerProfileOutput,
+  GetOrdersByBuyerStatusOutput,
   GetProductByIdOutput,
   GetProductsOutput,
-  GetOrdersByBuyerStatusOutput,
+  GetSellerProfileOutput,
   LoginInput,
   LoginOutput,
   OrderStatus,
   RefreshTokenOutput,
   RegisterInput,
-  RegisterOutput
+  RegisterOutput,
+  UpdateBuyerProfileInput,
+  UpdateBuyerProfileOutput,
+  UpdateSellerProfileInput,
+  UpdateSellerProfileOutput
 } from './types';
 
 const DEFAULT_BASE_URL = 'http://localhost:8080';
@@ -67,10 +79,87 @@ export async function registerRequest(input: RegisterInput): Promise<RegisterOut
   });
 }
 
+export async function changePasswordRequest(
+  input: ChangePasswordInput,
+  token?: string | null
+): Promise<ChangePasswordOutput> {
+  return apiFetch<ChangePasswordOutput>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    token
+  });
+}
+
 export async function refreshTokenRequest(refreshToken: string): Promise<RefreshTokenOutput> {
   return apiFetch<RefreshTokenOutput>('/auth/refresh-token', {
     method: 'POST',
     body: JSON.stringify({ refresh_token: refreshToken })
+  });
+}
+
+export async function createBuyerProfileRequest(
+  input: CreateBuyerProfileInput,
+  token?: string | null
+): Promise<CreateBuyerProfileOutput> {
+  return apiFetch<CreateBuyerProfileOutput>('/users/buyers', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    token
+  });
+}
+
+export async function getBuyerProfileRequest(
+  userId: number,
+  token?: string | null
+): Promise<GetBuyerProfileOutput> {
+  return apiFetch<GetBuyerProfileOutput>(`/users/buyers/${userId}`, {
+    method: 'GET',
+    token
+  });
+}
+
+export async function updateBuyerProfileRequest(
+  userId: number,
+  input: UpdateBuyerProfileInput,
+  token?: string | null
+): Promise<UpdateBuyerProfileOutput> {
+  return apiFetch<UpdateBuyerProfileOutput>(`/users/buyers/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+    token
+  });
+}
+
+export async function createSellerProfileRequest(
+  input: CreateSellerProfileInput,
+  token?: string | null
+): Promise<CreateSellerProfileOutput> {
+  return apiFetch<CreateSellerProfileOutput>('/users/sellers', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    token
+  });
+}
+
+export async function getSellerProfileRequest(
+  userId: number,
+  token?: string | null
+): Promise<GetSellerProfileOutput> {
+  return apiFetch<GetSellerProfileOutput>(`/users/sellers/${userId}`, {
+    method: 'GET',
+    token
+  });
+}
+
+export async function updateSellerProfileRequest(
+  userId: number,
+  input: UpdateSellerProfileInput,
+  token?: string | null
+): Promise<UpdateSellerProfileOutput> {
+  return apiFetch<UpdateSellerProfileOutput>(`/users/sellers/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+    token
   });
 }
 

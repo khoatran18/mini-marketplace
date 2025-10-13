@@ -38,6 +38,74 @@ export interface RegisterOutput {
   message?: string;
 }
 
+export interface ChangePasswordInput {
+  username: string;
+  old_password: string;
+  new_password: string;
+  role: Role;
+}
+
+export interface ChangePasswordOutput {
+  success?: boolean;
+  message?: string;
+}
+
+export interface BuyerProfile {
+  user_id: number;
+  name: string;
+  gender: string;
+  date_of_birth: string;
+  phone: string;
+  address: string;
+}
+
+export interface BuyerProfilePayload {
+  buyer: BuyerProfile;
+}
+
+export interface BuyerProfileResponse {
+  success?: boolean;
+  message?: string;
+  buyer?: BuyerProfile;
+}
+
+export type CreateBuyerProfileInput = BuyerProfilePayload;
+export type UpdateBuyerProfileInput = BuyerProfilePayload;
+export type CreateBuyerProfileOutput = BuyerProfileResponse;
+export type UpdateBuyerProfileOutput = BuyerProfileResponse;
+export type GetBuyerProfileOutput = BuyerProfileResponse;
+
+export interface SellerProfile {
+  id?: number;
+  name: string;
+  bank_account: string;
+  tax_code: string;
+  description: string;
+  date_of_birth: string;
+  phone: string;
+  address: string;
+}
+
+export interface CreateSellerProfileInput {
+  seller: SellerProfile;
+  user_id: number;
+}
+
+export interface UpdateSellerProfileInput {
+  seller: SellerProfile;
+  user_id?: number;
+}
+
+export interface SellerProfileResponse {
+  success?: boolean;
+  message?: string;
+  seller?: SellerProfile;
+}
+
+export type CreateSellerProfileOutput = SellerProfileResponse;
+export type UpdateSellerProfileOutput = SellerProfileResponse;
+export type GetSellerProfileOutput = SellerProfileResponse;
+
 export interface Product {
   id?: number;
   name: string;

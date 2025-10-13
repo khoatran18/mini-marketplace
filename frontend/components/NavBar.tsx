@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from './auth/AuthProvider';
 import { useCart } from './cart/CartProvider';
 import type { Role } from '../lib/types';
@@ -28,17 +28,20 @@ const baseLinks: NavLink[] = [
     requiresAuth: true,
     hiddenForRoles: ['seller_admin', 'seller_employee']
   },
+  { href: '/profile', label: 'Thông tin cá nhân', requiresAuth: true },
   { href: '/dashboard', label: 'Bảng điều khiển', requiresAuth: true, hiddenForRoles: ['buyer'] }
 ];
 
 export function NavBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { accessToken, username, role, logout } = useAuth();
   const { totalQuantity, clearCart } = useCart();
 
   const handleLogout = () => {
     clearCart();
     logout();
+    router.push('/');
   };
 
   const normalizedRole = role ?? null;
@@ -66,7 +69,7 @@ export function NavBar() {
             return true;
           })
           .map((link) => {
-            const isActive = pathname === link.href;
+            const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (
               <Link
                 key={link.href}

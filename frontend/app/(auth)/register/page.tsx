@@ -9,7 +9,7 @@ const roles: Role[] = ['buyer', 'seller_admin', 'seller_employee'];
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const [formState, setFormState] = useState<RegisterInput>({
     username: '',
     password: '',
@@ -24,10 +24,9 @@ export default function RegisterPage() {
     setMessage(null);
     try {
       const response = await register(formState);
-      setMessage(response.message ?? 'Đăng ký thành công. Vui lòng đăng nhập.');
-      setTimeout(() => {
-        router.push('/login');
-      }, 800);
+      setMessage(response.message ?? 'Đăng ký thành công. Vui lòng hoàn thiện thông tin cá nhân.');
+      await login({ ...formState });
+      router.push('/profile?setup=1');
     } catch (err) {
       setMessage((err as Error).message);
     } finally {
