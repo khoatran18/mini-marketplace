@@ -1,0 +1,81 @@
+services:
+
+  frontend:
+    image: frontend
+    hostname: frontend
+    networks:
+      test-network:
+    ports:
+      - "3000:3000"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+  api-gateway:
+    image: api-gateway:latest
+    hostname: api-gateway
+    networks:
+      test-network:
+    ports:
+      - "8080:8080"
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+  auth-service:
+    image: auth-service:latest
+    hostname: auth-service
+    networks:
+      test-network:
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+  order-service:
+    image: order-service:latest
+    hostname: order-service
+    networks:
+      test-network:
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+  product-service:
+    image: product-service:latest
+    hostname: product-service
+    networks:
+      test-network:
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+  user-service:
+    image: user-service:latest
+    hostname: user-service
+    networks:
+      test-network:
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        window: 70s
+
+networks:
+  test-network:
+    driver: overlay

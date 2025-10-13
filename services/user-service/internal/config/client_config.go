@@ -5,6 +5,6 @@ type GRPCAddrConfig map[string]string
 // NewGRPCAddrConfig save address for client gRPC services
 func NewGRPCAddrConfig() GRPCAddrConfig {
 	return GRPCAddrConfig{
-		"AuthClientAddr": "auth-client:50051",
+		"AuthClientAddr": "auth-service:50051",
 	}
 }

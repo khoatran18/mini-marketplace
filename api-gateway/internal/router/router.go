@@ -23,7 +23,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	}))
 
 	router.Use(middleware.RequestLoggingMiddleware(serviceConfig.ZapLogger))
-	router.Use(middleware.RateLimitingMiddleware(100, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
+	// router.Use(middleware.RateLimitingMiddleware(100, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
 
 	authRoute := router.Group("/auth")
 	{

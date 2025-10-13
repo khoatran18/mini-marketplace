@@ -12,7 +12,7 @@ import (
 type RegisterRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Email    string `json:"email"`
+	Role     string `json:"role"`
 }
 
 func sendPostRequest(client *http.Client, url string, data RegisterRequest, id int) {
@@ -30,7 +30,7 @@ func sendPostRequest(client *http.Client, url string, data RegisterRequest, id i
 
 func main() {
 	//url := "https://127.0.0.1/auth/register"
-	url := "http://127.0.0.1:8080/auth/register"
+	url := "http://localhost:8080/auth/register"
 	requestsPerSecond := 100
 
 	// Tạo HTTP client bỏ qua kiểm tra certificate
@@ -49,8 +49,9 @@ func main() {
 		data := RegisterRequest{
 			Username: fmt.Sprintf("testuser%d", counter),
 			Password: "123456",
-			Email:    fmt.Sprintf("testuser%d@example.com", counter),
+			Role:     "buyer",
 		}
+		fmt.Printf("Request %d \n", counter)
 		go sendPostRequest(client, url, data, counter)
 	}
 }

@@ -103,7 +103,13 @@ func initPostgresDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxIdleConns(1000)
+	sqlDB.SetMaxOpenConns(1000)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 	db.AutoMigrate(&model.Account{}, &outbox.PwdVersionEvent{})
 
 	fmt.Println("Init postgres db successfully!")

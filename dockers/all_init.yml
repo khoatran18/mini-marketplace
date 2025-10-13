@@ -1,0 +1,306 @@
+services:
+
+  redis-node-1:
+    image: redis_custom:latest
+    ports:
+      - target: 6379
+        published: 6380
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16380
+        protocol: tcp
+        mode: host
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-1
+      --appendonly yes
+    networks:
+      test-network:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        window: 10s
+  redis-node-2:
+    image: redis:8.2.1-alpine
+    ports:
+      - target: 6379
+        published: 6381
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16381
+        protocol: tcp
+        mode: host
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-2
+      --appendonly yes
+    networks:
+      test-network:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        window: 10s
+  redis-node-3:
+    image: redis:8.2.1-alpine
+    ports:
+      - target: 6379
+        published: 6382
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16382
+        protocol: tcp
+        mode: host
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-3
+      --appendonly yes
+    networks:
+      test-network:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        window: 10s
+  redis-node-4:
+    image: redis:8.2.1-alpine
+    ports:
+      - target: 6379
+        published: 6383
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16383
+        protocol: tcp
+        mode: host
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-4
+      --appendonly yes
+    networks:
+      test-network:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        window: 10s
+  redis-node-5:
+    image: redis:8.2.1-alpine
+    ports:
+      - target: 6379
+        published: 6384
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16384
+        protocol: tcp
+        mode: host
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-5
+      --appendonly yes
+    networks:
+      test-network:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        window: 10s
+  redis-node-6:
+    image: redis:8.2.1-alpine
+    ports:
+      - target: 6379
+        published: 6385
+        protocol: tcp
+        mode: host
+      - target: 16379
+        published: 16385
+        protocol: tcp
+        mode: host
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --cluster-announce-ip redis-node-6
+      --appendonly yes
+    networks:
+      test-network:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        window: 10s
+
+  redis:
+    image: redis:8.2.1-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      test-network:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        window: 10s
+
+  etcd1: &etcd
+    image: patroni
+    hostname: etcd1
+    networks:
+      - test-network
+    environment:
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_INITIAL_CLUSTER: etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: arm64
+      ETCD_UNSUPPORTED_ARCH: arm64
+    command: etcd --name etcd1 --initial-advertise-peer-urls http://etcd1:2380
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        window: 30s
+  etcd2:
+    <<: *etcd
+    hostname: etcd2
+    command: etcd --name etcd2 --initial-advertise-peer-urls http://etcd2:2380
+  etcd3:
+    <<: *etcd
+    hostname: etcd3
+    command: etcd --name etcd3 --initial-advertise-peer-urls http://etcd3:2380
+
+  haproxy:
+    image: patroni
+    hostname: haproxy
+    env_file:
+      - postgres_custom/docker/patroni.env
+    networks:
+      - test-network
+    command: haproxy
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        window: 30s
+    environment: &haproxy_env
+      ETCDCTL_ENDPOINTS: "http://etcd1:2379,http://etcd2:2379,http://etcd3:2379"
+      PATRONI_ETCD3_HOSTS: "'etcd1:2379','etcd2:2379','etcd3:2379'"
+      PATRONI_SCOPE: pg-cluster
+
+  patroni1:
+    image: patroni
+    hostname: patroni1
+    networks:
+      - test-network
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni1
+    depends_on:
+      - etcd
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        window: 30s
+  patroni2:
+    image: patroni
+    hostname: patroni2
+    networks:
+      - test-network
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni2
+    depends_on:
+      - etcd
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        window: 30s
+  patroni3:
+    image: patroni
+    hostname: patroni3
+    networks:
+      - test-network
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni3
+    depends_on:
+      - etcd
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        window: 30s
+
+  broker1:
+    image: apache/kafka
+    hostname: broker1
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker1:29092,PLAINTEXT_HOST://broker1:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_RETENTION_MS: "9000000"
+      KAFKA_LOG_RETENTION_BYTES: "2147483648"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker1:29093
+      KAFKA_LISTENERS: PLAINTEXT://broker1:29092,CONTROLLER://broker1:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs-1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "nc -z broker1 29092 && nc -z broker1 29093 || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      test-network:
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 2s
+        window: 15s
+
+networks:
+  test-network:
+    driver: overlay
+
