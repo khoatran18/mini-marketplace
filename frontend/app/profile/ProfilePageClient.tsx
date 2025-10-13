@@ -119,6 +119,7 @@ export function ProfilePageClient() {
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordFormVisible, setPasswordFormVisible] = useState(false);
 
   useEffect(() => {
     setBuyerForm(createEmptyBuyerForm());
@@ -533,62 +534,97 @@ export function ProfilePageClient() {
         </section>
 
         <section className="card h-max">
-          <h2 className="text-xl font-semibold text-slate-900">Đổi mật khẩu</h2>
-          <p className="text-sm text-slate-600">
-            Sử dụng mật khẩu mạnh để đảm bảo an toàn cho tài khoản của bạn.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Đổi mật khẩu</h2>
+              <p className="text-sm text-slate-600">
+                Sử dụng mật khẩu mạnh để đảm bảo an toàn cho tài khoản của bạn.
+              </p>
+            </div>
+            {!passwordFormVisible ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setPasswordFormVisible(true);
+                  setPasswordError(null);
+                  setPasswordMessage(null);
+                }}
+                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+              >
+                Đổi mật khẩu
+              </button>
+            ) : null}
+          </div>
 
-          {passwordMessage ? (
-            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{passwordMessage}</p>
-          ) : null}
-          {passwordError ? (
-            <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{passwordError}</p>
-          ) : null}
+          {passwordFormVisible ? (
+            <>
+              {passwordMessage ? (
+                <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{passwordMessage}</p>
+              ) : null}
+              {passwordError ? (
+                <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{passwordError}</p>
+              ) : null}
 
-          <form className="mt-6 grid gap-4" onSubmit={handlePasswordSubmit}>
-            <label className="grid gap-1 text-sm font-medium text-slate-700">
-              Mật khẩu hiện tại
-              <input
-                type="password"
-                value={passwordForm.oldPassword}
-                onChange={(event) =>
-                  setPasswordForm((prev) => ({ ...prev, oldPassword: event.target.value }))
-                }
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-medium text-slate-700">
-              Mật khẩu mới
-              <input
-                type="password"
-                value={passwordForm.newPassword}
-                minLength={6}
-                onChange={(event) =>
-                  setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))
-                }
-                required
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-medium text-slate-700">
-              Nhập lại mật khẩu mới
-              <input
-                type="password"
-                value={passwordForm.confirmPassword}
-                minLength={6}
-                onChange={(event) =>
-                  setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
-                }
-                required
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={changingPassword}
-              className="rounded-xl bg-slate-900 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {changingPassword ? 'Đang xử lý...' : 'Cập nhật mật khẩu'}
-            </button>
-          </form>
+              <form className="mt-6 grid gap-4" onSubmit={handlePasswordSubmit}>
+                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                  Mật khẩu hiện tại
+                  <input
+                    type="password"
+                    value={passwordForm.oldPassword}
+                    onChange={(event) =>
+                      setPasswordForm((prev) => ({ ...prev, oldPassword: event.target.value }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                  Mật khẩu mới
+                  <input
+                    type="password"
+                    value={passwordForm.newPassword}
+                    minLength={6}
+                    onChange={(event) =>
+                      setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                  Nhập lại mật khẩu mới
+                  <input
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    minLength={6}
+                    onChange={(event) =>
+                      setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
+                    }
+                    required
+                  />
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="submit"
+                    disabled={changingPassword}
+                    className="rounded-xl bg-slate-900 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {changingPassword ? 'Đang xử lý...' : 'Cập nhật mật khẩu'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPasswordFormVisible(false);
+                      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                      setPasswordError(null);
+                      setPasswordMessage(null);
+                    }}
+                    className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300"
+                  >
+                    Huỷ
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : null}
         </section>
       </div>
     </div>
