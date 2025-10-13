@@ -182,17 +182,19 @@ export function CreateProductForm() {
               required
             />
           </label>
-          <label className="grid gap-2 text-sm font-medium text-slate-700">
-            Mã người bán
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            <span>Mã người bán</span>
             <input
               type="number"
               value={formState.seller_id}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, seller_id: Number(event.target.value) || 0 }))
-              }
+              readOnly
               min={1}
               required
+              className="cursor-not-allowed bg-slate-100"
             />
+            <span className="text-xs font-normal text-slate-500">
+              Trường này được liên kết với tài khoản hiện tại và không thể thay đổi.
+            </span>
           </label>
           <div className="grid gap-3">
             <div className="flex items-center justify-between">

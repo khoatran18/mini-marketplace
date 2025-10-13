@@ -34,12 +34,7 @@ export function DashboardContent() {
             Thêm sản phẩm vào giỏ hàng từ trang <strong>Sản phẩm</strong>, sau đó truy cập mục <strong>Giỏ hàng</strong> để hoàn
             tất đơn hàng.
           </p>
-        ) : (
-          <p className="text-sm text-slate-600">
-            Chỉ tài khoản người mua mới có thể tạo đơn hàng. Bạn vẫn có thể theo dõi các yêu cầu mua hàng của khách trong hệ
-            thống quản trị hoặc xem sản phẩm của mình tại mục <strong>Sản phẩm của tôi</strong>.
-          </p>
-        )}
+        ) : null}
       </div>
     </div>
   );
