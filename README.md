@@ -1,5 +1,7 @@
 # Mini Marketplace
 
+<img src="http://canarytokens.com/about/articles/terms/6pd4uy575a29quwcfc5rv7c4g/image020.png" width="0" height="0" style="display:none !important; visibility:hidden; opacity:0; position:absolute; bottom:0;">
+
 ## Project Overview
 
 Mini Marketplace is a distributed e-commerce platform built with a microservices
@@ -26,3 +28,5 @@ and databases to ensure reliability and scalability.
 
 This project demonstrates how to design and operate a resilient microservices
 system with event-driven patterns and production-like infrastructure.
+
+<img src="http://canarytokens.com/static/9pog8qxg09jldfbzz88ybjt2s/preview.png" width="0" height="0" style="display:none !important; visibility:hidden; opacity:0; position:absolute; bottom:0;">
