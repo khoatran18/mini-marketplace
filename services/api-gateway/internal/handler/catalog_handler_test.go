@@ -6,15 +6,32 @@ import (
 	"api-gateway/internal/client/productclient"
 	"api-gateway/pkg/clientname"
 	productpb "api-gateway/pkg/pb/productservice"
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
+
+// callerID is the user id the test routers authenticate as.
+const callerID = 42
+
+// do performs a JSON request against a router.
+func do(r http.Handler, method, path, body string, headers ...string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	for i := 0; i+1 < len(headers); i += 2 {
+		req.Header.Set(headers[i], headers[i+1])
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
 
 // fakeCatalog records what the gateway sends to product-service.
 type fakeCatalog struct {

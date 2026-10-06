@@ -3,101 +3,220 @@ syntax = "proto3";
 package order_service.pkg.pb;
 
 import "buf/validate/validate.proto";
-import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
 
 option go_package = "order-service/orderpb";
 
-message Order {
-  uint64 id = 1;
-  uint64 buyer_id = 2;
-  string status = 3 [(buf.validate.field).string.in = "PENDING", (buf.validate.field).string.in = "FAILED", (buf.validate.field).string.in = "SUCCESS", (buf.validate.field).string.in = "VALID", (buf.validate.field).string.in = "CANCELED"];
-  double total_price = 4;
-  repeated OrderItem order_item = 5;
-  google.protobuf.Timestamp created_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
-}
+// ---- orders ---------------------------------------------------------------------------------
 
 message OrderItem {
-  uint64 ID = 1;
-  string name = 2;
-  uint64 order_id = 3;
-  uint64 product_id = 4;
-  int64 quantity = 5;
-  double price = 6;
-  string status = 7;
-  google.protobuf.Timestamp created_at = 8;
-  google.protobuf.Timestamp updated_at = 9;
-}
-
-message CreateOrderRequest {
-  Order order = 1;
-}
-message CreateOrderResponse {
-  string message = 1;
-  bool success = 2;
-}
-
-message GetOrderByIDRequest {
   uint64 id = 1;
-}
-message GetOrderByIDResponse {
-  string message = 1;
-  bool success = 2;
-  Order order = 3;
+  uint64 order_id = 2;
+  uint64 product_id = 3;
+  string name = 4; // snapshot at order time
+  string sku = 5;
+  string image_url = 6;
+  uint64 store_id = 7;
+  uint64 category_id = 8;
+  int64 quantity = 9;
+  double unit_price = 10; // snapshot of the catalog price
+  double line_total = 11;
+  string status = 12; // ACTIVE | CANCELED
 }
 
-//message GetOrderByIDOnlyRequest {
-//  uint64 id = 1;
-//}
-//message GetOrderByIDOnlyResponse {
-//  string message = 1;
-//  bool success = 2;
-//  Order order = 3;
-//}
+message StatusHistory {
+  string from_status = 1;
+  string to_status = 2;
+  string actor_type = 3; // system | buyer | seller | admin | payment
+  uint64 actor_id = 4;
+  string reason = 5;
+  string at = 6; // RFC3339 (UTC)
+}
 
-message GetOrdersByBuyerIDStatusRequest {
+// Order statuses: PENDING, AWAITING_PAYMENT, CONFIRMED (COD), PAID, SHIPPED, DELIVERED,
+// REFUND_REQUESTED, REFUNDED, CANCELED, EXPIRED, FAILED
+message Order {
+  uint64 id = 1;
+  string checkout_id = 2;
+  uint64 buyer_id = 3;
+  uint64 store_id = 4;
+  string status = 5;
+  string payment_method = 6; // COD | MOCK_CARD | MOCK_WALLET | MOCK_BANK_TRANSFER
+  string payment_status = 7; // UNPAID | PAID | REFUNDED
+  double subtotal = 8;
+  double shipping_fee = 9;
+  double total_price = 10;
+  google.protobuf.Struct shipping_address = 11; // snapshot taken at checkout
+  string note = 12;
+  string expires_at = 13; // unpaid orders are released after this time
+  string created_at = 14;
+  string updated_at = 15;
+  string paid_at = 16;
+  string shipped_at = 17;
+  string delivered_at = 18;
+  string canceled_at = 19;
+  string cancel_reason = 20;
+  string canceled_by = 21;
+  string carrier = 22;
+  string tracking_code = 23;
+  string return_reason = 24;
+  repeated OrderItem items = 25;
+  repeated StatusHistory history = 26; // only on single-order reads
+}
+
+// ---- checkout ---------------------------------------------------------------------------------
+
+message CheckoutItem {
+  uint64 product_id = 1;
+  int64 quantity = 2;
+}
+
+message CheckoutRequest {
   uint64 buyer_id = 1;
-  string status = 2;
-}
-message GetOrdersByBuyerIDStatusResponse {
-  string message = 1;
-  bool success = 2;
-  repeated Order order = 3;
-}
-
-message GetOrderItemsByOrderIDRequest {
-  uint64 order_id = 1;
-}
-message GetOrderItemsByOrderIDResponse {
-  string message = 1;
-  bool success = 2;
-  repeated OrderItem order_item = 3;
+  bool from_cart = 2;
+  repeated CheckoutItem items = 3; // ignored when from_cart
+  string payment_method = 4;
+  google.protobuf.Struct shipping_address = 5;
+  string note = 6;
+  string idempotency_key = 7 [(buf.validate.field).string.min_len = 1, (buf.validate.field).string.max_len = 64];
 }
 
-message UpdateOrderByIDRequest {
-  Order order = 1;
-}
-message UpdateOrderByIDResponse {
-  string massage = 1;
-  bool success = 2;
+message CheckoutResponse {
+  string checkout_id = 1;
+  repeated Order orders = 2; // one per store
+  double grand_total = 3;
+  string payment_method = 4;
+  bool replayed = 5; // true when the idempotency key was already used
 }
 
-message CancelOrderByIDRequest {
+message GetCheckoutRequest {
+  string checkout_id = 1;
+  uint64 buyer_id = 2;
+}
+
+message PreviewLine {
+  uint64 product_id = 1;
+  string name = 2;
+  string image_url = 3;
+  int64 quantity = 4;
+  double unit_price = 5;
+  double line_total = 6;
+  string stock_level = 7;
+  bool available = 8;
+  string issue = 9; // why the line can not be ordered (empty when fine)
+}
+message PreviewGroup {
+  uint64 store_id = 1;
+  repeated PreviewLine lines = 2;
+  double subtotal = 3;
+  double shipping_fee = 4;
+  double total = 5;
+}
+message PreviewRequest {
+  uint64 buyer_id = 1;
+  bool from_cart = 2;
+  repeated CheckoutItem items = 3;
+}
+message PreviewResponse {
+  repeated PreviewGroup groups = 1;
+  double subtotal = 2;
+  double shipping_fee = 3;
+  double grand_total = 4;
+  bool can_order = 5; // false when any line has an issue
+}
+
+// ---- reading and acting on orders -----------------------------------------------------------
+
+message GetOrderRequest {
   uint64 id = 1;
+  // scope: exactly one of these must identify the caller (set by the gateway from the token)
+  uint64 buyer_id = 2;
+  uint64 store_id = 3;
+  bool is_admin = 4;
 }
-message CancelOrderByIDResponse {
-  string message = 1;
-  bool success = 2;
+
+message ListOrdersRequest {
+  uint64 buyer_id = 1; // buyer view
+  uint64 store_id = 2; // seller view
+  bool is_admin = 3;   // admin view (all orders)
+  string status = 4;   // optional filter
+  uint64 page = 5;
+  uint64 page_size = 6;
+}
+message ListOrdersResponse {
+  repeated Order orders = 1;
+  uint64 total = 2;
+}
+
+message CountOrdersRequest {
+  uint64 buyer_id = 1;
+  uint64 store_id = 2;
+  bool is_admin = 3;
+}
+message CountOrdersResponse {
+  map<string, int64> by_status = 1;
+}
+
+// ApplyAction moves an order along the state machine on behalf of a buyer, seller or admin.
+// Actions: cancel, ship, deliver, confirm_received, request_return, approve_return, reject_return
+message ActionRequest {
+  uint64 order_id = 1;
+  string action = 2;
+  string actor_type = 3; // buyer | seller | admin (set by the gateway from the token)
+  uint64 actor_id = 4;   // user id
+  uint64 store_id = 5;   // the caller's store (sellers)
+  string reason = 6;
+  string carrier = 7;
+  string tracking_code = 8;
+}
+
+// ---- cart --------------------------------------------------------------------------------------
+
+message CartLine {
+  uint64 product_id = 1;
+  int64 quantity = 2;
+  string name = 3;
+  string image_url = 4;
+  uint64 store_id = 5;
+  double unit_price = 6;
+  double line_total = 7;
+  string stock_level = 8;
+  bool available = 9;
+  string issue = 10;
+}
+message CartResponse {
+  repeated CartLine lines = 1;
+  double subtotal = 2;
+  int64 item_count = 3; // total quantity
+}
+message GetCartRequest {
+  uint64 user_id = 1;
+}
+message SetCartItemRequest {
+  uint64 user_id = 1;
+  uint64 product_id = 2;
+  int64 quantity = 3 [(buf.validate.field).int64 = {gte: 0, lte: 99}]; // 0 removes the line
+}
+message ClearCartRequest {
+  uint64 user_id = 1;
+}
+message MergeCartRequest {
+  uint64 user_id = 1;
+  repeated CheckoutItem items = 2; // guest cart (localStorage) merged after login
 }
 
 service OrderService {
-  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
-  rpc GetOrderByID(GetOrderByIDRequest) returns (GetOrderByIDResponse);
+  rpc Checkout(CheckoutRequest) returns (CheckoutResponse);
+  rpc PreviewCheckout(PreviewRequest) returns (PreviewResponse);
+  rpc GetCheckout(GetCheckoutRequest) returns (CheckoutResponse);
 
-  //  rpc GetOrderByIDOnly (GetOrderByIDOnlyRequest) returns (GetOrderByIDOnlyResponse);
+  rpc GetOrder(GetOrderRequest) returns (Order);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc CountOrders(CountOrdersRequest) returns (CountOrdersResponse);
+  rpc ApplyAction(ActionRequest) returns (Order);
 
-  rpc GetOrdersByBuyerIDStatus(GetOrdersByBuyerIDStatusRequest) returns (GetOrdersByBuyerIDStatusResponse);
-  rpc GetOrderItemsByOrderID(GetOrderItemsByOrderIDRequest) returns (GetOrderItemsByOrderIDResponse);
-  rpc UpdateOrderByID(UpdateOrderByIDRequest) returns (UpdateOrderByIDResponse);
-  rpc CancelOrderByID(CancelOrderByIDRequest) returns (CancelOrderByIDResponse);
+  rpc GetCart(GetCartRequest) returns (CartResponse);
+  rpc SetCartItem(SetCartItemRequest) returns (CartResponse);
+  rpc ClearCart(ClearCartRequest) returns (CartResponse);
+  rpc MergeCart(MergeCartRequest) returns (CartResponse);
 }

@@ -2,227 +2,222 @@ package server
 
 import (
 	"context"
-	"order-service/internal/server/adapter"
+	"encoding/json"
+	"order-service/internal/repository"
 	"order-service/internal/service"
+	"order-service/pkg/model"
 	orderpb "order-service/pkg/pb"
+	"time"
 
 	"buf.build/go/protovalidate"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
+// OrderServer adapts the gRPC API to OrderService.
 type OrderServer struct {
 	orderpb.UnimplementedOrderServiceServer
 	OrderService *service.OrderService
 	ZapLogger    *zap.Logger
 }
 
-func (s *OrderServer) CreateOrder(ctx context.Context, req *orderpb.CreateOrderRequest) (*orderpb.CreateOrderResponse, error) {
-
-	// Validate ServerRequest and parse to ServiceInput
-	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid request for CreateProduct", zap.Error(err))
-		return CreOrdFailResponse("Invalid request for CreateProduct", err, codes.InvalidArgument)
+func ts(t *time.Time) string {
+	if t == nil || t.IsZero() {
+		return ""
 	}
-	input, err := adapter.CreOrdRequestToInput(req)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse CreateOrder request to input error", zap.Error(err))
-		return CreOrdFailResponse("Parse CreateOrder request to input error", err, codes.InvalidArgument)
-	}
-
-	// Get ServiceOutput
-	output, err := s.OrderService.CreateOrder(ctx, input)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: CreateOrder error in OrderService", zap.Error(err))
-		return CreOrdFailResponse("CreateOrder error in OrderService", err, codes.Internal)
-	}
-
-	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.CreOrdOutputToResponse(output)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse CreateOrder output to response error", zap.Error(err))
-		return CreOrdFailResponse("Parse CreateOrder output to response error", err, codes.Unknown)
-	}
-	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid response for CreateOrder", zap.Error(err))
-		return CreOrdFailResponse("Invalid response for CreateOrder", err, codes.InvalidArgument)
-	}
-
-	// Return valid response
-	return res, nil
+	return t.UTC().Format(time.RFC3339)
 }
 
-func (s *OrderServer) GetOrderByID(ctx context.Context, req *orderpb.GetOrderByIDRequest) (*orderpb.GetOrderByIDResponse, error) {
-
-	// Validate ServerRequest and parse to ServiceInput
-	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid request for GetOrderByID", zap.Error(err))
-		return GetOrdByIDFailResponse("Invalid request for GetOrderByID", err, codes.InvalidArgument)
+func orderToProto(o *model.Order, history []*model.OrderStatusHistory) *orderpb.Order {
+	out := &orderpb.Order{
+		Id: o.ID, CheckoutId: o.CheckoutID, BuyerId: o.BuyerID, StoreId: o.StoreID, Status: o.Status, PaymentMethod: o.PaymentMethod,
+		PaymentStatus: o.PaymentStatus, Subtotal: o.Subtotal, ShippingFee: o.ShippingFee, TotalPrice: o.TotalPrice, Note: o.Note,
+		ExpiresAt: ts(o.ExpiresAt), CreatedAt: o.CreatedAt.UTC().Format(time.RFC3339), UpdatedAt: o.UpdatedAt.UTC().Format(time.RFC3339),
+		PaidAt: ts(o.PaidAt), ShippedAt: ts(o.ShippedAt), DeliveredAt: ts(o.DeliveredAt), CanceledAt: ts(o.CanceledAt),
+		CancelReason: o.CancelReason, CanceledBy: o.CanceledBy, Carrier: o.Carrier, TrackingCode: o.TrackingCode, ReturnReason: o.ReturnReason,
 	}
-	input, err := adapter.GetOrdByIDRequestToInput(req)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse GetOrderByID request to input error", zap.Error(err))
-		return GetOrdByIDFailResponse("Parse GetOrderByID request to input error", err, codes.InvalidArgument)
+	if len(o.ShippingAddress) > 0 {
+		var m map[string]any
+		if json.Unmarshal(o.ShippingAddress, &m) == nil {
+			out.ShippingAddress, _ = structpb.NewStruct(m)
+		}
 	}
-
-	// Get ServiceOutput
-	output, err := s.OrderService.GetOrderByID(ctx, input)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: GetOrderByID error in OrderService", zap.Error(err))
-		return GetOrdByIDFailResponse("GetOrderByID error in OrderService", err, codes.Internal)
+	for _, it := range o.OrderItems {
+		out.Items = append(out.Items, &orderpb.OrderItem{
+			Id: it.ID, OrderId: it.OrderID, ProductId: it.ProductID, Name: it.ProductName, Sku: it.SKU, ImageUrl: it.ImageURL,
+			StoreId: it.StoreID, CategoryId: it.CategoryID, Quantity: it.Quantity, UnitPrice: it.Price, LineTotal: it.LineTotal, Status: it.Status,
+		})
 	}
-
-	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.GetOrdByIDOutputToResponse(output)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse GetOrderByID output to response error", zap.Error(err))
-		return GetOrdByIDFailResponse("Parse GetOrderByID output to response error", err, codes.Unknown)
+	for _, h := range history {
+		out.History = append(out.History, &orderpb.StatusHistory{
+			FromStatus: h.FromStatus, ToStatus: h.ToStatus, ActorType: h.ActorType, ActorId: h.ActorID, Reason: h.Reason, At: h.At.UTC().Format(time.RFC3339),
+		})
 	}
-	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid response for GetOrderByID", zap.Error(err))
-		return GetOrdByIDFailResponse("Invalid response for GetOrderByID", err, codes.InvalidArgument)
-	}
-
-	// Return valid response
-	return res, nil
+	return out
 }
 
-func (s *OrderServer) GetOrdersByBuyerIDStatus(ctx context.Context, req *orderpb.GetOrdersByBuyerIDStatusRequest) (*orderpb.GetOrdersByBuyerIDStatusResponse, error) {
-
-	// Validate ServerRequest and parse to ServiceInput
-	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid request for GetOrdersByBuyerIDStatus", zap.Error(err))
-		return GetOrdsByBuyIDStaFailResponse("Invalid request for GetOrdersByBuyerIDStatus", err, codes.InvalidArgument)
+func ordersToProto(orders []*model.Order) []*orderpb.Order {
+	out := make([]*orderpb.Order, 0, len(orders))
+	for _, o := range orders {
+		out = append(out, orderToProto(o, nil))
 	}
-	input, err := adapter.GetOrdsByBuyIDStaRequestToInput(req)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse GetOrdersByBuyerIDStatus request to input error", zap.Error(err))
-		return GetOrdsByBuyIDStaFailResponse("Parse GetOrdersByBuyerIDStatus request to input error", err, codes.InvalidArgument)
-	}
-
-	// Get ServiceOutput
-	output, err := s.OrderService.GetOrdersByBuyerIDStatus(ctx, input)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: GetOrdersByBuyerIDStatus error in OrderService", zap.Error(err))
-		return GetOrdsByBuyIDStaFailResponse("GetOrdersByBuyerIDStatus error in OrderService", err, codes.Internal)
-	}
-
-	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.GetOrdsByBuyIDStaOutputToResponse(output)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse GetOrdersByBuyerIDStatus output to response error", zap.Error(err))
-		return GetOrdsByBuyIDStaFailResponse("Parse GetOrdersByBuyerIDStatus output to response error", err, codes.Unknown)
-	}
-	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid response for GetOrdersByBuyerIDStatus", zap.Error(err))
-		return GetOrdsByBuyIDStaFailResponse("Invalid response for GetOrdersByBuyerIDStatus", err, codes.InvalidArgument)
-	}
-
-	// Return valid response
-	return res, nil
+	return out
 }
 
-func (s *OrderServer) GetOrderItemsByOrderID(ctx context.Context, req *orderpb.GetOrderItemsByOrderIDRequest) (*orderpb.GetOrderItemsByOrderIDResponse, error) {
-
-	// Validate ServerRequest and parse to ServiceInput
-	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid request for GetOrderItemsByOrderID", zap.Error(err))
-		return GetOrdItesByOrdIDFailResponse("Invalid request for GetOrderItemsByOrderID", err, codes.InvalidArgument)
+func checkoutToProto(r *service.CheckoutResult) *orderpb.CheckoutResponse {
+	return &orderpb.CheckoutResponse{
+		CheckoutId: r.Checkout.ID, Orders: ordersToProto(r.Orders), GrandTotal: r.Checkout.Total,
+		PaymentMethod: r.Checkout.PaymentMethod, Replayed: r.Replayed,
 	}
-	input, err := adapter.GetOrdItesByOrdIDRequestToInput(req)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse GetOrderItemsByOrderID request to input error", zap.Error(err))
-		return GetOrdItesByOrdIDFailResponse("Parse GetOrderItemsByOrderID request to input error", err, codes.InvalidArgument)
-	}
-
-	// Get ServiceOutput
-	output, err := s.OrderService.GetOrderItemsByOrderID(ctx, input)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: GetOrderItemsByOrderID error in OrderService", zap.Error(err))
-		return GetOrdItesByOrdIDFailResponse("GetOrderItemsByOrderID error in OrderService", err, codes.Internal)
-	}
-
-	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.GetOrdItesByOrdIDOutputToResponse(output)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse GetOrderItemsByOrderID output to response error", zap.Error(err))
-		return GetOrdItesByOrdIDFailResponse("Parse GetOrderItemsByOrderID output to response error", err, codes.Unknown)
-	}
-	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid response for GetOrderItemsByOrderID", zap.Error(err))
-		return GetOrdItesByOrdIDFailResponse("Invalid response for GetOrderItemsByOrderID", err, codes.InvalidArgument)
-	}
-
-	// Return valid response
-	return res, nil
 }
 
-func (s *OrderServer) UpdateOrderByID(ctx context.Context, req *orderpb.UpdateOrderByIDRequest) (*orderpb.UpdateOrderByIDResponse, error) {
-
-	// Validate ServerRequest and parse to ServiceInput
-	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid request for UpdateOrderByID", zap.Error(err))
-		return UpdOrdByIDFailResponse("Invalid request for UpdateOrderByID", err, codes.InvalidArgument)
+func lines(items []*orderpb.CheckoutItem) []service.Line {
+	out := make([]service.Line, 0, len(items))
+	for _, it := range items {
+		out = append(out, service.Line{ProductID: it.GetProductId(), Quantity: it.GetQuantity()})
 	}
-	input, err := adapter.UpdOrdByIDRequestToInput(req)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse UpdateOrderByID request to input error", zap.Error(err))
-		return UpdOrdByIDFailResponse("Parse UpdateOrderByID request to input error", err, codes.InvalidArgument)
-	}
-
-	// Get ServiceOutput
-	output, err := s.OrderService.UpdateOrderByID(ctx, input)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: UpdateOrderByID error in OrderService", zap.Error(err))
-		return UpdOrdByIDFailResponse("UpdateOrderByID error in OrderService", err, codes.Internal)
-	}
-
-	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.UpdOrdByIDOutputToResponse(output)
-	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse UpdateOrderByID output to response error", zap.Error(err))
-		return UpdOrdByIDFailResponse("Parse UpdateOrderByID output to response error", err, codes.Unknown)
-	}
-	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid response for UpdateOrderByID", zap.Error(err))
-		return UpdOrdByIDFailResponse("Invalid response for UpdateOrderByID", err, codes.InvalidArgument)
-	}
-
-	// Return valid response
-	return res, nil
+	return out
 }
 
-func (s *OrderServer) CancelOrderByID(ctx context.Context, req *orderpb.CancelOrderByIDRequest) (*orderpb.CancelOrderByIDResponse, error) {
+func scopeOf(buyerID, storeID uint64, admin bool) repository.Scope {
+	return repository.Scope{BuyerID: buyerID, StoreID: storeID, Admin: admin}
+}
 
-	// Validate ServerRequest and parse to ServiceInput
+// Checkout places the orders of a buyer (one per store).
+func (s *OrderServer) Checkout(ctx context.Context, req *orderpb.CheckoutRequest) (*orderpb.CheckoutResponse, error) {
 	if err := protovalidate.Validate(req); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid request for UpdateOrderByID", zap.Error(err))
-		return CanOrdByIDFailResponse("Invalid request for UpdateOrderByID", err, codes.InvalidArgument)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	input, err := adapter.CanOrdByIDRequestToInput(req)
+	var addr map[string]any
+	if req.GetShippingAddress() != nil {
+		addr = req.GetShippingAddress().AsMap()
+	}
+	res, err := s.OrderService.Checkout(ctx, &service.CheckoutInput{
+		BuyerID: req.GetBuyerId(), FromCart: req.GetFromCart(), Items: lines(req.GetItems()), PaymentMethod: req.GetPaymentMethod(),
+		Address: addr, Note: req.GetNote(), IdempotencyKey: req.GetIdempotencyKey(),
+	})
 	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse UpdateOrderByID request to input error", zap.Error(err))
-		return CanOrdByIDFailResponse("Parse UpdateOrderByID request to input error", err, codes.InvalidArgument)
+		return nil, err
 	}
+	return checkoutToProto(res), nil
+}
 
-	// Get ServiceOutput
-	output, err := s.OrderService.CancelOrderByID(ctx, input)
+// PreviewCheckout prices a checkout without creating anything.
+func (s *OrderServer) PreviewCheckout(ctx context.Context, req *orderpb.PreviewRequest) (*orderpb.PreviewResponse, error) {
+	pv, err := s.OrderService.PreviewCheckout(ctx, req.GetBuyerId(), req.GetFromCart(), lines(req.GetItems()))
 	if err != nil {
-		s.ZapLogger.Warn("OrderServer: UpdateOrderByID error in OrderService", zap.Error(err))
-		return CanOrdByIDFailResponse("UpdateOrderByID error in OrderService", err, codes.Internal)
+		return nil, err
 	}
+	out := &orderpb.PreviewResponse{Subtotal: pv.Subtotal, ShippingFee: pv.ShippingFee, GrandTotal: pv.GrandTotal, CanOrder: pv.CanOrder}
+	for _, g := range pv.Groups {
+		pg := &orderpb.PreviewGroup{StoreId: g.StoreID, Subtotal: g.Subtotal, ShippingFee: g.ShippingFee, Total: g.Total}
+		for _, l := range g.Lines {
+			pg.Lines = append(pg.Lines, &orderpb.PreviewLine{
+				ProductId: l.ProductID, Name: l.Name, ImageUrl: l.ImageURL, Quantity: l.Quantity, UnitPrice: l.UnitPrice,
+				LineTotal: l.LineTotal, StockLevel: l.StockLevel, Available: l.Available, Issue: l.Issue,
+			})
+		}
+		out.Groups = append(out.Groups, pg)
+	}
+	return out, nil
+}
 
-	// Parse ServiceOutput to ServerResponse and validate
-	res, err := adapter.CanOrdByIDOutputToResponse(output)
+// GetCheckout returns a buyer's checkout.
+func (s *OrderServer) GetCheckout(ctx context.Context, req *orderpb.GetCheckoutRequest) (*orderpb.CheckoutResponse, error) {
+	res, err := s.OrderService.GetCheckout(ctx, req.GetBuyerId(), req.GetCheckoutId())
 	if err != nil {
-		s.ZapLogger.Warn("OrderServer: parse UpdateOrderByID output to response error", zap.Error(err))
-		return CanOrdByIDFailResponse("Parse UpdateOrderByID output to response error", err, codes.Unknown)
+		return nil, err
 	}
-	if err := protovalidate.Validate(res); err != nil {
-		s.ZapLogger.Warn("OrderServer: invalid response for UpdateOrderByID", zap.Error(err))
-		return CanOrdByIDFailResponse("Invalid response for UpdateOrderByID", err, codes.InvalidArgument)
-	}
+	return checkoutToProto(res), nil
+}
 
-	// Return valid response
-	return res, nil
+// GetOrder returns one order in the caller's scope.
+func (s *OrderServer) GetOrder(ctx context.Context, req *orderpb.GetOrderRequest) (*orderpb.Order, error) {
+	v, err := s.OrderService.GetOrder(ctx, req.GetId(), scopeOf(req.GetBuyerId(), req.GetStoreId(), req.GetIsAdmin()))
+	if err != nil {
+		return nil, err
+	}
+	return orderToProto(v.Order, v.History), nil
+}
+
+// ListOrders returns a page of orders in scope.
+func (s *OrderServer) ListOrders(ctx context.Context, req *orderpb.ListOrdersRequest) (*orderpb.ListOrdersResponse, error) {
+	orders, total, err := s.OrderService.ListOrders(ctx, scopeOf(req.GetBuyerId(), req.GetStoreId(), req.GetIsAdmin()), req.GetStatus(), req.GetPage(), req.GetPageSize())
+	if err != nil {
+		return nil, err
+	}
+	return &orderpb.ListOrdersResponse{Orders: ordersToProto(orders), Total: uint64(total)}, nil
+}
+
+// CountOrders returns the number of orders per status.
+func (s *OrderServer) CountOrders(ctx context.Context, req *orderpb.CountOrdersRequest) (*orderpb.CountOrdersResponse, error) {
+	m, err := s.OrderService.CountOrders(ctx, scopeOf(req.GetBuyerId(), req.GetStoreId(), req.GetIsAdmin()))
+	if err != nil {
+		return nil, err
+	}
+	return &orderpb.CountOrdersResponse{ByStatus: m}, nil
+}
+
+// ApplyAction performs a user action on an order.
+func (s *OrderServer) ApplyAction(ctx context.Context, req *orderpb.ActionRequest) (*orderpb.Order, error) {
+	v, err := s.OrderService.ApplyAction(ctx, &service.ActionInput{
+		OrderID: req.GetOrderId(), Action: req.GetAction(), Reason: req.GetReason(), Carrier: req.GetCarrier(), TrackingCode: req.GetTrackingCode(),
+		Actor: repository.Actor{Type: req.GetActorType(), ID: req.GetActorId(), StoreID: req.GetStoreId()},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return orderToProto(v.Order, v.History), nil
+}
+
+func cartToProto(c *service.Cart) *orderpb.CartResponse {
+	out := &orderpb.CartResponse{Subtotal: c.Subtotal, ItemCount: c.ItemCount}
+	for _, l := range c.Lines {
+		out.Lines = append(out.Lines, &orderpb.CartLine{
+			ProductId: l.ProductID, Quantity: l.Quantity, Name: l.Name, ImageUrl: l.ImageURL, StoreId: l.StoreID, UnitPrice: l.UnitPrice,
+			LineTotal: l.LineTotal, StockLevel: l.StockLevel, Available: l.Available, Issue: l.Issue,
+		})
+	}
+	return out
+}
+
+// GetCart returns the buyer's cart.
+func (s *OrderServer) GetCart(ctx context.Context, req *orderpb.GetCartRequest) (*orderpb.CartResponse, error) {
+	c, err := s.OrderService.GetCart(ctx, req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	return cartToProto(c), nil
+}
+
+// SetCartItem sets the quantity of one product in the cart.
+func (s *OrderServer) SetCartItem(ctx context.Context, req *orderpb.SetCartItemRequest) (*orderpb.CartResponse, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	c, err := s.OrderService.SetCartItem(ctx, req.GetUserId(), req.GetProductId(), req.GetQuantity())
+	if err != nil {
+		return nil, err
+	}
+	return cartToProto(c), nil
+}
+
+// ClearCart empties the cart.
+func (s *OrderServer) ClearCart(ctx context.Context, req *orderpb.ClearCartRequest) (*orderpb.CartResponse, error) {
+	c, err := s.OrderService.ClearCart(ctx, req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	return cartToProto(c), nil
+}
+
+// MergeCart merges a guest cart after login.
+func (s *OrderServer) MergeCart(ctx context.Context, req *orderpb.MergeCartRequest) (*orderpb.CartResponse, error) {
+	c, err := s.OrderService.MergeCart(ctx, req.GetUserId(), lines(req.GetItems()))
+	if err != nil {
+		return nil, err
+	}
+	return cartToProto(c), nil
 }

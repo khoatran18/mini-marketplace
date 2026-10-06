@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"order-service/internal/service/adapter"
-	"order-service/pkg/dto"
+	"errors"
+	"order-service/internal/repository"
 	"order-service/pkg/model"
 	"order-service/pkg/outbox"
 	"strconv"
@@ -17,147 +17,271 @@ import (
 // publishTimeout bounds one publish + outbox status update.
 const publishTimeout = 5 * time.Second
 
-// For Consumer
+// ignorable reports errors that mean "this event no longer applies" (replay, out-of-order, unknown order).
+func ignorable(err error) bool {
+	return errors.Is(err, repository.ErrNotAllowed) || errors.Is(err, repository.ErrOrderNotFound)
+}
 
-// UpdateOrderStatusByKafka applies the inventory validation result of product-service.
-// It is idempotent: a PENDING order is moved to SUCCESS/FAILED once, and replays or
-// out-of-order events find no PENDING row and are ignored.
+// ---- consumers --------------------------------------------------------------------------------
+
+// validateResultEvent is the payload of product.validate_order.
+type validateResultEvent struct {
+	OrderID uint64 `json:"order_id"`
+	Success bool   `json:"success"`
+}
+
+// UpdateOrderStatusByKafka applies the stock reservation result of product-service to a PENDING order:
+// online methods wait for payment (with a deadline), cash on delivery is confirmed, no stock means FAILED.
+// It is idempotent: replays and out-of-order events find the order no longer PENDING and are ignored.
 func (s *OrderService) UpdateOrderStatusByKafka(ctx context.Context, msg *kafka.Message) error {
-	var eventDTO dto.ValidateOrderKafkaEvent
-	if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
+	var ev validateResultEvent
+	if err := json.Unmarshal(msg.Value, &ev); err != nil {
 		// A malformed message can never succeed; drop it instead of retrying.
 		s.ZapLogger.Error("OrderService: invalid validate-order event", zap.Error(err))
 		return nil
 	}
-
-	target := model.StatusSuccess
-	if !eventDTO.Success {
-		target = model.StatusFailed
+	order, _, err := s.OrderRepo.GetOrder(ctx, ev.OrderID, repository.Scope{Admin: true})
+	if errors.Is(err, repository.ErrOrderNotFound) {
+		s.ZapLogger.Info("OrderService: validate-order event for an unknown order", zap.Uint64("order_id", ev.OrderID))
+		return nil
 	}
-	changed, err := s.OrderRepo.TransitionStatus(ctx, eventDTO.OrderID, []string{model.StatusPending}, target)
 	if err != nil {
 		return err
 	}
-	if !changed {
-		s.ZapLogger.Info("OrderService: validate-order event ignored (order missing or not pending)",
-			zap.Uint64("order_id", eventDTO.OrderID), zap.String("target", target))
+	p := repository.TransitionParams{Actor: repository.Actor{Type: repository.ActorSystem}}
+	switch {
+	case !ev.Success:
+		p.To, p.Reason = model.StatusFailed, "out_of_stock"
+	case model.IsOnline(order.PaymentMethod):
+		p.To, p.PaymentTTL = model.StatusAwaitingPayment, s.Settings.PaymentTTL
+	default:
+		p.To = model.StatusConfirmed
+	}
+	if _, err := s.OrderRepo.Transition(ctx, ev.OrderID, p); err != nil {
+		if ignorable(err) {
+			s.ZapLogger.Info("OrderService: validate-order event ignored", zap.Uint64("order_id", ev.OrderID), zap.Error(err))
+			return nil
+		}
+		return err
 	}
 	return nil
 }
 
-// For Producer
+// paymentSucceededEvent is the payload of payment.succeeded.
+type paymentSucceededEvent struct {
+	CheckoutID  string `json:"checkout_id"`
+	PaymentID   uint64 `json:"payment_id"`
+	AmountMinor int64  `json:"amount_minor"`
+}
 
-// runOutboxWorker calls batch every interval until ctx is canceled.
-func (s *OrderService) runOutboxWorker(ctx context.Context, name string, interval time.Duration, batch func(context.Context) error) {
+// HandlePaymentSucceeded marks every order of the checkout that is still awaiting payment as PAID. Orders that
+// can no longer be paid (canceled or expired meanwhile) are not charged: the difference is refunded.
+func (s *OrderService) HandlePaymentSucceeded(ctx context.Context, msg *kafka.Message) error {
+	var ev paymentSucceededEvent
+	if err := json.Unmarshal(msg.Value, &ev); err != nil || ev.CheckoutID == "" {
+		s.ZapLogger.Error("OrderService: invalid payment.succeeded event", zap.Error(err))
+		return nil
+	}
+	orders, err := s.OrderRepo.OrdersInCheckout(ctx, ev.CheckoutID)
+	if err != nil {
+		return err
+	}
+	if len(orders) == 0 {
+		return nil
+	}
+	for _, o := range orders {
+		if o.Status != model.StatusAwaitingPayment {
+			continue
+		}
+		if _, err := s.OrderRepo.Transition(ctx, o.ID, repository.TransitionParams{To: model.StatusPaid, Actor: repository.Actor{Type: repository.ActorPayment}}); err != nil && !ignorable(err) {
+			return err
+		}
+	}
+	// What was really paid is read back after the transitions: a concurrent delivery of the same event may have
+	// done the work (our Transition then reports "not allowed"), and orders canceled after being paid still
+	// count as paid (they are refunded through their own cancel path).
+	orders, err = s.OrderRepo.OrdersInCheckout(ctx, ev.CheckoutID)
+	if err != nil {
+		return err
+	}
+	var paidMinor int64
+	for _, o := range orders {
+		if o.PaidAt != nil {
+			paidMinor += toMinor(o.TotalPrice)
+		}
+	}
+	if over := ev.AmountMinor - paidMinor; over > 0 {
+		// money arrived for orders that were canceled/expired in the meantime
+		return s.OrderRepo.RequestRefund(ctx, orders[0], over, "order_not_payable", "checkout:"+ev.CheckoutID+":overpay")
+	}
+	return nil
+}
+
+// paymentRefundedEvent is the payload of payment.refunded.
+type paymentRefundedEvent struct {
+	OrderID uint64 `json:"order_id"`
+}
+
+// HandlePaymentRefunded records that the money of an order went back to the buyer.
+func (s *OrderService) HandlePaymentRefunded(ctx context.Context, msg *kafka.Message) error {
+	var ev paymentRefundedEvent
+	if err := json.Unmarshal(msg.Value, &ev); err != nil {
+		s.ZapLogger.Error("OrderService: invalid payment.refunded event", zap.Error(err))
+		return nil
+	}
+	if ev.OrderID == 0 {
+		return nil
+	}
+	return s.OrderRepo.MarkPaymentRefunded(ctx, ev.OrderID)
+}
+
+// ---- time based workers -----------------------------------------------------------------------
+
+// ExpireUnpaid moves orders whose payment deadline passed to EXPIRED (their stock is released through the outbox).
+// Returns how many orders expired.
+func (s *OrderService) ExpireUnpaid(ctx context.Context, now time.Time) (int, error) {
+	ids, err := s.OrderRepo.DueForExpiry(ctx, now, 100)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, id := range ids {
+		_, err := s.OrderRepo.Transition(ctx, id, repository.TransitionParams{To: model.StatusExpired, Actor: repository.Actor{Type: repository.ActorSystem}, Now: now})
+		switch {
+		case err == nil:
+			n++
+		case ignorable(err):
+		default:
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+// AutoDeliver marks orders as delivered when they were shipped more than AutoDeliverAfter ago (0 = disabled).
+func (s *OrderService) AutoDeliver(ctx context.Context, now time.Time) (int, error) {
+	if s.Settings.AutoDeliverAfter <= 0 {
+		return 0, nil
+	}
+	ids, err := s.OrderRepo.DueForAutoDelivery(ctx, now.Add(-s.Settings.AutoDeliverAfter), 100)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, id := range ids {
+		_, err := s.OrderRepo.Transition(ctx, id, repository.TransitionParams{To: model.StatusDelivered, Actor: repository.Actor{Type: repository.ActorSystem}, Reason: "auto_delivered", Now: now})
+		switch {
+		case err == nil:
+			n++
+		case ignorable(err):
+		default:
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+// RunTimers runs ExpireUnpaid and AutoDeliver every interval until ctx is canceled; heartbeat (optional) is
+// called after every round so readiness can see the worker is alive.
+func (s *OrderService) RunTimers(ctx context.Context, interval time.Duration, heartbeat func()) {
 	go func() {
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
+		t := time.NewTicker(interval)
+		defer t.Stop()
 		for {
 			select {
 			case <-ctx.Done():
-				s.ZapLogger.Info("OrderService: outbox worker stopped", zap.String("worker", name))
 				return
-			case <-ticker.C:
-				if err := batch(ctx); err != nil {
-					s.ZapLogger.Warn("OrderService: outbox batch error", zap.String("worker", name), zap.Error(err))
+			case <-t.C:
+				now := time.Now()
+				if n, err := s.ExpireUnpaid(ctx, now); err != nil {
+					s.ZapLogger.Warn("OrderService: expiry round failed", zap.Error(err))
+				} else if n > 0 {
+					s.ZapLogger.Info("OrderService: unpaid orders expired", zap.Int("count", n))
+				}
+				if _, err := s.AutoDeliver(ctx, now); err != nil {
+					s.ZapLogger.Warn("OrderService: auto-deliver round failed", zap.Error(err))
+				}
+				if heartbeat != nil {
+					heartbeat()
 				}
 			}
 		}
 	}()
 }
 
-// ProducerCreOrdKafkaEventWorker publishes CreateOrder outbox events.
-func (s *OrderService) ProducerCreOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
-	s.runOutboxWorker(ctx, "create_order", interval, func(ctx context.Context) error {
-		return s.producerCreOrdKafkaEventBatch(ctx, limit, topic)
-	})
-}
+// ---- legacy outbox drain ----------------------------------------------------------------------
+// Rows written by versions before the generic domain_events outbox are still published so that no
+// in-flight order is lost during an upgrade.
 
-func (s *OrderService) producerCreOrdKafkaEventBatch(ctx context.Context, limit int, topic string) error {
-	eventsModel, err := s.OrderRepo.GetCreateOrderEventNotPublish(ctx, limit)
-	if err != nil {
-		return err
-	}
-
-	var firstErr error
-	for _, eventModel := range eventsModel {
-		eventKafka, err := adapter.CreOrdEvesModelToKafkaEvent(eventModel)
-		if err != nil {
-			s.ZapLogger.Error("OrderService: can not build create-order event", zap.Uint64("order_id", eventModel.OrderID), zap.Error(err))
-			if firstErr == nil {
-				firstErr = err
+func (s *OrderService) runLegacyWorker(ctx context.Context, interval time.Duration, round func(context.Context) error) {
+	go func() {
+		t := time.NewTicker(interval)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if err := round(ctx); err != nil {
+					s.ZapLogger.Warn("OrderService: legacy outbox round failed", zap.Error(err))
+				}
 			}
-			continue
 		}
-		if err := s.publishCreateOrder(ctx, eventKafka, topic); err != nil && firstErr == nil {
-			firstErr = err
-		}
-	}
-	return firstErr
+	}()
 }
 
-func (s *OrderService) publishCreateOrder(ctx context.Context, event *outbox.CreateOrderKafkaEvent, topic string) error {
-	ctx, cancel := context.WithTimeout(ctx, publishTimeout)
-	defer cancel()
-
-	payload, err := json.Marshal(event)
-	if err != nil {
-		return err
-	}
-	// Key = order ID: events of one order always land on the same partition, in order.
-	key := []byte(strconv.FormatUint(event.OrderID, 10))
-	if err := s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, key, payload); err != nil {
-		s.ZapLogger.Warn("OrderService: publish create-order failed", zap.Uint64("order_id", event.OrderID), zap.Error(err))
-		if err2 := s.OrderRepo.UpdateCreateOrderEventStatus(ctx, event.OrderID, "FAILED"); err2 != nil {
-			s.ZapLogger.Warn("OrderService: publish failed and can not update outbox", zap.Error(err2))
-		}
-		return err
-	}
-	// A crash between publish and this update re-publishes the event; consumers are idempotent.
-	if err := s.OrderRepo.UpdateCreateOrderEventStatus(ctx, event.OrderID, "SUCCESS"); err != nil {
-		s.ZapLogger.Warn("OrderService: published create-order but outbox update failed", zap.Error(err))
-		return err
-	}
-	return nil
-}
-
-// ProducerCancelOrdKafkaEventWorker publishes CancelOrder outbox events so inventory is released.
-func (s *OrderService) ProducerCancelOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
-	s.runOutboxWorker(ctx, "cancel_order", interval, func(ctx context.Context) error {
-		events, err := s.OrderRepo.GetCancelOrderEventNotPublish(ctx, limit)
+// ProducerCreOrdKafkaEventWorker publishes legacy create_order_events rows.
+func (s *OrderService) ProducerCreOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
+	s.runLegacyWorker(ctx, interval, func(ctx context.Context) error {
+		rows, err := s.OrderRepo.GetCreateOrderEventNotPublish(ctx, limit)
 		if err != nil {
 			return err
 		}
-		var firstErr error
-		for _, e := range events {
-			if err := s.publishCancelOrder(ctx, e, topic); err != nil && firstErr == nil {
-				firstErr = err
+		for _, e := range rows {
+			var items []*outbox.ItemEvent
+			if err := json.Unmarshal(e.Items, &items); err != nil {
+				continue
+			}
+			payload, _ := json.Marshal(&outbox.CreateOrderKafkaEvent{OrderID: e.OrderID, Items: items})
+			if err := s.publishLegacy(ctx, topic, e.OrderID, payload); err != nil {
+				_ = s.OrderRepo.UpdateCreateOrderEventStatus(ctx, e.OrderID, "FAILED")
+				return err
+			}
+			if err := s.OrderRepo.UpdateCreateOrderEventStatus(ctx, e.OrderID, "SUCCESS"); err != nil {
+				return err
 			}
 		}
-		return firstErr
+		return nil
 	})
 }
 
-func (s *OrderService) publishCancelOrder(ctx context.Context, e *outbox.CancelOrderEvent, topic string) error {
+// ProducerCancelOrdKafkaEventWorker publishes legacy cancel_order_events rows.
+func (s *OrderService) ProducerCancelOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
+	s.runLegacyWorker(ctx, interval, func(ctx context.Context) error {
+		rows, err := s.OrderRepo.GetCancelOrderEventNotPublish(ctx, limit)
+		if err != nil {
+			return err
+		}
+		for _, e := range rows {
+			ev := &outbox.CancelOrderKafkaEvent{OrderID: e.OrderID}
+			if err := json.Unmarshal(e.Items, &ev.Items); err != nil {
+				continue
+			}
+			payload, _ := json.Marshal(ev)
+			if err := s.publishLegacy(ctx, topic, e.OrderID, payload); err != nil {
+				_ = s.OrderRepo.UpdateCancelOrderEventStatus(ctx, e.OrderID, "FAILED")
+				return err
+			}
+			if err := s.OrderRepo.UpdateCancelOrderEventStatus(ctx, e.OrderID, "SUCCESS"); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (s *OrderService) publishLegacy(ctx context.Context, topic string, orderID uint64, payload []byte) error {
 	ctx, cancel := context.WithTimeout(ctx, publishTimeout)
 	defer cancel()
-
-	event := &outbox.CancelOrderKafkaEvent{OrderID: e.OrderID}
-	if err := json.Unmarshal(e.Items, &event.Items); err != nil {
-		s.ZapLogger.Error("OrderService: can not decode cancel-order items", zap.Uint64("order_id", e.OrderID), zap.Error(err))
-		return err
-	}
-	payload, err := json.Marshal(event)
-	if err != nil {
-		return err
-	}
-	key := []byte(strconv.FormatUint(e.OrderID, 10))
-	if err := s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, key, payload); err != nil {
-		s.ZapLogger.Warn("OrderService: publish cancel-order failed", zap.Uint64("order_id", e.OrderID), zap.Error(err))
-		if err2 := s.OrderRepo.UpdateCancelOrderEventStatus(ctx, e.OrderID, "FAILED"); err2 != nil {
-			s.ZapLogger.Warn("OrderService: publish failed and can not update outbox", zap.Error(err2))
-		}
-		return err
-	}
-	return s.OrderRepo.UpdateCancelOrderEventStatus(ctx, e.OrderID, "SUCCESS")
+	return s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, []byte(strconv.FormatUint(orderID, 10)), payload)
 }

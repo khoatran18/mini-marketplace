@@ -13,6 +13,7 @@ import (
 	"user-service/internal/repository"
 	"user-service/internal/server"
 	"user-service/internal/service"
+	"user-service/pkg/model"
 	"user-service/pkg/ops"
 	userpb "user-service/pkg/pb"
 
@@ -50,6 +51,10 @@ func main() {
 
 	defer serviceConfig.KafkaInstance.KafkaManager.CloseWriterAll()
 	defer serviceConfig.KafkaInstance.KafkaManager.CloseReaderAll()
+
+	if err := serviceConfig.PostgresDB.AutoMigrate(&model.Address{}); err != nil {
+		log.Fatalf("Can not migrate addresses: %v", err)
+	}
 
 	userRepo := repository.NewUserRepository(serviceConfig.PostgresDB)
 	userService := service.NewUserService(userRepo, serviceConfig.ZapLogger, scm, serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient)

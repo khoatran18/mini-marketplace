@@ -19,24 +19,34 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrderService_CreateOrder_FullMethodName              = "/order_service.pkg.pb.OrderService/CreateOrder"
-	OrderService_GetOrderByID_FullMethodName             = "/order_service.pkg.pb.OrderService/GetOrderByID"
-	OrderService_GetOrdersByBuyerIDStatus_FullMethodName = "/order_service.pkg.pb.OrderService/GetOrdersByBuyerIDStatus"
-	OrderService_GetOrderItemsByOrderID_FullMethodName   = "/order_service.pkg.pb.OrderService/GetOrderItemsByOrderID"
-	OrderService_UpdateOrderByID_FullMethodName          = "/order_service.pkg.pb.OrderService/UpdateOrderByID"
-	OrderService_CancelOrderByID_FullMethodName          = "/order_service.pkg.pb.OrderService/CancelOrderByID"
+	OrderService_Checkout_FullMethodName        = "/order_service.pkg.pb.OrderService/Checkout"
+	OrderService_PreviewCheckout_FullMethodName = "/order_service.pkg.pb.OrderService/PreviewCheckout"
+	OrderService_GetCheckout_FullMethodName     = "/order_service.pkg.pb.OrderService/GetCheckout"
+	OrderService_GetOrder_FullMethodName        = "/order_service.pkg.pb.OrderService/GetOrder"
+	OrderService_ListOrders_FullMethodName      = "/order_service.pkg.pb.OrderService/ListOrders"
+	OrderService_CountOrders_FullMethodName     = "/order_service.pkg.pb.OrderService/CountOrders"
+	OrderService_ApplyAction_FullMethodName     = "/order_service.pkg.pb.OrderService/ApplyAction"
+	OrderService_GetCart_FullMethodName         = "/order_service.pkg.pb.OrderService/GetCart"
+	OrderService_SetCartItem_FullMethodName     = "/order_service.pkg.pb.OrderService/SetCartItem"
+	OrderService_ClearCart_FullMethodName       = "/order_service.pkg.pb.OrderService/ClearCart"
+	OrderService_MergeCart_FullMethodName       = "/order_service.pkg.pb.OrderService/MergeCart"
 )
 
 // OrderServiceClient is the client API for OrderService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OrderServiceClient interface {
-	CreateOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error)
-	GetOrderByID(ctx context.Context, in *GetOrderByIDRequest, opts ...grpc.CallOption) (*GetOrderByIDResponse, error)
-	GetOrdersByBuyerIDStatus(ctx context.Context, in *GetOrdersByBuyerIDStatusRequest, opts ...grpc.CallOption) (*GetOrdersByBuyerIDStatusResponse, error)
-	GetOrderItemsByOrderID(ctx context.Context, in *GetOrderItemsByOrderIDRequest, opts ...grpc.CallOption) (*GetOrderItemsByOrderIDResponse, error)
-	UpdateOrderByID(ctx context.Context, in *UpdateOrderByIDRequest, opts ...grpc.CallOption) (*UpdateOrderByIDResponse, error)
-	CancelOrderByID(ctx context.Context, in *CancelOrderByIDRequest, opts ...grpc.CallOption) (*CancelOrderByIDResponse, error)
+	Checkout(ctx context.Context, in *CheckoutRequest, opts ...grpc.CallOption) (*CheckoutResponse, error)
+	PreviewCheckout(ctx context.Context, in *PreviewRequest, opts ...grpc.CallOption) (*PreviewResponse, error)
+	GetCheckout(ctx context.Context, in *GetCheckoutRequest, opts ...grpc.CallOption) (*CheckoutResponse, error)
+	GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*Order, error)
+	ListOrders(ctx context.Context, in *ListOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error)
+	CountOrders(ctx context.Context, in *CountOrdersRequest, opts ...grpc.CallOption) (*CountOrdersResponse, error)
+	ApplyAction(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*Order, error)
+	GetCart(ctx context.Context, in *GetCartRequest, opts ...grpc.CallOption) (*CartResponse, error)
+	SetCartItem(ctx context.Context, in *SetCartItemRequest, opts ...grpc.CallOption) (*CartResponse, error)
+	ClearCart(ctx context.Context, in *ClearCartRequest, opts ...grpc.CallOption) (*CartResponse, error)
+	MergeCart(ctx context.Context, in *MergeCartRequest, opts ...grpc.CallOption) (*CartResponse, error)
 }
 
 type orderServiceClient struct {
@@ -47,60 +57,110 @@ func NewOrderServiceClient(cc grpc.ClientConnInterface) OrderServiceClient {
 	return &orderServiceClient{cc}
 }
 
-func (c *orderServiceClient) CreateOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error) {
+func (c *orderServiceClient) Checkout(ctx context.Context, in *CheckoutRequest, opts ...grpc.CallOption) (*CheckoutResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateOrderResponse)
-	err := c.cc.Invoke(ctx, OrderService_CreateOrder_FullMethodName, in, out, cOpts...)
+	out := new(CheckoutResponse)
+	err := c.cc.Invoke(ctx, OrderService_Checkout_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *orderServiceClient) GetOrderByID(ctx context.Context, in *GetOrderByIDRequest, opts ...grpc.CallOption) (*GetOrderByIDResponse, error) {
+func (c *orderServiceClient) PreviewCheckout(ctx context.Context, in *PreviewRequest, opts ...grpc.CallOption) (*PreviewResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetOrderByIDResponse)
-	err := c.cc.Invoke(ctx, OrderService_GetOrderByID_FullMethodName, in, out, cOpts...)
+	out := new(PreviewResponse)
+	err := c.cc.Invoke(ctx, OrderService_PreviewCheckout_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *orderServiceClient) GetOrdersByBuyerIDStatus(ctx context.Context, in *GetOrdersByBuyerIDStatusRequest, opts ...grpc.CallOption) (*GetOrdersByBuyerIDStatusResponse, error) {
+func (c *orderServiceClient) GetCheckout(ctx context.Context, in *GetCheckoutRequest, opts ...grpc.CallOption) (*CheckoutResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetOrdersByBuyerIDStatusResponse)
-	err := c.cc.Invoke(ctx, OrderService_GetOrdersByBuyerIDStatus_FullMethodName, in, out, cOpts...)
+	out := new(CheckoutResponse)
+	err := c.cc.Invoke(ctx, OrderService_GetCheckout_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *orderServiceClient) GetOrderItemsByOrderID(ctx context.Context, in *GetOrderItemsByOrderIDRequest, opts ...grpc.CallOption) (*GetOrderItemsByOrderIDResponse, error) {
+func (c *orderServiceClient) GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*Order, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetOrderItemsByOrderIDResponse)
-	err := c.cc.Invoke(ctx, OrderService_GetOrderItemsByOrderID_FullMethodName, in, out, cOpts...)
+	out := new(Order)
+	err := c.cc.Invoke(ctx, OrderService_GetOrder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *orderServiceClient) UpdateOrderByID(ctx context.Context, in *UpdateOrderByIDRequest, opts ...grpc.CallOption) (*UpdateOrderByIDResponse, error) {
+func (c *orderServiceClient) ListOrders(ctx context.Context, in *ListOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateOrderByIDResponse)
-	err := c.cc.Invoke(ctx, OrderService_UpdateOrderByID_FullMethodName, in, out, cOpts...)
+	out := new(ListOrdersResponse)
+	err := c.cc.Invoke(ctx, OrderService_ListOrders_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *orderServiceClient) CancelOrderByID(ctx context.Context, in *CancelOrderByIDRequest, opts ...grpc.CallOption) (*CancelOrderByIDResponse, error) {
+func (c *orderServiceClient) CountOrders(ctx context.Context, in *CountOrdersRequest, opts ...grpc.CallOption) (*CountOrdersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CancelOrderByIDResponse)
-	err := c.cc.Invoke(ctx, OrderService_CancelOrderByID_FullMethodName, in, out, cOpts...)
+	out := new(CountOrdersResponse)
+	err := c.cc.Invoke(ctx, OrderService_CountOrders_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderServiceClient) ApplyAction(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*Order, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Order)
+	err := c.cc.Invoke(ctx, OrderService_ApplyAction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderServiceClient) GetCart(ctx context.Context, in *GetCartRequest, opts ...grpc.CallOption) (*CartResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CartResponse)
+	err := c.cc.Invoke(ctx, OrderService_GetCart_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderServiceClient) SetCartItem(ctx context.Context, in *SetCartItemRequest, opts ...grpc.CallOption) (*CartResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CartResponse)
+	err := c.cc.Invoke(ctx, OrderService_SetCartItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderServiceClient) ClearCart(ctx context.Context, in *ClearCartRequest, opts ...grpc.CallOption) (*CartResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CartResponse)
+	err := c.cc.Invoke(ctx, OrderService_ClearCart_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderServiceClient) MergeCart(ctx context.Context, in *MergeCartRequest, opts ...grpc.CallOption) (*CartResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CartResponse)
+	err := c.cc.Invoke(ctx, OrderService_MergeCart_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -111,12 +171,17 @@ func (c *orderServiceClient) CancelOrderByID(ctx context.Context, in *CancelOrde
 // All implementations must embed UnimplementedOrderServiceServer
 // for forward compatibility.
 type OrderServiceServer interface {
-	CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error)
-	GetOrderByID(context.Context, *GetOrderByIDRequest) (*GetOrderByIDResponse, error)
-	GetOrdersByBuyerIDStatus(context.Context, *GetOrdersByBuyerIDStatusRequest) (*GetOrdersByBuyerIDStatusResponse, error)
-	GetOrderItemsByOrderID(context.Context, *GetOrderItemsByOrderIDRequest) (*GetOrderItemsByOrderIDResponse, error)
-	UpdateOrderByID(context.Context, *UpdateOrderByIDRequest) (*UpdateOrderByIDResponse, error)
-	CancelOrderByID(context.Context, *CancelOrderByIDRequest) (*CancelOrderByIDResponse, error)
+	Checkout(context.Context, *CheckoutRequest) (*CheckoutResponse, error)
+	PreviewCheckout(context.Context, *PreviewRequest) (*PreviewResponse, error)
+	GetCheckout(context.Context, *GetCheckoutRequest) (*CheckoutResponse, error)
+	GetOrder(context.Context, *GetOrderRequest) (*Order, error)
+	ListOrders(context.Context, *ListOrdersRequest) (*ListOrdersResponse, error)
+	CountOrders(context.Context, *CountOrdersRequest) (*CountOrdersResponse, error)
+	ApplyAction(context.Context, *ActionRequest) (*Order, error)
+	GetCart(context.Context, *GetCartRequest) (*CartResponse, error)
+	SetCartItem(context.Context, *SetCartItemRequest) (*CartResponse, error)
+	ClearCart(context.Context, *ClearCartRequest) (*CartResponse, error)
+	MergeCart(context.Context, *MergeCartRequest) (*CartResponse, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
 
@@ -127,23 +192,38 @@ type OrderServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedOrderServiceServer struct{}
 
-func (UnimplementedOrderServiceServer) CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateOrder not implemented")
+func (UnimplementedOrderServiceServer) Checkout(context.Context, *CheckoutRequest) (*CheckoutResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Checkout not implemented")
 }
-func (UnimplementedOrderServiceServer) GetOrderByID(context.Context, *GetOrderByIDRequest) (*GetOrderByIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetOrderByID not implemented")
+func (UnimplementedOrderServiceServer) PreviewCheckout(context.Context, *PreviewRequest) (*PreviewResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PreviewCheckout not implemented")
 }
-func (UnimplementedOrderServiceServer) GetOrdersByBuyerIDStatus(context.Context, *GetOrdersByBuyerIDStatusRequest) (*GetOrdersByBuyerIDStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetOrdersByBuyerIDStatus not implemented")
+func (UnimplementedOrderServiceServer) GetCheckout(context.Context, *GetCheckoutRequest) (*CheckoutResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCheckout not implemented")
 }
-func (UnimplementedOrderServiceServer) GetOrderItemsByOrderID(context.Context, *GetOrderItemsByOrderIDRequest) (*GetOrderItemsByOrderIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetOrderItemsByOrderID not implemented")
+func (UnimplementedOrderServiceServer) GetOrder(context.Context, *GetOrderRequest) (*Order, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOrder not implemented")
 }
-func (UnimplementedOrderServiceServer) UpdateOrderByID(context.Context, *UpdateOrderByIDRequest) (*UpdateOrderByIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateOrderByID not implemented")
+func (UnimplementedOrderServiceServer) ListOrders(context.Context, *ListOrdersRequest) (*ListOrdersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListOrders not implemented")
 }
-func (UnimplementedOrderServiceServer) CancelOrderByID(context.Context, *CancelOrderByIDRequest) (*CancelOrderByIDResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CancelOrderByID not implemented")
+func (UnimplementedOrderServiceServer) CountOrders(context.Context, *CountOrdersRequest) (*CountOrdersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CountOrders not implemented")
+}
+func (UnimplementedOrderServiceServer) ApplyAction(context.Context, *ActionRequest) (*Order, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyAction not implemented")
+}
+func (UnimplementedOrderServiceServer) GetCart(context.Context, *GetCartRequest) (*CartResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCart not implemented")
+}
+func (UnimplementedOrderServiceServer) SetCartItem(context.Context, *SetCartItemRequest) (*CartResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetCartItem not implemented")
+}
+func (UnimplementedOrderServiceServer) ClearCart(context.Context, *ClearCartRequest) (*CartResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClearCart not implemented")
+}
+func (UnimplementedOrderServiceServer) MergeCart(context.Context, *MergeCartRequest) (*CartResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MergeCart not implemented")
 }
 func (UnimplementedOrderServiceServer) mustEmbedUnimplementedOrderServiceServer() {}
 func (UnimplementedOrderServiceServer) testEmbeddedByValue()                      {}
@@ -166,110 +246,200 @@ func RegisterOrderServiceServer(s grpc.ServiceRegistrar, srv OrderServiceServer)
 	s.RegisterService(&OrderService_ServiceDesc, srv)
 }
 
-func _OrderService_CreateOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateOrderRequest)
+func _OrderService_Checkout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckoutRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OrderServiceServer).CreateOrder(ctx, in)
+		return srv.(OrderServiceServer).Checkout(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: OrderService_CreateOrder_FullMethodName,
+		FullMethod: OrderService_Checkout_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderServiceServer).CreateOrder(ctx, req.(*CreateOrderRequest))
+		return srv.(OrderServiceServer).Checkout(ctx, req.(*CheckoutRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _OrderService_GetOrderByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetOrderByIDRequest)
+func _OrderService_PreviewCheckout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PreviewRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OrderServiceServer).GetOrderByID(ctx, in)
+		return srv.(OrderServiceServer).PreviewCheckout(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: OrderService_GetOrderByID_FullMethodName,
+		FullMethod: OrderService_PreviewCheckout_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderServiceServer).GetOrderByID(ctx, req.(*GetOrderByIDRequest))
+		return srv.(OrderServiceServer).PreviewCheckout(ctx, req.(*PreviewRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _OrderService_GetOrdersByBuyerIDStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetOrdersByBuyerIDStatusRequest)
+func _OrderService_GetCheckout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCheckoutRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OrderServiceServer).GetOrdersByBuyerIDStatus(ctx, in)
+		return srv.(OrderServiceServer).GetCheckout(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: OrderService_GetOrdersByBuyerIDStatus_FullMethodName,
+		FullMethod: OrderService_GetCheckout_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderServiceServer).GetOrdersByBuyerIDStatus(ctx, req.(*GetOrdersByBuyerIDStatusRequest))
+		return srv.(OrderServiceServer).GetCheckout(ctx, req.(*GetCheckoutRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _OrderService_GetOrderItemsByOrderID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetOrderItemsByOrderIDRequest)
+func _OrderService_GetOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrderRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OrderServiceServer).GetOrderItemsByOrderID(ctx, in)
+		return srv.(OrderServiceServer).GetOrder(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: OrderService_GetOrderItemsByOrderID_FullMethodName,
+		FullMethod: OrderService_GetOrder_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderServiceServer).GetOrderItemsByOrderID(ctx, req.(*GetOrderItemsByOrderIDRequest))
+		return srv.(OrderServiceServer).GetOrder(ctx, req.(*GetOrderRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _OrderService_UpdateOrderByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateOrderByIDRequest)
+func _OrderService_ListOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOrdersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OrderServiceServer).UpdateOrderByID(ctx, in)
+		return srv.(OrderServiceServer).ListOrders(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: OrderService_UpdateOrderByID_FullMethodName,
+		FullMethod: OrderService_ListOrders_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderServiceServer).UpdateOrderByID(ctx, req.(*UpdateOrderByIDRequest))
+		return srv.(OrderServiceServer).ListOrders(ctx, req.(*ListOrdersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _OrderService_CancelOrderByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CancelOrderByIDRequest)
+func _OrderService_CountOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CountOrdersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OrderServiceServer).CancelOrderByID(ctx, in)
+		return srv.(OrderServiceServer).CountOrders(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: OrderService_CancelOrderByID_FullMethodName,
+		FullMethod: OrderService_CountOrders_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderServiceServer).CancelOrderByID(ctx, req.(*CancelOrderByIDRequest))
+		return srv.(OrderServiceServer).CountOrders(ctx, req.(*CountOrdersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderService_ApplyAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).ApplyAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_ApplyAction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).ApplyAction(ctx, req.(*ActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderService_GetCart_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCartRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).GetCart(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_GetCart_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).GetCart(ctx, req.(*GetCartRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderService_SetCartItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetCartItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).SetCartItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_SetCartItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).SetCartItem(ctx, req.(*SetCartItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderService_ClearCart_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClearCartRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).ClearCart(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_ClearCart_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).ClearCart(ctx, req.(*ClearCartRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderService_MergeCart_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MergeCartRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).MergeCart(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_MergeCart_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).MergeCart(ctx, req.(*MergeCartRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -282,28 +452,48 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*OrderServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateOrder",
-			Handler:    _OrderService_CreateOrder_Handler,
+			MethodName: "Checkout",
+			Handler:    _OrderService_Checkout_Handler,
 		},
 		{
-			MethodName: "GetOrderByID",
-			Handler:    _OrderService_GetOrderByID_Handler,
+			MethodName: "PreviewCheckout",
+			Handler:    _OrderService_PreviewCheckout_Handler,
 		},
 		{
-			MethodName: "GetOrdersByBuyerIDStatus",
-			Handler:    _OrderService_GetOrdersByBuyerIDStatus_Handler,
+			MethodName: "GetCheckout",
+			Handler:    _OrderService_GetCheckout_Handler,
 		},
 		{
-			MethodName: "GetOrderItemsByOrderID",
-			Handler:    _OrderService_GetOrderItemsByOrderID_Handler,
+			MethodName: "GetOrder",
+			Handler:    _OrderService_GetOrder_Handler,
 		},
 		{
-			MethodName: "UpdateOrderByID",
-			Handler:    _OrderService_UpdateOrderByID_Handler,
+			MethodName: "ListOrders",
+			Handler:    _OrderService_ListOrders_Handler,
 		},
 		{
-			MethodName: "CancelOrderByID",
-			Handler:    _OrderService_CancelOrderByID_Handler,
+			MethodName: "CountOrders",
+			Handler:    _OrderService_CountOrders_Handler,
+		},
+		{
+			MethodName: "ApplyAction",
+			Handler:    _OrderService_ApplyAction_Handler,
+		},
+		{
+			MethodName: "GetCart",
+			Handler:    _OrderService_GetCart_Handler,
+		},
+		{
+			MethodName: "SetCartItem",
+			Handler:    _OrderService_SetCartItem_Handler,
+		},
+		{
+			MethodName: "ClearCart",
+			Handler:    _OrderService_ClearCart_Handler,
+		},
+		{
+			MethodName: "MergeCart",
+			Handler:    _OrderService_MergeCart_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -111,16 +111,56 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		adminRoute.POST("/categories", h.CatalogHandler.CreateCategory)
 		adminRoute.PUT("/categories/:id", h.CatalogHandler.UpdateCategory)
 		adminRoute.PATCH("/products/:id/status", h.CatalogHandler.AdminSetStatus)
+		adminRoute.GET("/orders", h.OrderHandler.ListAllOrders())
+		adminRoute.GET("/orders/:id", h.OrderHandler.GetAnyOrder())
+		adminRoute.POST("/orders/:id/cancel", h.OrderHandler.AdminCancel())
+		adminRoute.POST("/orders/:id/deliver", h.OrderHandler.AdminDeliver())
+		adminRoute.POST("/orders/:id/return/approve", h.OrderHandler.AdminApproveReturn())
+		adminRoute.POST("/orders/:id/return/reject", h.OrderHandler.AdminRejectReturn())
 	}
 
-	orderRoute := router.Group("/orders")
+	// Buyers: cart, checkout, orders, addresses (every handler scopes its queries to the authenticated buyer)
+	buyerRoles := middleware.AuthorizationMiddleware([]string{"buyer"}, serviceConfig.ZapLogger)
+	cartRoute := router.Group("/cart", authenticated, buyerRoles)
 	{
-		// Buyers only; handlers scope every query to the authenticated buyer
-		orderRoute.Use(middleware.AuthorizationMiddleware([]string{"buyer"}, serviceConfig.ZapLogger))
-		orderRoute.POST("", h.OrderHandler.CreateOrder)
-		orderRoute.GET("/:id", h.OrderHandler.GetOrderByID)
-		orderRoute.GET("", h.OrderHandler.GetOrdersByBuyerIDStatus) // ?status={status}
-		orderRoute.DELETE("/:id", h.OrderHandler.CancelOrderByID)
+		cartRoute.GET("", h.OrderHandler.GetCart)
+		cartRoute.DELETE("", h.OrderHandler.ClearCart)
+		cartRoute.POST("/merge", h.OrderHandler.MergeCart)
+		cartRoute.PUT("/items/:product_id", h.OrderHandler.SetCartItem)
+		cartRoute.DELETE("/items/:product_id", h.OrderHandler.RemoveCartItem)
+	}
+	router.POST("/checkout/preview", authenticated, buyerRoles, h.OrderHandler.PreviewCheckout)
+	router.GET("/checkouts/:id", authenticated, buyerRoles, h.OrderHandler.GetCheckout)
+
+	orderRoute := router.Group("/orders", authenticated, buyerRoles)
+	{
+		orderRoute.POST("", h.OrderHandler.Checkout)
+		orderRoute.GET("", h.OrderHandler.ListMyOrders()) // ?status=&page=&page_size=
+		orderRoute.GET("/summary", h.OrderHandler.CountMyOrders())
+		orderRoute.GET("/:id", h.OrderHandler.GetMyOrder())
+		orderRoute.POST("/:id/cancel", h.OrderHandler.BuyerCancel())
+		orderRoute.DELETE("/:id", h.OrderHandler.BuyerCancel()) // kept for old clients: same as POST /:id/cancel
+		orderRoute.POST("/:id/confirm-received", h.OrderHandler.BuyerConfirmReceived())
+		orderRoute.POST("/:id/return", h.OrderHandler.BuyerRequestReturn())
+	}
+	addressRoute := router.Group("/users/me/addresses", authenticated, buyerRoles)
+	{
+		addressRoute.GET("", h.OrderHandler.ListAddresses)
+		addressRoute.POST("", h.OrderHandler.CreateAddress)
+		addressRoute.PUT("/:id", h.OrderHandler.UpdateAddress)
+		addressRoute.DELETE("/:id", h.OrderHandler.DeleteAddress)
 	}
 
+	// Sellers: the order inbox of their own store
+	sellerOrders := router.Group("/seller/orders", authenticated, sellerRoles)
+	{
+		sellerOrders.GET("", h.OrderHandler.ListStoreOrders())
+		sellerOrders.GET("/summary", h.OrderHandler.CountStoreOrders())
+		sellerOrders.GET("/:id", h.OrderHandler.GetStoreOrder())
+		sellerOrders.POST("/:id/ship", h.OrderHandler.SellerShip())
+		sellerOrders.POST("/:id/deliver", h.OrderHandler.SellerDeliver())
+		sellerOrders.POST("/:id/cancel", h.OrderHandler.SellerCancel())
+		sellerOrders.POST("/:id/return/approve", h.OrderHandler.SellerApproveReturn())
+		sellerOrders.POST("/:id/return/reject", h.OrderHandler.SellerRejectReturn())
+	}
 }

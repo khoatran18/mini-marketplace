@@ -27,6 +27,10 @@ const (
 	UserService_UpdateSellerByID_FullMethodName    = "/user_service.pkg.pb.UserService/UpdateSellerByID"
 	UserService_GetSellerByID_FullMethodName       = "/user_service.pkg.pb.UserService/GetSellerByID"
 	UserService_DelSellerByID_FullMethodName       = "/user_service.pkg.pb.UserService/DelSellerByID"
+	UserService_UpsertAddress_FullMethodName       = "/user_service.pkg.pb.UserService/UpsertAddress"
+	UserService_ListAddresses_FullMethodName       = "/user_service.pkg.pb.UserService/ListAddresses"
+	UserService_GetAddress_FullMethodName          = "/user_service.pkg.pb.UserService/GetAddress"
+	UserService_DeleteAddress_FullMethodName       = "/user_service.pkg.pb.UserService/DeleteAddress"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -41,6 +45,10 @@ type UserServiceClient interface {
 	UpdateSellerByID(ctx context.Context, in *UpdateSellerByIDRequest, opts ...grpc.CallOption) (*UpdateSellerByIDResponse, error)
 	GetSellerByID(ctx context.Context, in *GetSellerByIDRequest, opts ...grpc.CallOption) (*GetSellerByIDResponse, error)
 	DelSellerByID(ctx context.Context, in *DelSellerByIDRequest, opts ...grpc.CallOption) (*DelSellerByIDResponse, error)
+	UpsertAddress(ctx context.Context, in *UpsertAddressRequest, opts ...grpc.CallOption) (*AddressResponse, error)
+	ListAddresses(ctx context.Context, in *ListAddressesRequest, opts ...grpc.CallOption) (*ListAddressesResponse, error)
+	GetAddress(ctx context.Context, in *GetAddressRequest, opts ...grpc.CallOption) (*AddressResponse, error)
+	DeleteAddress(ctx context.Context, in *DeleteAddressRequest, opts ...grpc.CallOption) (*DeleteAddressResponse, error)
 }
 
 type userServiceClient struct {
@@ -131,6 +139,46 @@ func (c *userServiceClient) DelSellerByID(ctx context.Context, in *DelSellerByID
 	return out, nil
 }
 
+func (c *userServiceClient) UpsertAddress(ctx context.Context, in *UpsertAddressRequest, opts ...grpc.CallOption) (*AddressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddressResponse)
+	err := c.cc.Invoke(ctx, UserService_UpsertAddress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ListAddresses(ctx context.Context, in *ListAddressesRequest, opts ...grpc.CallOption) (*ListAddressesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAddressesResponse)
+	err := c.cc.Invoke(ctx, UserService_ListAddresses_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetAddress(ctx context.Context, in *GetAddressRequest, opts ...grpc.CallOption) (*AddressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddressResponse)
+	err := c.cc.Invoke(ctx, UserService_GetAddress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) DeleteAddress(ctx context.Context, in *DeleteAddressRequest, opts ...grpc.CallOption) (*DeleteAddressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteAddressResponse)
+	err := c.cc.Invoke(ctx, UserService_DeleteAddress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -143,6 +191,10 @@ type UserServiceServer interface {
 	UpdateSellerByID(context.Context, *UpdateSellerByIDRequest) (*UpdateSellerByIDResponse, error)
 	GetSellerByID(context.Context, *GetSellerByIDRequest) (*GetSellerByIDResponse, error)
 	DelSellerByID(context.Context, *DelSellerByIDRequest) (*DelSellerByIDResponse, error)
+	UpsertAddress(context.Context, *UpsertAddressRequest) (*AddressResponse, error)
+	ListAddresses(context.Context, *ListAddressesRequest) (*ListAddressesResponse, error)
+	GetAddress(context.Context, *GetAddressRequest) (*AddressResponse, error)
+	DeleteAddress(context.Context, *DeleteAddressRequest) (*DeleteAddressResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -176,6 +228,18 @@ func (UnimplementedUserServiceServer) GetSellerByID(context.Context, *GetSellerB
 }
 func (UnimplementedUserServiceServer) DelSellerByID(context.Context, *DelSellerByIDRequest) (*DelSellerByIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DelSellerByID not implemented")
+}
+func (UnimplementedUserServiceServer) UpsertAddress(context.Context, *UpsertAddressRequest) (*AddressResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertAddress not implemented")
+}
+func (UnimplementedUserServiceServer) ListAddresses(context.Context, *ListAddressesRequest) (*ListAddressesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAddresses not implemented")
+}
+func (UnimplementedUserServiceServer) GetAddress(context.Context, *GetAddressRequest) (*AddressResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAddress not implemented")
+}
+func (UnimplementedUserServiceServer) DeleteAddress(context.Context, *DeleteAddressRequest) (*DeleteAddressResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAddress not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -342,6 +406,78 @@ func _UserService_DelSellerByID_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_UpsertAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertAddressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).UpsertAddress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_UpsertAddress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).UpsertAddress(ctx, req.(*UpsertAddressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ListAddresses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAddressesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListAddresses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListAddresses_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListAddresses(ctx, req.(*ListAddressesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAddressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetAddress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetAddress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetAddress(ctx, req.(*GetAddressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_DeleteAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAddressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).DeleteAddress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_DeleteAddress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).DeleteAddress(ctx, req.(*DeleteAddressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -380,6 +516,22 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DelSellerByID",
 			Handler:    _UserService_DelSellerByID_Handler,
+		},
+		{
+			MethodName: "UpsertAddress",
+			Handler:    _UserService_UpsertAddress_Handler,
+		},
+		{
+			MethodName: "ListAddresses",
+			Handler:    _UserService_ListAddresses_Handler,
+		},
+		{
+			MethodName: "GetAddress",
+			Handler:    _UserService_GetAddress_Handler,
+		},
+		{
+			MethodName: "DeleteAddress",
+			Handler:    _UserService_DeleteAddress_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

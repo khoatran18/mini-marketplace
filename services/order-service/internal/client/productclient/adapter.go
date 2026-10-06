@@ -15,11 +15,20 @@ func ProductProtoToDTO(product *productpb.Product) *ProductDTOClient {
 	if product == nil {
 		return nil
 	}
+	image := ""
+	if urls := product.GetImageUrls(); len(urls) > 0 {
+		image = urls[0]
+	}
 	return &ProductDTOClient{
-		ID:        product.GetId(),
-		Name:      product.GetName(),
-		Price:     product.GetPrice(),
-		SellerID:  product.GetSellerId(),
-		Inventory: product.GetInventory(),
+		ID:         product.GetId(),
+		Name:       product.GetName(),
+		Price:      product.GetPrice(),
+		SellerID:   product.GetSellerId(),
+		Inventory:  product.GetInventory(),
+		Status:     product.GetStatus(),
+		SKU:        product.GetSku(),
+		CategoryID: product.GetCategoryId(),
+		ImageURL:   image,
+		StockLevel: product.GetStockLevel(),
 	}
 }

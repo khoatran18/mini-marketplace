@@ -228,3 +228,36 @@ func TestCatalogRouteAccessRules(t *testing.T) {
 		}
 	}
 }
+
+func TestOrderRouteAccessRules(t *testing.T) {
+	e := newEngine(t)
+	for _, route := range []struct{ method, path, wrongRole string }{
+		{"GET", "/cart", "seller_admin"},
+		{"PUT", "/cart/items/1", "admin"},
+		{"POST", "/cart/merge", "seller_employee"},
+		{"POST", "/checkout/preview", "admin"},
+		{"GET", "/checkouts/co_1", "seller_admin"},
+		{"POST", "/orders", "seller_admin"},
+		{"GET", "/orders", "admin"},
+		{"GET", "/orders/summary", "admin"},
+		{"POST", "/orders/1/cancel", "seller_admin"},
+		{"POST", "/orders/1/confirm-received", "admin"},
+		{"POST", "/orders/1/return", "seller_admin"},
+		{"GET", "/users/me/addresses", "seller_admin"},
+		{"POST", "/users/me/addresses", "admin"},
+		{"GET", "/seller/orders", "buyer"},
+		{"GET", "/seller/orders/summary", "admin"},
+		{"POST", "/seller/orders/1/ship", "buyer"},
+		{"POST", "/seller/orders/1/return/approve", "buyer"},
+		{"GET", "/admin/orders", "seller_admin"},
+		{"POST", "/admin/orders/1/cancel", "buyer"},
+		{"POST", "/admin/orders/1/return/approve", "seller_admin"},
+	} {
+		if w := request(e, route.method, route.path, ""); w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s anonymous: %d, want 401", route.method, route.path, w.Code)
+		}
+		if w := request(e, route.method, route.path, token(t, route.wrongRole)); w.Code != http.StatusForbidden {
+			t.Errorf("%s %s as %s: %d, want 403", route.method, route.path, route.wrongRole, w.Code)
+		}
+	}
+}

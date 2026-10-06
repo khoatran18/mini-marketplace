@@ -3,7 +3,6 @@ package handler
 import (
 	"api-gateway/internal/client"
 	"api-gateway/internal/client/authclient"
-	"api-gateway/internal/client/orderclient"
 	"api-gateway/internal/client/productclient"
 	"api-gateway/internal/client/userclient"
 	"strconv"
@@ -29,9 +28,8 @@ func NewHandlerManager(cm *client.ClientManager, logger *zap.Logger) *ManagerHan
 	authService := authclient.NewAuthClient(nil, cm, logger) // AuthClient is nil until it is called
 	authHandler := NewAuthHandler(authService, logger)
 
-	// Create OrderService (wrap OrderClient)
-	orderService := orderclient.NewOrderClient(nil, cm, logger)
-	orderHandler := NewOrderHandler(orderService, logger)
+	// Orders, carts, checkout and addresses call the generated gRPC clients directly
+	orderHandler := NewOrderHandler(cm, authService, logger)
 
 	// Create ProductService (wrap ProductClient)
 	productService := productclient.NewProductClient(nil, cm, logger)
