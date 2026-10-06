@@ -43,7 +43,7 @@ services:
     hostname: frontend
     networks: [marketplace]
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/healthz >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -76,11 +76,14 @@ services:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-300}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
+    # liveness only (never depends on other services); readiness (/ready) is used by Traefik below
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health >/dev/null 2>&1 || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
     deploy:
       replicas: 2
       restart_policy: {condition: on-failure, delay: 10s}
@@ -90,6 +93,10 @@ services:
         - traefik.http.routers.api.entrypoints=websecure
         - traefik.http.routers.api.tls=true
         - traefik.http.services.api.loadbalancer.server.port=8080
+        - traefik.http.services.api.loadbalancer.healthcheck.path=/ready
+        - traefik.http.services.api.loadbalancer.healthcheck.port=8081
+        - traefik.http.services.api.loadbalancer.healthcheck.interval=5s
+        - traefik.http.services.api.loadbalancer.healthcheck.timeout=2s
         - traefik.http.routers.api.middlewares=secure-headers
         - traefik.http.middlewares.secure-headers.headers.frameDeny=true
         - traefik.http.middlewares.secure-headers.headers.browserXssFilter=true
@@ -102,6 +109,13 @@ services:
     hostname: auth-service
     networks: [marketplace]
     environment: *svc_env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
     deploy:
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
@@ -111,6 +125,13 @@ services:
     hostname: user-service
     networks: [marketplace]
     environment: *svc_env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
     deploy:
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
@@ -120,6 +141,13 @@ services:
     hostname: product-service
     networks: [marketplace]
     environment: *svc_env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
     deploy:
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
@@ -129,6 +157,13 @@ services:
     hostname: order-service
     networks: [marketplace]
     environment: *svc_env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
     deploy:
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}

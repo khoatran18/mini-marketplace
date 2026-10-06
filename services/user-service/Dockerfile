@@ -9,5 +9,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/web ./c
 FROM alpine:3.20
 RUN addgroup -S app && adduser -S -G app app
 COPY --from=builder /out/web /usr/local/bin/web
+ARG SERVICE_VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG BUILD_TIME=unknown
+ENV SERVICE_VERSION=$SERVICE_VERSION GIT_COMMIT=$GIT_COMMIT BUILD_TIME=$BUILD_TIME
 USER app
 CMD ["web"]

@@ -6,11 +6,11 @@ Thứ tự: nền vận hành trước (health/ready/metrics) → dữ liệu & 
 ### P0 – Thiết kế *(đang ở đây)*
 Tài liệu này; chủ dự án duyệt. **Chưa code.**
 
-### P1 – Nền vận hành & danh tính
+### P1 – Nền vận hành & danh tính *(đang làm: phần health/ready/metrics đã code – xem 02)*
 | Việc | Nghiệm thu |
 |---|---|
-| Thư viện chung nhỏ (`pkg/ops` copy vào từng module, theo ADR-8): admin HTTP :8081 với `/health /ready /metrics /version`, grpc health, interceptor metrics, graceful shutdown | test health (fake dep) · mọi service hiện có trả đúng · SIGTERM ⇒ ready 503 rồi thoát sạch |
-| Docker `HEALTHCHECK` + Traefik `/ready` + `update_config start-first` + `wait-ready.sh` | rolling update không rớt request (e2e) |
+| ✅ *đã làm* Thư viện chung nhỏ (`pkg/ops` copy vào từng module, theo ADR-8): admin HTTP :8081 với `/health /ready /metrics /version`, grpc health, interceptor metrics, graceful shutdown | test health (fake dep) · mọi service hiện có trả đúng · SIGTERM ⇒ ready 503 rồi thoát sạch |
+| ✅ *đã làm (chưa chạy thử trên Swarm thật)* Docker `HEALTHCHECK` + Traefik `/ready` + `update_config start-first` + `wait-ready.sh` | rolling update không rớt request (e2e) |
 | Healthcheck cho mọi container hạ tầng | `docker service ls` toàn healthy |
 | Prometheus + exporters + cAdvisor + node-exporter + Grafana (dashboard Overview/Services/Containers/Nodes) | thấy CPU/RAM từng service; target `up==1` |
 | Role `admin` + bootstrap + `Role` ở frontend + khoá tạm đăng nhập + `audit_log` | `/auth/register` từ chối admin; test RBAC; test khoá |
@@ -45,7 +45,7 @@ Console seller/admin, checkout + `/pay`, timeline đơn, system page, product fo
 - **P-7 Tracking ẩn danh có consent, ip băm, whitelist event, event nghiệp vụ chỉ từ server.**
 - **P-8 Chưa có cảnh báo; chỉ Grafana.** Không alert-service/Alertmanager/notification. Ngưỡng trong 05 §3.1 chỉ tô màu panel. Thêm sau không cần đổi code service.
 - **P-9 Cart ở `order-service`; payment tách `payment-service`** (ranh giới an toàn/ vận hành khác).
-- **P-10 (ĐỀ XUẤT – chờ chốt) Tách đơn theo shop khi checkout (`checkout_id` cha).** Xem câu hỏi bên dưới.
+- **P-10 Tách đơn theo shop khi checkout (`checkout_id` cha) – ĐÃ CHỐT.** Mỗi shop một đơn, thanh toán gộp theo `checkout_id`.
 - **P-11 Admin role không đăng ký công khai.**
 
 ## Rủi ro
@@ -60,7 +60,7 @@ Console seller/admin, checkout + `/pay`, timeline đơn, system page, product fo
 | Rò dữ liệu chéo shop | scope ép ở gateway, test chéo shop cho mọi endpoint `/seller/*` |
 
 ## Đã chốt
-- Thanh toán mô phỏng · ClickHouse · health/ready/metrics mọi service · **múi giờ cố định `Asia/Ho_Chi_Minh`** · **dark mode** · **không cảnh báo (chỉ Grafana)** · **không mã giảm giá** · endpoint tên `/health` `/ready` (không `z`).
+- Thanh toán mô phỏng · ClickHouse · health/ready/metrics mọi service · **múi giờ cố định `Asia/Ho_Chi_Minh`** · **dark mode** · **không cảnh báo (chỉ Grafana)** · **không mã giảm giá** · endpoint hỗ trợ cả `/health` & `/healthz`, `/ready` & `/readyz` · **tách đơn theo shop (A)** · mọi service Go mở cổng admin HTTP `:8081`.
 
 ## Câu hỏi còn mở
-1. **Tách đơn theo shop khi checkout** – chọn một: (A) tách đơn theo shop *(đề xuất nếu muốn console người bán thật sự dùng được)*, (B) mỗi giỏ/ đơn chỉ chứa **một shop** *(đơn giản nhất, UX kém hơn)*, (C) không tách *(không khuyến nghị: không thể có trạng thái giao hàng/ doanh thu theo shop đúng)*. Giải thích ở phần trả lời; tài liệu hiện viết theo (A) và sẽ sửa nếu bạn chọn khác.
+Không còn.

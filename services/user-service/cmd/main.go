@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 	"user-service/internal/client/clientmanager"
 	"user-service/internal/client/serviceclientmanager"
@@ -12,6 +13,7 @@ import (
 	"user-service/internal/repository"
 	"user-service/internal/server"
 	"user-service/internal/service"
+	"user-service/pkg/ops"
 	userpb "user-service/pkg/pb"
 
 	"github.com/lpernett/godotenv"
@@ -68,7 +70,20 @@ func main() {
 	ctx := context.Context(context.Background())
 	userService.ProducerCreSelKafkaEventWorker(ctx, 3*time.Second, 100, topic)
 
-	s := grpc.NewServer()
+	// Admin HTTP port (/health /healthz /ready /readyz /metrics /version) next to the gRPC port
+	adm := ops.New(ops.Options{
+		Service: "user-service",
+		Checks: []ops.Check{
+			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
+			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
+			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+			ops.GRPCHealthCheck("auth-service", config.NewGRPCAddrConfig()["AuthClientAddr"], true),
+		},
+	})
+	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
+		adm.AttachDB(sqlDB)
+	}
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	userpb.RegisterUserServiceServer(s, &server.UserServer{
 		UserService: userService,
 		ZapLogger:   serviceConfig.ZapLogger,
@@ -77,7 +92,7 @@ func main() {
 
 	reflection.Register(s)
 
-	if err := s.Serve(lis); err != nil {
+	if err := adm.ServeGRPC(s, lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 

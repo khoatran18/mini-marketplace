@@ -22,3 +22,6 @@ Update `JWT_SECRET` in `deploy/.env`, redeploy all stacks. Every user must log i
 
 ## Seed accounts
 `SEED_DEMO_DATA=true` (auth: `buyer1`, `seller1` / `password`; product: 20 sample products owned by store id 2). Disable in production.
+
+## Is a service up / ready?
+`wget -qO- http://<service>:8081/ready` (inside the overlay network). 503 + JSON `checks` shows which dependency fails (`postgres`, `kafka`, `redis`, a downstream gRPC service). `/healthz` is 200 as long as the process runs – a failing `/ready` with a passing `/healthz` means "dependency problem", not "restart me". `/version` shows the deployed version/commit.

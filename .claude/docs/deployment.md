@@ -36,6 +36,10 @@ Start infra with `docker compose --env-file deploy/.env -f deploy/infra.yml up -
 - The frontend image must listen on `0.0.0.0` (`HOSTNAME=0.0.0.0`), otherwise its healthcheck on `localhost` fails and Swarm kills it.
 - Docker Hub rate limits (HTTP 429) can interrupt image pulls/builds on shared egress IPs; retry or use a registry mirror.
 
+## Operational endpoints
+Every Go service listens on an extra **internal** HTTP port `ADMIN_PORT` (default `8081`, not published, not routed by Traefik): `/health` = `/healthz` (liveness), `/ready` = `/readyz` (readiness: Postgres, Kafka, downstream gRPC health are critical; Redis is non-critical), `/metrics` (Prometheus), `/version`. gRPC services also register `grpc.health.v1`. On SIGTERM a service reports not-ready for `DRAIN_SECONDS` (default 10) before stopping. Docker healthchecks use `/healthz`; Traefik routes to the gateway only while its `/ready` is 200. The frontend exposes `/api/health|healthz|ready|readyz`. Details: [platform/02-health-ready-metrics.md](platform/02-health-ready-metrics.md).
+Quick check from any container on the network: `wget -qO- http://order-service:8081/ready`.
+
 ## Operations
 - Scale: `docker service scale marketplace_api-gateway=3`. Services with Kafka consumers can run multiple replicas (consumer groups split partitions); outbox workers may then publish the same row twice – safe because consumers are idempotent.
 - Kafka single broker and one Postgres are single points of failure. Back up the `postgres-data` volume (`pg_dump`). For HA use managed Postgres and a 3-broker Kafka (set RF 3, min ISR 2).

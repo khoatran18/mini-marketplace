@@ -54,6 +54,9 @@ func request(e *gin.Engine, method, path, tok string) *httptest.ResponseRecorder
 }
 
 func TestHealthIsPublic(t *testing.T) {
+	if w := request(newEngine(t), "GET", "/healthz", ""); w.Code != 200 {
+		t.Fatalf("/healthz must mirror /health, got %d", w.Code)
+	}
 	if w := request(newEngine(t), "GET", "/health", ""); w.Code != 200 {
 		t.Errorf("status %d", w.Code)
 	}

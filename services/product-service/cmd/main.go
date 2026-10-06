@@ -9,6 +9,7 @@ import (
 	"product-service/internal/repository"
 	"product-service/internal/server"
 	"product-service/internal/service"
+	"product-service/pkg/ops"
 	productpb "product-service/pkg/pb"
 	"time"
 
@@ -75,7 +76,19 @@ func main() {
 		ProductService: productService,
 		ZapLogger:      serviceConfig.ZapLogger,
 	}
-	s := grpc.NewServer()
+	// Admin HTTP port (/health /healthz /ready /readyz /metrics /version) next to the gRPC port
+	adm := ops.New(ops.Options{
+		Service: "product-service",
+		Checks: []ops.Check{
+			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
+			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
+			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+		},
+	})
+	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
+		adm.AttachDB(sqlDB)
+	}
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	productpb.RegisterProductServiceServer(s, &productServer)
 	log.Printf("Product Server Listen at %v", lis.Addr())
 
@@ -86,7 +99,7 @@ func main() {
 
 	reflection.Register(s)
 
-	if err := s.Serve(lis); err != nil {
+	if err := adm.ServeGRPC(s, lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 }

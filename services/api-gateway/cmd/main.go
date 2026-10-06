@@ -4,10 +4,14 @@ import (
 	"api-gateway/internal/client"
 	"api-gateway/internal/config"
 	"api-gateway/internal/handler"
+	"api-gateway/internal/middleware"
 	"api-gateway/internal/router"
 	"api-gateway/internal/service"
+	"api-gateway/pkg/ops"
 	"context"
 	"log"
+	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -86,6 +90,18 @@ func main() {
 	// Setup router
 	engine := gin.New()
 	engine.Use(gin.Recovery())
+
+	// Admin HTTP port (/health /healthz /ready /readyz /metrics /version), internal only
+	grpcAddrs := config.NewGRPCAddrConfig()
+	checks := []ops.Check{
+		ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
+		ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+	}
+	for name, addr := range grpcAddrs {
+		checks = append(checks, ops.GRPCHealthCheck(name, addr, true))
+	}
+	adm := ops.New(ops.Options{Service: "api-gateway", Checks: checks})
+	engine.Use(middleware.MetricsMiddleware(adm.ObserveHTTP))
 	// Only trust X-Forwarded-For from configured proxies (nil = trust none) so c.ClientIP() cannot be spoofed
 	if err := engine.SetTrustedProxies(envConfig.TrustedProxies); err != nil {
 		panic(err)
@@ -108,5 +124,7 @@ func main() {
 	//fmt.Println("Received stop signal, shutting down...")
 
 	// Run
-	engine.Run(":8080")
+	if err := adm.ServeHTTPMain(&http.Server{Addr: ":8080", Handler: engine, ReadHeaderTimeout: 10 * time.Second}); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
 }

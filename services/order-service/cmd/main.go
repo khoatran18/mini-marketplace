@@ -10,7 +10,9 @@ import (
 	"order-service/internal/repository"
 	"order-service/internal/server"
 	"order-service/internal/service"
+	"order-service/pkg/ops"
 	orderpb "order-service/pkg/pb"
+	"os"
 	"time"
 
 	"github.com/lpernett/godotenv"
@@ -72,7 +74,20 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
+	// Admin HTTP port (/health /healthz /ready /readyz /metrics /version) next to the gRPC port
+	adm := ops.New(ops.Options{
+		Service: "order-service",
+		Checks: []ops.Check{
+			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
+			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
+			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+			ops.GRPCHealthCheck("product-service", config.NewGRPCAddrConfig()["ProductClientAddr"], true),
+		},
+	})
+	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
+		adm.AttachDB(sqlDB)
+	}
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	orderpb.RegisterOrderServiceServer(s, &server.OrderServer{
 		OrderService: orderService,
 		ZapLogger:    serviceConfig.ZapLogger,
@@ -82,7 +97,7 @@ func main() {
 
 	reflection.Register(s)
 
-	if err := s.Serve(lis); err != nil {
+	if err := adm.ServeGRPC(s, lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 }

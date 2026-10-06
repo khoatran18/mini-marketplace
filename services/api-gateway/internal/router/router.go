@@ -27,7 +27,9 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		router.Use(middleware.RateLimitingMiddleware("global", envConfig.RateLimit, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
 	}
 
-	router.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
+	liveness := func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) }
+	router.GET("/health", liveness)
+	router.GET("/healthz", liveness)
 
 	authenticated := middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret)
 

@@ -6,6 +6,7 @@ import (
 	"auth-service/internal/server"
 	"auth-service/internal/service"
 	"auth-service/pkg/model"
+	"auth-service/pkg/ops"
 	authpb "auth-service/pkg/pb"
 	"context"
 	"fmt"
@@ -55,7 +56,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
+	// Admin HTTP port (/health /healthz /ready /readyz /metrics /version) next to the gRPC port
+	adm := ops.New(ops.Options{
+		Service: "auth-service",
+		Checks: []ops.Check{
+			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
+			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
+			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+		},
+	})
+	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
+		adm.AttachDB(sqlDB)
+	}
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	authpb.RegisterAuthServiceServer(s, &authServer)
 
 	// Demo accounts only when explicitly requested (never in production)
@@ -85,7 +98,7 @@ func main() {
 	// Run
 	log.Printf("Auth Server listening at %v", lis.Addr())
 	reflection.Register(s)
-	if err := s.Serve(lis); err != nil {
+	if err := adm.ServeGRPC(s, lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 }

@@ -13,11 +13,14 @@ Có 3 cách; chọn **A**:
 | C. Gộp HTTP + gRPC chung một cổng (cmux/h2c) | | phức tạp, dễ lỗi; không đáng |
 Vẫn đăng ký **`grpc.health.v1`** (cho gateway gọi kiểm tra downstream) **và** mở cổng HTTP `:8081` (cho Docker, Prometheus, con người). Gateway giữ `:8080` công khai (có `/health` hiện tại) và cũng mở `:8081` cho `/ready`, `/metrics`.
 
+> **Tên endpoint**: hỗ trợ **cả hai kiểu** – `/health` = `/healthz` (liveness), `/ready` = `/readyz` (readiness). Hai tên trả cùng kết quả (alias); dùng tên nào cũng được (Docker/Traefik trong repo dùng `/healthz` và `/ready`).
+> **Trạng thái triển khai (P1, đã code)**: gói `pkg/ops` (5 bản giống hệt nhau trong gateway/auth/user/product/order), cổng admin `:8081`, `/health /healthz /ready /readyz /metrics /version`, `grpc.health.v1`, metrics gRPC/HTTP/DB pool/build info, tắt êm theo SIGTERM, healthcheck Docker/Traefik, frontend `/api/health|healthz|ready|readyz`. **Chưa làm**: outbox/Kafka-lag metrics, Prometheus/Grafana, `/admin/system/*`, service payment/analytics.
+
 ## 1. Khác nhau giữa các endpoint
 | Endpoint | Câu hỏi | Kiểm tra gì | Khi lỗi | Ai dùng |
 |---|---|---|---|---|
-| `GET /health` (liveness) | "Tiến trình còn sống, không bị treo?" | **Chỉ** bản thân process (HTTP server trả lời được; tuỳ chọn: goroutine chính/ worker heartbeat không quá cũ). **Không** gọi DB/Kafka/service khác | 200 `{"status":"ok"}`; không 200 ⇒ restart container | Docker `HEALTHCHECK`, Swarm |
-| `GET /ready` (readiness) | "Nhận được traffic và xử lý đúng chưa?" | Dependency **bắt buộc** (bảng 3) + trạng thái khởi động xong + không đang drain | 200 hoặc **503** kèm JSON chi tiết từng check | Traefik LB healthcheck, `deploy.sh` (chờ ready), e2e, UI trạng thái hệ thống |
+| `GET /health` · `/healthz` (liveness) | "Tiến trình còn sống, không bị treo?" | **Chỉ** bản thân process (HTTP server trả lời được; tuỳ chọn: goroutine chính/ worker heartbeat không quá cũ). **Không** gọi DB/Kafka/service khác | 200 `{"status":"ok"}`; không 200 ⇒ restart container | Docker `HEALTHCHECK`, Swarm |
+| `GET /ready` · `/readyz` (readiness) | "Nhận được traffic và xử lý đúng chưa?" | Dependency **bắt buộc** (bảng 3) + trạng thái khởi động xong + không đang drain | 200 hoặc **503** kèm JSON chi tiết từng check | Traefik LB healthcheck, `deploy.sh` (chờ ready), e2e, UI trạng thái hệ thống |
 | `GET /metrics` | "Số đo Prometheus" | – | – | Prometheus |
 | `GET /version` | "Đang chạy build nào?" | – | – | người, CI, dashboard "đã deploy gì" |
 

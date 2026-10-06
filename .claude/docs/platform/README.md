@@ -17,9 +17,10 @@
 | 09 | [roadmap.md](09-roadmap.md) | Giai đoạn + nghiệm thu, ADR, rủi ro, câu hỏi còn mở |
 
 ## Quyết định đã chốt (từ chủ dự án)
+- Đơn hàng **tách theo shop** khi checkout (`checkout_id` cha).
 - Thanh toán: **mô phỏng** (không cổng thật) – xem 04.
 - Analytics: **ClickHouse**.
-- Mọi service/container có **health + ready + metrics** – xem 02. Tên endpoint: `/health`, `/ready` (không `z`).
+- Mọi service/container có **health + ready + metrics** – xem 02. Tên endpoint: hỗ trợ cả `/health` & `/healthz`, `/ready` & `/readyz`.
 - Múi giờ cố định `Asia/Ho_Chi_Minh`; có dark mode; **không mã giảm giá**; **chưa có cảnh báo** (chỉ Grafana theo dõi metric).
 - AI: chưa làm gì, chưa tạo `ai-service`; chỉ có file nháp. Khi làm sẽ dùng Python (ghi trong nháp).
 
