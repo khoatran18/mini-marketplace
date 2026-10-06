@@ -6,7 +6,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 version="${SERVICE_VERSION:-dev}"
 commit="$(git -C "$root" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 built_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-for s in api-gateway auth-service user-service product-service order-service payment-service; do
+for s in api-gateway auth-service user-service product-service order-service payment-service analytics-service; do
   docker build -t "marketplace/$s:latest" \
     --build-arg SERVICE_VERSION="$version" --build-arg GIT_COMMIT="$commit" --build-arg BUILD_TIME="$built_at" \
     "$root/services/$s"

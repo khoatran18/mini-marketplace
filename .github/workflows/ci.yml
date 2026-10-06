@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [api-gateway, auth-service, user-service, product-service, order-service]
+        service: [api-gateway, auth-service, user-service, product-service, order-service, payment-service, analytics-service]
     services:
       postgres:
         image: postgres:16-alpine
@@ -20,6 +20,13 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 10
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_SKIP_USER_SETUP: "1"
+        ports: ["8123:8123"]
+        options: >-
+          --health-cmd "wget -qO- http://localhost:8123/ping" --health-interval 5s --health-timeout 3s --health-retries 15
     defaults:
       run:
         working-directory: services/${{ matrix.service }}
@@ -36,6 +43,7 @@ jobs:
       - name: Test
         env:
           TEST_POSTGRES_DSN: host=localhost port=5432 user=postgres password=postgres sslmode=disable
+          TEST_CLICKHOUSE_URL: http://localhost:8123
         run: go test -race -count=1 ./...
 
   frontend:
@@ -58,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        context: [services/api-gateway, services/auth-service, services/user-service, services/product-service, services/order-service, apps/frontend]
+        context: [services/api-gateway, services/auth-service, services/user-service, services/product-service, services/order-service, services/payment-service, services/analytics-service, apps/frontend]
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3

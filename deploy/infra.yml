@@ -41,6 +41,34 @@ services:
         condition: on-failure
         delay: 1s
 
+  # Analytics store (analytics-service creates the database and tables itself on start)
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    hostname: clickhouse
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+      TZ: UTC
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ulimits:
+      nofile: {soft: 262144, hard: 262144}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8123/ping >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    networks:
+      - marketplace
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+      resources:
+        limits: {memory: 2G}
+
   broker1:
     image: apache/kafka:3.9.0
     hostname: broker1
@@ -81,6 +109,7 @@ volumes:
   postgres-data:
   redis-data:
   kafka-data:
+  clickhouse-data:
 
 networks:
   marketplace:

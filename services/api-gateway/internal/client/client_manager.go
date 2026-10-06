@@ -3,6 +3,7 @@ package client
 import (
 	"api-gateway/internal/config"
 	"api-gateway/pkg/clientname"
+	analyticspb "api-gateway/pkg/pb/analyticsservice"
 	"api-gateway/pkg/pb/authservice"
 	orderpb "api-gateway/pkg/pb/orderservice"
 	paymentpb "api-gateway/pkg/pb/paymentservice"
@@ -106,12 +107,17 @@ func newClientConstructors() map[string]func(conn *grpc.ClientConn) any {
 		return paymentpb.NewPaymentServiceClient(conn)
 	}
 
+	analyticsConstructor := func(conn *grpc.ClientConn) any {
+		return analyticspb.NewAnalyticsServiceClient(conn)
+	}
+
 	constructors := map[string]func(conn *grpc.ClientConn) any{
-		clientname.AuthClientName:    authConstructor,
-		clientname.OrderClientName:   orderConstructor,
-		clientname.ProductClientName: productConstructor,
-		clientname.UserClientName:    userConstructor,
-		clientname.PaymentClientName: paymentConstructor,
+		clientname.AuthClientName:      authConstructor,
+		clientname.OrderClientName:     orderConstructor,
+		clientname.ProductClientName:   productConstructor,
+		clientname.UserClientName:      userConstructor,
+		clientname.PaymentClientName:   paymentConstructor,
+		clientname.AnalyticsClientName: analyticsConstructor,
 	}
 
 	return constructors
@@ -196,6 +202,15 @@ func (cm *ClientManager) Payment() (paymentpb.PaymentServiceClient, error) {
 		return nil, err
 	}
 	return c.(paymentpb.PaymentServiceClient), nil
+}
+
+// Analytics returns the analytics-service client.
+func (cm *ClientManager) Analytics() (analyticspb.AnalyticsServiceClient, error) {
+	c, err := cm.GetOrCreateServiceClient(clientname.AnalyticsClientName)
+	if err != nil {
+		return nil, err
+	}
+	return c.(analyticspb.AnalyticsServiceClient), nil
 }
 
 // GetOrCreateAuthClient is responsible for getting AuthClient if existed else creating AuthClient

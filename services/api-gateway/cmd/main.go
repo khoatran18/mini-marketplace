@@ -59,7 +59,7 @@ func main() {
 	grpcClientManager := client.NewClientManager()
 	defer grpcClientManager.CloseAll()
 
-	managerHandler := handler.NewHandlerManager(grpcClientManager, serviceConfig.ZapLogger)
+	managerHandler := handler.NewHandlerManager(grpcClientManager, envConfig.IPHashSecret, serviceConfig.ZapLogger)
 
 	apiGatewayService := service.NewAPIGatewayService(serviceConfig.RedisClient, serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient, serviceConfig.ZapLogger)
 
@@ -99,8 +99,8 @@ func main() {
 		ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
 	}
 	for name, addr := range grpcAddrs {
-		// payments are an add-on: the shop keeps working (COD) when payment-service is down
-		checks = append(checks, ops.GRPCHealthCheck(name, addr, name != clientname.PaymentClientName))
+		// payments and analytics are add-ons: the shop keeps working (COD, no dashboards) when they are down
+		checks = append(checks, ops.GRPCHealthCheck(name, addr, name != clientname.PaymentClientName && name != clientname.AnalyticsClientName))
 	}
 	adm := ops.New(ops.Options{Service: "api-gateway", Checks: checks})
 	engine.Use(middleware.MetricsMiddleware(adm.ObserveHTTP))

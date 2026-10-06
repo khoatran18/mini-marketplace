@@ -51,8 +51,9 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 			h.AuthHandler.RegisterSellerRoles)
 	}
 
-	router.Use(authenticated)
-	userRoute := router.Group("/users")
+	// NOTE: authentication is attached per group/route (never with router.Use) so the public catalog,
+	// /payments/methods and /events stay reachable without a token.
+	userRoute := router.Group("/users", authenticated)
 	{
 		//userRoute.Use(middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret))
 		buyerRoute := userRoute.Group("/buyers")
@@ -78,6 +79,14 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	router.GET("/search", optionalAuth, h.CatalogHandler.Search)
 	router.GET("/categories", h.CatalogHandler.Categories)
 
+	// Clickstream (public, own rate limit; /events/identify needs a token)
+	eventsRoute := router.Group("/events")
+	if envConfig.EventsRateLimit > 0 {
+		eventsRoute.Use(middleware.RateLimitingMiddleware("events", envConfig.EventsRateLimit, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
+	}
+	eventsRoute.POST("", optionalAuth, h.TrackingHandler.Ingest)
+	eventsRoute.POST("/identify", authenticated, h.TrackingHandler.Identify)
+
 	productRoute := router.Group("/products")
 	{
 		productRoute.POST("", authenticated, sellerRoles, h.ProductHandler.CreateProduct)
@@ -96,6 +105,11 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		sellerRoute.POST("/products/:id/inventory/adjust", h.CatalogHandler.AdjustInventory)
 		sellerRoute.GET("/products/:id/inventory/ledger", h.CatalogHandler.InventoryLedger)
 		sellerRoute.GET("/inventory/low-stock", h.CatalogHandler.LowStock)
+
+		// Store analytics (scope = the caller's store, from the token)
+		for _, r := range []string{"summary", "timeseries", "top-products", "funnel", "low-stock"} {
+			sellerRoute.GET("/analytics/"+r, h.AnalyticsHandler.Seller(r))
+		}
 	}
 
 	// Platform administrators only
@@ -107,6 +121,9 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	adminRoute := router.Group("/admin", authenticated, middleware.AuthorizationMiddleware([]string{"admin"}, serviceConfig.ZapLogger))
 	{
 		adminRoute.GET("/system/health", systemHandler.Health)
+		for _, r := range []string{"summary", "timeseries", "top-products", "funnel", "low-stock", "traffic", "payments", "search-terms", "data-health"} {
+			adminRoute.GET("/analytics/"+r, h.AnalyticsHandler.Admin(r))
+		}
 		adminRoute.GET("/categories", h.CatalogHandler.AdminCategories)
 		adminRoute.POST("/categories", h.CatalogHandler.CreateCategory)
 		adminRoute.PUT("/categories/:id", h.CatalogHandler.UpdateCategory)

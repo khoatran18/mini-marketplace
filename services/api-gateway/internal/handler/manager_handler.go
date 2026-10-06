@@ -14,16 +14,18 @@ import (
 
 // ManagerHandler save handlers for all client gRPC
 type ManagerHandler struct {
-	AuthHandler    *AuthHandler
-	OrderHandler   *OrderHandler
-	ProductHandler *ProductHandler
-	UserHandler    *UserHandler
-	CatalogHandler *CatalogHandler
-	PaymentHandler *PaymentHandler
+	AuthHandler      *AuthHandler
+	OrderHandler     *OrderHandler
+	ProductHandler   *ProductHandler
+	UserHandler      *UserHandler
+	CatalogHandler   *CatalogHandler
+	PaymentHandler   *PaymentHandler
+	TrackingHandler  *TrackingHandler
+	AnalyticsHandler *AnalyticsHandler
 }
 
 // NewHandlerManager init handlers for ManagerHandler
-func NewHandlerManager(cm *client.ClientManager, logger *zap.Logger) *ManagerHandler {
+func NewHandlerManager(cm *client.ClientManager, ipHashSecret string, logger *zap.Logger) *ManagerHandler {
 
 	// Create AuthService (wrap AuthClient)
 	authService := authclient.NewAuthClient(nil, cm, logger) // AuthClient is nil until it is called
@@ -48,12 +50,14 @@ func NewHandlerManager(cm *client.ClientManager, logger *zap.Logger) *ManagerHan
 
 	// Return ManagerHandler
 	return &ManagerHandler{
-		AuthHandler:    authHandler,
-		OrderHandler:   orderHandler,
-		ProductHandler: productHandler,
-		UserHandler:    userHandler,
-		CatalogHandler: catalogHandler,
-		PaymentHandler: paymentHandler,
+		AuthHandler:      authHandler,
+		OrderHandler:     orderHandler,
+		ProductHandler:   productHandler,
+		UserHandler:      userHandler,
+		CatalogHandler:   catalogHandler,
+		PaymentHandler:   paymentHandler,
+		TrackingHandler:  NewTrackingHandler(cm, authService, ipHashSecret, logger),
+		AnalyticsHandler: NewAnalyticsHandler(cm, authService, logger),
 	}
 }
 

@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package analytics_service.pkg.pb;
+
+import "buf/validate/validate.proto";
+
+option go_package = "analytics-service/analyticspb";
+
+// Clickstream event handed over by the gateway. Fields 16+ are attached by the GATEWAY from the JWT / request;
+// the gateway never copies them from the client body.
+message TrackEvent {
+  string event_id = 1;
+  string event_type = 2;
+  string ts_client = 3; // RFC 3339
+  string anonymous_id = 4;
+  string session_id = 5;
+  string surface = 6;
+  string path = 7;
+  string referrer = 8;
+  uint64 product_id = 9;
+  uint32 position = 10;
+  string props_json = 11; // JSON object, <= 2 KB
+  string device_type = 12;
+  string os = 13;
+  string app_version = 14;
+  bool analytics_consent = 15;
+
+  uint64 user_id = 16;
+  string role = 17;
+  uint64 store_id = 18;
+  string ip_hash = 19;
+  string ua_family = 20;
+  string country = 21;
+}
+
+message IngestEventsRequest {
+  repeated TrackEvent events = 1 [(buf.validate.field).repeated.max_items = 50];
+}
+message IngestEventsResponse {
+  int32 accepted = 1;
+  int32 rejected = 2;
+  repeated string reasons = 3; // one entry per rejected event ("<index>:<reason>")
+}
+
+// Whom a report is for. Set by the gateway from the JWT, never from the client.
+message Scope {
+  string role = 1;      // "admin" = whole platform, "seller" = one store
+  uint64 store_id = 2;  // required for seller
+}
+
+message QueryRequest {
+  // summary | timeseries | top_products | funnel | low_stock | traffic | payments | search_terms | data_health
+  string report = 1 [(buf.validate.field).string.min_len = 1];
+  Scope scope = 2;
+  string from = 3;         // RFC 3339; default now-30d
+  string to = 4;           // RFC 3339; default now
+  string granularity = 5;  // hour | day | week | month (timeseries, traffic); default day
+  string sort = 6;         // top_products: revenue | units | views | conversion | viewed_unsold
+  int32 limit = 7;
+}
+
+message QueryResponse {
+  string as_of = 1;     // RFC 3339 time the numbers were computed
+  string source = 2;    // "clickhouse"
+  bool cached = 3;
+  string data_json = 4; // the report payload (JSON), shape per report in docs/platform/06-api-contracts.md
+}
+
+service AnalyticsService {
+  rpc IngestEvents(IngestEventsRequest) returns (IngestEventsResponse);
+  rpc Query(QueryRequest) returns (QueryResponse);
+}

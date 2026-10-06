@@ -9,7 +9,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # Our Go services: admin port :8081/metrics (gateway, auth, user, product, order, payment)
+  # Our Go services: admin port :8081/metrics (gateway, auth, user, product, order, payment, analytics)
   - job_name: mm-services
     dns_sd_configs:
       - names:
@@ -19,6 +19,7 @@ scrape_configs:
           - tasks.product-service
           - tasks.order-service
           - tasks.payment-service
+          - tasks.analytics-service
         type: A
         port: 8081
         refresh_interval: 15s

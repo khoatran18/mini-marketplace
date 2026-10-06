@@ -38,7 +38,7 @@ func newEngineEnv(t *testing.T, mutate func(*config.EnvConfig)) *gin.Engine {
 		mutate(envConfig)
 	}
 	engine := gin.New()
-	SetupRouter(engine, handler.NewHandlerManager(client.NewClientManager(), logger), serviceConfig, envConfig)
+	SetupRouter(engine, handler.NewHandlerManager(client.NewClientManager(), "test-secret", logger), serviceConfig, envConfig)
 	return engine
 }
 
@@ -256,6 +256,11 @@ func TestOrderRouteAccessRules(t *testing.T) {
 		{"GET", "/admin/payments/1", "seller_admin"},
 		{"POST", "/admin/payments/1/refund", "buyer"},
 		{"POST", "/admin/dev/payments/1/force", "seller_admin"},
+		{"GET", "/seller/analytics/summary", "buyer"},
+		{"GET", "/seller/analytics/top-products", "admin"},
+		{"GET", "/admin/analytics/summary", "seller_admin"},
+		{"GET", "/admin/analytics/traffic", "seller_admin"},
+		{"GET", "/admin/analytics/data-health", "buyer"},
 		{"GET", "/admin/orders", "seller_admin"},
 		{"POST", "/admin/orders/1/cancel", "buyer"},
 		{"POST", "/admin/orders/1/return/approve", "seller_admin"},
@@ -265,6 +270,39 @@ func TestOrderRouteAccessRules(t *testing.T) {
 		}
 		if w := request(e, route.method, route.path, token(t, route.wrongRole)); w.Code != http.StatusForbidden {
 			t.Errorf("%s %s as %s: %d, want 403", route.method, route.path, route.wrongRole, w.Code)
+		}
+	}
+}
+
+// Regression: a global router.Use(authenticated) once made every "public" route answer 401.
+func TestEventsRoutes(t *testing.T) {
+	e := newEngine(t)
+	if w := request(e, "POST", "/events/identify", ""); w.Code != http.StatusUnauthorized {
+		t.Errorf("identify anonymous: %d", w.Code)
+	}
+	// /events is public: an empty body is a 400 from the handler, not a 401
+	if w := request(e, "POST", "/events", ""); w.Code != http.StatusBadRequest {
+		t.Errorf("POST /events anonymous: %d", w.Code)
+	}
+	req := httptest.NewRequest("POST", "/events", strings.NewReader(`{"events":[{"event_type":"page_view"}]}`))
+	req.Header.Set("Authorization", "Bearer not-a-jwt")
+	w := httptest.NewRecorder()
+	e.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("a malformed token is rejected, not treated as anonymous: %d", w.Code)
+	}
+}
+
+func TestPublicRoutesNeedNoToken(t *testing.T) {
+	e := newEngine(t)
+	for _, path := range []string{"/search", "/categories", "/products", "/products/1", "/products/1/stock", "/payments/methods", "/health", "/healthz"} {
+		if w := request(e, "GET", path, ""); w.Code == http.StatusUnauthorized || w.Code == http.StatusForbidden {
+			t.Errorf("GET %s anonymous: %d, must be public", path, w.Code)
+		}
+	}
+	for _, path := range []string{"/users/buyers/1", "/users/sellers/1"} {
+		if w := request(e, "GET", path, ""); w.Code != http.StatusUnauthorized {
+			t.Errorf("GET %s anonymous: %d, want 401", path, w.Code)
 		}
 	}
 }

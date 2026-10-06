@@ -87,6 +87,8 @@ services:
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-300}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
       MAX_BODY_BYTES: ${MAX_BODY_BYTES:-1048576}
+      EVENTS_RATE_LIMIT_PER_MINUTE: ${EVENTS_RATE_LIMIT_PER_MINUTE:-120}
+      IP_HASH_SECRET: ${IP_HASH_SECRET:-}
       # business rules read by order-service / payment-service (shared anchor, no secrets here)
       ENV: ${ENV:-prod}
       ORDER_PAYMENT_TTL_MIN: ${ORDER_PAYMENT_TTL_MIN:-15}
@@ -219,6 +221,36 @@ services:
       timeout: 3s
       retries: 3
       start_period: 20s
+    stop_grace_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+      resources:
+        limits: {memory: 256M}
+
+  # Analytics: Kafka domain events + browser tracking -> ClickHouse; answers the seller/admin dashboards
+  analytics-service:
+    image: marketplace/analytics-service:latest
+    hostname: analytics-service
+    networks: [marketplace]
+    environment:
+      REDIS_ADDR: redis:6379
+      KAFKA_BROKERS_ADDR: broker1:9092
+      KAFKA_CONSUMER_BACKOFF: ${KAFKA_CONSUMER_BACKOFF:-100}
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-marketplace}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD}
+      ANALYTICS_CACHE_TTL_SEC: ${ANALYTICS_CACHE_TTL_SEC:-30}
+      ANALYTICS_FLUSH_INTERVAL_MS: ${ANALYTICS_FLUSH_INTERVAL_MS:-2000}
+      ANALYTICS_FLUSH_ROWS: ${ANALYTICS_FLUSH_ROWS:-5000}
+      EVENTS_RETENTION_MONTHS: ${EVENTS_RETENTION_MONTHS:-13}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
     stop_grace_period: 30s
     deploy:
       replicas: 1

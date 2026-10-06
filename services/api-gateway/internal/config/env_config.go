@@ -21,6 +21,10 @@ type EnvConfig struct {
 	MaxBodyBytes int64
 	// SystemTargets lists "name=adminURL" pairs the admin system-health endpoint aggregates.
 	SystemTargets map[string]string
+	// EventsRateLimit is the per-minute limit of POST /events per client IP (0 disables it).
+	EventsRateLimit int
+	// IPHashSecret keys the daily-rotating HMAC of client IPs stored with tracking events (raw IPs are never kept).
+	IPHashSecret string
 }
 
 // InitJWTSecret load env about jwt
@@ -79,20 +83,23 @@ func NewEnvConfig() (*EnvConfig, error) {
 	}
 
 	return &EnvConfig{
-		JWTSecret:      jwtSecret,
-		JWTExpireTime:  time.Duration(envInt("JWT_EXPIRE_TIME", 5)) * time.Minute,
-		AllowedOrigins: envList("ALLOWED_ORIGINS", []string{"http://localhost:3000"}),
-		RateLimit:      envInt("RATE_LIMIT_PER_MINUTE", 300),
-		AuthRateLimit:  envInt("AUTH_RATE_LIMIT_PER_MINUTE", 20),
-		TrustedProxies: envList("TRUSTED_PROXIES", nil),
-		MaxBodyBytes:   int64(envInt("MAX_BODY_BYTES", 1<<20)),
+		JWTSecret:       jwtSecret,
+		JWTExpireTime:   time.Duration(envInt("JWT_EXPIRE_TIME", 5)) * time.Minute,
+		AllowedOrigins:  envList("ALLOWED_ORIGINS", []string{"http://localhost:3000"}),
+		RateLimit:       envInt("RATE_LIMIT_PER_MINUTE", 300),
+		AuthRateLimit:   envInt("AUTH_RATE_LIMIT_PER_MINUTE", 20),
+		TrustedProxies:  envList("TRUSTED_PROXIES", nil),
+		MaxBodyBytes:    int64(envInt("MAX_BODY_BYTES", 1<<20)),
+		EventsRateLimit: envInt("EVENTS_RATE_LIMIT_PER_MINUTE", 120),
+		IPHashSecret:    os.Getenv("IP_HASH_SECRET"),
 		SystemTargets: envPairs("SYSTEM_HEALTH_TARGETS", map[string]string{
-			"api-gateway":     "http://localhost:8081", // this replica only
-			"auth-service":    "http://auth-service:8081",
-			"user-service":    "http://user-service:8081",
-			"product-service": "http://product-service:8081",
-			"order-service":   "http://order-service:8081",
-			"payment-service": "http://payment-service:8081",
+			"api-gateway":       "http://localhost:8081", // this replica only
+			"auth-service":      "http://auth-service:8081",
+			"user-service":      "http://user-service:8081",
+			"product-service":   "http://product-service:8081",
+			"order-service":     "http://order-service:8081",
+			"payment-service":   "http://payment-service:8081",
+			"analytics-service": "http://analytics-service:8081",
 		}),
 	}, nil
 }
