@@ -21,6 +21,7 @@
 Nothing sensitive is committed. Use `.env.example` templates; real values live in `deploy/.env` (ignored) or Docker secrets. TLS certs are generated locally (`scripts/gen-dev-certs.sh`) and ignored. **Anything committed before this cleanup (old JWT secret, DB/Elastic passwords, Traefik htpasswd, TLS key) is still in git history – rotate all of it.**
 
 ## Known gaps / follow-ups
+- **Credential format is capped by the protobuf contract**: usernames and passwords must match `^[a-zA-Z0-9_]{3,16}$` (`auth.proto`); the gateway/auth additionally require ≥ 8 password characters. A 16-character alphanumeric maximum is weak; relax it to e.g. 8–72 chars (bcrypt limit) by editing `services/auth-service/pkg/proto/auth.proto` and re-running `buf generate` (needs access to buf.build).
 - Tokens are stored in `localStorage` by the frontend (XSS exposure); prefer httpOnly cookies.
 - gRPC between services and Postgres connections are plaintext inside the overlay network (`sslmode=disable`).
 - No account lockout / email verification / password reset (see roadmap).

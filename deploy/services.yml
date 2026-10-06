@@ -3,7 +3,7 @@
 services:
 
   traefik:
-    image: traefik:v3.4
+    image: traefik:v3.6
     networks: [marketplace]
     ports:
       - {target: 80, published: 80, protocol: tcp, mode: ingress}
@@ -21,7 +21,7 @@ services:
       - --providers.file.filename=/dynamic/tls.yml
       - --providers.swarm.endpoint=unix:///var/run/docker.sock
       - --providers.swarm.exposedbydefault=false
-      - --providers.swarm.network=marketplace-infra_marketplace
+      - --providers.swarm.network=marketplace-net
       - --api.dashboard=true
       - --api.insecure=false
       - --accesslog=true
@@ -68,6 +68,7 @@ services:
       POSTGRES_DSN: host=postgres user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD} dbname=${POSTGRES_DB:-postgres} port=5432 sslmode=disable
       KAFKA_BROKERS_ADDR: broker1:9092
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      GIN_MODE: release
       KAFKA_PRODUCER_RETRY: ${KAFKA_PRODUCER_RETRY:-2}
       KAFKA_PRODUCER_BACKOFF: ${KAFKA_PRODUCER_BACKOFF:-100}
       KAFKA_CONSUMER_BACKOFF: ${KAFKA_CONSUMER_BACKOFF:-100}
@@ -134,5 +135,5 @@ services:
 
 networks:
   marketplace:
-    name: marketplace-infra_marketplace
+    name: marketplace-net
     external: true

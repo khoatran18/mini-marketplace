@@ -3,6 +3,8 @@ package handler
 import (
 	"api-gateway/internal/client/orderclient"
 	orderpb "api-gateway/pkg/pb/orderservice"
+	userpb "api-gateway/pkg/pb/userservice"
+	"buf.build/go/protovalidate"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -177,5 +179,15 @@ func TestGrpcErrorsMapToHTTPStatus(t *testing.T) {
 		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil || body["error"] == nil {
 			t.Errorf("%v: want JSON error body, got %s", code, w.Body)
 		}
+	}
+}
+
+func TestProtoValidationErrorsAreBadRequests(t *testing.T) {
+	err := protovalidate.Validate(&userpb.Buyer{}) // name must not be empty
+	if err == nil {
+		t.Fatal("expected a validation error")
+	}
+	if got := httpStatusFromError(err); got != http.StatusBadRequest {
+		t.Errorf("status %d, want 400", got)
 	}
 }

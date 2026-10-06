@@ -21,5 +21,15 @@ DB tests create a throw-away database (`CREATE DATABASE …_test_<rand>`) per te
 - Gateway tests build gin engines with a stub middleware that sets `userID`/`userRole`; Redis is `miniredis`.
 - Prefer testing the service layer against real Postgres (row locks, conditional updates and NUMERIC behave differently in mocks).
 
+## Tests on the real infrastructure (Docker Swarm)
+```bash
+./scripts/deploy.sh                                   # after build-images.sh
+scripts/e2e/run-in-swarm.sh                           # 58 checks: Traefik/TLS/UI/dashboard/CORS, auth, store+catalog, order saga, concurrency, token revocation
+RATE_LIMIT_TEST=1 scripts/e2e/run-in-swarm.sh         # needs AUTH_RATE_LIMIT_PER_MINUTE=20 (default); the main suite needs it raised (e.g. 1000)
+scripts/e2e/resilience.sh                             # failure injection: Kafka down, product/order-service down, rolling restart, Postgres restart
+```
+Both run from a throw-away container on the swarm network (`marketplace-net`), so they work where the host cannot reach the ingress ports; point `API_URL`/`UI_URL` at a public URL and run `node scripts/e2e/e2e.mjs` directly to test a remote deployment.
+`e2e.mjs` exercises: cross-service store linking through Kafka, server-side pricing, inventory reserve/release, 12 buyers racing for 5 units (exactly 5 succeed), IDOR attempts, password-change revocation through Redis, throttling.
+
 ## Not covered yet
-Kafka wiring end-to-end (no broker in the test environment), the user-service, gRPC server adapters, and the frontend. An integration suite on `docker compose` that runs register → order → inventory → cancel is the next useful addition.
+user-service unit tests, gRPC server adapters, and browser-level frontend tests (the UI is only checked for being served and for CORS).

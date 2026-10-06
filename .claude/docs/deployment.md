@@ -29,6 +29,13 @@ Hosts: `https://marketplace.swarm.localhost` (UI), `https://api.marketplace.swar
 ## Running locally without Swarm
 Start infra with `docker compose --env-file deploy/.env -f deploy/infra.yml up -d` (publish ports as needed), copy `services/<svc>/cmd/.env.example` to `.env`, then `go run ./cmd` in each service (start auth/product before order/user). The Kafka advertised listener is `broker1:9092`; for host access add an `/etc/hosts` entry `127.0.0.1 broker1` and publish port 9092.
 
+## Notes from the real deployment
+- Traefik must be ≥ v3.6 on Docker ≥ 29 (older Traefik uses Docker API 1.24, now rejected by the daemon).
+- `docker stack deploy` needs the rendered compose without the top-level `name:` and with numeric ports; `scripts/deploy.sh` does that.
+- The shared network is explicitly named `marketplace-net` (created by `infra.yml`, external in `services.yml`).
+- The frontend image must listen on `0.0.0.0` (`HOSTNAME=0.0.0.0`), otherwise its healthcheck on `localhost` fails and Swarm kills it.
+- Docker Hub rate limits (HTTP 429) can interrupt image pulls/builds on shared egress IPs; retry or use a registry mirror.
+
 ## Operations
 - Scale: `docker service scale marketplace_api-gateway=3`. Services with Kafka consumers can run multiple replicas (consumer groups split partitions); outbox workers may then publish the same row twice – safe because consumers are idempotent.
 - Kafka single broker and one Postgres are single points of failure. Back up the `postgres-data` volume (`pg_dump`). For HA use managed Postgres and a 3-broker Kafka (set RF 3, min ISR 2).

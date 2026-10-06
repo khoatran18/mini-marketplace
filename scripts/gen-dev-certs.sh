@@ -6,5 +6,5 @@ mkdir -p "$out"
 openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
   -keyout "$out/local.key" -out "$out/local.crt" \
   -subj "/CN=marketplace.swarm.localhost" \
-  -addext "subjectAltName=DNS:marketplace.swarm.localhost,DNS:localhost,IP:127.0.0.1"
+  -addext "subjectAltName=DNS:marketplace.swarm.localhost,DNS:api.marketplace.swarm.localhost,DNS:dashboard.marketplace.swarm.localhost,DNS:localhost,IP:127.0.0.1"
 echo "Wrote $out/local.crt and local.key"

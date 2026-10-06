@@ -2,6 +2,8 @@ package handler
 
 import (
 	"api-gateway/pkg/dto"
+	"buf.build/go/protovalidate"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +33,11 @@ func currentUser(c *gin.Context) (username, role string, ok bool) {
 
 // httpStatusFromError maps a gRPC status error to an HTTP status code.
 func httpStatusFromError(err error) int {
+	// Requests rejected by the protobuf validation rules are client errors
+	var validationErr *protovalidate.ValidationError
+	if errors.As(err, &validationErr) {
+		return http.StatusBadRequest
+	}
 	st, ok := status.FromError(err)
 	if !ok {
 		return http.StatusInternalServerError
