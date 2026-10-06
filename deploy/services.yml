@@ -71,6 +71,10 @@ services:
       KAFKA_PRODUCER_RETRY: ${KAFKA_PRODUCER_RETRY:-2}
       KAFKA_PRODUCER_BACKOFF: ${KAFKA_PRODUCER_BACKOFF:-100}
       KAFKA_CONSUMER_BACKOFF: ${KAFKA_CONSUMER_BACKOFF:-100}
+      ALLOWED_ORIGINS: https://${PUBLIC_HOST:-marketplace.swarm.localhost}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-300}
+      AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health >/dev/null 2>&1 || exit 1"]
       interval: 15s
