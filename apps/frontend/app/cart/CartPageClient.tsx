@@ -147,7 +147,7 @@ export function CartPageClient() {
         {
           order: {
             buyer_id: userId,
-            status: 'pending',
+            status: 'PENDING',
             total_price: orderItems.reduce((total, item) => total + item.price * item.quantity, 0),
             order_items: orderItems
           }

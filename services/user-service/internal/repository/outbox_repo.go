@@ -21,14 +21,9 @@ func (r *UserRepository) CreateCreateSellerEvent(tx *gorm.DB, sellerID uint64, u
 
 func (r *UserRepository) GetCreateSellerEventNotPublish(limit int) ([]*outbox.CreateSellerKafkaEvent, error) {
 	var pwdVersionEvents []*outbox.CreateSellerKafkaEvent
-	result := r.DB.Model(&outbox.CreateSellerEvent{}).Where("status IN ?", []string{"PENDING", "FAILED"}).Find(&pwdVersionEvents).Limit(limit)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	if result.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-	return pwdVersionEvents, nil
+	err := r.DB.Model(&outbox.CreateSellerEvent{}).Where("status IN ?", []string{"PENDING", "FAILED"}).
+		Limit(limit).Find(&pwdVersionEvents).Error
+	return pwdVersionEvents, err
 }
 
 func (r *UserRepository) UpdateCreateSellerEventStatus(ctx context.Context, sellerID uint64, status string) error {

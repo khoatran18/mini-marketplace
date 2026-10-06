@@ -135,7 +135,7 @@ export interface OrderItem {
   quantity: number;
 }
 
-export type OrderStatus = 'PENDING' | 'FAILED' | 'SUCCESS';
+export type OrderStatus = 'PENDING' | 'FAILED' | 'SUCCESS' | 'CANCELED';
 
 export interface Order {
   id?: number;

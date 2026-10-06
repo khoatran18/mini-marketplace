@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { createOrderRequest } from '../lib/api';
-import type { OrderItem } from '../lib/types';
+import type { OrderItem, OrderStatus } from '../lib/types';
 import { useAuth } from './auth/AuthProvider';
 
 export function CreateOrderForm() {
   const { userId, getValidAccessToken } = useAuth();
   const [buyerId, setBuyerId] = useState(0);
-  const [status, setStatus] = useState("pending");
+  const [status, setStatus] = useState<OrderStatus>("PENDING");
   const [items, setItems] = useState<OrderItem[]>([
     { product_id: 0, quantity: 1, price: 0 }
   ]);
@@ -80,7 +80,7 @@ export function CreateOrderForm() {
         Trạng thái
         <select
           value={status}
-          onChange={(event) => setStatus(event.target.value)}
+          onChange={(event) => setStatus(event.target.value as OrderStatus)}
           className="w-full rounded-xl border border-slate-300 px-3 py-2 text-base shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
         >
           <option value="pending">pending</option>

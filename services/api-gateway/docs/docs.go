@@ -26,6 +26,11 @@ const docTemplate = `{
     "paths": {
         "/auth/change-password": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Change password",
                 "consumes": [
                     "application/json"
@@ -39,7 +44,7 @@ const docTemplate = `{
                 "summary": "ChangePassword",
                 "parameters": [
                     {
-                        "description": "Username, old and new password to ChangePassword",
+                        "description": "Old and new password (account taken from the token)",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -261,7 +266,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get order by buyer_id and status",
+                "description": "List the caller's orders by status",
                 "consumes": [
                     "application/json"
                 ],
@@ -273,13 +278,6 @@ const docTemplate = `{
                 ],
                 "summary": "GetOrdersByBuyerIDStatus",
                 "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Buyer ID",
-                        "name": "buyer_id",
-                        "in": "query",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "Status of order",
@@ -366,7 +364,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get order",
+                "description": "Get one of the caller's orders",
                 "consumes": [
                     "application/json"
                 ],
@@ -399,58 +397,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update order",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "order"
-                ],
-                "summary": "UpdateOrderByID",
-                "parameters": [
-                    {
-                        "description": "Order update payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.UpdateOrderByIDInput"
-                        }
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Order ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.UpdateOrderByIDOutput"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -469,7 +417,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Cancel order by ID",
+                "description": "Cancel one of the caller's orders",
                 "consumes": [
                     "application/json"
                 ],
@@ -498,6 +446,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1479,17 +1439,14 @@ const docTemplate = `{
             ],
             "properties": {
                 "password": {
-                    "description": "Password of the user",
                     "type": "string",
                     "example": "password1"
                 },
                 "role": {
-                    "description": "Role of the user, e.g., admin or buyer",
                     "type": "string",
                     "example": "admin"
                 },
                 "username": {
-                    "description": "Username of the user",
                     "type": "string",
                     "example": "user1"
                 }
@@ -1499,24 +1456,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "access_token": {
-                    "description": "JWT access token",
-                    "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    "type": "string"
                 },
                 "message": {
-                    "description": "Response message",
-                    "type": "string",
-                    "example": "Login successful"
+                    "type": "string"
                 },
                 "refresh_token": {
-                    "description": "JWT refresh token",
-                    "type": "string",
-                    "example": "dGhpc2lzcmVmcmVzaHRva2Vu"
+                    "type": "string"
                 },
                 "success": {
-                    "description": "Indicates if login was successful",
-                    "type": "boolean",
-                    "example": true
+                    "type": "boolean"
                 }
             }
         },
@@ -1743,25 +1692,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.UpdateOrderByIDInput": {
-            "type": "object",
-            "properties": {
-                "order": {
-                    "$ref": "#/definitions/dto.Order"
-                }
-            }
-        },
-        "dto.UpdateOrderByIDOutput": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
         "dto.UpdateProductInput": {
             "type": "object",
             "properties": {
@@ -1803,7 +1733,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
-	BasePath:         "/api/v1",
+	BasePath:         "",
 	Schemes:          []string{},
 	Title:            "Swagger Example API",
 	Description:      "My API-Gateway server celler server.",

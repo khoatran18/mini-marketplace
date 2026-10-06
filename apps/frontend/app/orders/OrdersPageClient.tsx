@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../components/auth/AuthProvider';
-import { getOrdersByBuyerStatusRequest } from '../../lib/api';
+import { cancelOrderRequest, getOrdersByBuyerStatusRequest } from '../../lib/api';
 import type { Order, OrderStatus } from '../../lib/types';
 
 const STATUS_META: Record<OrderStatus, { label: string; description: string; badgeClass: string }> = {
@@ -20,10 +20,15 @@ const STATUS_META: Record<OrderStatus, { label: string; description: string; bad
     label: 'Thành công',
     description: 'Đơn hàng đã thanh toán thành công.',
     badgeClass: 'bg-emerald-100 text-emerald-700'
+  },
+  CANCELED: {
+    label: 'Đã hủy',
+    description: 'Đơn hàng đã bị hủy và hàng đã được hoàn lại kho.',
+    badgeClass: 'bg-slate-200 text-slate-700'
   }
 };
 
-const statusOptions: OrderStatus[] = ['PENDING', 'FAILED', 'SUCCESS'];
+const statusOptions: OrderStatus[] = ['PENDING', 'FAILED', 'SUCCESS', 'CANCELED'];
 
 const currencyFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -55,6 +60,8 @@ export function OrdersPageClient() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [cancelingId, setCancelingId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +86,7 @@ export function OrdersPageClient() {
         if (!token) {
           throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
         }
-        const response = await getOrdersByBuyerStatusRequest(userId, selectedStatus, token);
+        const response = await getOrdersByBuyerStatusRequest(selectedStatus, token);
         if (!cancelled) {
           setOrders(response.orders ?? []);
         }
@@ -99,7 +106,27 @@ export function OrdersPageClient() {
     return () => {
       cancelled = true;
     };
-  }, [selectedStatus, userId, getValidAccessToken]);
+  }, [selectedStatus, userId, getValidAccessToken, reloadKey]);
+
+  const handleCancel = async (orderId: number) => {
+    if (!window.confirm(`Hủy đơn hàng #${orderId}?`)) {
+      return;
+    }
+    setCancelingId(orderId);
+    setError(null);
+    try {
+      const token = await getValidAccessToken();
+      if (!token) {
+        throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+      }
+      await cancelOrderRequest(orderId, token);
+      setReloadKey((key) => key + 1);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setCancelingId(null);
+    }
+  };
 
   const statusDescription = useMemo(() => STATUS_META[selectedStatus]?.description ?? '', [selectedStatus]);
 
@@ -162,6 +189,19 @@ export function OrdersPageClient() {
                 </div>
                 <span className={`rounded-full px-3 py-1 text-sm font-semibold ${meta.badgeClass}`}>{meta.label}</span>
               </header>
+
+              {status === 'SUCCESS' && order.id ? (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => void handleCancel(order.id as number)}
+                    disabled={cancelingId === order.id}
+                    className="rounded-full border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                  >
+                    {cancelingId === order.id ? 'Đang hủy...' : 'Hủy đơn hàng'}
+                  </button>
+                </div>
+              ) : null}
 
               <div className="grid gap-3">
                 {items.length === 0 ? (

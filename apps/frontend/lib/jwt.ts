@@ -6,7 +6,6 @@ interface AuthTokenPayload extends JWTPayload {
   userID?: number | string;
   userId?: number | string;
   userid?: number | string;
-  sub?: number | string;
   Username?: string;
   username?: string;
   Role?: string;

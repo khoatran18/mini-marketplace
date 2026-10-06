@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
+	"strconv"
 	"time"
 	"user-service/pkg/outbox"
 
@@ -47,7 +47,6 @@ func (s *UserService) producerCreateSellerKafkaEventBatch(ctx context.Context, l
 
 	var firstErr error
 	for _, eventModel := range eventsModel {
-		fmt.Println(eventModel)
 		if err := s.producerCreateSellerKafkaEvent(ctxEachEvent, eventModel, topic); err != nil && firstErr == nil {
 			firstErr = err
 		}
@@ -63,7 +62,7 @@ func (s *UserService) producerCreateSellerKafkaEvent(ctx context.Context, eventM
 		return err
 	}
 	// Publish event
-	if err := s.MQProducer.Publish(ctx, &kafka.LeastBytes{}, topic, []byte("key"), eventJson); err != nil {
+	if err := s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, []byte(strconv.FormatUint(eventModel.SellerID, 10)), eventJson); err != nil {
 		s.ZapLogger.Warn("UserService: publish to Kafka failure", zap.Error(err))
 		if err2 := s.UserRepo.UpdateCreateSellerEventStatus(ctx, eventModel.SellerID, "FAILED"); err2 != nil {
 			s.ZapLogger.Warn("UserService: publish to Kafka failure and can not update OutboxDB")

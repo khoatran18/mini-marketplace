@@ -190,15 +190,12 @@ definitions:
   dto.LoginInput:
     properties:
       password:
-        description: Password of the user
         example: password1
         type: string
       role:
-        description: Role of the user, e.g., admin or buyer
         example: admin
         type: string
       username:
-        description: Username of the user
         example: user1
         type: string
     required:
@@ -209,20 +206,12 @@ definitions:
   dto.LoginOutput:
     properties:
       access_token:
-        description: JWT access token
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
       message:
-        description: Response message
-        example: Login successful
         type: string
       refresh_token:
-        description: JWT refresh token
-        example: dGhpc2lzcmVmcmVzaHRva2Vu
         type: string
       success:
-        description: Indicates if login was successful
-        example: true
         type: boolean
     type: object
   dto.Order:
@@ -370,18 +359,6 @@ definitions:
       success:
         type: boolean
     type: object
-  dto.UpdateOrderByIDInput:
-    properties:
-      order:
-        $ref: '#/definitions/dto.Order'
-    type: object
-  dto.UpdateOrderByIDOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
   dto.UpdateProductInput:
     properties:
       product:
@@ -419,7 +396,7 @@ paths:
       - application/json
       description: Change password
       parameters:
-      - description: Username, old and new password to ChangePassword
+      - description: Old and new password (account taken from the token)
         in: body
         name: input
         required: true
@@ -440,6 +417,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: ChangePassword
       tags:
       - auth
@@ -567,13 +546,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get order by buyer_id and status
+      description: List the caller's orders by status
       parameters:
-      - description: Buyer ID
-        in: query
-        name: buyer_id
-        required: true
-        type: integer
       - description: Status of order
         in: query
         name: status
@@ -634,7 +608,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Cancel order by ID
+      description: Cancel one of the caller's orders
       parameters:
       - description: Order ID
         in: path
@@ -652,6 +626,14 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -664,7 +646,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get order
+      description: Get one of the caller's orders
       parameters:
       - description: Order ID
         in: path
@@ -682,6 +664,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -689,42 +675,6 @@ paths:
       security:
       - BearerAuth: []
       summary: GetOrderByID
-      tags:
-      - order
-    put:
-      consumes:
-      - application/json
-      description: Update order
-      parameters:
-      - description: Order update payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/dto.UpdateOrderByIDInput'
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.UpdateOrderByIDOutput'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: UpdateOrderByID
       tags:
       - order
   /products:

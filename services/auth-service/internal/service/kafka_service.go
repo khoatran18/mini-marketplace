@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -62,8 +63,8 @@ func (s *AuthService) producerPwdVersionKafkaEvent(ctx context.Context, eventMod
 		log.Printf("Can not marshal event: %v with err: %v\n", eventJson, err)
 		return err
 	}
-	// Publish event
-	if err := s.MQProducer.Publish(ctx, &kafka.LeastBytes{}, topic, []byte("key"), eventJson); err != nil {
+	// Publish event (key = user ID keeps the password versions of one user ordered)
+	if err := s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, []byte(strconv.FormatUint(eventModel.UserID, 10)), eventJson); err != nil {
 		s.ZapLogger.Warn("AuthService: publish to Kafka failure", zap.Error(err))
 		if err2 := s.AccountRepo.UpdatePwdVersionEventStatus(ctx, eventModel.UserID, "FAILED"); err2 != nil {
 			s.ZapLogger.Warn("AuthService: publish to Kafka failure and can not update OutboxDB")

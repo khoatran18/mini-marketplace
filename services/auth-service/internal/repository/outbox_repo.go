@@ -31,14 +31,9 @@ func (r *AccountRepository) CreateOrUpdatePwdVersionEvent(tx *gorm.DB, userID ui
 
 func (r *AccountRepository) GetPwdVersionEventNotPublish(limit int) ([]*outbox.PwdVersionKafkaEvent, error) {
 	var pwdVersionEvents []*outbox.PwdVersionKafkaEvent
-	result := r.DB.Model(&outbox.PwdVersionEvent{}).Where("status IN ?", []string{"PENDING", "FAILED"}).Find(&pwdVersionEvents).Limit(limit)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	if result.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-	return pwdVersionEvents, nil
+	err := r.DB.Model(&outbox.PwdVersionEvent{}).Where("status IN ?", []string{"PENDING", "FAILED"}).
+		Order("created_at ASC").Limit(limit).Find(&pwdVersionEvents).Error
+	return pwdVersionEvents, err
 }
 
 func (r *AccountRepository) UpdatePwdVersionEventStatus(ctx context.Context, userID uint64, status string) error {

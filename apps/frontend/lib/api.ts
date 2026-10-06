@@ -220,17 +220,24 @@ export async function createOrderRequest(
   });
 }
 
+// The buyer is identified by the access token; the gateway ignores any buyer_id.
 export async function getOrdersByBuyerStatusRequest(
-  buyerId: number,
   status: OrderStatus,
   token?: string | null
 ): Promise<GetOrdersByBuyerStatusOutput> {
-  const params = new URLSearchParams({
-    buyer_id: String(buyerId),
-    status
-  });
+  const params = new URLSearchParams({ status });
   return apiFetch<GetOrdersByBuyerStatusOutput>(`/orders?${params.toString()}`, {
     method: 'GET',
+    token
+  });
+}
+
+export async function cancelOrderRequest(
+  orderId: number,
+  token?: string | null
+): Promise<{ message: string; success: boolean }> {
+  return apiFetch<{ message: string; success: boolean }>(`/orders/${orderId}`, {
+    method: 'DELETE',
     token
   });
 }
