@@ -17,14 +17,14 @@ Sau khi nền tảng xong, tự xây các ứng dụng AI trên đó:
 Ngôn ngữ dự kiến: **`ai-service` bằng Python** (FastAPI + gRPC), các service Go giữ nguyên.
 
 ## Những thứ nền tảng (platform/) sẽ có sẵn để AI dựa vào – *không phải việc của AI*
-Tracking & ClickHouse · analytics API theo vai trò · metrics Prometheus + `/admin/system/*` · alert-service (rule + vòng đời) · catalog đủ trường · cart · thanh toán mô phỏng · role admin · health/ready/metrics mọi service. AI chỉ **gọi lại các API này** (bằng JWT của người dùng), không đọc DB trực tiếp.
+Tracking & ClickHouse · analytics API theo vai trò · metrics Prometheus + `/admin/system/*` · catalog đủ trường · cart · thanh toán mô phỏng · role admin · health/ready/metrics mọi service. AI chỉ **gọi lại các API này** (bằng JWT của người dùng), không đọc DB trực tiếp.
 
 ## Điều kiện tối thiểu cho từng ứng dụng AI
 | Ứng dụng | Cần có từ platform |
 |---|---|
 | Tìm theo mô tả | `description/category/tags/image` (03 platform), `product.changed` event |
 | Agent seller/admin | analytics API, `/admin/system/*`, role admin |
-| Cảnh báo thông minh | `alerts` + `evidence`, metrics |
+| Cảnh báo thông minh | **hiện chưa có hệ thống cảnh báo** (đã quyết định hoãn); nháp này giả định sau này sẽ thêm `alerts` + `evidence` trên metrics Prometheus |
 | Gợi ý | `events_raw` có `impression`+`position`+`surface`, `fact_order_items`, cart events; **cần thêm** `request_id`/`model_version` trong envelope khi tới lúc làm |
 | RAG | không phụ thuộc platform nhiều; cần kho văn bản + trang admin tải lên |
 

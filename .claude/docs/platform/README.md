@@ -7,10 +7,10 @@
 | # | Tài liệu | Nội dung |
 |---|---|---|
 | 01 | [architecture.md](01-architecture.md) | Kiến trúc đích, service mới, cổng/port, luồng dữ liệu |
-| 02 | [health-ready-metrics.md](02-health-ready-metrics.md) | **Chuẩn `/healthz` `/readyz` `/metrics` `/version`** cho mọi service + docker/Traefik/Swarm + checklist từng dependency |
+| 02 | [health-ready-metrics.md](02-health-ready-metrics.md) | **Chuẩn `/health` `/ready` `/metrics` `/version`** cho mọi service + docker/Traefik/Swarm + checklist từng dependency |
 | 03 | [data-model.md](03-data-model.md) | Trường mới (product, order, payment, inventory, user…), tracking event, ClickHouse |
 | 04 | [orders-payments.md](04-orders-payments.md) | Thanh toán **mô phỏng** (`payment-service`), vòng đời đơn, tồn kho/reservation, kịch bản test |
-| 05 | [analytics-alerting.md](05-analytics-alerting.md) | Analytics (doanh thu, traffic), metrics hệ thống CPU/RAM, **rule cảnh báo**, vòng đời alert |
+| 05 | [analytics-monitoring.md](05-analytics-monitoring.md) | Analytics (doanh thu, traffic), giám sát CPU/RAM bằng **Grafana** (chưa có cảnh báo) |
 | 06 | [api-contracts.md](06-api-contracts.md) | Toàn bộ REST mới/đổi, gRPC nội bộ, Kafka topic mới |
 | 07 | [ui-design.md](07-ui-design.md) | Sitemap, wireframe, component, tracking SDK (không AI) |
 | 08 | [infra-plan.md](08-infra-plan.md) | Container mới, env var, healthcheck, tài nguyên, CI/E2E |
@@ -19,14 +19,15 @@
 ## Quyết định đã chốt (từ chủ dự án)
 - Thanh toán: **mô phỏng** (không cổng thật) – xem 04.
 - Analytics: **ClickHouse**.
-- Mọi service/container có **health + ready + metrics** – xem 02.
+- Mọi service/container có **health + ready + metrics** – xem 02. Tên endpoint: `/health`, `/ready` (không `z`).
+- Múi giờ cố định `Asia/Ho_Chi_Minh`; có dark mode; **không mã giảm giá**; **chưa có cảnh báo** (chỉ Grafana theo dõi metric).
 - AI: chưa làm gì, chưa tạo `ai-service`; chỉ có file nháp. Khi làm sẽ dùng Python (ghi trong nháp).
 
 ## Tóm tắt kiến trúc
 ```
 Browser ─▶ Traefik ─▶ frontend (Next.js)         ─▶ api-gateway ──gRPC──▶ auth · user · product · order
-   └ tracking SDK ─ POST /events ─▶ gateway ─▶ Kafka `tracking.events`            payment* · analytics* · alert*
-Mọi service: :PORT (gRPC/HTTP) + :8081 admin (healthz, readyz, metrics, version) – chỉ trong mạng nội bộ
-Postgres · Redis · Kafka · ClickHouse* · MinIO* · Prometheus* · Alertmanager* · Grafana* · cAdvisor* · node-exporter*
+   └ tracking SDK ─ POST /events ─▶ gateway ─▶ Kafka `tracking.events`            payment* · analytics*
+Mọi service: :PORT (gRPC/HTTP) + :8081 admin (health, ready, metrics, version) – chỉ trong mạng nội bộ
+Postgres · Redis · Kafka · ClickHouse* · MinIO* · Prometheus* · Grafana* · cAdvisor* · node-exporter*
 (*) = mới
 ```

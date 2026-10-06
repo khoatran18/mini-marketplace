@@ -32,7 +32,7 @@ COD:  PENDING ─▶ CONFIRMED (không cần trả trước) ─▶ SHIPPED ─�
 - Đặt hàng → **reserve** (tăng `reserved`, ghi `inventory_ledger reason=reserve`). Thanh toán xong/ giao → khi `SHIPPED` trừ `inventory` & giảm `reserved` (`sale`). Huỷ/hết hạn/ thất bại → `release`.
 - Mọi thay đổi ghi `inventory_ledger` (bất biến) + outbox `inventory.changed` (để analytics & cảnh báo tồn thấp).
 - **Hết hạn giữ chỗ**: worker trong order-service quét `status=AWAITING_PAYMENT AND expires_at < now()` mỗi 30 s (khoá `FOR UPDATE SKIP LOCKED`) ⇒ `EXPIRED` + `order.cancel`-tương đương ⇒ release. `ORDER_PAYMENT_TTL_MIN` mặc định 15.
-- Ngưỡng tồn thấp: `available <= low_stock_threshold` ⇒ phát `inventory.changed{new_level:low}`; alert-service tạo alert cho shop (xem 05).
+- Ngưỡng tồn thấp: `available <= low_stock_threshold` ⇒ phát `inventory.changed{new_level:low}`; chỉ dùng để hiện danh sách "tồn thấp" trên dashboard seller (không gửi cảnh báo).
 - Shop điều chỉnh tồn: `POST /seller/products/:id/inventory/adjust {delta, reason}` (ghi ledger, bắt buộc lý do).
 
 ## 3. `payment-service` (mô phỏng)
@@ -68,7 +68,7 @@ payment-service: chọn kịch bản → cập nhật payments/attempts → outb
 order-service consume `payment.succeeded` → AWAITING_PAYMENT→PAID  (nếu đơn đã EXPIRED/CANCELED ⇒ yêu cầu refund tự động)
 ```
 - **Idempotency**: `payments.idempotency_key UNIQUE`; webhook trùng không đổi trạng thái hai lần.
-- **Kiểm tra số tiền**: `amount` payment phải bằng `orders.total_price` (so bằng cent nguyên); lệch ⇒ `FAILED` + alert.
+- **Kiểm tra số tiền**: `amount` payment phải bằng `orders.total_price` (so bằng cent nguyên); lệch ⇒ `FAILED` + log lỗi + metric `mm_payment_amount_mismatch_total`.
 - **Chữ ký webhook**: `X-Signature: t=<ts>,v1=HMAC_SHA256(secret, ts + "." + body)`, từ chối nếu lệch giờ > 5 phút (tập đúng cách làm với cổng thật). Secret `PAYMENT_WEBHOOK_SECRET`.
 - **Hoàn tiền**: `POST /payments/:id/refund` (nội bộ/ seller/ admin theo luồng đơn) → `refunds` → `payment.refunded`; hoàn một phần được; tổng hoàn ≤ đã thu.
 - **Trạng thái payment**: `REQUIRES_ACTION → PROCESSING → SUCCEEDED | FAILED | CANCELED`; `SUCCEEDED → PARTIALLY_REFUNDED | REFUNDED`.
@@ -77,10 +77,9 @@ order-service consume `payment.succeeded` → AWAITING_PAYMENT→PAID  (nếu đ
 ### 3.4 Chủ động bất thường (để luyện vận hành)
 Công cụ admin dev-only `POST /admin/dev/payments/:id/force {status}`; `PAYMENT_CHAOS_RATE` (0–1) tỉ lệ lỗi ngẫu nhiên khi chạy kiểm thử tải. Tắt hẳn ở production-like (`PAYMENTS_MODE` + `ENV`).
 
-## 4. Phí/giảm giá (mô phỏng tối thiểu)
-- `shipping_fee`: công thức đơn giản theo tổng khối lượng & vùng (cấu hình `SHIPPING_FLAT_FEE`, `FREE_SHIP_OVER`).
-- `discount_total`: mã giảm giá (`coupons(code, type, value, min_total, max_discount, starts_at, ends_at, usage_limit, store_id?)`) – **tuỳ chọn P2.5**; server tính, không tin client.
-- Tổng = `subtotal + shipping_fee - discount_total`, tính bằng cent nguyên.
+## 4. Phí vận chuyển (mô phỏng tối thiểu)
+- `shipping_fee`: công thức đơn giản theo tổng khối lượng (cấu hình `SHIPPING_FLAT_FEE`, `FREE_SHIP_OVER`). **Không có mã giảm giá/ coupon** (đã loại khỏi phạm vi).
+- Tổng = `subtotal + shipping_fee`, tính bằng cent nguyên, server tính, không tin client.
 
 ## 5. Kiểm thử bắt buộc (bổ sung testing.md)
 Unit (Postgres thật): chuyển trạng thái hợp lệ/không hợp lệ theo từng actor; reserve/release không lệch ledger; hết hạn giải phóng đúng một lần; webhook trùng/ trễ/ sau EXPIRED; số tiền lệch; hoàn tiền vượt mức bị từ chối; COD → PAID khi DELIVERED; cạnh tranh: 12 người mua 5 hàng (đã có) vẫn đúng với reserve mới.

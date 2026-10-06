@@ -4,7 +4,7 @@ Quy ước cũ giữ nguyên: `Authorization: Bearer`, lỗi `{"error":"…"}`, 
 Tiền ở API mới: `{ "amount": "125000", "currency": "VND" }` (chuỗi số nguyên VND, không float).
 
 ## 1. Vận hành (mọi service, cổng :8081 – xem 02)
-`GET /healthz` · `GET /readyz` · `GET /startupz`(tuỳ chọn) · `GET /metrics` · `GET /version`
+`GET /health` · `GET /ready` · `GET /metrics` · `GET /version`
 Gateway public (cổng 8080): `GET /health` (giữ nguyên) và `GET /version`.
 Frontend: `GET /api/health`, `GET /api/ready`.
 
@@ -46,8 +46,8 @@ Frontend: `GET /api/health`, `GET /api/ready`.
 |---|---|---|
 | GET `/cart` · PUT `/cart/items/:product_id {quantity}` · DELETE `/cart/items/:product_id` · DELETE `/cart` | B | |
 | POST `/cart/merge` | B | gộp giỏ localStorage khi đăng nhập |
-| POST `/checkout/preview` | B | server tính subtotal, ship, giảm, tổng, cảnh báo hết hàng (không tạo đơn) |
-| POST `/orders` | B | header `Idempotency-Key` (bắt buộc); body `{items?|from_cart:true, address_id, payment_method, coupon_code?, note?}` → `{checkout_id, orders:[…], payment?:{payment_id, status, pay_url}}`. Server tính giá/ship/giảm, snapshot địa chỉ; bỏ qua mọi giá/status client gửi |
+| POST `/checkout/preview` | B | server tính subtotal, ship, tổng, cảnh báo hết hàng (không tạo đơn) |
+| POST `/orders` | B | header `Idempotency-Key` (bắt buộc); body `{items?|from_cart:true, address_id, payment_method, note?}` → `{checkout_id, orders:[…], payment?:{payment_id, status, pay_url}}`. Server tính giá/ship, snapshot địa chỉ; bỏ qua mọi giá/status client gửi |
 | GET `/orders?status=&page=` · GET `/orders/:id` | B | + `payment`, `history[]`, `tracking` |
 | POST `/orders/:id/cancel {reason}` | B | trước SHIPPED; thay `DELETE /orders/:id` (giữ DELETE như alias tương thích tạm) |
 | POST `/orders/:id/confirm-received` | B | SHIPPED→DELIVERED |
@@ -85,27 +85,11 @@ Tất cả `S`, ép `store_id` từ JWT:
 `GET /admin/system/health` · `/admin/system/metrics?q=&service=&range=&step=` · `/admin/system/outbox` · `/admin/system/kafka` (lag theo group) · `POST /admin/system/outbox/requeue`
 Phản hồi chung: `{ "as_of": "...", "tz":"Asia/Ho_Chi_Minh", "source":"clickhouse|postgres|prometheus", "data": … }`.
 
-### 2.8 Cảnh báo
-| API | Quyền | |
-|---|---|---|
-| GET `/alerts?status=&severity=&since=&page=` | S (shop mình) / A (tất cả) | |
-| GET `/alerts/:id` | như trên | + `evidence`, `runbook_url` |
-| POST `/alerts/:id/ack` · `/resolve` · `/silence {until, reason}` | S/A | |
-| GET `/alerts/stream` | S/A | SSE |
-| GET `/notifications` · POST `/notifications/:id/read` · `/read-all` | 🔑 | chuông |
-| GET/PUT `/notification-prefs` | 🔑 | |
-| GET/POST/PUT `/admin/alert-rules[/:id]` · POST `/admin/alert-rules/:id/test` · `/enable` · `/disable` | A | |
-| POST `/internal/alerts/prometheus` | nội bộ (secret) | webhook Alertmanager |
-
-### 2.9 Coupons (P2.5, tuỳ chọn)
-`POST/GET/PUT /seller/coupons` (S) · `POST /admin/coupons` (A) · `POST /checkout/preview` áp mã.
-
 ## 3. gRPC nội bộ (đề xuất proto mới)
 | Service | RPC chính |
 |---|---|
 | `payment.PaymentService` :50057 | `CreatePayment`, `GetPayment`, `ConfirmPayment`, `CancelPayment`, `Refund`, `ListPayments`, `HandleWebhook` + `grpc.health.v1` |
 | `analytics.AnalyticsService` :50055 | `Summary`, `TimeSeries`, `TopN`, `Funnel`, `Traffic`, `ProductStats`, `StockoutForecast`, `PaymentsBreakdown`, `DataHealth` (nhận `Scope{role,store_id}`) |
-| `alert.AlertService` :50056 | `ListAlerts`, `GetAlert`, `Ack`, `Resolve`, `Silence`, `UpsertRule`, `ListRules`, `TestRule`, `IngestExternal`, `StreamNotifications` |
 | `order.OrderService` mở rộng | `GetCart/SetCartItem/MergeCart`, `PreviewCheckout`, `Transition(order_id, to, actor, reason)`, `ListOrdersByStore`, `GetHistory`, `RequestReturn` |
 | `product.ProductService` mở rộng | `Search`, `ListCategories`, `AdjustInventory`, `GetLedger`, `SetStatus`, `CreateReview`, `Wishlist*`, `GetStockLevel` |
 | `auth.AuthService` mở rộng | `GetMe`, `ListUsers`, `LockUser`, `Unlock`, `Logout` |
@@ -115,14 +99,13 @@ Mọi gRPC service: `grpc.health.v1`, interceptor metrics, deadline từ gateway
 | Topic | Producer → Consumer (group) | Key | Payload (có trường `v:1`) |
 |---|---|---|---|
 | `tracking.events` | gateway → analytics (`analytics-ingest`) | anonymous_id / user_id | envelope 03 §2.1 |
-| `order.status_changed` | order (outbox) → analytics, alert, payment? | order id | `{order_id, checkout_id, buyer_id, store_id, status, prev, payment_method, totals, at, items:[{item_id, product_id, category_id, qty, unit_price}]}` |
+| `order.status_changed` | order (outbox) → analytics | order id | `{order_id, checkout_id, buyer_id, store_id, status, prev, payment_method, totals, at, items:[{item_id, product_id, category_id, qty, unit_price}]}` |
 | `order.create_order` / `order.cancel_order` | (giữ) | order id | thêm `reason` khi cancel/expire |
 | `product.validate_order` | (giữ) | order id | thêm `reserved:true` |
 | `payment.requested` | order → payment *(thay vì gRPC nếu muốn async)* | order id | `{order_id, amount, method}` |
-| `payment.succeeded` / `payment.failed` / `payment.refunded` | payment (outbox) → order, analytics, alert | order id | `{payment_id, order_id, method, amount, failure_code?, at, provider_event_id}` |
+| `payment.succeeded` / `payment.failed` / `payment.refunded` | payment (outbox) → order, analytics | order id | `{payment_id, order_id, method, amount, failure_code?, at, provider_event_id}` |
 | `product.changed` | product (outbox) → analytics | product id | `{product_id, op, store_id, name, category_id, price, status, updated_at}` |
-| `inventory.changed` | product (outbox) → analytics, alert | product id | `{product_id, store_id, delta, available, level, reason, ref}` |
+| `inventory.changed` | product (outbox) → analytics | product id | `{product_id, store_id, delta, available, level, reason, ref}` |
 | `cart.updated` | order (outbox) → analytics | user id | `{user_id, items:[{product_id,qty}], at}` |
-| `alert.created` / `alert.updated` | alert → notifier (nội bộ alert-service) | alert id | alert JSON |
 | `*.dlq` | mọi consumer mới | giữ key gốc | `{original_topic, error, payload, attempts}` |
 Quy tắc cũ giữ nguyên (outbox, `acks=all`, commit sau xử lý, idempotent). Tăng retention `tracking.events` 7 ngày; `EnsureTopicExist` tạo các topic mới, 3 partition.

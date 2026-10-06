@@ -43,7 +43,7 @@ Bổ sung cho [../data-model.md](../data-model.md). Bảng mới dùng migration
 | `status` mở rộng | xem 04 (state machine) |
 | `payment_method` | `COD|MOCK_CARD|MOCK_WALLET|MOCK_BANK_TRANSFER` |
 | `payment_status` | `UNPAID|PENDING|PAID|FAILED|REFUNDED|PARTIAL_REFUND` (đồng bộ từ payment-service) |
-| `subtotal, shipping_fee, discount_total, total_price` | NUMERIC(18,2); server tính |
+| `subtotal, shipping_fee, total_price` | NUMERIC(18,2); server tính |
 | `shipping_address jsonb` | **snapshot** địa chỉ tại thời điểm đặt (receiver, phone, line…) |
 | `note`, `idempotency_key UNIQUE(buyer_id, key)` | chống đặt trùng (roadmap #3) |
 | `expires_at` | hạn thanh toán (mặc định `now + ORDER_PAYMENT_TTL_MIN`) |
@@ -57,11 +57,6 @@ Tách đơn theo shop: checkout giỏ nhiều shop ⇒ tạo **một `orders` ch
 
 ### payment-service (mới, DB `postgres`, bảng riêng) – xem 04
 `payments(id, order_id/checkout_id, buyer_id, method, status, amount, currency, provider, provider_ref, idempotency_key UNIQUE, failure_code, created_at, updated_at, paid_at)` · `payment_attempts(id, payment_id, scenario, status, at, raw jsonb)` · `refunds(id, payment_id, amount, reason, status, at)` · `webhook_deliveries(id, payment_id, event, attempt, status_code, next_retry_at)` · outbox `payment_events`.
-
-### alert-service (DB `ops`)
-`alert_rules(id, key UNIQUE, name, type[promql|threshold|sql|anomaly], definition jsonb, schedule, severity, scope[platform|store], for_seconds, cooldown_s, enabled, runbook_url, owner, updated_by, updated_at)` ·
-`alerts(id, fingerprint, rule_id, severity, scope, store_id, title, description, evidence jsonb, status[open|ack|resolved|silenced], count, first_seen, last_seen, ack_by, ack_at, resolved_at)` (unique `fingerprint` khi `status in (open,ack)`) ·
-`silences(id, rule_id?, fingerprint?, store_id?, until, reason, created_by)` · `notifications(id, user_id, store_id, alert_id, channel, payload, created_at, read_at)` · `notification_prefs(user_id, channel, min_severity)`.
 
 ### gateway / chung
 `identity_links(anonymous_id, user_id, first_seen)` (nối khách ẩn danh với tài khoản) · `consents(user_id, analytics, personalization, updated_at)` · `feature_flags(key, enabled, config, updated_at)`.
@@ -103,7 +98,7 @@ Tách đơn theo shop: checkout giỏ nhiều shop ⇒ tạo **một `orders` ch
 - `anonymous_id` cookie 1st-party `mm_aid` (13 tháng); đăng nhập ⇒ `POST /events/identify` ghi `identity_links`.
 - `POST /events`: JWT tuỳ chọn, ≤ 50 event/batch, ≤ 64 KB, whitelist `event_type`, rate-limit riêng theo IP; client không ghi đè trường server.
 - Banner consent (`analytics`); từ chối ⇒ chỉ thu `page_view`/`error_client` không định danh. Không PII trong `props` (che email/SĐT trong `q`).
-- Retention: events 13 tháng; fact đơn hàng vô thời hạn; `notifications` 90 ngày. Quyền xoá: `DELETE /users/me/data`.
+- Retention: events 13 tháng; fact đơn hàng vô thời hạn; Quyền xoá: `DELETE /users/me/data`.
 
 ## 3. ClickHouse
 ```sql
@@ -121,7 +116,7 @@ CREATE TABLE events_raw (
 
 CREATE TABLE fact_orders (
   order_id UInt64, checkout_id String, buyer_id UInt64, store_id UInt64, status LowCardinality(String), payment_method LowCardinality(String), payment_status LowCardinality(String),
-  subtotal Decimal(18,2), shipping_fee Decimal(18,2), discount_total Decimal(18,2), total Decimal(18,2),
+  subtotal Decimal(18,2), shipping_fee Decimal(18,2) Decimal(18,2), total Decimal(18,2),
   created_at DateTime64(3), paid_at Nullable(DateTime64(3)), delivered_at Nullable(DateTime64(3)), canceled_at Nullable(DateTime64(3)), status_at DateTime64(3)
 ) ENGINE = ReplacingMergeTree(status_at) ORDER BY order_id;
 
@@ -140,4 +135,4 @@ CREATE TABLE fact_inventory (product_id UInt64, store_id UInt64, delta Int32, re
 ```
 **Rollup (materialized views)**: `mv_revenue_hourly` (theo giờ × shop × category × method: doanh thu, đơn, đơn hủy, AOV), `mv_traffic_hourly` (PV, session, UV, new/returning, theo path/ referrer/ device), `mv_funnel_daily` (view→cart→checkout→paid), `mv_product_stats_daily` (impression, click, view, cart, order, units, revenue), `mv_search_terms_daily`, `mv_payment_hourly` (tỉ lệ thành công/ thất bại theo method & failure_code).
 **Định nghĩa doanh thu** (một nơi duy nhất, dùng cho mọi dashboard): *doanh thu ghi nhận* = tổng `line_total` của đơn có `payment_status=PAID` (online) hoặc `status=DELIVERED` (COD), trừ hoàn tiền; **tính theo thời điểm `paid_at`/`delivered_at`**. GMV = đơn đã đặt (không tính EXPIRED/FAILED/CANCELED trước thanh toán). Phải ghi chú định nghĩa này trên UI (tooltip).
-**Đối soát**: job đêm so tổng doanh thu theo ngày giữa ClickHouse và Postgres; lệch > 0,5% ⇒ alert `reconcile_mismatch`.
+**Đối soát**: job đêm so tổng doanh thu theo ngày giữa ClickHouse và Postgres; lệch > 0,5% ⇒ hiển thị đỏ ở `/admin/data-health` và ghi metric `mm_reconcile_diff_ratio` (xem trên Grafana).

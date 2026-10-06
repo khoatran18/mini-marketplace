@@ -3,7 +3,7 @@
 Stack giữ nguyên: Next.js 14 + Tailwind, chỉ gọi gateway. Thêm Recharts cho biểu đồ.
 
 ## 1. Nguyên tắc
-Tiếng Việt mặc định · mỗi vùng dữ liệu đủ 4 trạng thái **loading / empty / error / stale** · số liệu luôn có `as_of` + tooltip định nghĩa (đặc biệt "doanh thu") · mọi thứ *MÔ PHỎNG* (thanh toán, vận chuyển) có nhãn rõ · ẩn UI theo role chỉ là tiện lợi, quyền thật ở gateway · không render HTML từ người dùng · truy cập được (focus, tương phản, `aria-live` cho thông báo).
+Tiếng Việt mặc định · mỗi vùng dữ liệu đủ 4 trạng thái **loading / empty / error / stale** · số liệu luôn có `as_of` + tooltip định nghĩa (đặc biệt "doanh thu"); **múi giờ cố định `Asia/Ho_Chi_Minh`**, không có bộ chọn múi giờ · mọi thứ *MÔ PHỎNG* (thanh toán, vận chuyển) có nhãn rõ · ẩn UI theo role chỉ là tiện lợi, quyền thật ở gateway · không render HTML từ người dùng · truy cập được (focus, tương phản, `aria-live` cho thông báo).
 
 ## 2. Sitemap
 ```
@@ -11,12 +11,12 @@ Công khai/buyer:  /  ·  /products (lọc, sắp xếp, tìm kiếm từ khoá 
                   /categories/[slug]  ·  /cart  ·  /checkout (địa chỉ, phương thức, mã giảm, tóm tắt)  ·  /pay/[payment_id] (trang thanh toán MÔ PHỎNG)
                   /orders  ·  /orders/[id] (timeline trạng thái, huỷ, đã nhận, đổi trả)  ·  /wishlist  ·  /profile (+ địa chỉ, quyền riêng tư)  ·  /login /register
 Người bán:        /seller (tổng quan)  ·  /seller/products (+ form đủ trường, ảnh, trạng thái)  ·  /seller/inventory  ·  /seller/orders (hộp thư đơn, ship)
-                  /seller/analytics  ·  /seller/alerts  ·  /seller/coupons (P2.5)  ·  /seller/team (seller_admin)
-Quản trị:         /admin  ·  /admin/system (CPU/RAM/health)  ·  /admin/analytics  ·  /admin/payments  ·  /admin/orders  ·  /admin/alerts (+ rules)
+                  /seller/analytics  ·  /seller/team (seller_admin)
+Quản trị:         /admin  ·  /admin/system (CPU/RAM/health)  ·  /admin/analytics  ·  /admin/payments  ·  /admin/orders
                   /admin/users  ·  /admin/stores  ·  /admin/categories  ·  /admin/audit  ·  /admin/data-health
 Dev (ENV=dev):    /dev/tracking (event realtime)  ·  /dev/payments (ép trạng thái)
 ```
-`NavBar`: bảng cấu hình route→role ở một nơi; thêm `admin` vào `Role` (`lib/types.ts`); `/dashboard` cũ chuyển hướng theo role. Layout: `(shop)`, `(seller)`, `(admin)`; seller/admin dùng **ConsoleLayout** (sidebar + bộ chọn khoảng thời gian + chuông cảnh báo).
+`NavBar`: bảng cấu hình route→role ở một nơi; thêm `admin` vào `Role` (`lib/types.ts`); `/dashboard` cũ chuyển hướng theo role. Layout: `(shop)`, `(seller)`, `(admin)`; seller/admin dùng **ConsoleLayout** (sidebar + bộ chọn khoảng thời gian + nút đổi giao diện sáng/tối).
 
 ## 3. Wireframe chính
 ### 3.1 Checkout & thanh toán mô phỏng
@@ -24,9 +24,7 @@ Dev (ENV=dev):    /dev/tracking (event realtime)  ·  /dev/payments (ép trạng
 /checkout                                                   ┌ Tóm tắt ──────────────┐
  1. Địa chỉ giao  ( ) Nhà – Nguyễn A, 09…  [Sửa]  [+ Thêm]    │ 2 sản phẩm   450.000₫ │
  2. Thanh toán    (•) Thẻ (MÔ PHỎNG)  ( ) Ví (MÔ PHỎNG)       │ Phí giao      20.000₫ │
-                  ( ) Chuyển khoản (MÔ PHỎNG) ( ) COD         │ Mã giảm  [____] -0₫   │
- 3. Mã giảm giá [_____] [Áp dụng]                             │ Tổng         470.000₫ │
- ⚠ Chế độ mô phỏng: không trừ tiền thật.                      │ [ Đặt hàng ]          │
+                  ( ) Chuyển khoản (MÔ PHỎNG) ( ) COD          ⚠ Chế độ mô phỏng: không trừ tiền thật.                      │ [ Đặt hàng ]          │
                                                               └───────────────────────┘
 /pay/{id}: banner "TRANG THANH TOÁN GIẢ LẬP"  Số thẻ test [4242…] hạn [..] CVC [..]  [Thanh toán]
            (bảng số thẻ kịch bản có thể mở ra: thành công / từ chối / 3-D Secure / timeout…) → trạng thái "Đang xử lý…" (poll) → kết quả
@@ -36,7 +34,7 @@ Dev (ENV=dev):    /dev/tracking (event realtime)  ·  /dev/payments (ép trạng
 Timeline: `Đã đặt ● Chờ thanh toán ● Đã thanh toán ○ Đang giao ○ Đã giao`; thông tin thanh toán (method, trạng thái, mã), địa chỉ snapshot, mã vận đơn; nút theo trạng thái (Thanh toán lại / Huỷ / Đã nhận hàng / Yêu cầu đổi trả).
 ### 3.3 Seller tổng quan `/seller`
 ```
-[Hôm nay|7 ngày|30 ngày|Tuỳ chọn]                                                   🔔3
+[Hôm nay|7 ngày|30 ngày|Tuỳ chọn]                                                   
 ┌Doanh thu┐ ┌Đơn┐ ┌AOV┐ ┌Tỉ lệ huỷ┐   (so kỳ trước ▲▼)       ┌ Cần chú ý ────────────┐
 │ 12,4tr  │ │38 │ │326k│ │ 4,2%   │                           │ ⚠ 3 SP sắp hết hàng   │
 └─────────┘ └───┘ └────┘ └────────┘                           │ ⚠ 2 đơn chờ giao >24h │
@@ -48,7 +46,7 @@ Cập nhật lúc 08:15 · Doanh thu = đơn đã thanh toán/ COD đã giao (�
 `/seller/products` form: tên, SKU, danh mục, thương hiệu, mô tả, giá, tồn, ngưỡng cảnh báo, ảnh (kéo thả, sắp xếp), thuộc tính (key/value), tags, trạng thái; xem trước trang sản phẩm.
 ### 3.4 Admin `/admin` & `/admin/system`
 ```
-/admin: KPI  Doanh thu | GMV | Đơn | Người dùng hoạt động | Phiên | Lỗi 5xx | Alert mở (critical/warn)
+/admin: KPI  Doanh thu | GMV | Đơn | Người dùng hoạt động | Phiên | Lỗi 5xx | Service not_ready/degraded
         Biểu đồ: doanh thu theo giờ · traffic (PV/Session/UV) · funnel · top shop · top danh mục · thanh toán thành công/thất bại
 /admin/system:
  ┌ service           replicas  ready   version  CPU%  RAM (MB/limit)  p95    5xx   Kafka lag  outbox cũ nhất ┐
@@ -58,22 +56,19 @@ Cập nhật lúc 08:15 · Doanh thu = đơn đã thanh toán/ COD đã giao (�
  ├ Hạ tầng: postgres ● redis ● kafka ● clickhouse ● minio ● prometheus ●  (từ /admin/system/health)          ┤
  ├ Node: CPU/RAM/Disk gauge · Biểu đồ chọn (service, metric, 1h/6h/24h/7d) · Hàng đợi outbox/ consumer lag  ┘
 ```
-Hàng có trạng thái `degraded`/`not_ready` tô màu + hiện check lỗi (từ `checks{}` của `/readyz`).
-### 3.5 Trung tâm cảnh báo
-Danh sách (trạng thái, mức, phạm vi, rule, thời gian, số lần) · chi tiết: biểu đồ bằng chứng, rule, ngưỡng, `runbook ›`, nút Ack/Resolve/Tắt tiếng (1h/1 ngày/tuỳ chọn) · tab Rule: bật/tắt, sửa ngưỡng, "Chạy thử". Chuông trên NavBar cập nhật qua SSE, badge theo mức nghiêm trọng.
-### 3.6 `/admin/payments`
+Hàng có trạng thái `degraded`/`not_ready` tô màu + hiện check lỗi (từ `checks{}` của `/ready`).
+### 3.5 `/admin/payments`
 Bảng giao dịch (lọc status/method/thời gian), chi tiết (attempts, webhook deliveries, hoàn tiền), nút hoàn tiền; thẻ tỉ lệ thành công & top `failure_code`.
 
 ## 4. Component & thư viện
 ```
-components/layout/   ConsoleLayout · RoleGuard · FeatureGate
+components/layout/   ConsoleLayout · RoleGuard · FeatureGate · ThemeToggle (sáng/tối/theo hệ thống)
 components/shop/     ProductCard(+impression/click) · ProductGallery · StockBadge · CategoryNav · SearchBar(+suggest) · FilterPanel · ReviewList
 components/checkout/ AddressPicker · PaymentMethodPicker · OrderSummary · MockPayForm · CountdownTimer · OrderTimeline
 components/seller/   OrderTable · ShipDialog · ProductForm · ImageUploader · InventoryTable
 components/analytics/DateRangePicker · KpiRow · TimeSeries · FunnelChart · DataTable · AsOfBadge · DefinitionTooltip
 components/system/   ServiceTable · ResourceGauge · HealthPill · ChecksPopover
-components/alerts/   AlertList · AlertDetail · RuleEditor · BellMenu · SeverityBadge
-lib/                 api.ts (mở rộng) · tracking.ts · sse.ts · flags.ts · money.ts (định dạng VND) · tz.ts
+lib/                 api.ts (mở rộng) · tracking.ts · flags.ts · money.ts (định dạng VND) · tz.ts (cố định Asia/Ho_Chi_Minh) · theme.ts
 ```
 Biểu đồ: Recharts, một màu nhấn, kỳ trước nét đứt xám, trục có đơn vị, tooltip; lazy-load (`next/dynamic`).
 
@@ -83,5 +78,11 @@ Biểu đồ: Recharts, một màu nhấn, kỳ trước nét đứt xám, trụ
 ## 6. Bảo mật UI
 Token localStorage là nợ đã ghi (security.md) → chuyển cookie httpOnly trước khi mở thêm bề mặt (SSE/ upload). Markdown mô tả sản phẩm chỉ cho tập thẻ an toàn, sanitize; link ngoài `rel="noopener nofollow"`.
 
-## 7. Token thiết kế
-Tailwind `extend`: `brand`, `surface`, `muted`; trạng thái `success/warning/danger/info` dùng cho alert, stock, trạng thái đơn/ thanh toán (một bảng màu duy nhất, ánh xạ trong `lib/status.ts`); bo `xl`; font hệ thống; dark mode để sau (biến CSS).
+## 7. Dark mode & token thiết kế
+- **Tailwind `darkMode: 'class'`**; màu định nghĩa bằng **biến CSS** (`--bg`, `--surface`, `--text`, `--muted`, `--border`, `--brand`, `--success/--warning/--danger/--info`) ở `:root` và `.dark`; component dùng class ánh xạ biến (`bg-surface text-text`) thay vì hardcode `slate-*` (code hiện tại đang dùng `text-slate-900` ở nhiều nơi → cần chuyển dần).
+- Chế độ: **Sáng / Tối / Theo hệ thống** (mặc định theo `prefers-color-scheme`); lưu lựa chọn ở `localStorage` **và cookie `mm_theme`** để server render đúng class `<html class="dark">` ngay (tránh nháy trắng); `ThemeToggle` nằm ở NavBar/ConsoleLayout.
+- Biểu đồ (Recharts): palette riêng cho từng theme (lưới/ trục/ tooltip theo biến CSS); kỳ trước nét đứt xám; kiểm tra độ tương phản ≥ 4.5:1 cho chữ, ≥ 3:1 cho thành phần đồ hoạ ở cả hai theme.
+- Ảnh sản phẩm nền trong suốt: nền khung `surface`; logo/ icon dùng `currentColor`.
+- Trạng thái đơn/ thanh toán/ tồn kho: một bảng ánh xạ duy nhất `lib/status.ts` → token màu (có biến thể sáng/tối).
+- Bo `xl`, bóng nhẹ (tối: dùng viền thay bóng), font hệ thống.
+- Kiểm thử: snapshot hai theme cho component chính; không có chữ/ icon "mất hút" ở theme tối (kiểm tra thủ công + axe).
