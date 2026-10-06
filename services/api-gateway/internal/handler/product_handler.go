@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"api-gateway/internal/client/authclient"
 	"api-gateway/internal/client/productclient"
 	"api-gateway/pkg/dto"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 
 // ProductHandler : handler for ProductClient
 type ProductHandler struct {
+	Auth    *authclient.AuthClient // resolves the caller's store (seller) ID
 	Service *productclient.ProductClient
 	Logger  *zap.Logger
 }
@@ -22,6 +24,27 @@ func NewProductHandler(service *productclient.ProductClient, logger *zap.Logger)
 		Service: service,
 		Logger:  logger,
 	}
+}
+
+const maxPageSize = 100
+
+// callerStoreID resolves the store of the authenticated user; callers without a store are rejected.
+func (h *ProductHandler) callerStoreID(c *gin.Context) (uint64, bool) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		return 0, false
+	}
+	storeID, _, err := h.Auth.GetStoreID(userID)
+	if err != nil {
+		respondError(c, h.Logger, "ProductHandler: resolve store failed", err)
+		return 0, false
+	}
+	if storeID == 0 {
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Create a store before managing products"})
+		return 0, false
+	}
+	return storeID, true
 }
 
 // CreateProduct is responsible for parse create product gin.context request
@@ -44,6 +67,17 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		return
+	}
+
+	// The product always belongs to the caller's own store
+	storeID, ok := h.callerStoreID(c)
+	if !ok {
+		return
+	}
+	req.SellerID = storeID
+	if req.Name == "" || req.Price <= 0 || req.Inventory < 0 {
+		badRequest(c, "Name is required, price must be positive and inventory must not be negative")
 		return
 	}
 
@@ -87,8 +121,26 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		return
+	}
+	if req.Product == nil {
+		badRequest(c, "Product is required")
+		return
 	}
 	req.Product.ID = idUint
+	if req.Product.Price < 0 || req.Product.Inventory < 0 {
+		badRequest(c, "Price and inventory must not be negative")
+		return
+	}
+
+	// Ownership is checked by the product service against the caller's store,
+	// never against a user_id sent by the client.
+	storeID, ok := h.callerStoreID(c)
+	if !ok {
+		return
+	}
+	req.UserId = storeID
+	req.Product.SellerID = storeID
 
 	// Get response and parse to json
 	res, err := h.Service.UpdateProduct(&req)
@@ -129,6 +181,7 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		return
 	}
 	req.ProductID = idUint
 
@@ -171,6 +224,7 @@ func (h *ProductHandler) GetProductsBySellerID(c *gin.Context) {
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		return
 	}
 	req.SellerID = sellerIdUint
 
@@ -213,11 +267,22 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		return
 	}
 	pageSize, err := getQueryInt(c, "page_size", 10)
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		return
+	}
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > maxPageSize {
+		pageSize = maxPageSize
 	}
 	req.Page = uint64(page)
 	req.PageSize = uint64(pageSize)

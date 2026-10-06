@@ -24,7 +24,9 @@ func NewOrderHandler(service *orderclient.OrderClient, logger *zap.Logger) *Orde
 	}
 }
 
-// CreateOrder is responsible for parse create order gin.context request
+// CreateOrder is responsible for parse create order gin.context request.
+// The buyer is always the authenticated user; prices and totals sent by the
+// client are ignored and recomputed by the order service.
 // CreateOrder godoc
 // @Summary CreateOrder
 // @Description Create new order
@@ -39,87 +41,77 @@ func NewOrderHandler(service *orderclient.OrderClient, logger *zap.Logger) *Orde
 // @Router /orders [post]
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
 
-	// Parse from gin.context json to request dto
 	var req dto.CreateOrderInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
 		return
 	}
-
-	userIDInterface, exists := c.Get("userID")
-	if !exists {
-		c.JSON(400, gin.H{"error": "User ID not found in context"})
+	if req.Order == nil || len(req.Order.OrderItems) == 0 {
+		badRequest(c, "Order must contain at least one item")
 		return
 	}
-	userID, ok := userIDInterface.(uint64)
+
+	userID, ok := currentUserID(c)
 	if !ok {
-		// Xử lý trường hợp ép kiểu thất bại (lỗi lập trình)
-		c.JSON(500, gin.H{"error": "User ID format is incorrect"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
 		return
 	}
 
+	// Never trust identifiers, status or money fields from the client
+	req.Order.ID = 0
 	req.Order.BuyerID = userID
 	req.Order.Status = "PENDING"
+	req.Order.TotalPrice = 0
+	for _, item := range req.Order.OrderItems {
+		if item == nil || item.Quantity <= 0 {
+			badRequest(c, "Item quantity must be greater than zero")
+			return
+		}
+		item.ID = 0
+		item.OrderID = 0
+		item.Price = 0
+	}
 
-	// Get response and parse to json
 	res, err := h.Service.CreateOrder(&req)
 	if err != nil {
-		h.Logger.Warn("OrderHandler: CreateOrder warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "OrderHandler: CreateOrder warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
 }
 
-// UpdateOrderByID is responsible for parse update order by ID gin.context request
-// UpdateOrderByID godoc
-// @Summary UpdateOrderByID
-// @Description Update order
-// @Tags order
-// @Accept json
-// @Produce json
-// @Param request body dto.UpdateOrderByIDInput true "Order update payload"
-// @Security BearerAuth
-// @Param id path integer true "Order ID"
-// @Success 200 {object} dto.UpdateOrderByIDOutput
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
-// @Router /orders/{id} [put]
-func (h *OrderHandler) UpdateOrderByID(c *gin.Context) {
-
-	// Parse from gin.context json to request dto
-	var req dto.UpdateOrderByIDInput
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
-		return
+// getOwnedOrder loads an order and verifies it belongs to the caller.
+// A foreign order is reported as not found so IDs cannot be probed.
+func (h *OrderHandler) getOwnedOrder(c *gin.Context) (*dto.GetOrderByIDOutput, bool) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		return nil, false
 	}
-
-	// Get ID
-	idStr := c.Param("id")
-	idUint, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
-		return
+		badRequest(c, "Invalid order id")
+		return nil, false
 	}
-	req.Order.ID = idUint
 
-	// Get response and parse to json
-	res, err := h.Service.UpdateOrderByID(&req)
+	res, err := h.Service.GetOrderByID(&dto.GetOrderByIDInput{ID: id})
 	if err != nil {
-		h.Logger.Warn("OrderHandler: UpdateOrderByID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
-		return
+		respondError(c, h.Logger, "OrderHandler: GetOrderByID warn", err)
+		return nil, false
 	}
-	c.JSON(http.StatusOK, res)
+	if res.Order == nil || res.Order.BuyerID != userID {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "Order not found"})
+		return nil, false
+	}
+	return res, true
 }
 
 // GetOrderByID is responsible for parse get order by ID gin.context request
 // GetOrderByID godoc
 // @Summary GetOrderByID
-// @Description Get order
+// @Description Get one of the caller's orders
 // @Tags order
 // @Accept json
 // @Produce json
@@ -127,79 +119,44 @@ func (h *OrderHandler) UpdateOrderByID(c *gin.Context) {
 // @Param id path integer true "Order ID"
 // @Success 200 {object} dto.GetOrderByIDOutput
 // @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /orders/{id} [get]
 func (h *OrderHandler) GetOrderByID(c *gin.Context) {
-
-	// Parse from gin.context json to request dto
-	var req dto.GetOrderByIDInput
-	//if err := c.ShouldBindJSON(&req); err != nil {
-	//	h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
-	//	c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
-	//	return
-	//}
-
-	// Get ID
-	idStr := c.Param("id")
-	idUint, err := strconv.ParseUint(idStr, 10, 64)
-	if err != nil {
-		h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
-		h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
-		return
-	}
-	req.ID = idUint
-
-	// Get response and parse to json
-	res, err := h.Service.GetOrderByID(&req)
-	if err != nil {
-		h.Logger.Warn("OrderHandler: GetOrderByID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+	res, ok := h.getOwnedOrder(c)
+	if !ok {
 		return
 	}
 	c.JSON(http.StatusOK, res)
 }
 
-// GetOrdersByBuyerIDStatus is responsible for parse get orders by buyer_id and status gin.context request
+// GetOrdersByBuyerIDStatus lists the caller's orders by status. The buyer is taken
+// from the token; a buyer_id query parameter is ignored.
 // GetOrdersByBuyerIDStatus godoc
 // @Summary GetOrdersByBuyerIDStatus
-// @Description Get order by buyer_id and status
+// @Description List the caller's orders by status
 // @Tags order
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param buyer_id query integer true "Buyer ID"
 // @Param status query string true "Status of order"
 // @Success 200 {object} dto.GetOrdersByBuyerIDStatusOutput
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /orders [get]
 func (h *OrderHandler) GetOrdersByBuyerIDStatus(c *gin.Context) {
-
-	// Parse from gin.context json to request dto
-	var req dto.GetOrdersByBuyerIDStatusInput
-	//if err := c.ShouldBindJSON(&req); err != nil {
-	//	h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
-	//	c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
-	//	return
-	//}
-
-	// Get ID
-	buyerIDStr := c.Query("buyer_id")
-	buyerIDUint, err := strconv.ParseUint(buyerIDStr, 10, 64)
-	if err != nil {
-		h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+	userID, ok := currentUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
 		return
 	}
-	req.BuyerID = buyerIDUint
-	req.Status = c.Query("status")
 
-	// Get response and parse to json
-	res, err := h.Service.GetOrdersByBuyerIDStatus(&req)
+	res, err := h.Service.GetOrdersByBuyerIDStatus(&dto.GetOrdersByBuyerIDStatusInput{
+		BuyerID: userID,
+		Status:  c.Query("status"),
+	})
 	if err != nil {
-		h.Logger.Warn("OrderHandler: GetOrdersByBuyerIDStatus warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "OrderHandler: GetOrdersByBuyerIDStatus warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -208,7 +165,7 @@ func (h *OrderHandler) GetOrdersByBuyerIDStatus(c *gin.Context) {
 // CancelOrderByID is responsible for parse cancel order by id gin.context request
 // CancelOrderByID godoc
 // @Summary CancelOrderByID
-// @Description Cancel order by ID
+// @Description Cancel one of the caller's orders
 // @Tags order
 // @Accept json
 // @Produce json
@@ -216,33 +173,19 @@ func (h *OrderHandler) GetOrdersByBuyerIDStatus(c *gin.Context) {
 // @Param id path integer true "Order ID"
 // @Success 200 {object} dto.CancelOrderByIDOutput
 // @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 422 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /orders/{id} [delete]
 func (h *OrderHandler) CancelOrderByID(c *gin.Context) {
-
-	// Parse from gin.context json to request dto
-	var req dto.CancelOrderByIDInput
-	//if err := c.ShouldBindJSON(&req); err != nil {
-	//	h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": GetErrorString(err.Error())})
-	//	return
-	//}
-
-	// Get ID
-	idStr := c.Param("id")
-	idUint, err := strconv.ParseUint(idStr, 10, 64)
-	if err != nil {
-		h.Logger.Warn("OrderHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+	owned, ok := h.getOwnedOrder(c)
+	if !ok {
 		return
 	}
-	req.ID = idUint
 
-	// Get response and parse to json
-	res, err := h.Service.CancelOrderByID(&req)
+	res, err := h.Service.CancelOrderByID(&dto.CancelOrderByIDInput{ID: owned.Order.ID})
 	if err != nil {
-		h.Logger.Warn("OrderHandler: CancelOrderByID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "OrderHandler: CancelOrderByID warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)

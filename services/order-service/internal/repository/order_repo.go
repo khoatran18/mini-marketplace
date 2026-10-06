@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"order-service/pkg/model"
 	"order-service/pkg/outbox"
@@ -10,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var OrderStatus = []string{"PENDING", "SUCCESS", "FAILED", "CANCELED", "VALID"}
+var OrderStatus = []string{model.StatusPending, model.StatusSuccess, model.StatusFailed, model.StatusCanceled}
 
 type OrderRepository struct {
 	DB *gorm.DB
@@ -28,10 +29,13 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order, c
 
 	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
-		// Create order in OrderDB
+		// Create order in OrderDB (this also assigns order.ID and the item IDs)
 		if err := tx.Create(order).Error; err != nil {
 			return err
 		}
+
+		// The outbox event must reference the real order ID
+		createOrderOutbox.OrderID = order.ID
 
 		// Create order in outbox
 		if err := r.CreateOrderOutbox(tx, createOrderOutbox); err != nil {
@@ -94,42 +98,45 @@ func (r *OrderRepository) GetOrderItemsByOrderID(ctx context.Context, id uint64)
 
 // For Update function
 
-func (r *OrderRepository) UpdateOrderByID(ctx context.Context, order *model.Order) error {
-	return r.DB.WithContext(ctx).Where("id = ?", order.ID).Updates(order).Error
-}
-func (r *OrderRepository) UpdateOrderItemsByID(ctx context.Context, orderItems []*model.OrderItem) error {
-	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for _, item := range orderItems {
-			if err := tx.Where("id = ?", item.ID).Updates(item).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-func (r *OrderRepository) UpdateOrderStatusByID(ctx context.Context, id uint64, status string) error {
-	result := r.DB.WithContext(ctx).Model(&model.Order{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"status": status,
-	})
+// TransitionStatus moves an order to status `to` only if it currently has one of the `from` statuses.
+// It returns false when no row matched (order missing or already in another state), which makes
+// repeated or out-of-order status events harmless.
+func (r *OrderRepository) TransitionStatus(ctx context.Context, id uint64, from []string, to string) (bool, error) {
+	result := r.DB.WithContext(ctx).Model(&model.Order{}).
+		Where("id = ? AND status IN ?", id, from).
+		Updates(map[string]interface{}{"status": to})
 	if result.Error != nil {
-		return result.Error
+		return false, result.Error
 	}
-	if result.RowsAffected == 0 {
-		return errors.New("no rows affected")
-	}
-	return nil
+	return result.RowsAffected > 0, nil
 }
 
-// For Canceled order function
+// ErrOrderNotFound and ErrInvalidTransition are returned by CancelOrderByID.
+var (
+	ErrOrderNotFound     = errors.New("order not found")
+	ErrInvalidTransition = errors.New("order cannot be canceled in its current status")
+)
 
+// CancelOrderByID cancels a confirmed (SUCCESS) order and, in the same transaction, records an
+// outbox event so product-service releases the reserved inventory.
 func (r *OrderRepository) CancelOrderByID(ctx context.Context, id uint64) error {
 	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
-		// Update status for Order
-		if err := tx.Model(&model.Order{}).
-			Where("id = ?", id).
-			Updates(map[string]interface{}{"status": "CANCELED"}).Error; err != nil {
-			return err
+		result := tx.Model(&model.Order{}).
+			Where("id = ? AND status = ?", id, model.StatusSuccess).
+			Updates(map[string]interface{}{"status": model.StatusCanceled})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			var count int64
+			if err := tx.Model(&model.Order{}).Where("id = ?", id).Count(&count).Error; err != nil {
+				return err
+			}
+			if count == 0 {
+				return ErrOrderNotFound
+			}
+			return ErrInvalidTransition
 		}
 
 		// Update for OrderItems in Order
@@ -139,7 +146,20 @@ func (r *OrderRepository) CancelOrderByID(ctx context.Context, id uint64) error 
 			return err
 		}
 
-		return nil
+		// Tell product-service to give the inventory back
+		var items []*model.OrderItem
+		if err := tx.Where("order_id = ?", id).Find(&items).Error; err != nil {
+			return err
+		}
+		eventItems := make([]*outbox.ItemEvent, 0, len(items))
+		for _, item := range items {
+			eventItems = append(eventItems, &outbox.ItemEvent{ProductID: item.ProductID, Quantity: item.Quantity})
+		}
+		payload, err := json.Marshal(eventItems)
+		if err != nil {
+			return err
+		}
+		return tx.Create(&outbox.CancelOrderEvent{OrderID: id, Items: payload, Status: "PENDING"}).Error
 	})
 }
 

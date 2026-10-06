@@ -3,9 +3,9 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
-	"product-service/pkg/dto"
 	"product-service/pkg/model"
+	"product-service/pkg/outbox"
+	"slices"
 
 	"gorm.io/gorm"
 )
@@ -26,9 +26,15 @@ func (r *ProductRepository) CreateProduct(ctx context.Context, product *model.Pr
 	return r.DB.WithContext(ctx).Create(product).Error
 }
 
-// UpdateProduct update product
+// UpdateProduct replaces the editable fields of a product. Owner (seller_id) is never changed,
+// and zero values (price/inventory 0) are written explicitly.
 func (r *ProductRepository) UpdateProduct(ctx context.Context, product *model.Product) error {
-	result := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", product.ID).Updates(product)
+	result := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", product.ID).Updates(map[string]interface{}{
+		"name":       product.Name,
+		"price":      product.Price,
+		"inventory":  product.Inventory,
+		"attributes": product.Attributes,
+	})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -90,27 +96,53 @@ func (r *ProductRepository) GetAndDecreaseInventoryByID(ctx context.Context, id 
 	return nil
 }
 
-func (r *ProductRepository) GetAndDecreaseInventoryByIDBatch(ctx context.Context, kafkaEvent *dto.CreateOrderKafkaEvent) error {
+// ItemQuantity is a product and the quantity to reserve or release.
+type ItemQuantity struct {
+	ProductID uint64
+	Quantity  int64
+}
+
+// ErrInsufficientInventory is returned when a product is missing or has too little stock.
+var ErrInsufficientInventory = errors.New("insufficient inventory")
+
+func sortItems(items []ItemQuantity) []ItemQuantity {
+	sorted := slices.Clone(items)
+	// Fixed lock order across concurrent orders avoids deadlocks
+	slices.SortFunc(sorted, func(a, b ItemQuantity) int {
+		switch {
+		case a.ProductID < b.ProductID:
+			return -1
+		case a.ProductID > b.ProductID:
+			return 1
+		}
+		return 0
+	})
+	return sorted
+}
+
+// ReserveInventory decrements stock for every item of an order and records the successful
+// validation result, all in one transaction. If any item lacks stock nothing is changed and
+// ErrInsufficientInventory is returned. A concurrent duplicate delivery of the same order fails on
+// the primary key of the result row and rolls back its own decrements.
+func (r *ProductRepository) ReserveInventory(ctx context.Context, orderID uint64, items []ItemQuantity) error {
 	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		itemEvents := kafkaEvent.Items
-		for _, item := range itemEvents {
+		for _, item := range sortItems(items) {
 			result := tx.Model(&model.Product{}).
 				Where("id = ? AND inventory >= ?", item.ProductID, item.Quantity).
 				UpdateColumn("inventory", gorm.Expr("inventory - ?", item.Quantity))
-
 			if result.Error != nil {
-				return fmt.Errorf("errorDB %v in ID: %d", result.Error.Error(), item.ProductID)
+				return result.Error
 			}
 			if result.RowsAffected == 0 {
-				return fmt.Errorf("no product for product_id = %d", item.ProductID)
+				return ErrInsufficientInventory
 			}
 		}
-
-		// Update in OutboxDB
-		if err := r.CreateOrUpdateValOrdEvent(tx, kafkaEvent.OrderID, true, true); err != nil {
-			return err
-		}
-		return nil
+		return tx.Create(&outbox.ValidateOrderEvent{
+			OrderID:   orderID,
+			Success:   true,
+			Status:    "PENDING",
+			Processed: true,
+		}).Error
 	})
 }
 
@@ -123,11 +155,20 @@ func (r *ProductRepository) GetProductsBySellerID(ctx context.Context, sellerID 
 	return products, nil
 }
 
+// MaxPageSize caps the number of products returned per page.
+const MaxPageSize = 100
+
 func (r *ProductRepository) GetProducts(ctx context.Context, page, pageSize uint64) ([]*model.Product, error) {
 	var products []*model.Product
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > MaxPageSize {
+		pageSize = MaxPageSize
+	}
 	pageSizeInt := int(pageSize)
 	offset := int((page - 1) * pageSize)
-	if err := r.DB.WithContext(ctx).Limit(pageSizeInt).Offset(offset).Find(&products).Error; err != nil {
+	if err := r.DB.WithContext(ctx).Order("id ASC").Limit(pageSizeInt).Offset(offset).Find(&products).Error; err != nil {
 		return nil, err
 	}
 	return products, nil

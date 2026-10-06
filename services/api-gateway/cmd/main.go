@@ -8,6 +8,7 @@ import (
 	"api-gateway/internal/service"
 	"context"
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lpernett/godotenv"
@@ -57,9 +58,17 @@ func main() {
 
 	apiGatewayService := service.NewAPIGatewayService(serviceConfig.RedisClient, serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient, serviceConfig.ZapLogger)
 
+	// Keep cached password versions at least as long as an access token lives
+	apiGatewayService.PwdVersionTTL = envConfig.JWTExpireTime + time.Minute
+
 	// Run consumer in goroutine
 	ctx := context.Context(context.Background())
 	topic := "auth.change_password"
+	for _, topic := range []string{topic} {
+		if err := serviceConfig.KafkaInstance.KafkaClient.EnsureTopicExist(context.Background(), topic); err != nil {
+			log.Fatalf("Can not ensure Kafka topic %s: %v", topic, err)
+		}
+	}
 	go func() {
 		if err := serviceConfig.KafkaInstance.KafkaConsumer.Consume(ctx, topic, "api-gateway-group-3", apiGatewayService.AddChaPwdVerToRedis); err != nil {
 			log.Printf("Consumer stopped with error: %v", err)
@@ -76,6 +85,11 @@ func main() {
 
 	// Setup router
 	engine := gin.New()
+	engine.Use(gin.Recovery())
+	// Only trust X-Forwarded-For from configured proxies (nil = trust none) so c.ClientIP() cannot be spoofed
+	if err := engine.SetTrustedProxies(envConfig.TrustedProxies); err != nil {
+		panic(err)
+	}
 	router.SetupRouter(engine, managerHandler, serviceConfig, envConfig)
 
 	//// Tạo channel chờ signal

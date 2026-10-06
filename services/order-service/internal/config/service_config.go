@@ -89,7 +89,7 @@ func initPostgresDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate(&model.Order{}, &model.OrderItem{}, &outbox.CreateOrderEvent{})
+	db.AutoMigrate(&model.Order{}, &model.OrderItem{}, &outbox.CreateOrderEvent{}, &outbox.CancelOrderEvent{})
 
 	return db, nil
 }
@@ -103,7 +103,7 @@ func initAllKafkaInstance() (*kafkaimpl.KafkaManager, *kafkaimpl.KafkaProducer, 
 
 	producerRetry := GetEnvIntWithDefault("KAFKA_PRODUCER_RETRY", 3)
 	producerBackoff := GetEnvIntWithDefault("KAFKA_PRODUCER_BACKOFF", 100)
-	consumerBackoff := GetEnvIntWithDefault("KAFKA_PRODUCER_BACKOFF", 100)
+	consumerBackoff := GetEnvIntWithDefault("KAFKA_CONSUMER_BACKOFF", 100)
 
 	kafkaManager := kafkaimpl.NewKafkaManager(brokersList)
 	kafkaProducer := kafkaimpl.NewKafkaProducer(kafkaManager, producerRetry, time.Duration(producerBackoff)*time.Millisecond)

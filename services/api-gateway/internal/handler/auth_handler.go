@@ -77,6 +77,11 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	if len(req.Password) < 8 {
+		badRequest(c, "Password must be at least 8 characters")
+		return
+	}
+
 	// Get response and parse to json
 	res, err := h.Service.Register(&req)
 	if err != nil {
@@ -94,7 +99,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param input body dto.ChangePasswordInput true "Username, old and new password to ChangePassword"
+// @Security BearerAuth
+// @Param input body dto.ChangePasswordInput true "Old and new password (account taken from the token)"
 // @Success 200 {object} dto.ChangePasswordOutput
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -108,6 +114,19 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
 		return
 	}
+
+	// The account being changed is always the authenticated one
+	username, role, ok := currentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+	if len(req.NewPassword) < 8 {
+		badRequest(c, "New password must be at least 8 characters")
+		return
+	}
+	req.Username = username
+	req.Role = role
 
 	// Get response and parse to json
 	res, err := h.Service.ChangePassword(&req)
@@ -183,6 +202,7 @@ func (h *AuthHandler) RegisterSellerRoles(c *gin.Context) {
 		return
 	}
 	req.SellerAdminID = adminID
+	req.Role = "seller_employee"
 
 	// Get response and parse to json
 	res, err := h.Service.RegisterSellerRoles(&req)

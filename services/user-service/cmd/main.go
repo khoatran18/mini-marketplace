@@ -15,7 +15,6 @@ import (
 	userpb "user-service/pkg/pb"
 
 	"github.com/lpernett/godotenv"
-	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -58,13 +57,12 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	// Test
 	topic := "user.create_seller"
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "broker1:9092", topic, 0)
-	if err != nil {
-		panic(err)
+	for _, topic := range []string{topic} {
+		if err := serviceConfig.KafkaInstance.KafkaClient.EnsureTopicExist(context.Background(), topic); err != nil {
+			log.Fatalf("Can not ensure Kafka topic %s: %v", topic, err)
+		}
 	}
-	defer conn.Close()
 
 	// Create go routine for publishing PwdVersion Kafka to API Gateway
 	ctx := context.Context(context.Background())

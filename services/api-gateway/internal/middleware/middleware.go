@@ -54,29 +54,27 @@ func RequestLoggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	}
 }
 
-// RateLimitingMiddleware solve problem about CORS
-func RateLimitingMiddleware(limit int, period time.Duration, logger *zap.Logger, rdb *redis.Client) gin.HandlerFunc {
+// rateLimitScript increments the counter and sets the TTL atomically on first hit,
+// so a crash between INCR and EXPIRE can never leave an immortal key.
+var rateLimitScript = redis.NewScript(`
+local count = redis.call("INCR", KEYS[1])
+if count == 1 then
+  redis.call("PEXPIRE", KEYS[1], ARGV[1])
+end
+return count
+`)
+
+// RateLimitingMiddleware limits requests per client IP within a period.
+// scope separates counters (e.g. "global", "auth") so different limits do not share a key.
+func RateLimitingMiddleware(scope string, limit int, period time.Duration, logger *zap.Logger, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		key := fmt.Sprintf("rate_limit_ip:%s", c.ClientIP())
-		count, err := rdb.Incr(context.Background(), key).Result()
+		key := fmt.Sprintf("rate_limit:%s:%s", scope, c.ClientIP())
+		count, err := rateLimitScript.Run(c.Request.Context(), rdb, []string{key}, period.Milliseconds()).Int64()
 		if err != nil {
-			logger.Error("Middleware: error incrementing rate limit",
-				zap.Error(err),
-			)
+			// Fail open on Redis errors so a cache outage does not take the API down.
+			logger.Error("Middleware: error incrementing rate limit", zap.Error(err))
 			c.Next()
 			return
-		}
-
-		// New IP or expired time
-		if count == 1 {
-			_, err := rdb.Expire(context.Background(), key, period).Result()
-			if err != nil {
-				logger.Error("Middleware: warn error setting expired key",
-					zap.Error(err),
-					zap.String("key", key),
-				)
-				rdb.Del(context.Background(), key)
-			}
 		}
 
 		// Limit
@@ -135,8 +133,15 @@ func AuthMiddleware(logger *zap.Logger, redisClient *redis.Client, jwtSecret str
 		}
 
 		if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
+			if claims.Type != "access" {
+				logger.Warn("Middleware: warn token is not an access token")
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token type"})
+				c.Abort()
+				return
+			}
 			c.Set("userID", claims.UserID)
 			c.Set("userRole", claims.Role)
+			c.Set("username", claims.Username)
 
 			// Check logic for change password
 			keyPwdVersion := fmt.Sprintf("%d:pwd_version", claims.UserID)
@@ -157,7 +162,6 @@ func AuthMiddleware(logger *zap.Logger, redisClient *redis.Client, jwtSecret str
 					return
 				}
 				if value != int(claims.PwdVersion) {
-					fmt.Printf("%d : %d \n", value, claims.PwdVersion)
 					logger.Warn("Middleware: warn invalid or expired pwd version")
 					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired pwd version"})
 					c.Abort()

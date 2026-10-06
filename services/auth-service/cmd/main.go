@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 
 	"github.com/lpernett/godotenv"
-	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -58,16 +58,18 @@ func main() {
 	s := grpc.NewServer()
 	authpb.RegisterAuthServiceServer(s, &authServer)
 
-	// Init sample data
-	SeedAccounts(&authServer)
-
-	// Test
-	topic1 := "auth.change_password"
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "broker1:9092", topic1, 0)
-	if err != nil {
-		panic(err)
+	// Demo accounts only when explicitly requested (never in production)
+	if os.Getenv("SEED_DEMO_DATA") == "true" {
+		SeedAccounts(&authServer)
 	}
-	defer conn.Close()
+
+	// Topics must exist before readers/writers use them
+	topic1 := "auth.change_password"
+	for _, topic := range []string{topic1, "user.create_seller"} {
+		if err := serviceConfig.KafkaInstance.KafkaClient.EnsureTopicExist(context.Background(), topic); err != nil {
+			log.Fatalf("Can not ensure Kafka topic %s: %v", topic, err)
+		}
+	}
 	ctx1 := context.Context(context.Background())
 	authService.ProducerPwdVerKafkaEventWorker(ctx1, 3*time.Second, 100, topic1)
 

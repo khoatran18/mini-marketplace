@@ -2,7 +2,6 @@ package kafkaimpl
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -22,33 +21,30 @@ func NewKafkaProducer(km *KafkaManager, retry int, backoff time.Duration) *Kafka
 	}
 }
 
+// Publish writes one message. Messages with the same key go to the same partition
+// when a hash balancer is used, which preserves per-key ordering.
 func (p *KafkaProducer) Publish(ctx context.Context, balance kafka.Balancer, topic string, key, value []byte) error {
-	// Check if writer is existed
-	var writer *kafka.Writer
-	if w, ok := p.km.writers[topic]; ok {
-		writer = w
-		log.Println("writer is created")
-	} else {
-		writer = p.km.newWriter(topic, balance)
-		log.Println("writer is nil and create")
-	}
+	writer := p.km.newWriter(topic, balance)
 
-	// Get only first error, but need to publish all events
+	attempts := p.retry
+	if attempts < 1 {
+		attempts = 1
+	}
 	var lastErr error
-	for i := 0; i < p.retry; i++ {
-		if err := writer.WriteMessages(ctx, kafka.Message{
+	for i := 0; i < attempts; i++ {
+		err := writer.WriteMessages(ctx, kafka.Message{
 			Key:   key,
 			Value: value,
-		}); err != nil {
-			lastErr = err
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(p.backoff):
-				continue
-			}
+		})
+		if err == nil {
+			return nil
 		}
-		return nil
+		lastErr = err
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(p.backoff):
+		}
 	}
 	return lastErr
 }

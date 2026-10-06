@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -16,10 +15,9 @@ func (s *APIGatewayService) AddChaPwdVerToRedis(ctx context.Context, msg *kafka.
 	if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
 		return err
 	}
-	period := 5 * time.Minute
+	period := s.PwdVersionTTL
 
 	key := fmt.Sprintf("%d:pwd_version", eventDTO.UserID)
-	fmt.Println("Key for change-password:", key)
 	if err := s.RedisClient.Set(ctx, key, eventDTO.PwdVersion, period).Err(); err != nil {
 		return err
 	}

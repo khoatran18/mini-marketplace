@@ -28,8 +28,8 @@ func (c *KafkaClient) createTopic(ctx context.Context, topic string) error {
 		Topics: []kafka.TopicConfig{
 			kafka.TopicConfig{
 				Topic:             topic,
-				NumPartitions:     -1,
-				ReplicationFactor: -1,
+				NumPartitions:     3,
+				ReplicationFactor: 1,
 			},
 		},
 	}
@@ -46,7 +46,7 @@ func (c *KafkaClient) createTopic(ctx context.Context, topic string) error {
 			log.Printf("Kafka topic %v already exists\n", topic)
 			return nil
 		}
-		return err
+		return e
 	}
 	return nil
 }
@@ -82,15 +82,5 @@ func (c *KafkaClient) EnsureTopicExist(ctx context.Context, topic string) error 
 		return err
 	}
 	log.Printf("Kafka topic %v not exists, created successfully\n", topic)
-	return nil
-}
-
-func (c *KafkaClient) CreateTopicByLeader(ctx context.Context, topic string) error {
-	// Test
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic, 0)
-	defer conn.Close()
-	if err != nil {
-		return err
-	}
 	return nil
 }

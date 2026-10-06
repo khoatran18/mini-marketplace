@@ -14,19 +14,28 @@ func (r *OrderRepository) CreateOrderOutbox(tx *gorm.DB, createOrderOutbox *outb
 	return nil
 }
 
-func (r *OrderRepository) GetCreateOrderEventNotPublish(limit int) ([]*outbox.CreateOrderEvent, error) {
-	var CreOrdEvents []*outbox.CreateOrderEvent
-	result := r.DB.Model(&outbox.CreateOrderEvent{}).Where("status IN ?", []string{"PENDING", "FAILED"}).Find(&CreOrdEvents).Limit(limit)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	if result.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-	return CreOrdEvents, nil
+// GetCreateOrderEventNotPublish returns up to limit events that still have to be published, oldest first.
+func (r *OrderRepository) GetCreateOrderEventNotPublish(ctx context.Context, limit int) ([]*outbox.CreateOrderEvent, error) {
+	var events []*outbox.CreateOrderEvent
+	err := r.DB.WithContext(ctx).Where("status IN ?", []string{"PENDING", "FAILED"}).
+		Order("order_id ASC").Limit(limit).Find(&events).Error
+	return events, err
 }
 
 func (r *OrderRepository) UpdateCreateOrderEventStatus(ctx context.Context, orderID uint64, status string) error {
 	return r.DB.WithContext(ctx).Model(&outbox.CreateOrderEvent{}).Where("order_id = ?", orderID).
+		Updates(map[string]interface{}{"status": status}).Error
+}
+
+// GetCancelOrderEventNotPublish returns up to limit cancel events that still have to be published.
+func (r *OrderRepository) GetCancelOrderEventNotPublish(ctx context.Context, limit int) ([]*outbox.CancelOrderEvent, error) {
+	var events []*outbox.CancelOrderEvent
+	err := r.DB.WithContext(ctx).Where("status IN ?", []string{"PENDING", "FAILED"}).
+		Order("order_id ASC").Limit(limit).Find(&events).Error
+	return events, err
+}
+
+func (r *OrderRepository) UpdateCancelOrderEventStatus(ctx context.Context, orderID uint64, status string) error {
+	return r.DB.WithContext(ctx).Model(&outbox.CancelOrderEvent{}).Where("order_id = ?", orderID).
 		Updates(map[string]interface{}{"status": status}).Error
 }

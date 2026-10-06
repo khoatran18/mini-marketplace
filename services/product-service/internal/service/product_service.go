@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"product-service/internal/config/messagequeue"
 	"product-service/internal/config/messagequeue/kafkaimpl"
@@ -9,9 +10,26 @@ import (
 	"product-service/internal/service/adapter"
 	"product-service/pkg/dto"
 	"product-service/pkg/model"
+	"strings"
 
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"gorm.io/gorm"
 )
+
+func validateProductFields(name string, price float64, inventory int64) error {
+	if strings.TrimSpace(name) == "" {
+		return status.Error(codes.InvalidArgument, "name is required")
+	}
+	if price <= 0 {
+		return status.Error(codes.InvalidArgument, "price must be positive")
+	}
+	if inventory < 0 {
+		return status.Error(codes.InvalidArgument, "inventory must not be negative")
+	}
+	return nil
+}
 
 type ProductService struct {
 	ProductRepo *repository.ProductRepository
@@ -36,6 +54,13 @@ func NewProductService(productRepo *repository.ProductRepository, logger *zap.Lo
 // CreateProduct handle logic for Create Product gRPC request in Service
 func (s *ProductService) CreateProduct(ctx context.Context, input *dto.CreateProductInput) (*dto.CreateProductOutput, error) {
 
+	if err := validateProductFields(input.Name, input.Price, input.Inventory); err != nil {
+		return nil, err
+	}
+	if input.SellerID == 0 {
+		return nil, status.Error(codes.InvalidArgument, "seller_id is required")
+	}
+
 	// Create product
 	var product = &model.Product{
 		Name:       input.Name,
@@ -59,20 +84,27 @@ func (s *ProductService) CreateProduct(ctx context.Context, input *dto.CreatePro
 // UpdateProduct handle logic for Update Product gRPC request in Service
 func (s *ProductService) UpdateProduct(ctx context.Context, input *dto.UpdateProductInput) (*dto.UpdateProductOutput, error) {
 
+	if input.Product == nil {
+		return nil, status.Error(codes.InvalidArgument, "product is required")
+	}
+	if err := validateProductFields(input.Product.Name, input.Product.Price, input.Product.Inventory); err != nil {
+		return nil, err
+	}
+
 	// Check if product not existed
 	oldProduct, err := s.ProductRepo.GetProductByID(ctx, input.Product.ID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, status.Error(codes.NotFound, "product not found")
+		}
 		s.ZapLogger.Warn("ProductService: failed to get old product", zap.Error(err))
 		return nil, err
 	}
 
-	// Check user is owner of product
-	if oldProduct.SellerID != input.UserID {
-		s.ZapLogger.Error("ProductService: user is not owner of product", zap.Any("old", oldProduct.SellerID))
-		return &dto.UpdateProductOutput{
-			Message: fmt.Sprintf("Seller is not owner of product"),
-			Success: false,
-		}, nil
+	// input.UserID carries the caller's store (seller) ID, resolved by the gateway from the token.
+	if input.UserID == 0 || oldProduct.SellerID != input.UserID {
+		s.ZapLogger.Warn("ProductService: caller is not owner of product", zap.Uint64("owner", oldProduct.SellerID), zap.Uint64("caller", input.UserID))
+		return nil, status.Error(codes.PermissionDenied, "seller is not owner of product")
 	}
 
 	// Parse ProductModel to Product DTO

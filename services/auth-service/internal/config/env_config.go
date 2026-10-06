@@ -19,6 +19,9 @@ func initJWTSecret() (string, error) {
 	if jwtSecret == "" {
 		return "", errors.New("JWT secret not set")
 	}
+	if len(jwtSecret) < 16 {
+		return "", errors.New("JWT secret is too short (min 16 characters)")
+	}
 	return jwtSecret, nil
 }
 

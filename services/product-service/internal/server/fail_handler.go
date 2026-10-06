@@ -11,14 +11,14 @@ func CreProFailResponse(message string, err error, code codes.Code) (*productpb.
 	return &productpb.CreateProductResponse{
 		Message: message,
 		Success: false,
-	}, status.Error(code, err.Error())
+	}, statusError(code, err)
 }
 
 func UpdProFailResponse(message string, err error, code codes.Code) (*productpb.UpdateProductResponse, error) {
 	return &productpb.UpdateProductResponse{
 		Message: message,
 		Success: false,
-	}, status.Error(code, err.Error())
+	}, statusError(code, err)
 }
 
 func GetProByIDFailResponse(message string, err error, code codes.Code) (*productpb.GetProductByIDResponse, error) {
@@ -26,7 +26,7 @@ func GetProByIDFailResponse(message string, err error, code codes.Code) (*produc
 		Message: message,
 		Success: false,
 		Product: nil,
-	}, status.Error(code, err.Error())
+	}, statusError(code, err)
 }
 
 func GetProsByIDFailResponse(message string, err error, code codes.Code) (*productpb.GetProductsByIDResponse, error) {
@@ -34,7 +34,7 @@ func GetProsByIDFailResponse(message string, err error, code codes.Code) (*produ
 		Message: message,
 		Success: false,
 		Product: nil,
-	}, status.Error(code, err.Error())
+	}, statusError(code, err)
 }
 
 func GetProsBySelIDFailResponse(message string, err error, code codes.Code) (*productpb.GetProductsBySellerIDResponse, error) {
@@ -42,7 +42,7 @@ func GetProsBySelIDFailResponse(message string, err error, code codes.Code) (*pr
 		Message:  message,
 		Success:  false,
 		Products: nil,
-	}, status.Error(code, err.Error())
+	}, statusError(code, err)
 }
 
 func GetInvByIDFailResponse(message string, err error, code codes.Code) (*productpb.GetInventoryByIDResponse, error) {
@@ -50,19 +50,28 @@ func GetInvByIDFailResponse(message string, err error, code codes.Code) (*produc
 		Message:   message,
 		Success:   false,
 		Inventory: 0,
-	}, status.Error(code, err.Error())
+	}, statusError(code, err)
 }
 
 func GetAndDecInvByIDFailResponse(message string, err error, code codes.Code) (*productpb.GetAndDecreaseInventoryByIDResponse, error) {
 	return &productpb.GetAndDecreaseInventoryByIDResponse{
 		Message: message,
 		Success: false,
-	}, status.Error(code, err.Error())
+	}, statusError(code, err)
 }
 
 func GetProductsFailResponse(message string, err error, code codes.Code) (*productpb.GetProductsResponse, error) {
 	return &productpb.GetProductsResponse{
 		Message: message,
 		Success: false,
-	}, status.Error(code, err.Error())
+	}, statusError(code, err)
+}
+
+// statusError keeps the gRPC code chosen by the service layer (e.g. NotFound) and
+// falls back to code for plain errors.
+func statusError(code codes.Code, err error) error {
+	if st, ok := status.FromError(err); ok {
+		return st.Err()
+	}
+	return status.Error(code, err.Error())
 }

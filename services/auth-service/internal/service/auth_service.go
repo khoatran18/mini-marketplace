@@ -18,6 +18,10 @@ import (
 	"gorm.io/gorm"
 )
 
+const minPasswordLength = 8
+
+var validRoles = map[string]bool{"buyer": true, "seller_admin": true, "seller_employee": true}
+
 // AuthService is responsible for interacting with AuthServer and AccountRepository
 type AuthService struct {
 	AccountRepo   *repository.AccountRepository
@@ -47,9 +51,15 @@ func NewAuthService(accountRepo *repository.AccountRepository, jwtSecret string,
 // Register handle logic register
 func (s *AuthService) Register(ctx context.Context, input *dto.RegisterInput) (*dto.RegisterOutput, error) {
 
-	// Validate role
+	// Validate role and password
+	if !validRoles[input.Role] {
+		return nil, errors.New("invalid role")
+	}
 	if input.Role == input.RoleNotRegister {
-		return nil, errors.New("can not register role seller_employee")
+		return nil, fmt.Errorf("can not register role %s", input.Role)
+	}
+	if len(input.Password) < minPasswordLength {
+		return nil, fmt.Errorf("password must be at least %d characters", minPasswordLength)
 	}
 
 	// Check account existed
@@ -112,7 +122,6 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.Logi
 
 	// Create token
 	tokenRequest := adapter.AccountModelToTokenRequest(account)
-	fmt.Printf("Account\n: %v", account)
 	signedAccessToken, signedRefreshToken, err := s.generateToken(ctx, tokenRequest)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: token generation failure")
@@ -129,6 +138,11 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.Logi
 
 // RegisterSellerRoles handle logic create accounts for seller_admin or seller_employee role
 func (s *AuthService) RegisterSellerRoles(ctx context.Context, input *dto.RegisterSellerRolesInput) (*dto.RegisterSellerRolesOutput, error) {
+
+	// Employees are the only role a seller admin may create
+	if input.Role != "seller_employee" {
+		return nil, errors.New("only seller_employee accounts can be created")
+	}
 
 	// Validate Role and Account
 	acc, err := s.AccountRepo.GetAccountById(ctx, input.SellerAdminID)

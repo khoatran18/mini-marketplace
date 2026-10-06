@@ -3,68 +3,79 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"order-service/internal/service/adapter"
 	"order-service/pkg/dto"
+	"order-service/pkg/model"
 	"order-service/pkg/outbox"
+	"strconv"
 	"time"
 
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
 
+// publishTimeout bounds one publish + outbox status update.
+const publishTimeout = 5 * time.Second
+
 // For Consumer
 
+// UpdateOrderStatusByKafka applies the inventory validation result of product-service.
+// It is idempotent: a PENDING order is moved to SUCCESS/FAILED once, and replays or
+// out-of-order events find no PENDING row and are ignored.
 func (s *OrderService) UpdateOrderStatusByKafka(ctx context.Context, msg *kafka.Message) error {
 	var eventDTO dto.ValidateOrderKafkaEvent
 	if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
-		return err
+		// A malformed message can never succeed; drop it instead of retrying.
+		s.ZapLogger.Error("OrderService: invalid validate-order event", zap.Error(err))
+		return nil
 	}
 
-	var status string
-	if eventDTO.Success == false {
-		status = "FAILED"
-	} else {
-		status = "SUCCESS"
+	target := model.StatusSuccess
+	if !eventDTO.Success {
+		target = model.StatusFailed
 	}
-	if err := s.OrderRepo.UpdateOrderStatusByID(ctx, eventDTO.OrderID, status); err != nil {
+	changed, err := s.OrderRepo.TransitionStatus(ctx, eventDTO.OrderID, []string{model.StatusPending}, target)
+	if err != nil {
 		return err
+	}
+	if !changed {
+		s.ZapLogger.Info("OrderService: validate-order event ignored (order missing or not pending)",
+			zap.Uint64("order_id", eventDTO.OrderID), zap.String("target", target))
 	}
 	return nil
 }
 
 // For Producer
 
-func (s *OrderService) ProducerCreOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
+// runOutboxWorker calls batch every interval until ctx is canceled.
+func (s *OrderService) runOutboxWorker(ctx context.Context, name string, interval time.Duration, batch func(context.Context) error) {
 	go func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
-
 		for {
 			select {
-			// Cancel by context
 			case <-ctx.Done():
-				s.ZapLogger.Info("OrderService: Worker send CreateOrder Kafka event stop by context")
+				s.ZapLogger.Info("OrderService: outbox worker stopped", zap.String("worker", name))
 				return
-			// Interval time
 			case <-ticker.C:
-				if err := s.producerCreOrdKafkaEventBatch(ctx, limit, topic); err != nil {
-					s.ZapLogger.Warn("OrderService: error in procedure CreOrdKafkaEvent batch", zap.Error(err))
+				if err := batch(ctx); err != nil {
+					s.ZapLogger.Warn("OrderService: outbox batch error", zap.String("worker", name), zap.Error(err))
 				}
 			}
 		}
 	}()
 }
 
-func (s *OrderService) producerCreOrdKafkaEventBatch(ctx context.Context, limit int, topic string) error {
-	// Create context for function
-	ctxEachEvent, cancel := context.WithTimeout(ctx, 9*time.Second)
-	defer cancel()
+// ProducerCreOrdKafkaEventWorker publishes CreateOrder outbox events.
+func (s *OrderService) ProducerCreOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
+	s.runOutboxWorker(ctx, "create_order", interval, func(ctx context.Context) error {
+		return s.producerCreOrdKafkaEventBatch(ctx, limit, topic)
+	})
+}
 
-	// Get models from DB
-	eventsModel, err := s.OrderRepo.GetCreateOrderEventNotPublish(limit)
+func (s *OrderService) producerCreOrdKafkaEventBatch(ctx context.Context, limit int, topic string) error {
+	eventsModel, err := s.OrderRepo.GetCreateOrderEventNotPublish(ctx, limit)
 	if err != nil {
-		log.Println("Can not get KafkaEvent from OutboxDB")
 		return err
 	}
 
@@ -72,61 +83,81 @@ func (s *OrderService) producerCreOrdKafkaEventBatch(ctx context.Context, limit 
 	for _, eventModel := range eventsModel {
 		eventKafka, err := adapter.CreOrdEvesModelToKafkaEvent(eventModel)
 		if err != nil {
-			firstErr = err
+			s.ZapLogger.Error("OrderService: can not build create-order event", zap.Uint64("order_id", eventModel.OrderID), zap.Error(err))
+			if firstErr == nil {
+				firstErr = err
+			}
 			continue
 		}
-		if err := s.producerPwdVersionKafkaEvent(ctxEachEvent, eventKafka, topic); err != nil && firstErr == nil {
+		if err := s.publishCreateOrder(ctx, eventKafka, topic); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
 	return firstErr
 }
 
-func (s *OrderService) producerPwdVersionKafkaEvent(ctx context.Context, eventModel *outbox.CreateOrderKafkaEvent, topic string) error {
+func (s *OrderService) publishCreateOrder(ctx context.Context, event *outbox.CreateOrderKafkaEvent, topic string) error {
+	ctx, cancel := context.WithTimeout(ctx, publishTimeout)
+	defer cancel()
 
-	// Parse event model to json
-	log.Printf("Event model before marshal %+v\n", eventModel)
-	eventJson, err := json.Marshal(eventModel)
-	log.Printf("Event model after marshal %+v\n", eventJson)
+	payload, err := json.Marshal(event)
 	if err != nil {
-		log.Printf("Can not marshal event: %v with err: %v\n", eventJson, err)
 		return err
 	}
-
-	// Publish event
-	if err := s.MQProducer.Publish(ctx, &kafka.LeastBytes{}, topic, []byte("key"), eventJson); err != nil {
-		s.ZapLogger.Warn("OrderService: publish to Kafka failure", zap.Error(err))
-		if err2 := s.OrderRepo.UpdateCreateOrderEventStatus(ctx, eventModel.OrderID, "FAILED"); err2 != nil {
-			s.ZapLogger.Warn("OrderService: publish to Kafka failure and can not update OutboxDB")
-			return err2
+	// Key = order ID: events of one order always land on the same partition, in order.
+	key := []byte(strconv.FormatUint(event.OrderID, 10))
+	if err := s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, key, payload); err != nil {
+		s.ZapLogger.Warn("OrderService: publish create-order failed", zap.Uint64("order_id", event.OrderID), zap.Error(err))
+		if err2 := s.OrderRepo.UpdateCreateOrderEventStatus(ctx, event.OrderID, "FAILED"); err2 != nil {
+			s.ZapLogger.Warn("OrderService: publish failed and can not update outbox", zap.Error(err2))
 		}
-		s.ZapLogger.Info("OrderService: publish to Kafka failure and update OutboxDB success")
 		return err
 	}
-	// Update OutboxDB if procedure successfully
-	if err := s.OrderRepo.UpdateCreateOrderEventStatus(ctx, eventModel.OrderID, "SUCCESS"); err != nil {
-		s.ZapLogger.Warn("OrderService: publish to Kafka success but update to OutboxDB failed")
+	// A crash between publish and this update re-publishes the event; consumers are idempotent.
+	if err := s.OrderRepo.UpdateCreateOrderEventStatus(ctx, event.OrderID, "SUCCESS"); err != nil {
+		s.ZapLogger.Warn("OrderService: published create-order but outbox update failed", zap.Error(err))
 		return err
 	}
-
-	s.ZapLogger.Info("OrderService: publish to Kafka success")
 	return nil
 }
 
-//func (s *OrderService) UpdateStoreIDFromKafka(ctx context.Context, msg *kafka.Message) error {
-//
-//	fmt.Println("UpdateStoreIDFromKafka")
-//	var eventDTO dto.CreateSellerKafkaEvent
-//	fmt.Printf("Msg value : %v\n", string(msg.Value))
-//	if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
-//		s.ZapLogger.Warn("OrderService: update store id error", zap.Error(err))
-//		return err
-//	}
-//	fmt.Printf("%+v\n", eventDTO)
-//	if err := s.OrderRepo.UpdateStoreID(ctx, eventDTO.UserID, eventDTO.SellerID); err != nil {
-//		s.ZapLogger.Warn("OrderService: update store id error", zap.Error(err))
-//		return err
-//	}
-//	s.ZapLogger.Info("OrderService: update store id successfully")
-//	return nil
-//}
+// ProducerCancelOrdKafkaEventWorker publishes CancelOrder outbox events so inventory is released.
+func (s *OrderService) ProducerCancelOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
+	s.runOutboxWorker(ctx, "cancel_order", interval, func(ctx context.Context) error {
+		events, err := s.OrderRepo.GetCancelOrderEventNotPublish(ctx, limit)
+		if err != nil {
+			return err
+		}
+		var firstErr error
+		for _, e := range events {
+			if err := s.publishCancelOrder(ctx, e, topic); err != nil && firstErr == nil {
+				firstErr = err
+			}
+		}
+		return firstErr
+	})
+}
+
+func (s *OrderService) publishCancelOrder(ctx context.Context, e *outbox.CancelOrderEvent, topic string) error {
+	ctx, cancel := context.WithTimeout(ctx, publishTimeout)
+	defer cancel()
+
+	event := &outbox.CancelOrderKafkaEvent{OrderID: e.OrderID}
+	if err := json.Unmarshal(e.Items, &event.Items); err != nil {
+		s.ZapLogger.Error("OrderService: can not decode cancel-order items", zap.Uint64("order_id", e.OrderID), zap.Error(err))
+		return err
+	}
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+	key := []byte(strconv.FormatUint(e.OrderID, 10))
+	if err := s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, key, payload); err != nil {
+		s.ZapLogger.Warn("OrderService: publish cancel-order failed", zap.Uint64("order_id", e.OrderID), zap.Error(err))
+		if err2 := s.OrderRepo.UpdateCancelOrderEventStatus(ctx, e.OrderID, "FAILED"); err2 != nil {
+			s.ZapLogger.Warn("OrderService: publish failed and can not update outbox", zap.Error(err2))
+		}
+		return err
+	}
+	return s.OrderRepo.UpdateCancelOrderEventStatus(ctx, e.OrderID, "SUCCESS")
+}

@@ -35,6 +35,7 @@ func NewHandlerManager(cm *client.ClientManager, logger *zap.Logger) *ManagerHan
 	// Create ProductService (wrap ProductClient)
 	productService := productclient.NewProductClient(nil, cm, logger)
 	productHandler := NewProductHandler(productService, logger)
+	productHandler.Auth = authService
 
 	// Create UserService (wrap UserClient)
 	userService := userclient.NewUserClient(nil, cm, logger)

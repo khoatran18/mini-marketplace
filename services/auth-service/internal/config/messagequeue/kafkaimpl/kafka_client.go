@@ -28,8 +28,8 @@ func (c *KafkaClient) createTopic(ctx context.Context, topic string) error {
 		Topics: []kafka.TopicConfig{
 			kafka.TopicConfig{
 				Topic:             topic,
-				NumPartitions:     -1,
-				ReplicationFactor: -1,
+				NumPartitions:     3,
+				ReplicationFactor: 1,
 			},
 		},
 	}
@@ -46,7 +46,7 @@ func (c *KafkaClient) createTopic(ctx context.Context, topic string) error {
 			log.Printf("Kafka topic %v already exists\n", topic)
 			return nil
 		}
-		return err
+		return e
 	}
 	return nil
 }

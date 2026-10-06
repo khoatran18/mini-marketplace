@@ -10,6 +10,7 @@ import (
 	"gorm.io/datatypes"
 
 	"product-service/internal/server"
+	"product-service/pkg/dto"
 	productpb "product-service/pkg/pb"
 )
 
@@ -29,6 +30,11 @@ func convertJSONToStruct(data datatypes.JSON) *structpb.Struct {
 
 func SeedProducts(productServer *server.ProductServer) {
 	ctx := context.Background()
+
+	if existing, err := productServer.ProductService.GetProducts(ctx, &dto.GetProductsInput{Page: 1, PageSize: 1}); err == nil && len(existing.Products) > 0 {
+		fmt.Println("Catalog is not empty, skip seeding demo products")
+		return
+	}
 
 	products := []struct {
 		Name       string

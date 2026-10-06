@@ -30,7 +30,9 @@ func (m *KafkaManager) newWriterForTopic(topic string, balancer kafka.Balancer) 
 		Topic:        topic,
 		Balancer:     balancer,
 		BatchBytes:   1e6,
-		BatchTimeout: 500 * time.Millisecond,
+		BatchTimeout: 50 * time.Millisecond,
+		// Wait for all in-sync replicas: the outbox marks events as sent after Publish returns.
+		RequiredAcks: kafka.RequireAll,
 	}
 }
 
@@ -65,9 +67,9 @@ func (m *KafkaManager) newReaderForTopic(topic string, groupID string) *kafka.Re
 		Brokers:  m.brokers,
 		Topic:    topic,
 		GroupID:  groupID,
-		MinBytes: 10e3,
+		MinBytes: 1,
 		MaxBytes: 10e6,
-		MaxWait:  2 * time.Second,
+		MaxWait:  1 * time.Second,
 	})
 }
 

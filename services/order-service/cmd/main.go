@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 	"order-service/internal/client/clientmanager"
@@ -15,9 +14,14 @@ import (
 	"time"
 
 	"github.com/lpernett/godotenv"
-	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+)
+
+const (
+	topicCreateOrder   = "order.create_order"
+	topicValidateOrder = "product.validate_order"
+	topicCancelOrder   = "order.cancel_order"
 )
 
 func main() {
@@ -33,13 +37,6 @@ func main() {
 		log.Fatal("Error NewEnvConfig", err.Error())
 	}
 
-	// err = serviceConfig.PostgresDB.AutoMigrate(&dto.Product{})
-	if err != nil {
-		log.Fatalf("Can not migrate database: %v", err)
-	} else {
-		fmt.Println("Migration successfully!")
-	}
-
 	grpcClientManager := clientmanager.NewClientManager()
 	defer grpcClientManager.CloseAll()
 
@@ -51,24 +48,24 @@ func main() {
 	orderRepo := repository.NewOrderRepository(serviceConfig.PostgresDB)
 	orderService := service.NewOrderService(orderRepo, serviceConfig.ZapLogger, scm, serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient)
 
-	// Run consumer in goroutine
-	ctx := context.Context(context.Background())
-	topic := "product.validate_order"
+	// Topics must exist before readers/writers use them (auto-creation is disabled in kafka-go writers)
+	ctx := context.Background()
+	for _, topic := range []string{topicCreateOrder, topicValidateOrder, topicCancelOrder} {
+		if err := serviceConfig.KafkaInstance.KafkaClient.EnsureTopicExist(ctx, topic); err != nil {
+			log.Fatalf("Can not ensure Kafka topic %s: %v", topic, err)
+		}
+	}
+
+	// Consume inventory validation results
 	go func() {
-		if err := serviceConfig.KafkaInstance.KafkaConsumer.Consume(ctx, topic, "order-service-group", orderService.UpdateOrderStatusByKafka); err != nil {
+		if err := serviceConfig.KafkaInstance.KafkaConsumer.Consume(ctx, topicValidateOrder, "order-service-validate-result", orderService.UpdateOrderStatusByKafka); err != nil {
 			log.Printf("Consumer stopped with error: %v", err)
 		}
 	}()
 
-	// Test
-	topic1 := "order.create_order"
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "broker1:9092", topic1, 0)
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close()
-	ctx1 := context.Context(context.Background())
-	orderService.ProducerCreOrdKafkaEventWorker(ctx1, 3*time.Second, 100, topic1)
+	// Outbox publishers
+	orderService.ProducerCreOrdKafkaEventWorker(ctx, 3*time.Second, 100, topicCreateOrder)
+	orderService.ProducerCancelOrdKafkaEventWorker(ctx, 3*time.Second, 100, topicCancelOrder)
 
 	lis, err := net.Listen("tcp", ":50052")
 	if err != nil {

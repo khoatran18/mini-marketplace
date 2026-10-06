@@ -260,3 +260,21 @@ func (s *AuthClient) validateClient() error {
 	s.Client = client
 	return nil
 }
+
+// GetStoreID resolves the store (seller) ID and role of an account.
+// A zero store ID means the account has no store yet.
+func (s *AuthClient) GetStoreID(userID uint64) (storeID uint64, role string, err error) {
+	if s.Client == nil {
+		if err := s.validateClient(); err != nil {
+			return 0, "", err
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	res, err := s.Client.GetStoreIDRoleById(ctx, &authpb.GetStoreIDRoleByIDRequest{ID: userID})
+	if err != nil {
+		s.Logger.Warn("AuthClient: GetStoreIDRoleById error", zap.Error(err))
+		return 0, "", err
+	}
+	return res.GetStoreId(), res.GetRole(), nil
+}

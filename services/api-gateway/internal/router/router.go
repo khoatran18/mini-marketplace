@@ -14,7 +14,7 @@ import (
 func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *config.ServiceConfig, envConfig *config.EnvConfig) {
 
 	router.Use(cors.New(cors.Config{
-		AllowAllOrigins:  true, // hoặc AllowOrigins: []string{"https://frontend.example.com"}
+		AllowOrigins:     envConfig.AllowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -23,22 +23,30 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	}))
 
 	router.Use(middleware.RequestLoggingMiddleware(serviceConfig.ZapLogger))
-	// router.Use(middleware.RateLimitingMiddleware(100, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
+	if envConfig.RateLimit > 0 {
+		router.Use(middleware.RateLimitingMiddleware("global", envConfig.RateLimit, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
+	}
 
 	router.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 
+	authenticated := middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret)
+
 	authRoute := router.Group("/auth")
+	if envConfig.AuthRateLimit > 0 {
+		// Stricter limit on credential endpoints to slow down brute force
+		authRoute.Use(middleware.RateLimitingMiddleware("auth", envConfig.AuthRateLimit, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
+	}
 	{
 		authRoute.POST("/login", h.AuthHandler.Login)
 		authRoute.POST("/register", h.AuthHandler.Register)
-		authRoute.POST("/change-password", h.AuthHandler.ChangePassword)
+		authRoute.POST("/change-password", authenticated, h.AuthHandler.ChangePassword)
 		authRoute.POST("/refresh-token", h.AuthHandler.RefreshToken)
 		authRoute.POST("/register-seller-roles", middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret),
 			middleware.AuthorizationMiddleware([]string{"seller_admin"}, serviceConfig.ZapLogger),
 			h.AuthHandler.RegisterSellerRoles)
 	}
 
-	router.Use(middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret))
+	router.Use(authenticated)
 	userRoute := router.Group("/users")
 	{
 		//userRoute.Use(middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret))
@@ -70,10 +78,11 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 
 	orderRoute := router.Group("/orders")
 	{
+		// Buyers only; handlers scope every query to the authenticated buyer
+		orderRoute.Use(middleware.AuthorizationMiddleware([]string{"buyer"}, serviceConfig.ZapLogger))
 		orderRoute.POST("", h.OrderHandler.CreateOrder)
 		orderRoute.GET("/:id", h.OrderHandler.GetOrderByID)
-		orderRoute.PUT("/:id", h.OrderHandler.UpdateOrderByID)
-		orderRoute.GET("", h.OrderHandler.GetOrdersByBuyerIDStatus) // ?buyer_id={buyer_id}&status={status}
+		orderRoute.GET("", h.OrderHandler.GetOrdersByBuyerIDStatus) // ?status={status}
 		orderRoute.DELETE("/:id", h.OrderHandler.CancelOrderByID)
 	}
 

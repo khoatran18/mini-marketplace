@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"errors"
+	"product-service/internal/repository"
 	"product-service/pkg/dto"
 	"product-service/pkg/outbox"
-	"strings"
+	"strconv"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -15,14 +16,25 @@ import (
 
 // For consumer
 
+func toItemQuantities(items []*dto.ItemEvent) []repository.ItemQuantity {
+	out := make([]repository.ItemQuantity, 0, len(items))
+	for _, item := range items {
+		out = append(out, repository.ItemQuantity{ProductID: item.ProductID, Quantity: item.Quantity})
+	}
+	return out
+}
+
+// ValidateProductInventory reserves inventory for a new order and records the result, which the
+// outbox worker publishes back to order-service. It is idempotent per order ID.
 func (s *ProductService) ValidateProductInventory(ctx context.Context, msg *kafka.Message) error {
 	var eventDTO dto.CreateOrderKafkaEvent
 	if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
+		// A malformed message can never succeed; drop it instead of retrying.
 		s.ZapLogger.Error("failed to unmarshal event", zap.Error(err))
-		return err
+		return nil
 	}
 
-	// Check if this message is processed
+	// Skip orders that were already validated (redelivery)
 	processed, err := s.ProductRepo.GetProcessedValOrdEvent(ctx, eventDTO.OrderID)
 	if err != nil {
 		return err
@@ -31,18 +43,29 @@ func (s *ProductService) ValidateProductInventory(ctx context.Context, msg *kafk
 		return nil
 	}
 
-	// Start handle
-	if err := s.ProductRepo.GetAndDecreaseInventoryByIDBatch(ctx, &eventDTO); err != nil {
-		s.ZapLogger.Error("failed to decrease inventory in batch", zap.Error(err))
-		if strings.Contains(err.Error(), "errorDB") {
-			s.ProductRepo.CreateOrUpdateValOrdEvent(s.ProductRepo.DB.WithContext(ctx), eventDTO.OrderID, false, false)
-			return err
-		}
-		// Insert Outbox fail event
-		s.ProductRepo.CreateOrUpdateValOrdEvent(s.ProductRepo.DB.WithContext(ctx), eventDTO.OrderID, false, true)
+	err = s.ProductRepo.ReserveInventory(ctx, eventDTO.OrderID, toItemQuantities(eventDTO.Items))
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, repository.ErrInsufficientInventory):
+		// Business failure: record it so order-service marks the order FAILED. Not retried.
+		s.ZapLogger.Info("not enough inventory for order", zap.Uint64("order_id", eventDTO.OrderID))
+		return s.ProductRepo.RecordFailedValidation(ctx, eventDTO.OrderID)
+	default:
+		// Technical failure (database): let the consumer retry
+		s.ZapLogger.Error("failed to reserve inventory", zap.Uint64("order_id", eventDTO.OrderID), zap.Error(err))
 		return err
 	}
-	return nil
+}
+
+// ReleaseProductInventory gives inventory back when order-service cancels a confirmed order.
+func (s *ProductService) ReleaseProductInventory(ctx context.Context, msg *kafka.Message) error {
+	var eventDTO dto.CancelOrderKafkaEvent
+	if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
+		s.ZapLogger.Error("failed to unmarshal cancel event", zap.Error(err))
+		return nil
+	}
+	return s.ProductRepo.ReleaseInventory(ctx, eventDTO.OrderID, toItemQuantities(eventDTO.Items))
 }
 
 // For Producer
@@ -66,24 +89,17 @@ func (s *ProductService) ProducerValOrdKafkaEventWorker(ctx context.Context, int
 			}
 		}
 	}()
-
 }
 
 func (s *ProductService) producerValOrdKafkaEventBatch(ctx context.Context, limit int, topic string) error {
-	// Create context for function
-	ctxEachEvent, cancel := context.WithTimeout(ctx, 9*time.Second)
-	defer cancel()
-
-	// Get models from DB
-	eventsModel, err := s.ProductRepo.GetValOrdEventNotPublish(limit)
+	eventsModel, err := s.ProductRepo.GetValOrdEventNotPublish(ctx, limit)
 	if err != nil {
-		log.Println("Can not get KafkaEvent from OutboxDB")
 		return err
 	}
 
 	var firstErr error
 	for _, eventModel := range eventsModel {
-		if err := s.producerValOrdKafkaEvent(ctxEachEvent, eventModel, topic); err != nil && firstErr == nil {
+		if err := s.producerValOrdKafkaEvent(ctx, eventModel, topic); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
@@ -91,46 +107,27 @@ func (s *ProductService) producerValOrdKafkaEventBatch(ctx context.Context, limi
 }
 
 func (s *ProductService) producerValOrdKafkaEvent(ctx context.Context, eventModel *outbox.ValidateOrderKafkaEvent, topic string) error {
-	// Parse event model to json
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	eventJson, err := json.Marshal(eventModel)
 	if err != nil {
-		log.Printf("Can not marshal event: %v with err: %v\n", eventJson, err)
 		return err
 	}
-	// Publish event
-	if err := s.MQProducer.Publish(ctx, &kafka.LeastBytes{}, topic, []byte("key"), eventJson); err != nil {
+	// Key = order ID keeps all events of an order on one partition, in order.
+	key := []byte(strconv.FormatUint(eventModel.OrderID, 10))
+	if err := s.MQProducer.Publish(ctx, &kafka.Hash{}, topic, key, eventJson); err != nil {
 		s.ZapLogger.Warn("ProductService: publish to Kafka failure", zap.Error(err))
 		if err2 := s.ProductRepo.UpdateValOrdEventStatus(ctx, eventModel.OrderID, "FAILED"); err2 != nil {
 			s.ZapLogger.Warn("ProductService: publish to Kafka failure and can not update OutboxDB")
 			return err2
 		}
-		s.ZapLogger.Info("ProductService: publish to Kafka failure and update OutboxDB success")
 		return err
 	}
-	// Update OutboxDB if procedure successfully
+	// A crash before this update re-publishes the event; order-service handles duplicates.
 	if err := s.ProductRepo.UpdateValOrdEventStatus(ctx, eventModel.OrderID, "SUCCESS"); err != nil {
 		s.ZapLogger.Warn("ProductService: publish to Kafka success but update to OutboxDB failed")
 		return err
 	}
-
-	s.ZapLogger.Info("ProductService: publish to Kafka success")
 	return nil
 }
-
-//func (s *ProductService) UpdateStoreIDFromKafka(ctx context.Context, msg *kafka.Message) error {
-//
-//	fmt.Println("UpdateStoreIDFromKafka")
-//	var eventDTO dto.CreateOrderKafkaEvent
-//	fmt.Printf("Msg value : %v\n", string(msg.Value))
-//	if err := json.Unmarshal(msg.Value, &eventDTO); err != nil {
-//		s.ZapLogger.Warn("ProductService: update store id error", zap.Error(err))
-//		return err
-//	}
-//	fmt.Printf("%+v\n", eventDTO)
-//	if err := s.ProductRepo.UpdateStoreID(ctx, eventDTO.UserID, eventDTO.SellerID); err != nil {
-//		s.ZapLogger.Warn("ProductService: update store id error", zap.Error(err))
-//		return err
-//	}
-//	s.ZapLogger.Info("ProductService: update store id successfully")
-//	return nil
-//}
