@@ -1,40 +1,41 @@
-# Bỏ qua thư mục IDE của JetBrains
+# IDE
 .idea/
 *.iml
+.vscode/
 
 # Go build
 /bin/
 /build/
 /dist/
 *.exe
-*.exe~
 *.dll
 *.so
 *.dylib
 *.test
 *.out
-
-# Go modules cache (nếu dùng)
+cmd/cmd
 vendor/
+coverage.out
 
 # Logs
 *.log
 
-# Thư mục môi trường, env files
-#.env
-#.env.*
+# Secrets / env (commit only *.example)
+.env
+.env.*
+!.env.example
 
-# VSCode (nếu đôi lúc bạn dùng VSCode)
-.vscode/
+# Certificates and keys
+*.pem
+*.key
+*.crt
+deploy/traefik/certs/
+deploy/secrets/
 
-# MacOS / Windows rác
+# OS
 .DS_Store
 Thumbs.db
 
-# Node modules
+# Node / Next.js
 node_modules/
-
-# Next.js build output
 .next/
-
-frontend

@@ -1,29 +1,13 @@
-# Stage 1: Build
+# syntax=docker/dockerfile:1
 FROM golang:1.25-alpine AS builder
-
 WORKDIR /app
-
 COPY go.mod go.sum ./
 RUN go mod download
-
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/web ./cmd
 
-WORKDIR /app/cmd
-
-#RUN go build -v -o /usr/local/bin/web .
-#
-#CMD ["web"]
-
-#RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o /app/cmd/web .
-RUN go build -v -o /app/cmd/web .
-
-# Stage 2: Runtime
-FROM alpine:3.18
-
-COPY --from=builder /app/cmd/web /usr/local/bin/web
-COPY --from=builder /app/cmd/.env /usr/local/bin/.env
-
-
-WORKDIR /usr/local/bin
-
+FROM alpine:3.20
+RUN addgroup -S app && adduser -S -G app app
+COPY --from=builder /out/web /usr/local/bin/web
+USER app
 CMD ["web"]

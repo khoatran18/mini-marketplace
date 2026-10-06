@@ -1,0 +1,133 @@
+# Application stack. Requires infra.yml to be deployed first (shared external network).
+# Build images first: scripts/build-images.sh
+services:
+
+  traefik:
+    image: traefik:v3.4
+    networks: [marketplace]
+    ports:
+      - {target: 80, published: 80, protocol: tcp, mode: ingress}
+      - {target: 443, published: 443, protocol: tcp, mode: ingress}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/certs:/certs:ro
+      - ./traefik/dynamic:/dynamic:ro
+    command:
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --providers.file.filename=/dynamic/tls.yml
+      - --providers.swarm.endpoint=unix:///var/run/docker.sock
+      - --providers.swarm.exposedbydefault=false
+      - --providers.swarm.network=marketplace-infra_marketplace
+      - --api.dashboard=true
+      - --api.insecure=false
+      - --accesslog=true
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.dashboard.rule=Host(`dashboard.${PUBLIC_HOST:-marketplace.swarm.localhost}`)
+        - traefik.http.routers.dashboard.entrypoints=websecure
+        - traefik.http.routers.dashboard.service=api@internal
+        - traefik.http.routers.dashboard.tls=true
+        - traefik.http.routers.dashboard.middlewares=dashboard-auth
+        - traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS:?set TRAEFIK_DASHBOARD_USERS}
+        - traefik.http.services.traefik.loadbalancer.server.port=8080
+
+  frontend:
+    image: marketplace/frontend:latest
+    hostname: frontend
+    networks: [marketplace]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.frontend.rule=Host(`${PUBLIC_HOST:-marketplace.swarm.localhost}`)
+        - traefik.http.routers.frontend.entrypoints=websecure
+        - traefik.http.routers.frontend.tls=true
+        - traefik.http.services.frontend.loadbalancer.server.port=3000
+
+  api-gateway:
+    image: marketplace/api-gateway:latest
+    hostname: api-gateway
+    networks: [marketplace]
+    environment: &svc_env
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      JWT_EXPIRE_TIME: ${JWT_EXPIRE_TIME:-5}
+      REDIS_ADDR: redis:6379
+      POSTGRES_DSN: host=postgres user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD} dbname=${POSTGRES_DB:-postgres} port=5432 sslmode=disable
+      KAFKA_BROKERS_ADDR: broker1:9092
+      KAFKA_PRODUCER_RETRY: ${KAFKA_PRODUCER_RETRY:-2}
+      KAFKA_PRODUCER_BACKOFF: ${KAFKA_PRODUCER_BACKOFF:-100}
+      KAFKA_CONSUMER_BACKOFF: ${KAFKA_CONSUMER_BACKOFF:-100}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 2
+      restart_policy: {condition: on-failure, delay: 10s}
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.api.rule=Host(`api.${PUBLIC_HOST:-marketplace.swarm.localhost}`)
+        - traefik.http.routers.api.entrypoints=websecure
+        - traefik.http.routers.api.tls=true
+        - traefik.http.services.api.loadbalancer.server.port=8080
+        - traefik.http.routers.api.middlewares=secure-headers
+        - traefik.http.middlewares.secure-headers.headers.frameDeny=true
+        - traefik.http.middlewares.secure-headers.headers.browserXssFilter=true
+        - traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true
+        - traefik.http.middlewares.secure-headers.headers.stsIncludeSubdomains=true
+        - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
+
+  auth-service:
+    image: marketplace/auth-service:latest
+    hostname: auth-service
+    networks: [marketplace]
+    environment: *svc_env
+    deploy:
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+
+  user-service:
+    image: marketplace/user-service:latest
+    hostname: user-service
+    networks: [marketplace]
+    environment: *svc_env
+    deploy:
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+
+  product-service:
+    image: marketplace/product-service:latest
+    hostname: product-service
+    networks: [marketplace]
+    environment: *svc_env
+    deploy:
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+
+  order-service:
+    image: marketplace/order-service:latest
+    hostname: order-service
+    networks: [marketplace]
+    environment: *svc_env
+    deploy:
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+
+networks:
+  marketplace:
+    name: marketplace-infra_marketplace
+    external: true
