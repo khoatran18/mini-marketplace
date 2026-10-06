@@ -31,6 +31,88 @@ func validateProductFields(name string, price float64, inventory int64) error {
 	return nil
 }
 
+// Limits for the catalog fields added with the product-catalog design.
+const (
+	maxNameLen        = 200
+	maxDescriptionLen = 5000
+	maxBrandLen       = 100
+	maxSKULen         = 64
+	maxTags           = 20
+	maxTagLen         = 40
+	maxImages         = 8
+	maxImageURLLen    = 500
+)
+
+var validStatuses = map[string]bool{model.StatusDraft: true, model.StatusActive: true, model.StatusHidden: true, model.StatusBanned: true}
+
+// validateCatalogFields checks the optional catalog fields. status may be empty (default applied by the caller).
+func validateCatalogFields(name, description, brand, sku, statusValue string, tags, images []string, weight, threshold int64) error {
+	switch {
+	case len([]rune(name)) > maxNameLen:
+		return status.Errorf(codes.InvalidArgument, "name must be at most %d characters", maxNameLen)
+	case len([]rune(description)) > maxDescriptionLen:
+		return status.Errorf(codes.InvalidArgument, "description must be at most %d characters", maxDescriptionLen)
+	case len([]rune(brand)) > maxBrandLen:
+		return status.Errorf(codes.InvalidArgument, "brand must be at most %d characters", maxBrandLen)
+	case len(sku) > maxSKULen:
+		return status.Errorf(codes.InvalidArgument, "sku must be at most %d characters", maxSKULen)
+	case len(tags) > maxTags:
+		return status.Errorf(codes.InvalidArgument, "at most %d tags", maxTags)
+	case len(images) > maxImages:
+		return status.Errorf(codes.InvalidArgument, "at most %d images", maxImages)
+	case weight < 0 || threshold < 0:
+		return status.Error(codes.InvalidArgument, "weight and low stock threshold must not be negative")
+	case statusValue != "" && (!validStatuses[statusValue] || statusValue == model.StatusBanned):
+		return status.Errorf(codes.InvalidArgument, "status must be one of draft, active, hidden")
+	}
+	for _, t := range tags {
+		if strings.TrimSpace(t) == "" || len([]rune(t)) > maxTagLen {
+			return status.Errorf(codes.InvalidArgument, "each tag must be 1-%d characters", maxTagLen)
+		}
+	}
+	for _, u := range images {
+		if len(u) == 0 || len(u) > maxImageURLLen || !(strings.HasPrefix(u, "https://") || strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "/")) {
+			return status.Error(codes.InvalidArgument, "image urls must be http(s) URLs or absolute paths")
+		}
+	}
+	return nil
+}
+
+// checkCategory verifies that categoryID (when set) refers to an active category.
+func (s *ProductService) checkCategory(ctx context.Context, categoryID uint64) error {
+	if categoryID == 0 {
+		return nil
+	}
+	ok, err := s.ProductRepo.CategoryExists(ctx, categoryID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return status.Error(codes.InvalidArgument, "category does not exist")
+	}
+	return nil
+}
+
+// mapRepoError converts repository sentinel errors to gRPC status errors (other errors pass through).
+func mapRepoError(err error) error {
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, gorm.ErrRecordNotFound), errors.Is(err, repository.ErrCategoryNotFound):
+		return status.Error(codes.NotFound, "not found")
+	case errors.Is(err, repository.ErrNotOwner), errors.Is(err, repository.ErrBannedByAdmin):
+		return status.Error(codes.PermissionDenied, err.Error())
+	case errors.Is(err, repository.ErrInsufficientInventory):
+		return status.Error(codes.FailedPrecondition, "inventory can not become negative")
+	case errors.Is(err, repository.ErrSlugTaken), errors.Is(err, repository.ErrCategoryCycle):
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	if strings.Contains(err.Error(), "idx_seller_sku") {
+		return status.Error(codes.AlreadyExists, "sku already used by another product of this store")
+	}
+	return err
+}
+
 type ProductService struct {
 	ProductRepo *repository.ProductRepository
 	MQProducer  messagequeue.Producer
@@ -61,23 +143,47 @@ func (s *ProductService) CreateProduct(ctx context.Context, input *dto.CreatePro
 		return nil, status.Error(codes.InvalidArgument, "seller_id is required")
 	}
 
+	if err := validateCatalogFields(input.Name, input.Description, input.Brand, input.SKU, input.Status, input.Tags, input.ImageURLs, input.WeightG, input.LowStockThreshold); err != nil {
+		return nil, err
+	}
+	if err := s.checkCategory(ctx, input.CategoryID); err != nil {
+		return nil, err
+	}
+	productStatus := input.Status
+	if productStatus == "" {
+		productStatus = model.StatusActive
+	}
+
 	// Create product
+	if len(input.Attributes) == 0 {
+		input.Attributes = []byte("{}")
+	}
 	var product = &model.Product{
-		Name:       input.Name,
-		Price:      input.Price,
-		Inventory:  input.Inventory,
-		SellerID:   input.SellerID,
-		Attributes: input.Attributes,
+		Name:              input.Name,
+		Price:             input.Price,
+		Inventory:         input.Inventory,
+		SellerID:          input.SellerID,
+		Attributes:        input.Attributes,
+		Description:       input.Description,
+		CategoryID:        input.CategoryID,
+		Brand:             input.Brand,
+		Tags:              adapter.ProductDTOToModel(&dto.Product{Tags: input.Tags}).Tags,
+		ImageURLs:         adapter.ProductDTOToModel(&dto.Product{ImageURLs: input.ImageURLs}).ImageURLs,
+		Status:            productStatus,
+		SKU:               strings.TrimSpace(input.SKU),
+		LowStockThreshold: input.LowStockThreshold,
+		WeightG:           input.WeightG,
 	}
 
 	// Handle in repository
 	if err := s.ProductRepo.CreateProduct(ctx, product); err != nil {
 		s.ZapLogger.Warn("ProductService: failed to create product", zap.Error(err))
-		return nil, err
+		return nil, mapRepoError(err)
 	}
 	return &dto.CreateProductOutput{
 		Message: "Product created successfully",
 		Success: true,
+		ID:      product.ID,
 	}, nil
 }
 
@@ -88,6 +194,13 @@ func (s *ProductService) UpdateProduct(ctx context.Context, input *dto.UpdatePro
 		return nil, status.Error(codes.InvalidArgument, "product is required")
 	}
 	if err := validateProductFields(input.Product.Name, input.Product.Price, input.Product.Inventory); err != nil {
+		return nil, err
+	}
+
+	if err := validateCatalogFields(input.Product.Name, input.Product.Description, input.Product.Brand, input.Product.SKU, input.Product.Status, input.Product.Tags, input.Product.ImageURLs, input.Product.WeightG, input.Product.LowStockThreshold); err != nil {
+		return nil, err
+	}
+	if err := s.checkCategory(ctx, input.Product.CategoryID); err != nil {
 		return nil, err
 	}
 
@@ -109,9 +222,10 @@ func (s *ProductService) UpdateProduct(ctx context.Context, input *dto.UpdatePro
 
 	// Parse ProductModel to Product DTO
 	productModel := adapter.ProductDTOToModel(input.Product)
+	productModel.SKU = strings.TrimSpace(productModel.SKU)
 	if err := s.ProductRepo.UpdateProduct(ctx, productModel); err != nil {
 		s.ZapLogger.Warn("ProductService: failed to update product", zap.Error(err))
-		return nil, err
+		return nil, mapRepoError(err)
 	}
 	return &dto.UpdateProductOutput{
 		Message: "Product updated successfully",
@@ -161,7 +275,7 @@ func (s *ProductService) GetProductsByID(ctx context.Context, input *dto.GetProd
 func (s *ProductService) GetProductsBySellerID(ctx context.Context, input *dto.GetProductsBySellerIDInput) (*dto.GetProductsBySellerIDOutput, error) {
 
 	// Get products
-	products, err := s.ProductRepo.GetProductsBySellerID(ctx, input.SellerID)
+	products, err := s.ProductRepo.GetProductsBySellerID(ctx, input.SellerID, input.OnlyActive)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get products", zap.Error(err))
 		return nil, err
@@ -210,7 +324,7 @@ func (s *ProductService) GetAndDecreaseInventoryByID(ctx context.Context, input 
 func (s *ProductService) GetProducts(ctx context.Context, input *dto.GetProductsInput) (*dto.GetProductsOutput, error) {
 
 	// Get Products
-	products, err := s.ProductRepo.GetProducts(ctx, input.Page, input.PageSize)
+	products, err := s.ProductRepo.GetProducts(ctx, input.Page, input.PageSize, input.OnlyActive)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get products", zap.Error(err))
 		return nil, err

@@ -189,6 +189,17 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 		respondError(c, h.Logger, "ProductHandler: GetProductByID warn", err)
 		return
 	}
+	v, err := resolveViewer(c, h.Auth)
+	if err != nil {
+		respondError(c, h.Logger, "ProductHandler: resolve viewer warn", err)
+		return
+	}
+	// Drafts, hidden and banned products exist only for their owner (and admins)
+	if res.Product != nil && res.Product.Status != "active" && !v.Owns(res.Product.SellerID) {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "Product not found"})
+		return
+	}
+	maskProduct(res.Product, v)
 	c.JSON(http.StatusOK, res)
 }
 
@@ -224,12 +235,22 @@ func (h *ProductHandler) GetProductsBySellerID(c *gin.Context) {
 		return
 	}
 	req.SellerID = sellerIdUint
+	v, err := resolveViewer(c, h.Auth)
+	if err != nil {
+		respondError(c, h.Logger, "ProductHandler: resolve viewer warn", err)
+		return
+	}
+	// Only the store itself (or an admin) sees drafts/hidden products
+	req.OnlyActive = !v.Owns(sellerIdUint)
 
 	// Get response and parse to json
 	res, err := h.Service.GetProductsBySellerID(&req)
 	if err != nil {
 		respondError(c, h.Logger, "ProductHandler: GetProductsBySellerID warn", err)
 		return
+	}
+	for _, p := range res.Products {
+		maskProduct(p, v)
 	}
 	c.JSON(http.StatusOK, res)
 }
@@ -282,12 +303,16 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 	}
 	req.Page = uint64(page)
 	req.PageSize = uint64(pageSize)
+	req.OnlyActive = true // the public listing never shows drafts, hidden or banned products
 
 	// Get response and parse to json
 	res, err := h.Service.GetProducts(&req)
 	if err != nil {
 		respondError(c, h.Logger, "ProductHandler: GetProducts warn", err)
 		return
+	}
+	for _, p := range res.Products {
+		maskProduct(p, Viewer{})
 	}
 	c.JSON(http.StatusOK, res)
 }

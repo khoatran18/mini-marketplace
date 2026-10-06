@@ -27,6 +27,13 @@ const (
 	ProductService_GetInventoryByID_FullMethodName            = "/product_service.pkg.pb.ProductService/GetInventoryByID"
 	ProductService_GetAndDecreaseInventoryByID_FullMethodName = "/product_service.pkg.pb.ProductService/GetAndDecreaseInventoryByID"
 	ProductService_GetProducts_FullMethodName                 = "/product_service.pkg.pb.ProductService/GetProducts"
+	ProductService_SearchProducts_FullMethodName              = "/product_service.pkg.pb.ProductService/SearchProducts"
+	ProductService_ListCategories_FullMethodName              = "/product_service.pkg.pb.ProductService/ListCategories"
+	ProductService_UpsertCategory_FullMethodName              = "/product_service.pkg.pb.ProductService/UpsertCategory"
+	ProductService_SetProductStatus_FullMethodName            = "/product_service.pkg.pb.ProductService/SetProductStatus"
+	ProductService_AdjustInventory_FullMethodName             = "/product_service.pkg.pb.ProductService/AdjustInventory"
+	ProductService_GetInventoryLedger_FullMethodName          = "/product_service.pkg.pb.ProductService/GetInventoryLedger"
+	ProductService_ListLowStock_FullMethodName                = "/product_service.pkg.pb.ProductService/ListLowStock"
 )
 
 // ProductServiceClient is the client API for ProductService service.
@@ -43,6 +50,13 @@ type ProductServiceClient interface {
 	GetInventoryByID(ctx context.Context, in *GetInventoryByIDRequest, opts ...grpc.CallOption) (*GetInventoryByIDResponse, error)
 	GetAndDecreaseInventoryByID(ctx context.Context, in *GetAndDecreaseInventoryByIDRequest, opts ...grpc.CallOption) (*GetAndDecreaseInventoryByIDResponse, error)
 	GetProducts(ctx context.Context, in *GetProductsRequest, opts ...grpc.CallOption) (*GetProductsResponse, error)
+	SearchProducts(ctx context.Context, in *SearchProductsRequest, opts ...grpc.CallOption) (*SearchProductsResponse, error)
+	ListCategories(ctx context.Context, in *ListCategoriesRequest, opts ...grpc.CallOption) (*ListCategoriesResponse, error)
+	UpsertCategory(ctx context.Context, in *UpsertCategoryRequest, opts ...grpc.CallOption) (*UpsertCategoryResponse, error)
+	SetProductStatus(ctx context.Context, in *SetProductStatusRequest, opts ...grpc.CallOption) (*SetProductStatusResponse, error)
+	AdjustInventory(ctx context.Context, in *AdjustInventoryRequest, opts ...grpc.CallOption) (*AdjustInventoryResponse, error)
+	GetInventoryLedger(ctx context.Context, in *GetInventoryLedgerRequest, opts ...grpc.CallOption) (*GetInventoryLedgerResponse, error)
+	ListLowStock(ctx context.Context, in *ListLowStockRequest, opts ...grpc.CallOption) (*ListLowStockResponse, error)
 }
 
 type productServiceClient struct {
@@ -133,6 +147,76 @@ func (c *productServiceClient) GetProducts(ctx context.Context, in *GetProductsR
 	return out, nil
 }
 
+func (c *productServiceClient) SearchProducts(ctx context.Context, in *SearchProductsRequest, opts ...grpc.CallOption) (*SearchProductsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SearchProductsResponse)
+	err := c.cc.Invoke(ctx, ProductService_SearchProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *productServiceClient) ListCategories(ctx context.Context, in *ListCategoriesRequest, opts ...grpc.CallOption) (*ListCategoriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCategoriesResponse)
+	err := c.cc.Invoke(ctx, ProductService_ListCategories_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *productServiceClient) UpsertCategory(ctx context.Context, in *UpsertCategoryRequest, opts ...grpc.CallOption) (*UpsertCategoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertCategoryResponse)
+	err := c.cc.Invoke(ctx, ProductService_UpsertCategory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *productServiceClient) SetProductStatus(ctx context.Context, in *SetProductStatusRequest, opts ...grpc.CallOption) (*SetProductStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetProductStatusResponse)
+	err := c.cc.Invoke(ctx, ProductService_SetProductStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *productServiceClient) AdjustInventory(ctx context.Context, in *AdjustInventoryRequest, opts ...grpc.CallOption) (*AdjustInventoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdjustInventoryResponse)
+	err := c.cc.Invoke(ctx, ProductService_AdjustInventory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *productServiceClient) GetInventoryLedger(ctx context.Context, in *GetInventoryLedgerRequest, opts ...grpc.CallOption) (*GetInventoryLedgerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetInventoryLedgerResponse)
+	err := c.cc.Invoke(ctx, ProductService_GetInventoryLedger_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *productServiceClient) ListLowStock(ctx context.Context, in *ListLowStockRequest, opts ...grpc.CallOption) (*ListLowStockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLowStockResponse)
+	err := c.cc.Invoke(ctx, ProductService_ListLowStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProductServiceServer is the server API for ProductService service.
 // All implementations must embed UnimplementedProductServiceServer
 // for forward compatibility.
@@ -147,6 +231,13 @@ type ProductServiceServer interface {
 	GetInventoryByID(context.Context, *GetInventoryByIDRequest) (*GetInventoryByIDResponse, error)
 	GetAndDecreaseInventoryByID(context.Context, *GetAndDecreaseInventoryByIDRequest) (*GetAndDecreaseInventoryByIDResponse, error)
 	GetProducts(context.Context, *GetProductsRequest) (*GetProductsResponse, error)
+	SearchProducts(context.Context, *SearchProductsRequest) (*SearchProductsResponse, error)
+	ListCategories(context.Context, *ListCategoriesRequest) (*ListCategoriesResponse, error)
+	UpsertCategory(context.Context, *UpsertCategoryRequest) (*UpsertCategoryResponse, error)
+	SetProductStatus(context.Context, *SetProductStatusRequest) (*SetProductStatusResponse, error)
+	AdjustInventory(context.Context, *AdjustInventoryRequest) (*AdjustInventoryResponse, error)
+	GetInventoryLedger(context.Context, *GetInventoryLedgerRequest) (*GetInventoryLedgerResponse, error)
+	ListLowStock(context.Context, *ListLowStockRequest) (*ListLowStockResponse, error)
 	mustEmbedUnimplementedProductServiceServer()
 }
 
@@ -180,6 +271,27 @@ func (UnimplementedProductServiceServer) GetAndDecreaseInventoryByID(context.Con
 }
 func (UnimplementedProductServiceServer) GetProducts(context.Context, *GetProductsRequest) (*GetProductsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProducts not implemented")
+}
+func (UnimplementedProductServiceServer) SearchProducts(context.Context, *SearchProductsRequest) (*SearchProductsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchProducts not implemented")
+}
+func (UnimplementedProductServiceServer) ListCategories(context.Context, *ListCategoriesRequest) (*ListCategoriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCategories not implemented")
+}
+func (UnimplementedProductServiceServer) UpsertCategory(context.Context, *UpsertCategoryRequest) (*UpsertCategoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertCategory not implemented")
+}
+func (UnimplementedProductServiceServer) SetProductStatus(context.Context, *SetProductStatusRequest) (*SetProductStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetProductStatus not implemented")
+}
+func (UnimplementedProductServiceServer) AdjustInventory(context.Context, *AdjustInventoryRequest) (*AdjustInventoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdjustInventory not implemented")
+}
+func (UnimplementedProductServiceServer) GetInventoryLedger(context.Context, *GetInventoryLedgerRequest) (*GetInventoryLedgerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetInventoryLedger not implemented")
+}
+func (UnimplementedProductServiceServer) ListLowStock(context.Context, *ListLowStockRequest) (*ListLowStockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListLowStock not implemented")
 }
 func (UnimplementedProductServiceServer) mustEmbedUnimplementedProductServiceServer() {}
 func (UnimplementedProductServiceServer) testEmbeddedByValue()                        {}
@@ -346,6 +458,132 @@ func _ProductService_GetProducts_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProductService_SearchProducts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchProductsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProductServiceServer).SearchProducts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProductService_SearchProducts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProductServiceServer).SearchProducts(ctx, req.(*SearchProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProductService_ListCategories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCategoriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProductServiceServer).ListCategories(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProductService_ListCategories_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProductServiceServer).ListCategories(ctx, req.(*ListCategoriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProductService_UpsertCategory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertCategoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProductServiceServer).UpsertCategory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProductService_UpsertCategory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProductServiceServer).UpsertCategory(ctx, req.(*UpsertCategoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProductService_SetProductStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetProductStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProductServiceServer).SetProductStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProductService_SetProductStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProductServiceServer).SetProductStatus(ctx, req.(*SetProductStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProductService_AdjustInventory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdjustInventoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProductServiceServer).AdjustInventory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProductService_AdjustInventory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProductServiceServer).AdjustInventory(ctx, req.(*AdjustInventoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProductService_GetInventoryLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetInventoryLedgerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProductServiceServer).GetInventoryLedger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProductService_GetInventoryLedger_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProductServiceServer).GetInventoryLedger(ctx, req.(*GetInventoryLedgerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProductService_ListLowStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLowStockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProductServiceServer).ListLowStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProductService_ListLowStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProductServiceServer).ListLowStock(ctx, req.(*ListLowStockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProductService_ServiceDesc is the grpc.ServiceDesc for ProductService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -384,6 +622,34 @@ var ProductService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetProducts",
 			Handler:    _ProductService_GetProducts_Handler,
+		},
+		{
+			MethodName: "SearchProducts",
+			Handler:    _ProductService_SearchProducts_Handler,
+		},
+		{
+			MethodName: "ListCategories",
+			Handler:    _ProductService_ListCategories_Handler,
+		},
+		{
+			MethodName: "UpsertCategory",
+			Handler:    _ProductService_UpsertCategory_Handler,
+		},
+		{
+			MethodName: "SetProductStatus",
+			Handler:    _ProductService_SetProductStatus_Handler,
+		},
+		{
+			MethodName: "AdjustInventory",
+			Handler:    _ProductService_AdjustInventory_Handler,
+		},
+		{
+			MethodName: "GetInventoryLedger",
+			Handler:    _ProductService_GetInventoryLedger_Handler,
+		},
+		{
+			MethodName: "ListLowStock",
+			Handler:    _ProductService_ListLowStock_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

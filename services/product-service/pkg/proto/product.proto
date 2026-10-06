@@ -14,6 +14,22 @@ message Product {
   uint64 seller_id = 4;
   int64 inventory = 5 [(buf.validate.field).int64 = {gte: 0}];
   google.protobuf.Struct attributes = 6;
+  string description = 7;
+  uint64 category_id = 8;
+  string brand = 9;
+  repeated string tags = 10;
+  repeated string image_urls = 11;
+  string status = 12; // draft | active | hidden | banned
+  string sku = 13;
+  int64 low_stock_threshold = 14; // 0 = use the default threshold
+  int64 weight_g = 15;
+  int64 reserved = 16; // held for unpaid/unshipped orders (inventory = available stock)
+  int64 version = 17;
+  string created_at = 18; // RFC3339 (UTC)
+  string updated_at = 19;
+  string stock_level = 20; // computed: none | low | ok
+  string category_name = 21;
+  int64 sold = 22;
 }
 
 // CreateProduct
@@ -23,10 +39,20 @@ message CreateProductRequest {
   uint64 seller_id = 3;
   int64 inventory = 4 [(buf.validate.field).int64 = {gte: 0}];
   google.protobuf.Struct attributes = 5;
+  string description = 6;
+  uint64 category_id = 7;
+  string brand = 8;
+  repeated string tags = 9;
+  repeated string image_urls = 10;
+  string status = 11;
+  string sku = 12;
+  int64 low_stock_threshold = 13;
+  int64 weight_g = 14;
 }
 message CreateProductResponse {
   string message = 1;
   bool success = 2;
+  uint64 id = 3;
 }
 
 // UpdateProduct
@@ -62,6 +88,7 @@ message GetProductsByIDResponse {
 // GetProductsBySellerID
 message GetProductsBySellerIDRequest {
   uint64 seller_id = 1;
+  bool only_active = 2; // public view: hide draft/hidden/banned
 }
 message GetProductsBySellerIDResponse {
   string message = 1;
@@ -94,11 +121,117 @@ message GetAndDecreaseInventoryByIDResponse {
 message GetProductsRequest {
   uint64 page = 1;
   uint64 page_size = 2;
+  bool only_active = 3;
 }
 message GetProductsResponse {
   string message = 1;
   bool success = 2;
   repeated Product product = 3;
+}
+
+// SearchProducts: keyword search + filters (Postgres full text, accent-insensitive)
+message SearchProductsRequest {
+  string query = 1;
+  uint64 category_id = 2; // includes sub-categories
+  double price_min = 3;
+  double price_max = 4; // 0 = no upper bound
+  string brand = 5;
+  uint64 seller_id = 6;
+  bool in_stock_only = 7;
+  string sort = 8; // relevance | price_asc | price_desc | newest | best_selling
+  uint64 page = 9;
+  uint64 page_size = 10;
+  bool include_all_statuses = 11; // only the gateway sets this, for the owner of seller_id
+}
+message SearchProductsResponse {
+  string message = 1;
+  bool success = 2;
+  repeated Product products = 3;
+  uint64 total = 4;
+}
+
+message Category {
+  uint64 id = 1;
+  uint64 parent_id = 2;
+  string name = 3;
+  string slug = 4;
+  int32 sort = 5;
+  bool active = 6;
+  int64 product_count = 7; // active products in this category and its descendants
+}
+message ListCategoriesRequest {
+  bool include_inactive = 1;
+}
+message ListCategoriesResponse {
+  string message = 1;
+  bool success = 2;
+  repeated Category categories = 3;
+}
+message UpsertCategoryRequest {
+  Category category = 1; // id = 0 creates
+}
+message UpsertCategoryResponse {
+  string message = 1;
+  bool success = 2;
+  Category category = 3;
+}
+
+// SetProductStatus: the owner store (store_id) or an admin (is_admin) changes visibility
+message SetProductStatusRequest {
+  uint64 product_id = 1;
+  uint64 store_id = 2;
+  bool is_admin = 3;
+  string status = 4;
+}
+message SetProductStatusResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+// AdjustInventory: manual stock correction by the owner store, always recorded in the ledger
+message AdjustInventoryRequest {
+  uint64 product_id = 1;
+  uint64 store_id = 2;
+  int64 delta = 3;
+  string reason = 4;
+}
+message AdjustInventoryResponse {
+  string message = 1;
+  bool success = 2;
+  int64 inventory = 3;
+}
+
+message LedgerEntry {
+  uint64 id = 1;
+  uint64 product_id = 2;
+  int64 delta = 3;
+  string reason = 4; // reserve | release | sale | restock | adjust | update | initial
+  string ref_type = 5;
+  string ref_id = 6;
+  int64 balance_after = 7;
+  string at = 8;
+}
+message GetInventoryLedgerRequest {
+  uint64 product_id = 1;
+  uint64 store_id = 2;
+  uint64 page = 3;
+  uint64 page_size = 4;
+}
+message GetInventoryLedgerResponse {
+  string message = 1;
+  bool success = 2;
+  repeated LedgerEntry entries = 3;
+}
+
+// ListLowStock: products of a store whose available stock is at or below the threshold
+message ListLowStockRequest {
+  uint64 store_id = 1;
+  int64 default_threshold = 2;
+}
+message ListLowStockResponse {
+  string message = 1;
+  bool success = 2;
+  repeated Product products = 3;
 }
 
 // Service
@@ -111,4 +244,11 @@ service ProductService {
   rpc GetInventoryByID(GetInventoryByIDRequest) returns (GetInventoryByIDResponse);
   rpc GetAndDecreaseInventoryByID(GetAndDecreaseInventoryByIDRequest) returns (GetAndDecreaseInventoryByIDResponse);
   rpc GetProducts(GetProductsRequest) returns (GetProductsResponse);
+  rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+  rpc UpsertCategory(UpsertCategoryRequest) returns (UpsertCategoryResponse);
+  rpc SetProductStatus(SetProductStatusRequest) returns (SetProductStatusResponse);
+  rpc AdjustInventory(AdjustInventoryRequest) returns (AdjustInventoryResponse);
+  rpc GetInventoryLedger(GetInventoryLedgerRequest) returns (GetInventoryLedgerResponse);
+  rpc ListLowStock(ListLowStockRequest) returns (ListLowStockResponse);
 }

@@ -42,7 +42,7 @@ func testService(t *testing.T) *ProductService {
 	if err != nil {
 		t.Fatalf("connect test db: %v", err)
 	}
-	if err := db.AutoMigrate(&model.Product{}, &outbox.ValidateOrderEvent{}); err != nil {
+	if err := repository.Migrate(db); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	t.Cleanup(func() {
@@ -305,15 +305,15 @@ func TestGetProductsPaginationIsBounded(t *testing.T) {
 		seed(t, s, 1, 1, 1)
 	}
 	// page 0 used to underflow into a huge offset
-	got, err := s.ProductRepo.GetProducts(ctx, 0, 2)
+	got, err := s.ProductRepo.GetProducts(ctx, 0, 2, false)
 	if err != nil || len(got) != 2 {
 		t.Fatalf("page 0: %v len=%d", err, len(got))
 	}
-	got, err = s.ProductRepo.GetProducts(ctx, 2, 2)
+	got, err = s.ProductRepo.GetProducts(ctx, 2, 2, false)
 	if err != nil || len(got) != 1 {
 		t.Fatalf("page 2: %v len=%d", err, len(got))
 	}
-	got, err = s.ProductRepo.GetProducts(ctx, 1, 1_000_000)
+	got, err = s.ProductRepo.GetProducts(ctx, 1, 1_000_000, false)
 	if err != nil || len(got) != 3 {
 		t.Fatalf("huge page size: %v len=%d", err, len(got))
 	}

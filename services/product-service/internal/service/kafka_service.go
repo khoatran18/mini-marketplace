@@ -68,6 +68,34 @@ func (s *ProductService) ReleaseProductInventory(ctx context.Context, msg *kafka
 	return s.ProductRepo.ReleaseInventory(ctx, eventDTO.OrderID, toItemQuantities(eventDTO.Items))
 }
 
+// orderStatusEvent is the part of order-service's order.status_changed payload this service needs.
+type orderStatusEvent struct {
+	OrderID uint64 `json:"order_id"`
+	Status  string `json:"status"`
+	Items   []struct {
+		ProductID uint64 `json:"product_id"`
+		Quantity  int64  `json:"quantity"`
+	} `json:"items"`
+}
+
+// MarkShippedFromOrderEvent consumes order.status_changed; when an order is SHIPPED the reserved goods leave
+// the warehouse (reserved goes down, sold up). Exactly once per order; all other statuses are ignored here.
+func (s *ProductService) MarkShippedFromOrderEvent(ctx context.Context, msg *kafka.Message) error {
+	var ev orderStatusEvent
+	if err := json.Unmarshal(msg.Value, &ev); err != nil {
+		s.ZapLogger.Error("failed to unmarshal order status event", zap.Error(err))
+		return nil
+	}
+	if ev.Status != "SHIPPED" {
+		return nil
+	}
+	items := make([]repository.ItemQuantity, 0, len(ev.Items))
+	for _, it := range ev.Items {
+		items = append(items, repository.ItemQuantity{ProductID: it.ProductID, Quantity: it.Quantity})
+	}
+	return s.ProductRepo.MarkShipped(ctx, ev.OrderID, items)
+}
+
 // For Producer
 
 func (s *ProductService) ProducerValOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {

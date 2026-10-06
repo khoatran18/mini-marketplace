@@ -9,6 +9,22 @@ type Product struct {
 	SellerID   uint64
 	Inventory  int64
 	Attributes datatypes.JSON
+
+	Description       string
+	CategoryID        uint64
+	Brand             string
+	Tags              []string
+	ImageURLs         []string
+	Status            string
+	SKU               string
+	LowStockThreshold int64
+	WeightG           int64
+	Reserved          int64
+	Version           int64
+	CreatedAt         string
+	UpdatedAt         string
+	StockLevel        string
+	Sold              int64
 }
 
 // CreateProduct
@@ -19,10 +35,21 @@ type CreateProductInput struct {
 	SellerID   uint64
 	Inventory  int64
 	Attributes datatypes.JSON
+
+	Description       string
+	CategoryID        uint64
+	Brand             string
+	Tags              []string
+	ImageURLs         []string
+	Status            string
+	SKU               string
+	LowStockThreshold int64
+	WeightG           int64
 }
 type CreateProductOutput struct {
 	Message string
 	Success bool
+	ID      uint64
 }
 
 // UpdateProduct
@@ -61,7 +88,8 @@ type GetProductsByIDOutput struct {
 // GetProductsBySellerID
 
 type GetProductsBySellerIDInput struct {
-	SellerID uint64
+	SellerID   uint64
+	OnlyActive bool
 }
 type GetProductsBySellerIDOutput struct {
 	Message  string
@@ -95,8 +123,9 @@ type GetAndDecreaseInventoryByIDOutput struct {
 // Get List Products
 
 type GetProductsInput struct {
-	Page     uint64
-	PageSize uint64
+	Page       uint64
+	PageSize   uint64
+	OnlyActive bool
 }
 type GetProductsOutput struct {
 	Message  string

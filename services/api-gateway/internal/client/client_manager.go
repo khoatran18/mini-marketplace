@@ -154,6 +154,35 @@ func (cm *ClientManager) GetOrCreateServiceClient(serviceName string) (any, erro
 	return newClient.Client, nil
 }
 
+// Typed accessors used by handlers that call a service's generated gRPC client directly.
+
+// Product returns the product-service client.
+func (cm *ClientManager) Product() (productpb.ProductServiceClient, error) {
+	c, err := cm.GetOrCreateServiceClient(clientname.ProductClientName)
+	if err != nil {
+		return nil, err
+	}
+	return c.(productpb.ProductServiceClient), nil
+}
+
+// Order returns the order-service client.
+func (cm *ClientManager) Order() (orderpb.OrderServiceClient, error) {
+	c, err := cm.GetOrCreateServiceClient(clientname.OrderClientName)
+	if err != nil {
+		return nil, err
+	}
+	return c.(orderpb.OrderServiceClient), nil
+}
+
+// User returns the user-service client.
+func (cm *ClientManager) User() (userpb.UserServiceClient, error) {
+	c, err := cm.GetOrCreateServiceClient(clientname.UserClientName)
+	if err != nil {
+		return nil, err
+	}
+	return c.(userpb.UserServiceClient), nil
+}
+
 // GetOrCreateAuthClient is responsible for getting AuthClient if existed else creating AuthClient
 //func (cm *ClientManager) GetOrCreateAuthClient() (authpb.AuthServiceClient, error) {
 //

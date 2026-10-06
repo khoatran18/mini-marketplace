@@ -195,3 +195,36 @@ func TestBodyLimitAppliesToEveryRoute(t *testing.T) {
 		t.Fatalf("want 413, got %d", w.Code)
 	}
 }
+
+func TestCatalogRouteAccessRules(t *testing.T) {
+	e := newEngine(t)
+	// admin-only and seller-only routes: anonymous -> 401, wrong role -> 403
+	for _, route := range []struct{ method, path, wrongRole string }{
+		{"GET", "/admin/categories", "seller_admin"},
+		{"POST", "/admin/categories", "buyer"},
+		{"PUT", "/admin/categories/1", "seller_admin"},
+		{"PATCH", "/admin/products/1/status", "seller_admin"},
+		{"GET", "/seller/products", "buyer"},
+		{"GET", "/seller/inventory/low-stock", "buyer"},
+		{"POST", "/seller/products/1/inventory/adjust", "buyer"},
+		{"GET", "/seller/products/1/inventory/ledger", "admin"},
+		{"PATCH", "/products/1/status", "buyer"},
+	} {
+		if w := request(e, route.method, route.path, ""); w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s anonymous: %d, want 401", route.method, route.path, w.Code)
+		}
+		if w := request(e, route.method, route.path, token(t, route.wrongRole)); w.Code != http.StatusForbidden {
+			t.Errorf("%s %s as %s: %d, want 403", route.method, route.path, route.wrongRole, w.Code)
+		}
+	}
+	// a malformed token on a public route is rejected rather than treated as anonymous
+	for _, path := range []string{"/search", "/products", "/products/1", "/products/seller/1"} {
+		req := httptest.NewRequest("GET", path, nil)
+		req.Header.Set("Authorization", "Bearer not-a-jwt")
+		w := httptest.NewRecorder()
+		e.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("GET %s with a bad token: %d, want 401", path, w.Code)
+		}
+	}
+}

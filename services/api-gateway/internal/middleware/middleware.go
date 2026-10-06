@@ -182,6 +182,18 @@ func AuthMiddleware(logger *zap.Logger, redisClient *redis.Client, jwtSecret str
 	}
 }
 
+// OptionalAuth lets anonymous requests through (no identity is set) but validates a token when one is sent:
+// a bad or expired token is still a 401, never silently treated as anonymous.
+func OptionalAuth(strict gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.GetHeader("Authorization") == "" {
+			c.Next()
+			return
+		}
+		strict(c)
+	}
+}
+
 // AuthorizationMiddleware solve problem about role user
 func AuthorizationMiddleware(requiredRoles []string, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {

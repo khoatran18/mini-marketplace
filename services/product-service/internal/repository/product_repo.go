@@ -6,8 +6,11 @@ import (
 	"product-service/pkg/model"
 	"product-service/pkg/outbox"
 	"slices"
+	"strconv"
+	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ProductRepository struct {
@@ -23,25 +26,65 @@ func NewProductRepository(db *gorm.DB) *ProductRepository {
 
 // CreateProduct create new product
 func (r *ProductRepository) CreateProduct(ctx context.Context, product *model.Product) error {
-	return r.DB.WithContext(ctx).Create(product).Error
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(product).Error; err != nil {
+			return err
+		}
+		// product.changed first so consumers know the product before its first stock movement
+		if err := emitProductChanged(tx, product, "upsert"); err != nil {
+			return err
+		}
+		if product.Inventory > 0 {
+			row := &stockRow{SellerID: product.SellerID, Inventory: product.Inventory, LowStockThreshold: product.LowStockThreshold}
+			return recordStock(tx, product.ID, row, product.Inventory, model.ReasonInitial, "product", strconv.FormatUint(product.ID, 10))
+		}
+		return nil
+	})
 }
 
 // UpdateProduct replaces the editable fields of a product. Owner (seller_id) is never changed,
-// and zero values (price/inventory 0) are written explicitly.
+// and zero values (price/inventory 0) are written explicitly. A changed inventory is recorded in the
+// ledger (reason "update"). Status "banned" can not be set or cleared here (see SetProductStatus).
 func (r *ProductRepository) UpdateProduct(ctx context.Context, product *model.Product) error {
-	result := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", product.ID).Updates(map[string]interface{}{
-		"name":       product.Name,
-		"price":      product.Price,
-		"inventory":  product.Inventory,
-		"attributes": product.Attributes,
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var old model.Product
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", product.ID).First(&old).Error; err != nil {
+			return err
+		}
+		status := product.Status
+		if status == "" || old.Status == model.StatusBanned {
+			status = old.Status
+		}
+		err := tx.Model(&model.Product{}).Where("id = ?", product.ID).Updates(map[string]interface{}{
+			"name":                product.Name,
+			"price":               product.Price,
+			"inventory":           product.Inventory,
+			"attributes":          product.Attributes,
+			"description":         product.Description,
+			"category_id":         product.CategoryID,
+			"brand":               product.Brand,
+			"tags":                product.Tags,
+			"image_urls":          product.ImageURLs,
+			"status":              status,
+			"sku":                 product.SKU,
+			"low_stock_threshold": product.LowStockThreshold,
+			"weight_g":            product.WeightG,
+			"version":             gorm.Expr("version + 1"),
+			"updated_at":          time.Now(),
+		}).Error
+		if err != nil {
+			return err
+		}
+		if delta := product.Inventory - old.Inventory; delta != 0 {
+			row := &stockRow{SellerID: old.SellerID, Inventory: product.Inventory, Reserved: old.Reserved, LowStockThreshold: product.LowStockThreshold}
+			if err := recordStock(tx, old.ID, row, delta, model.ReasonUpdate, "product", strconv.FormatUint(old.ID, 10)); err != nil {
+				return err
+			}
+		}
+		merged := old
+		merged.Name, merged.Price, merged.SKU, merged.CategoryID, merged.Brand, merged.Status = product.Name, product.Price, product.SKU, product.CategoryID, product.Brand, status
+		return emitProductChanged(tx, &merged, "upsert")
 	})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-	return nil
 }
 
 // GetProductByID get product by ProductID
@@ -85,15 +128,12 @@ func (r *ProductRepository) GetSellerIDByID(ctx context.Context, productID uint6
 
 // GetAndDecreaseInventoryByID get and decrease inventory by ProductID (atomic)
 func (r *ProductRepository) GetAndDecreaseInventoryByID(ctx context.Context, id uint64, quantity int64) error {
-	// Use dto.Product to use atomic transaction: get and delete inventory
-	result := r.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ? AND inventory >= ?", id, quantity).UpdateColumn("inventory", gorm.Expr("inventory - ?", quantity))
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("no rows affected")
-	}
-	return nil
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if _, err := applyStock(tx, id, -quantity, 0, 0, model.ReasonAdjust, "legacy", ""); err != nil {
+			return errors.New("no rows affected")
+		}
+		return nil
+	})
 }
 
 // ItemQuantity is a product and the quantity to reserve or release.
@@ -126,15 +166,10 @@ func sortItems(items []ItemQuantity) []ItemQuantity {
 // the primary key of the result row and rolls back its own decrements.
 func (r *ProductRepository) ReserveInventory(ctx context.Context, orderID uint64, items []ItemQuantity) error {
 	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		ref := strconv.FormatUint(orderID, 10)
 		for _, item := range sortItems(items) {
-			result := tx.Model(&model.Product{}).
-				Where("id = ? AND inventory >= ?", item.ProductID, item.Quantity).
-				UpdateColumn("inventory", gorm.Expr("inventory - ?", item.Quantity))
-			if result.Error != nil {
-				return result.Error
-			}
-			if result.RowsAffected == 0 {
-				return ErrInsufficientInventory
+			if _, err := applyStock(tx, item.ProductID, -item.Quantity, item.Quantity, 0, model.ReasonReserve, "order", ref); err != nil {
+				return err
 			}
 		}
 		return tx.Create(&outbox.ValidateOrderEvent{
@@ -147,9 +182,13 @@ func (r *ProductRepository) ReserveInventory(ctx context.Context, orderID uint64
 }
 
 // GetProductsBySellerID get product array by SellerID
-func (r *ProductRepository) GetProductsBySellerID(ctx context.Context, sellerID uint64) ([]*model.Product, error) {
+func (r *ProductRepository) GetProductsBySellerID(ctx context.Context, sellerID uint64, onlyActive bool) ([]*model.Product, error) {
 	var products []*model.Product
-	if err := r.DB.WithContext(ctx).Where("seller_id = ?", sellerID).Find(&products).Error; err != nil {
+	q := r.DB.WithContext(ctx).Where("seller_id = ?", sellerID)
+	if onlyActive {
+		q = q.Where("status = ?", model.StatusActive)
+	}
+	if err := q.Order("id ASC").Find(&products).Error; err != nil {
 		return nil, err
 	}
 	return products, nil
@@ -158,7 +197,7 @@ func (r *ProductRepository) GetProductsBySellerID(ctx context.Context, sellerID 
 // MaxPageSize caps the number of products returned per page.
 const MaxPageSize = 100
 
-func (r *ProductRepository) GetProducts(ctx context.Context, page, pageSize uint64) ([]*model.Product, error) {
+func (r *ProductRepository) GetProducts(ctx context.Context, page, pageSize uint64, onlyActive bool) ([]*model.Product, error) {
 	var products []*model.Product
 	if page < 1 {
 		page = 1
@@ -168,7 +207,11 @@ func (r *ProductRepository) GetProducts(ctx context.Context, page, pageSize uint
 	}
 	pageSizeInt := int(pageSize)
 	offset := int((page - 1) * pageSize)
-	if err := r.DB.WithContext(ctx).Order("id ASC").Limit(pageSizeInt).Offset(offset).Find(&products).Error; err != nil {
+	q := r.DB.WithContext(ctx).Order("id ASC").Limit(pageSizeInt).Offset(offset)
+	if onlyActive {
+		q = q.Where("status = ?", model.StatusActive)
+	}
+	if err := q.Find(&products).Error; err != nil {
 		return nil, err
 	}
 	return products, nil

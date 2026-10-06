@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"errors"
+	"product-service/pkg/model"
 	"product-service/pkg/outbox"
+	"strconv"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -42,8 +44,8 @@ func (r *ProductRepository) UpdateValOrdEventStatus(ctx context.Context, orderID
 		Updates(map[string]interface{}{"status": status}).Error
 }
 
-// ReleaseInventory gives the inventory of a canceled order back, exactly once.
-// It does nothing when the order never reserved inventory or was already released.
+// ReleaseInventory gives the inventory of a canceled/expired/failed order back, exactly once.
+// It does nothing when the order never reserved inventory or was already released (or already shipped).
 func (r *ProductRepository) ReleaseInventory(ctx context.Context, orderID uint64, items []ItemQuantity) error {
 	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var event outbox.ValidateOrderEvent
@@ -54,16 +56,42 @@ func (r *ProductRepository) ReleaseInventory(ctx context.Context, orderID uint64
 		if err != nil {
 			return err
 		}
-		if !event.Success || event.Restored {
+		if !event.Success || event.Restored || event.Shipped {
 			return nil
 		}
 
+		ref := strconv.FormatUint(orderID, 10)
 		for _, item := range sortItems(items) {
-			if err := tx.Table("products").Where("id = ?", item.ProductID).
-				UpdateColumn("inventory", gorm.Expr("inventory + ?", item.Quantity)).Error; err != nil {
+			if _, err := applyStock(tx, item.ProductID, item.Quantity, -item.Quantity, 0, model.ReasonRelease, "order", ref); err != nil {
 				return err
 			}
 		}
 		return tx.Model(&outbox.ValidateOrderEvent{}).Where("order_id = ?", orderID).Update("restored", true).Error
+	})
+}
+
+// MarkShipped records that the reserved goods of an order left the warehouse: reserved goes down and the
+// sold counter up (available stock does not change). Exactly once per order; no-op when the order never
+// reserved, was released, or was already shipped.
+func (r *ProductRepository) MarkShipped(ctx context.Context, orderID uint64, items []ItemQuantity) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var event outbox.ValidateOrderEvent
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("order_id = ?", orderID).First(&event).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if !event.Success || event.Restored || event.Shipped {
+			return nil
+		}
+		ref := strconv.FormatUint(orderID, 10)
+		for _, item := range sortItems(items) {
+			if _, err := applyStock(tx, item.ProductID, 0, -item.Quantity, item.Quantity, model.ReasonSale, "order", ref); err != nil {
+				return err
+			}
+		}
+		return tx.Model(&outbox.ValidateOrderEvent{}).Where("order_id = ?", orderID).Update("shipped", true).Error
 	})
 }

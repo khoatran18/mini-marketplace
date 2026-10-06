@@ -227,3 +227,13 @@ func TestTCPCheck(t *testing.T) {
 		t.Fatal("empty address list must fail")
 	}
 }
+
+func TestGaugeFunc(t *testing.T) {
+	s := newTestServer()
+	v := 3.0
+	s.GaugeFunc("mm_outbox_pending", "pending outbox rows", map[string]string{"table": "domain_events"}, func() float64 { return v })
+	_, _, m := get(t, s.Handler(), "/metrics")
+	if !strings.Contains(m, `mm_outbox_pending{service="test-service",table="domain_events"} 3`) {
+		t.Fatalf("gauge func not exported:\n%s", m)
+	}
+}

@@ -7,6 +7,14 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+// nonNil makes empty lists serialize as [] instead of null.
+func nonNil(v []string) []string {
+	if v == nil {
+		return []string{}
+	}
+	return v
+}
+
 func MapToStruct(m map[string]any) (*structpb.Struct, error) {
 	return structpb.NewStruct(m)
 }
@@ -23,12 +31,21 @@ func ProductDTOToProto(product *dto.Product) (*productpb.Product, error) {
 		return nil, err
 	}
 	return &productpb.Product{
-		Id:         product.ID,
-		Name:       product.Name,
-		Price:      product.Price,
-		SellerId:   product.SellerID,
-		Inventory:  product.Inventory,
-		Attributes: attributes,
+		Id:                product.ID,
+		Name:              product.Name,
+		Price:             product.Price,
+		SellerId:          product.SellerID,
+		Inventory:         product.Inventory,
+		Attributes:        attributes,
+		Description:       product.Description,
+		CategoryId:        product.CategoryID,
+		Brand:             product.Brand,
+		Tags:              product.Tags,
+		ImageUrls:         product.ImageURLs,
+		Status:            product.Status,
+		Sku:               product.SKU,
+		LowStockThreshold: product.LowStockThreshold,
+		WeightG:           product.WeightG,
 	}, nil
 }
 func ProductProtoToDTO(product *productpb.Product) (*dto.Product, error) {
@@ -40,12 +57,27 @@ func ProductProtoToDTO(product *productpb.Product) (*dto.Product, error) {
 		return nil, err
 	}
 	return &dto.Product{
-		ID:         product.GetId(),
-		Name:       product.GetName(),
-		Price:      product.GetPrice(),
-		SellerID:   product.GetSellerId(),
-		Inventory:  product.GetInventory(),
-		Attributes: attributes,
+		ID:                product.GetId(),
+		Name:              product.GetName(),
+		Price:             product.GetPrice(),
+		SellerID:          product.GetSellerId(),
+		Inventory:         product.GetInventory(),
+		Attributes:        attributes,
+		Description:       product.GetDescription(),
+		CategoryID:        product.GetCategoryId(),
+		Brand:             product.GetBrand(),
+		Tags:              nonNil(product.GetTags()),
+		ImageURLs:         nonNil(product.GetImageUrls()),
+		Status:            product.GetStatus(),
+		SKU:               product.GetSku(),
+		LowStockThreshold: product.GetLowStockThreshold(),
+		WeightG:           product.GetWeightG(),
+		Reserved:          product.GetReserved(),
+		Sold:              product.GetSold(),
+		Version:           product.GetVersion(),
+		CreatedAt:         product.GetCreatedAt(),
+		UpdatedAt:         product.GetUpdatedAt(),
+		StockLevel:        product.GetStockLevel(),
 	}, nil
 }
 
@@ -78,17 +110,27 @@ func CreateProductInputToRequest(input *dto.CreateProductInput) (*productpb.Crea
 		return nil, err
 	}
 	return &productpb.CreateProductRequest{
-		Name:       input.Name,
-		Price:      input.Price,
-		SellerId:   input.SellerID,
-		Inventory:  input.Inventory,
-		Attributes: attributes,
+		Name:              input.Name,
+		Price:             input.Price,
+		SellerId:          input.SellerID,
+		Inventory:         input.Inventory,
+		Attributes:        attributes,
+		Description:       input.Description,
+		CategoryId:        input.CategoryID,
+		Brand:             input.Brand,
+		Tags:              input.Tags,
+		ImageUrls:         input.ImageURLs,
+		Status:            input.Status,
+		Sku:               input.SKU,
+		LowStockThreshold: input.LowStockThreshold,
+		WeightG:           input.WeightG,
 	}, nil
 }
 func CreateProductResponseToOutput(res *productpb.CreateProductResponse) (*dto.CreateProductOutput, error) {
 	return &dto.CreateProductOutput{
 		Message: res.GetMessage(),
 		Success: res.GetSuccess(),
+		ID:      res.GetId(),
 	}, nil
 }
 
@@ -128,7 +170,8 @@ func GetProductByIDResponseToOutput(res *productpb.GetProductByIDResponse) (*dto
 
 func GetProductsBySellerIDInputToRequest(input *dto.GetProductsBySellerIDInput) (*productpb.GetProductsBySellerIDRequest, error) {
 	return &productpb.GetProductsBySellerIDRequest{
-		SellerId: input.SellerID,
+		SellerId:   input.SellerID,
+		OnlyActive: input.OnlyActive,
 	}, nil
 }
 func GetProductsBySellerIDResponseToOutput(res *productpb.GetProductsBySellerIDResponse) (*dto.GetProductsBySellerIDOutput, error) {
@@ -145,8 +188,9 @@ func GetProductsBySellerIDResponseToOutput(res *productpb.GetProductsBySellerIDR
 
 func GetProductsInputToRequest(input *dto.GetProductsInput) (*productpb.GetProductsRequest, error) {
 	return &productpb.GetProductsRequest{
-		Page:     input.Page,
-		PageSize: input.PageSize,
+		Page:       input.Page,
+		PageSize:   input.PageSize,
+		OnlyActive: input.OnlyActive,
 	}, nil
 }
 func GetProductsResponseToOutput(res *productpb.GetProductsResponse) (*dto.GetProductsOutput, error) {

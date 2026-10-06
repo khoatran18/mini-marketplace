@@ -159,6 +159,16 @@ func (s *Server) AttachDB(db *sql.DB) {
 	s.registry.MustRegister(prometheus.NewCounterFunc(prometheus.CounterOpts{Name: "mm_db_pool_wait_seconds_total", Help: "Total time blocked waiting for a DB connection.", ConstLabels: labels}, func() float64 { return db.Stats().WaitDuration.Seconds() }))
 }
 
+// GaugeFunc registers a gauge whose value is computed on every scrape (keep fn cheap or cache inside it).
+// Names should start with mm_; the service label is added automatically.
+func (s *Server) GaugeFunc(name, help string, labels map[string]string, fn func() float64) {
+	l := prometheus.Labels{"service": s.service}
+	for k, v := range labels {
+		l[k] = v
+	}
+	s.registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: name, Help: help, ConstLabels: l}, fn))
+}
+
 // Registry exposes the registry so a service can register its own business metrics (prefix mm_).
 func (s *Server) Registry() *prometheus.Registry { return s.registry }
 

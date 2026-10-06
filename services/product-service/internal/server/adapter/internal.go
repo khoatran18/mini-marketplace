@@ -40,12 +40,21 @@ func ProductProtoToDTO(p *productpb.Product) (*dto.Product, error) {
 		return nil, err
 	}
 	return &dto.Product{
-		ID:         p.Id,
-		Name:       p.Name,
-		Price:      p.Price,
-		SellerID:   p.SellerId,
-		Inventory:  p.Inventory,
-		Attributes: attributes,
+		ID:                p.Id,
+		Name:              p.Name,
+		Price:             p.Price,
+		SellerID:          p.SellerId,
+		Inventory:         p.Inventory,
+		Attributes:        attributes,
+		Description:       p.Description,
+		CategoryID:        p.CategoryId,
+		Brand:             p.Brand,
+		Tags:              p.Tags,
+		ImageURLs:         p.ImageUrls,
+		Status:            p.Status,
+		SKU:               p.Sku,
+		LowStockThreshold: p.LowStockThreshold,
+		WeightG:           p.WeightG,
 	}, nil
 }
 func ProductDTOToProto(p *dto.Product) (*productpb.Product, error) {
@@ -57,12 +66,27 @@ func ProductDTOToProto(p *dto.Product) (*productpb.Product, error) {
 		return nil, err
 	}
 	return &productpb.Product{
-		Id:         p.ID,
-		Name:       p.Name,
-		Price:      p.Price,
-		SellerId:   p.SellerID,
-		Inventory:  p.Inventory,
-		Attributes: attributes,
+		Id:                p.ID,
+		Name:              p.Name,
+		Price:             p.Price,
+		SellerId:          p.SellerID,
+		Inventory:         p.Inventory,
+		Attributes:        attributes,
+		Description:       p.Description,
+		CategoryId:        p.CategoryID,
+		Brand:             p.Brand,
+		Tags:              p.Tags,
+		ImageUrls:         p.ImageURLs,
+		Status:            p.Status,
+		Sku:               p.SKU,
+		LowStockThreshold: p.LowStockThreshold,
+		WeightG:           p.WeightG,
+		Reserved:          p.Reserved,
+		Version:           p.Version,
+		CreatedAt:         p.CreatedAt,
+		UpdatedAt:         p.UpdatedAt,
+		StockLevel:        p.StockLevel,
+		Sold:              p.Sold,
 	}, nil
 }
 
@@ -84,17 +108,27 @@ func CreProRequestToInput(req *productpb.CreateProductRequest) (*dto.CreateProdu
 		return nil, err
 	}
 	return &dto.CreateProductInput{
-		Name:       req.GetName(),
-		Price:      req.GetPrice(),
-		SellerID:   req.GetSellerId(),
-		Inventory:  req.GetInventory(),
-		Attributes: attributes,
+		Name:              req.GetName(),
+		Price:             req.GetPrice(),
+		SellerID:          req.GetSellerId(),
+		Inventory:         req.GetInventory(),
+		Attributes:        attributes,
+		Description:       req.GetDescription(),
+		CategoryID:        req.GetCategoryId(),
+		Brand:             req.GetBrand(),
+		Tags:              req.GetTags(),
+		ImageURLs:         req.GetImageUrls(),
+		Status:            req.GetStatus(),
+		SKU:               req.GetSku(),
+		LowStockThreshold: req.GetLowStockThreshold(),
+		WeightG:           req.GetWeightG(),
 	}, nil
 }
 func CreProOutputToResponse(output *dto.CreateProductOutput) (*productpb.CreateProductResponse, error) {
 	return &productpb.CreateProductResponse{
 		Message: output.Message,
 		Success: output.Success,
+		Id:      output.ID,
 	}, nil
 }
 
@@ -151,7 +185,8 @@ func GetProsByIDOutputToResponse(output *dto.GetProductsByIDOutput) (*productpb.
 
 func GetProsBySelIDRequestToInput(req *productpb.GetProductsBySellerIDRequest) (*dto.GetProductsBySellerIDInput, error) {
 	return &dto.GetProductsBySellerIDInput{
-		SellerID: req.GetSellerId(),
+		SellerID:   req.GetSellerId(),
+		OnlyActive: req.GetOnlyActive(),
 	}, nil
 }
 func GetProsBySelIDOutputToResponse(output *dto.GetProductsBySellerIDOutput) (*productpb.GetProductsBySellerIDResponse, error) {
@@ -196,8 +231,9 @@ func GetAndDecInvByIDOutputToResponse(output *dto.GetAndDecreaseInventoryByIDOut
 
 func GetProductsRequestToInput(req *productpb.GetProductsRequest) (*dto.GetProductsInput, error) {
 	return &dto.GetProductsInput{
-		Page:     req.GetPage(),
-		PageSize: req.GetPageSize(),
+		Page:       req.GetPage(),
+		PageSize:   req.GetPageSize(),
+		OnlyActive: req.GetOnlyActive(),
 	}, nil
 }
 

@@ -15,8 +15,8 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     envConfig.AllowedOrigins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Idempotency-Key"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -72,13 +72,30 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		}
 	}
 
+	// Public catalog: anonymous visitors see active products; a valid token adds owner/admin visibility
+	optionalAuth := middleware.OptionalAuth(authenticated)
+	sellerRoles := middleware.AuthorizationMiddleware([]string{"seller_admin", "seller_employee"}, serviceConfig.ZapLogger)
+	router.GET("/search", optionalAuth, h.CatalogHandler.Search)
+	router.GET("/categories", h.CatalogHandler.Categories)
+
 	productRoute := router.Group("/products")
 	{
-		productRoute.POST("", middleware.AuthorizationMiddleware([]string{"seller_admin", "seller_employee"}, serviceConfig.ZapLogger), h.ProductHandler.CreateProduct)
-		productRoute.PUT("/:id", middleware.AuthorizationMiddleware([]string{"seller_admin", "seller_employee"}, serviceConfig.ZapLogger), h.ProductHandler.UpdateProduct)
-		productRoute.GET("/:id", h.ProductHandler.GetProductByID)
-		productRoute.GET("", h.ProductHandler.GetProducts)
-		productRoute.GET("/seller/:seller_id", h.ProductHandler.GetProductsBySellerID)
+		productRoute.POST("", authenticated, sellerRoles, h.ProductHandler.CreateProduct)
+		productRoute.PUT("/:id", authenticated, sellerRoles, h.ProductHandler.UpdateProduct)
+		productRoute.PATCH("/:id/status", authenticated, sellerRoles, h.CatalogHandler.SetStatus)
+		productRoute.GET("/:id", optionalAuth, h.ProductHandler.GetProductByID)
+		productRoute.GET("/:id/stock", h.CatalogHandler.Stock)
+		productRoute.GET("", optionalAuth, h.ProductHandler.GetProducts)
+		productRoute.GET("/seller/:seller_id", optionalAuth, h.ProductHandler.GetProductsBySellerID)
+	}
+
+	// Seller console
+	sellerRoute := router.Group("/seller", authenticated, sellerRoles)
+	{
+		sellerRoute.GET("/products", h.CatalogHandler.SellerProducts)
+		sellerRoute.POST("/products/:id/inventory/adjust", h.CatalogHandler.AdjustInventory)
+		sellerRoute.GET("/products/:id/inventory/ledger", h.CatalogHandler.InventoryLedger)
+		sellerRoute.GET("/inventory/low-stock", h.CatalogHandler.LowStock)
 	}
 
 	// Platform administrators only
@@ -90,6 +107,10 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	adminRoute := router.Group("/admin", authenticated, middleware.AuthorizationMiddleware([]string{"admin"}, serviceConfig.ZapLogger))
 	{
 		adminRoute.GET("/system/health", systemHandler.Health)
+		adminRoute.GET("/categories", h.CatalogHandler.AdminCategories)
+		adminRoute.POST("/categories", h.CatalogHandler.CreateCategory)
+		adminRoute.PUT("/categories/:id", h.CatalogHandler.UpdateCategory)
+		adminRoute.PATCH("/products/:id/status", h.CatalogHandler.AdminSetStatus)
 	}
 
 	orderRoute := router.Group("/orders")
