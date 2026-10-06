@@ -12,6 +12,7 @@
 | [runbook.md](runbook.md) | Troubleshooting stuck orders, outbox, tokens, Kafka |
 | [decisions.md](decisions.md) | Architecture decision records |
 | [roadmap.md](roadmap.md) | Remaining tech debt and proposed business features |
-| [ai/README.md](ai/README.md) | **AI Platform** (thiết kế, chưa code): agent, recsys, RAG chính sách, giám sát/cảnh báo, UI, API contract, hạ tầng, lộ trình |
+| [platform/README.md](platform/README.md) | **Thiết kế nền tảng (chưa code)**: health/ready/metrics, thanh toán mô phỏng, vòng đời đơn, tracking + ClickHouse, analytics, cảnh báo, UI, API, hạ tầng, lộ trình |
+| [AI-DRAFT.md](AI-DRAFT.md) | ⚠️ **Nháp ý tưởng AI – không dùng, không code theo** |
 
 The OpenAPI spec is generated into `services/api-gateway/docs/` (`swag init -g cmd/main.go -o docs --parseInternal`, run from `services/api-gateway`).
