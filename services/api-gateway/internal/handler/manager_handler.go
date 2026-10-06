@@ -40,6 +40,7 @@ func NewHandlerManager(cm *client.ClientManager, logger *zap.Logger) *ManagerHan
 	// Create UserService (wrap UserClient)
 	userService := userclient.NewUserClient(nil, cm, logger)
 	userHandler := NewUserHandler(userService, logger)
+	userHandler.Auth = authService
 
 	// Return ManagerHandler
 	return &ManagerHandler{

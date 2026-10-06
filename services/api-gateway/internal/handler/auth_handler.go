@@ -48,8 +48,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.Login(&req)
 	if err != nil {
-		h.Logger.Warn("AuthHandler: Login warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "AuthHandler: Login warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -85,8 +84,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.Register(&req)
 	if err != nil {
-		h.Logger.Warn("AuthHandler Register warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "AuthHandler Register warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -131,8 +129,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.ChangePassword(&req)
 	if err != nil {
-		h.Logger.Warn("AuthHandler Change Password warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "AuthHandler Change Password warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -163,8 +160,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.RefreshToken(&req)
 	if err != nil {
-		h.Logger.Warn("AuthHandler Refresh Token warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "AuthHandler Refresh Token warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -207,8 +203,7 @@ func (h *AuthHandler) RegisterSellerRoles(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.RegisterSellerRoles(&req)
 	if err != nil {
-		h.Logger.Warn("AuthHandler RegisterSellerRoles warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "AuthHandler RegisterSellerRoles warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)

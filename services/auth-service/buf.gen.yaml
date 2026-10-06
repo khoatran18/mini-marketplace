@@ -11,10 +11,10 @@ plugins:
 
   # For API Gateway
   - remote: buf.build/protocolbuffers/go
-    out: ../../api-gateway/pkg/pb/authservice
+    out: ../api-gateway/pkg/pb/authservice
     opt: paths=source_relative
   - remote: buf.build/grpc/go
-    out: ../../api-gateway/pkg/pb/authservice
+    out: ../api-gateway/pkg/pb/authservice
     opt: paths=source_relative
 
   # For Product Service

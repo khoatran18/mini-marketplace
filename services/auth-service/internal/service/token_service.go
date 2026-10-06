@@ -5,6 +5,8 @@ import (
 	"auth-service/pkg/model"
 	"context"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -91,22 +93,22 @@ func (s *AuthService) RefreshToken(ctx context.Context, input *dto.RefreshTokenI
 	// Parse and validate token
 	authClaim, err := s.parseToken(input.RefreshToken)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
 	}
 	if authClaim.Type != "refresh" {
 		s.ZapLogger.Warn("AuthService: refresh token only")
-		return nil, fmt.Errorf("refresh token only")
+		return nil, status.Error(codes.Unauthenticated, "refresh token only")
 	}
 
 	// Check if password updated
 	acc, err := s.AccountRepo.GetAccountByUsernameRole(ctx, authClaim.Username, authClaim.Role)
 	if err != nil {
 		s.ZapLogger.Warn("AuthService: refresh token failure, can not find account")
-		return nil, fmt.Errorf("can not find account")
+		return nil, status.Error(codes.Unauthenticated, "can not find account")
 	}
 	if authClaim.PwdVersion != acc.PwdVersion {
 		s.ZapLogger.Warn("AuthService: refresh token failure, password changed")
-		return nil, fmt.Errorf("password changed")
+		return nil, status.Error(codes.Unauthenticated, "password changed")
 	}
 
 	tokenRequest := &dto.TokenRequest{

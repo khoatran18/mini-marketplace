@@ -9,7 +9,8 @@ import (
 	"auth-service/pkg/model"
 	"context"
 	"errors"
-	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"log"
 	"time"
 
@@ -53,13 +54,13 @@ func (s *AuthService) Register(ctx context.Context, input *dto.RegisterInput) (*
 
 	// Validate role and password
 	if !validRoles[input.Role] {
-		return nil, errors.New("invalid role")
+		return nil, status.Error(codes.InvalidArgument, "invalid role")
 	}
 	if input.Role == input.RoleNotRegister {
-		return nil, fmt.Errorf("can not register role %s", input.Role)
+		return nil, status.Errorf(codes.PermissionDenied, "can not register role %s", input.Role)
 	}
 	if len(input.Password) < minPasswordLength {
-		return nil, fmt.Errorf("password must be at least %d characters", minPasswordLength)
+		return nil, status.Errorf(codes.InvalidArgument, "password must be at least %d characters", minPasswordLength)
 	}
 
 	// Check account existed
@@ -70,7 +71,7 @@ func (s *AuthService) Register(ctx context.Context, input *dto.RegisterInput) (*
 	}
 	if existingAccount != nil {
 		s.ZapLogger.Warn("AuthService: account already exists", zap.String("username", input.Username), zap.String("role", input.Role))
-		return nil, errors.New("account already exists")
+		return nil, status.Error(codes.AlreadyExists, "account already exists")
 	}
 
 	// Bcrypt password and create account
@@ -107,7 +108,7 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.Logi
 	account, err := s.AccountRepo.GetAccountByUsernameRole(ctx, req.Username, req.Role)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		s.ZapLogger.Warn("AuthService: account not found", zap.String("username", req.Username))
-		return nil, errors.New("username or password is incorrect")
+		return nil, status.Error(codes.Unauthenticated, "username or password is incorrect")
 	}
 	if account == nil {
 		s.ZapLogger.Error("AuthService: DB error", zap.Error(err))
@@ -117,7 +118,7 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.Logi
 	// Check password
 	if err := bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(req.Password)); err != nil || account.Role != req.Role {
 		s.ZapLogger.Warn("AuthService: wrong password", zap.Error(err))
-		return nil, errors.New("username or password is incorrect")
+		return nil, status.Error(codes.Unauthenticated, "username or password is incorrect")
 	}
 
 	// Create token
@@ -141,14 +142,14 @@ func (s *AuthService) RegisterSellerRoles(ctx context.Context, input *dto.Regist
 
 	// Employees are the only role a seller admin may create
 	if input.Role != "seller_employee" {
-		return nil, errors.New("only seller_employee accounts can be created")
+		return nil, status.Error(codes.InvalidArgument, "only seller_employee accounts can be created")
 	}
 
 	// Validate Role and Account
 	acc, err := s.AccountRepo.GetAccountById(ctx, input.SellerAdminID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		s.ZapLogger.Warn("AuthService: account not found")
-		return nil, errors.New("user_id is invalid")
+		return nil, status.Error(codes.NotFound, "user_id is invalid")
 	}
 	if acc == nil {
 		s.ZapLogger.Error("AuthService: DB error", zap.Error(err))
@@ -157,7 +158,7 @@ func (s *AuthService) RegisterSellerRoles(ctx context.Context, input *dto.Regist
 
 	// Only SellerAdmin have Store can create this role
 	if acc.Role != "seller_admin" || acc.StoreID == 0 {
-		return nil, errors.New("this account can not take this action")
+		return nil, status.Error(codes.PermissionDenied, "this account can not take this action")
 	}
 
 	log.Printf("Store ID: %d\n", acc.StoreID)

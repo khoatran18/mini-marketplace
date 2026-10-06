@@ -84,8 +84,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.CreateProduct(&req)
 	if err != nil {
-		h.Logger.Warn("ProductHandler: CreateProduct warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "ProductHandler: CreateProduct warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -145,8 +144,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.UpdateProduct(&req)
 	if err != nil {
-		h.Logger.Warn("ProductHandler: UpdateProduct warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "ProductHandler: UpdateProduct warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -188,8 +186,7 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.GetProductByID(&req)
 	if err != nil {
-		h.Logger.Warn("ProductHandler: GetProductByID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "ProductHandler: GetProductByID warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -231,8 +228,7 @@ func (h *ProductHandler) GetProductsBySellerID(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.GetProductsBySellerID(&req)
 	if err != nil {
-		h.Logger.Warn("ProductHandler: GetProductsBySellerID warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "ProductHandler: GetProductsBySellerID warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
@@ -290,8 +286,7 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 	// Get response and parse to json
 	res, err := h.Service.GetProducts(&req)
 	if err != nil {
-		h.Logger.Warn("ProductHandler: GetProducts warn", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		respondError(c, h.Logger, "ProductHandler: GetProducts warn", err)
 		return
 	}
 	c.JSON(http.StatusOK, res)

@@ -107,8 +107,8 @@ func initPostgresDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	sqlDB.SetMaxIdleConns(1000)
-	sqlDB.SetMaxOpenConns(1000)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetMaxOpenConns(25)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 	db.AutoMigrate(&model.Account{}, &outbox.PwdVersionEvent{})
 
