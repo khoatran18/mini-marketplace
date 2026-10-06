@@ -1,10 +1,6 @@
-import { ProtectedContent } from '../../components/ProtectedContent';
-import { DashboardContent } from './DashboardContent';
+import { DashboardRedirect } from './DashboardRedirect';
 
+// old URL: send each role to its own home
 export default function DashboardPage() {
-  return (
-    <ProtectedContent allowedRoles={['seller_admin', 'seller_employee']}>
-      <DashboardContent />
-    </ProtectedContent>
-  );
+  return <DashboardRedirect />;
 }

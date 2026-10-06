@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../components/auth/AuthProvider';
+import { AddressPicker } from '../../components/checkout/AddressPicker';
 import {
   changePasswordRequest,
   createBuyerProfileRequest,
@@ -356,12 +357,12 @@ export function ProfilePageClient() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-slate-900">Thông tin cá nhân</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-3xl font-bold text-text">Thông tin cá nhân</h1>
+        <p className="text-sm text-muted">
           Quản lý dữ liệu cá nhân và cập nhật mật khẩu để bảo vệ tài khoản của bạn.
         </p>
         {isSetupFlow ? (
-          <p className="rounded-xl bg-indigo-50 px-4 py-2 text-sm text-indigo-700">
+          <p className="rounded-xl bg-brand-soft px-4 py-2 text-sm text-brand">
             Đăng ký thành công! Vui lòng hoàn thiện thông tin bên dưới để bắt đầu sử dụng hệ thống.
           </p>
         ) : null}
@@ -371,17 +372,17 @@ export function ProfilePageClient() {
         <section className="card">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">{profileTitle}</h2>
-              <p className="text-sm text-slate-600">{profileSubtitle}</p>
+              <h2 className="text-xl font-semibold text-text">{profileTitle}</h2>
+              <p className="text-sm text-muted">{profileSubtitle}</p>
             </div>
-            {loadingProfile ? <span className="text-xs font-medium text-slate-500">Đang tải...</span> : null}
+            {loadingProfile ? <span className="text-xs font-medium text-muted">Đang tải...</span> : null}
           </div>
 
           {profileMessage ? (
-            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{profileMessage}</p>
+            <p className="mt-4 rounded-lg bg-success-soft px-3 py-2 text-sm text-success">{profileMessage}</p>
           ) : null}
           {profileError ? (
-            <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{profileError}</p>
+            <p className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{profileError}</p>
           ) : null}
 
           {canEditProfile ? (
@@ -389,7 +390,7 @@ export function ProfilePageClient() {
               className="mt-6 grid gap-4"
               onSubmit={isBuyer ? handleBuyerSubmit : handleSellerSubmit}
             >
-              <label className="grid gap-1 text-sm font-medium text-slate-700">
+              <label className="grid gap-1 text-sm font-medium text-muted">
                 Họ và tên
                 <input
                   type="text"
@@ -407,14 +408,14 @@ export function ProfilePageClient() {
               </label>
 
               {isBuyer ? (
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                <label className="grid gap-1 text-sm font-medium text-muted">
                   Giới tính
                   <select
                     value={buyerForm.gender}
                     onChange={(event) =>
                       setBuyerForm((prev) => ({ ...prev, gender: event.target.value }))
                     }
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-base shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    className="w-full rounded-xl border border-line px-3 py-2 text-base shadow-sm"
                   >
                     {genderOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -424,7 +425,7 @@ export function ProfilePageClient() {
                   </select>
                 </label>
               ) : (
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                <label className="grid gap-1 text-sm font-medium text-muted">
                   Tài khoản ngân hàng
                   <input
                     type="text"
@@ -438,7 +439,7 @@ export function ProfilePageClient() {
                 </label>
               )}
 
-              <label className="grid gap-1 text-sm font-medium text-slate-700">
+              <label className="grid gap-1 text-sm font-medium text-muted">
                 Ngày sinh
                 <input
                   type="date"
@@ -455,7 +456,7 @@ export function ProfilePageClient() {
                 />
               </label>
 
-              <label className="grid gap-1 text-sm font-medium text-slate-700">
+              <label className="grid gap-1 text-sm font-medium text-muted">
                 Số điện thoại
                 <input
                   type="tel"
@@ -473,7 +474,7 @@ export function ProfilePageClient() {
               </label>
 
               {isSeller ? (
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                <label className="grid gap-1 text-sm font-medium text-muted">
                   Mã số thuế
                   <input
                     type="text"
@@ -486,7 +487,7 @@ export function ProfilePageClient() {
                 </label>
               ) : null}
 
-              <label className="grid gap-1 text-sm font-medium text-slate-700">
+              <label className="grid gap-1 text-sm font-medium text-muted">
                 Địa chỉ
                 <textarea
                   value={isBuyer ? buyerForm.address : sellerForm.address}
@@ -504,7 +505,7 @@ export function ProfilePageClient() {
               </label>
 
               {isSeller ? (
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                <label className="grid gap-1 text-sm font-medium text-muted">
                   Mô tả cửa hàng
                   <textarea
                     value={sellerForm.description}
@@ -521,13 +522,13 @@ export function ProfilePageClient() {
               <button
                 type="submit"
                 disabled={savingProfile || loadingProfile}
-                className="mt-2 rounded-xl bg-indigo-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-70"
+                className="mt-2 rounded-xl bg-brand-solid px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-brand-soft0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {savingProfile ? 'Đang lưu...' : profileExists ? 'Cập nhật thông tin' : 'Lưu thông tin'}
               </button>
             </form>
           ) : (
-            <p className="mt-6 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600">
+            <p className="mt-6 rounded-lg bg-surface2 px-3 py-2 text-sm text-muted">
               Vai trò hiện tại chưa hỗ trợ cập nhật thông tin cá nhân. Vui lòng liên hệ quản trị viên nếu bạn cần hỗ trợ.
             </p>
           )}
@@ -536,8 +537,8 @@ export function ProfilePageClient() {
         <section className="card h-max">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">Đổi mật khẩu</h2>
-              <p className="text-sm text-slate-600">
+              <h2 className="text-xl font-semibold text-text">Đổi mật khẩu</h2>
+              <p className="text-sm text-muted">
                 Sử dụng mật khẩu mạnh để đảm bảo an toàn cho tài khoản của bạn.
               </p>
             </div>
@@ -549,7 +550,7 @@ export function ProfilePageClient() {
                   setPasswordError(null);
                   setPasswordMessage(null);
                 }}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                className="rounded-xl bg-brand-solid px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-solid/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
                 Đổi mật khẩu
               </button>
@@ -559,14 +560,14 @@ export function ProfilePageClient() {
           {passwordFormVisible ? (
             <>
               {passwordMessage ? (
-                <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{passwordMessage}</p>
+                <p className="mt-4 rounded-lg bg-success-soft px-3 py-2 text-sm text-success">{passwordMessage}</p>
               ) : null}
               {passwordError ? (
-                <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{passwordError}</p>
+                <p className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{passwordError}</p>
               ) : null}
 
               <form className="mt-6 grid gap-4" onSubmit={handlePasswordSubmit}>
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                <label className="grid gap-1 text-sm font-medium text-muted">
                   Mật khẩu hiện tại
                   <input
                     type="password"
@@ -577,7 +578,7 @@ export function ProfilePageClient() {
                     required
                   />
                 </label>
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                <label className="grid gap-1 text-sm font-medium text-muted">
                   Mật khẩu mới
                   <input
                     type="password"
@@ -589,7 +590,7 @@ export function ProfilePageClient() {
                     required
                   />
                 </label>
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                <label className="grid gap-1 text-sm font-medium text-muted">
                   Nhập lại mật khẩu mới
                   <input
                     type="password"
@@ -605,7 +606,7 @@ export function ProfilePageClient() {
                   <button
                     type="submit"
                     disabled={changingPassword}
-                    className="rounded-xl bg-slate-900 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="rounded-xl bg-brand-solid px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-brand-solid/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {changingPassword ? 'Đang xử lý...' : 'Cập nhật mật khẩu'}
                   </button>
@@ -617,7 +618,7 @@ export function ProfilePageClient() {
                       setPasswordError(null);
                       setPasswordMessage(null);
                     }}
-                    className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300"
+                    className="rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-muted shadow-sm transition hover:bg-surface2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                   >
                     Huỷ
                   </button>
@@ -627,6 +628,12 @@ export function ProfilePageClient() {
           ) : null}
         </section>
       </div>
+      {role === 'buyer' ? (
+        <section className="card space-y-4">
+          <h2 className="text-xl font-semibold text-text">Địa chỉ giao hàng</h2>
+          <AddressPicker />
+        </section>
+      ) : null}
     </div>
   );
 }

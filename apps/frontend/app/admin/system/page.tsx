@@ -1,10 +1,6 @@
-import { ProtectedContent } from '../../../components/ProtectedContent';
 import { SystemHealthClient } from './SystemHealthClient';
 
+// access is guarded by app/admin/layout.tsx (ConsoleLayout)
 export default function AdminSystemPage() {
-  return (
-    <ProtectedContent allowedRoles={['admin']}>
-      <SystemHealthClient />
-    </ProtectedContent>
-  );
+  return <SystemHealthClient />;
 }

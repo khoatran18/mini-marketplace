@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import { getSystemHealthRequest } from '../../../lib/api';
+import { formatTime } from '../../../lib/format';
 import type { ServiceStatus, SystemHealthOutput } from '../../../lib/types';
 
 const REFRESH_MS = 10_000;
 
 const statusStyle: Record<ServiceStatus, string> = {
-  ready: 'bg-emerald-100 text-emerald-800',
-  degraded: 'bg-amber-100 text-amber-800',
-  not_ready: 'bg-red-100 text-red-800',
-  unreachable: 'bg-slate-200 text-slate-700'
+  ready: 'bg-success-soft text-success',
+  degraded: 'bg-warning-soft text-warning',
+  not_ready: 'bg-danger-soft text-danger',
+  unreachable: 'bg-surface2 text-muted'
 };
 
 function formatUptime(seconds?: number) {
@@ -47,20 +48,20 @@ export function SystemHealthClient() {
   return (
     <div className="grid gap-6">
       <header className="card grid gap-2">
-        <h1 className="text-2xl font-bold text-slate-900">Tình trạng hệ thống</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-2xl font-bold text-text">Tình trạng hệ thống</h1>
+        <p className="text-sm text-muted">
           Tổng hợp <code>/ready</code> của từng service (tự làm mới mỗi {REFRESH_MS / 1000}s).
-          {data ? <> Cập nhật lúc {new Date(data.as_of).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}.</> : null}
+          {data ? <> Cập nhật lúc {formatTime(data.as_of)}.</> : null}
         </p>
       </header>
 
-      {error ? <p className="card text-sm text-red-700">{error}</p> : null}
-      {!data && !error ? <p className="card text-sm text-slate-600">Đang tải…</p> : null}
+      {error ? <p className="card text-sm text-danger">{error}</p> : null}
+      {!data && !error ? <p className="card text-sm text-muted">Đang tải…</p> : null}
 
       {data ? (
         <div className="card overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="text-slate-500">
+            <thead className="text-muted">
               <tr>
                 <th className="py-2 pr-4">Service</th>
                 <th className="py-2 pr-4">Trạng thái</th>
@@ -74,15 +75,15 @@ export function SystemHealthClient() {
               {data.services.map((service) => {
                 const failing = Object.entries(service.checks ?? {}).filter(([, check]) => check.status === 'fail');
                 return (
-                  <tr key={service.name} className="border-t border-slate-100">
-                    <td className="py-2 pr-4 font-medium text-slate-900">{service.name}</td>
+                  <tr key={service.name} className="border-t border-line">
+                    <td className="py-2 pr-4 font-medium text-text">{service.name}</td>
                     <td className="py-2 pr-4">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusStyle[service.status]}`}>{service.status}</span>
                     </td>
                     <td className="py-2 pr-4">{service.version ?? '–'}</td>
                     <td className="py-2 pr-4">{formatUptime(service.uptime_s)}</td>
                     <td className="py-2 pr-4">{service.latency_ms} ms</td>
-                    <td className="py-2 text-slate-700">
+                    <td className="py-2 text-muted">
                       {failing.length === 0
                         ? '–'
                         : failing.map(([name, check]) => `${name}${check.error ? ` (${check.error})` : ''}`).join(', ')}

@@ -1,10 +1,6 @@
-import { ProtectedContent } from '../../../components/ProtectedContent';
-import { MyProductsPageClient } from './MyProductsPageClient';
+import { redirect } from 'next/navigation';
 
+// old URL: the seller product list now lives in the seller console
 export default function MyProductsPage() {
-  return (
-    <ProtectedContent allowedRoles={['seller_admin', 'seller_employee']}>
-      <MyProductsPageClient />
-    </ProtectedContent>
-  );
+  redirect('/seller/products');
 }

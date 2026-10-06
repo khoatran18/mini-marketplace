@@ -36,7 +36,7 @@ export default function RegisterPage() {
 
   return (
     <form className="card mx-auto grid max-w-md gap-4" onSubmit={handleSubmit}>
-      <h1 className="text-3xl font-bold text-slate-900">Tạo tài khoản</h1>
+      <h1 className="text-3xl font-bold text-text">Tạo tài khoản</h1>
       <label>
         Tên đăng nhập
         <input
@@ -60,7 +60,7 @@ export default function RegisterPage() {
         <select
           value={formState.role}
           onChange={(event) => setFormState((prev) => ({ ...prev, role: event.target.value as RegisterableRole }))}
-          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-base shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          className="w-full rounded-xl border border-line px-3 py-2 text-base shadow-sm"
         >
           {roles.map((role) => (
             <option key={role} value={role}>
@@ -72,11 +72,11 @@ export default function RegisterPage() {
       <button
         type="submit"
         disabled={loading}
-        className="rounded-xl bg-indigo-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-70"
+        className="rounded-xl bg-brand-solid px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-brand-soft0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-70"
       >
         {loading ? 'Đang xử lý...' : 'Đăng ký'}
       </button>
-      {message ? <p className="text-sm text-slate-700">{message}</p> : null}
+      {message ? <p className="text-sm text-muted">{message}</p> : null}
     </form>
   );
 }

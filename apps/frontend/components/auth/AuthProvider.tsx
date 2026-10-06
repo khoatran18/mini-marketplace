@@ -30,6 +30,8 @@ export interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
+  /** false until the persisted session has been read from localStorage (avoids a logged-out flash). */
+  ready: boolean;
   login: (input: LoginInput) => Promise<LoginOutput>;
   register: (input: RegisterInput) => Promise<RegisterOutput>;
   logout: () => void;
@@ -110,6 +112,7 @@ function persistState(state: AuthState) {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(defaultState);
+  const [ready, setReady] = useState(false);
   const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -125,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setState(loadPersistedState());
+    setReady(true);
   }, []);
 
   useEffect(() => {
@@ -244,12 +248,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       ...state,
+      ready,
       login,
       register,
       logout,
       getValidAccessToken
     }),
-    [state, login, register, logout, getValidAccessToken]
+    [state, ready, login, register, logout, getValidAccessToken]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
