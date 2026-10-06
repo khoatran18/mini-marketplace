@@ -1,86 +1,99 @@
 # 04 · Thanh toán mô phỏng, vòng đời đơn, tồn kho
 
-Mục tiêu: có dòng tiền/ trạng thái **giống thật** (bất đồng bộ, thất bại, hết hạn, hoàn tiền, webhook trễ/ trùng) để dashboard doanh thu có nghĩa và để luyện các tình huống vận hành, **mà không dùng cổng thật**. Mọi thứ gắn nhãn *MÔ PHỎNG* trên UI; `PAYMENTS_MODE=mock` là giá trị duy nhất ở giai đoạn này.
+> **Trạng thái: ✅ ĐÃ TRIỂN KHAI** (order-service, product-service, payment-service). Mô tả dưới đây khớp code; chỗ khác thiết kế ban đầu được nêu rõ. Mọi thứ thanh toán là **MÔ PHỎNG** (`PAYMENTS_MODE=mock` là giá trị duy nhất; mode khác thì payment-service từ chối chạy).
 
-## 1. Vòng đời đơn hàng (state machine mới)
+Mục tiêu: có dòng tiền/ trạng thái **giống thật** (bất đồng bộ, thất bại, hết hạn, hoàn tiền, webhook trễ/ trùng) để dashboard doanh thu có nghĩa và luyện vận hành, **không dùng cổng thật**.
+
+## 1. Vòng đời đơn hàng
 ```
-                    ┌───────────── FAILED (hết hàng/ không hợp lệ)
-PENDING ────────────┤
- (đang giữ hàng)    └─▶ AWAITING_PAYMENT ──(payment.succeeded)──▶ PAID ──(seller xác nhận+giao)──▶ SHIPPED ──▶ DELIVERED
-                          │ │                                       │                                              │
-                          │ └─(quá expires_at)──▶ EXPIRED           └─(buyer/seller huỷ trước SHIPPED)─▶ CANCELED   └─(đổi trả)▶ REFUND_REQUESTED ▶ REFUNDED
-                          └──(buyer huỷ)───────▶ CANCELED
-COD:  PENDING ─▶ CONFIRMED (không cần trả trước) ─▶ SHIPPED ─▶ DELIVERED (thu tiền khi giao ⇒ payment PAID)
+PENDING ─▶ AWAITING_PAYMENT (online, có hạn) ─▶ PAID ─▶ SHIPPED ─▶ DELIVERED ─▶ REFUND_REQUESTED ─▶ REFUNDED
+   │             │  │                              │                     ▲                  └─▶ DELIVERED (từ chối)
+   │             │  └─▶ EXPIRED (quá hạn, system)  └─▶ CANCELED          │ (COD: thu tiền ⇒ payment_status=PAID)
+   │             └─▶ CANCELED (buyer/seller/admin)
+   ├─▶ CONFIRMED (COD) ─▶ SHIPPED | CANCELED
+   └─▶ FAILED (hết hàng)
 ```
-- **`SUCCESS` cũ** (= "đã giữ hàng") đổi tên thành `AWAITING_PAYMENT` (online) / `CONFIRMED` (COD). Migration: `SUCCESS → AWAITING_PAYMENT`; client cũ coi cả hai là "thành công đặt hàng" (UI cập nhật).
-- Terminal: `FAILED, EXPIRED, CANCELED, REFUNDED, DELIVERED` (DELIVERED chỉ đi tiếp qua luồng hoàn trả).
-- Chuyển trạng thái là `UPDATE … WHERE status IN (allowedPredecessors)` như hiện tại (idempotent). Mỗi lần chuyển: ghi `order_status_history` + outbox `order.status_changed` **trong cùng transaction**.
-- Ai được chuyển (ép ở gateway + order-service):
-| Chuyển | Ai | Điều kiện |
+- Mỗi **store một đơn** trong một checkout (`checkout_id`, ADR-15). `PENDING` = đang chờ product-service giữ hàng.
+- **`SUCCESS` cũ** đã được migrate thành `CONFIRMED` (`order-service` `Migrate`).
+- Terminal: `FAILED, EXPIRED, CANCELED, REFUNDED` (`DELIVERED` chỉ đi tiếp qua luồng trả hàng, một lần).
+- Chuyển trạng thái chạy trong **một transaction có khoá hàng**: kiểm tra bảng `transitions`, cập nhật đơn, ghi `order_status_histories`, phát `order.status_changed` + event kéo theo. Bản giao trùng/ đến muộn → `ErrNotAllowed` → bỏ qua.
+| Chuyển | Ai | Điều kiện / hệ quả |
 |---|---|---|
-| PENDING→AWAITING_PAYMENT / CONFIRMED / FAILED | hệ thống (kết quả reserve từ product-service) | |
-| AWAITING_PAYMENT→PAID | `payment-service` qua event | amount khớp tổng đơn |
-| AWAITING_PAYMENT→EXPIRED | worker hết hạn | `now > expires_at` & chưa có payment thành công |
-| (AWAITING_PAYMENT\|PAID\|CONFIRMED)→CANCELED | buyer (trước SHIPPED) / seller (kèm lý do) / admin | PAID ⇒ tự tạo refund |
-| (PAID\|CONFIRMED)→SHIPPED | seller của đơn (kèm `carrier`, `tracking_code`) | |
-| SHIPPED→DELIVERED | seller xác nhận, hoặc buyer bấm "đã nhận", hoặc tự động sau `AUTO_DELIVER_DAYS` (mô phỏng) | COD ⇒ ghi payment PAID |
-| DELIVERED→REFUND_REQUESTED | buyer trong `RETURN_WINDOW_DAYS` (mặc định 7) | |
-| REFUND_REQUESTED→REFUNDED | seller đồng ý / admin | gọi hoàn tiền |
+| `PENDING → AWAITING_PAYMENT` | system (kết quả giữ hàng) | đơn online; `expires_at = now + ORDER_PAYMENT_TTL_MIN` (15) |
+| `PENDING → CONFIRMED` | system | COD |
+| `PENDING → FAILED` | system | hết hàng (`cancel_reason=out_of_stock`), không giữ gì nên không nhả kho |
+| `AWAITING_PAYMENT → PAID` | payment (`payment.succeeded`) | ghi `paid_at`, `payment_status=PAID` |
+| `AWAITING_PAYMENT → EXPIRED` | system (worker 30 s) | `expires_at < now`; lý do `payment_timeout`; nhả kho |
+| `AWAITING_PAYMENT / CONFIRMED / PAID → CANCELED` | buyer, seller (kèm lý do), admin (kèm lý do) | nhả kho; nếu `PAID` online ⇒ `order.refund_requested` (`order:<id>:cancel`) |
+| `CONFIRMED / PAID → SHIPPED` | **chỉ seller của đơn** | bắt buộc `carrier` (≤50), `tracking_code` (≤64); kho `reserved → sold` |
+| `SHIPPED → DELIVERED` | seller, admin, buyer (`confirm-received`), system sau `AUTO_DELIVER_DAYS` (7, 0 = tắt) | COD ⇒ `payment_status=PAID` + `paid_at` (ghi nhận doanh thu) |
+| `DELIVERED → REFUND_REQUESTED` | buyer | trong `RETURN_WINDOW_DAYS` (7) kể từ `delivered_at`, kèm lý do, **một lần** |
+| `REFUND_REQUESTED → REFUNDED` | seller, admin | online ⇒ `order.refund_requested` (`order:<id>:return`, toàn bộ `total_price` gồm ship); `payment_status=REFUNDED` |
+| `REFUND_REQUESTED → DELIVERED` | seller, admin (từ chối, kèm lý do) | đánh dấu `return_rejected`; không yêu cầu lại được |
+Khác thiết kế: không có bước "seller xác nhận"; không có `canceled` bởi hệ thống ngoài `EXPIRED/FAILED`; **không** nhập lại kho khi `REFUNDED`; COD khi duyệt trả hàng chỉ đổi nhãn `payment_status`. Địa chỉ giao hàng là snapshot JSON trong `orders.shipping_address` (bắt buộc `receiver_name, phone, line1, city`).
 
-## 2. Tồn kho & giữ chỗ (reservation)
-- `products.inventory` = tồn vật lý; `products.reserved` = đang giữ cho đơn chưa kết thúc; khả dụng = `inventory - reserved`.
-- Đặt hàng → **reserve** (tăng `reserved`, ghi `inventory_ledger reason=reserve`). Thanh toán xong/ giao → khi `SHIPPED` trừ `inventory` & giảm `reserved` (`sale`). Huỷ/hết hạn/ thất bại → `release`.
-- Mọi thay đổi ghi `inventory_ledger` (bất biến) + outbox `inventory.changed` (để analytics & cảnh báo tồn thấp).
-- **Hết hạn giữ chỗ**: worker trong order-service quét `status=AWAITING_PAYMENT AND expires_at < now()` mỗi 30 s (khoá `FOR UPDATE SKIP LOCKED`) ⇒ `EXPIRED` + `order.cancel`-tương đương ⇒ release. `ORDER_PAYMENT_TTL_MIN` mặc định 15.
-- Ngưỡng tồn thấp: `available <= low_stock_threshold` ⇒ phát `inventory.changed{new_level:low}`; chỉ dùng để hiện danh sách "tồn thấp" trên dashboard seller (không gửi cảnh báo).
-- Shop điều chỉnh tồn: `POST /seller/products/:id/inventory/adjust {delta, reason}` (ghi ledger, bắt buộc lý do).
+## 2. Tồn kho & giữ chỗ
+Chi tiết ở [../data-model.md](../data-model.md) §2 và ADR-21. Tóm tắt:
+- `products.inventory` = **còn bán được**; `reserved` = đang giữ; `sold` = đã xuất kho. Tồn vật lý = `inventory + reserved`.
+- Đặt hàng → `order.create_order` → **giữ hàng all-or-nothing** cho cả đơn (`inventory−q`, `reserved+q`, ledger `reserve`); `SHIPPED` → `reserved−q`, `sold+q` (ledger `sale`, đúng một lần); `CANCELED/EXPIRED` → `order.cancel_order` → `inventory+q`, `reserved−q` (ledger `release`, đúng một lần; bỏ qua nếu đã xuất kho).
+- Mọi thay đổi ghi `inventory_ledgers` (chỉ thêm) + `inventory.changed` (analytics ghi `fact_inventory`).
+- **Hết hạn giữ chỗ**: timers của order-service mỗi 30 s quét `status=AWAITING_PAYMENT AND expires_at < now()` (tối đa 100/lượt; mỗi đơn một transaction có khoá hàng nên an toàn đa replica) ⇒ `EXPIRED` + nhả kho. Cùng worker tự giao đơn `SHIPPED` quá `AUTO_DELIVER_DAYS`. Readiness `timers_worker` fail nếu không tick quá 90 s.
+- Mức tồn: `stock_level` = `none` (0) / `low` (≤ `low_stock_threshold` hoặc 5) / `ok`. Danh sách tồn thấp cho seller: `GET /seller/inventory/low-stock` (Postgres) và báo cáo analytics `low-stock` (ClickHouse, thêm ước tính "ngày còn bán" theo tốc độ bán 14 ngày, cảnh báo nếu ≤ 7 ngày). **Không** gửi cảnh báo – chỉ là truy vấn.
+- Shop điều chỉnh tồn: `POST /seller/products/:id/inventory/adjust {delta, reason}` (bắt buộc lý do; ledger `restock`/`adjust`); sửa `inventory` trong `PUT /products/:id` ghi ledger `update`.
 
-## 3. `payment-service` (mô phỏng)
+## 3. `payment-service` (mô phỏng, gRPC :50057)
+Một payment **cho cả checkout**, tạo **bất đồng bộ**: order-service phát `payment.requested` khi mọi đơn của checkout online đã rời `PENDING` (số tiền = tổng đơn đang `AWAITING_PAYMENT`, `expires_at` = hạn sớm nhất). `payments.checkout_id` UNIQUE ⇒ idempotent. COD **không** có payment.
+
 ### 3.1 Phương thức
-| Method | Hành vi mô phỏng |
+| Method | Hành vi (`POST /payments/:id/confirm`) |
 |---|---|
-| `COD` | Không tạo thanh toán trước; payment `PENDING_COD` → `PAID` khi `DELIVERED` |
-| `MOCK_CARD` | Trang thanh toán giả (frontend `/pay/[payment_id]`) nhập số thẻ **test**; kết quả theo số thẻ (3.2) |
-| `MOCK_WALLET` | "Ví" xác nhận bất đồng bộ: bấm đồng ý trên trang giả → webhook trễ 2–8 s |
-| `MOCK_BANK_TRANSFER` | Hiển thị mã chuyển khoản; admin/ nút "giả lập đã nhận tiền" hoặc tự khớp sau X giây; quá hạn ⇒ không thanh toán → đơn EXPIRED |
+| `COD` | không có payment; tiền ghi nhận khi `DELIVERED` |
+| `MOCK_CARD` | gửi `card_number/card_exp/card_cvc`; kết quả theo số thẻ (3.2); chỉ lưu 4 số cuối |
+| `MOCK_WALLET` | `{approve:true}` → `PROCESSING`, webhook thành công sau `MOCK_WEBHOOK_DELAY_MS` (3 s); `approve:false` → lỗi `user_cancelled` |
+| `MOCK_BANK_TRANSFER` | hiển thị `provider_ref` (`MM`+8 ký tự cuối của checkout id, nội dung chuyển khoản); `{approve:true}` = "đã chuyển" → `PROCESSING`, webhook sau `MOCK_TRANSFER_DELAY_MS` (8 s). Không tự khớp theo thời gian; quá hạn khi chưa xác nhận ⇒ payment `EXPIRED` (worker payment) và đơn tự `EXPIRED` (timers order-service, độc lập) |
+Khác thiết kế: không có header `X-Mock-Scenario`; không có nút "admin giả lập đã nhận tiền" (dùng `POST /admin/dev/payments/:id/force` khi `ENV=dev`).
 
-### 3.2 Kịch bản theo số thẻ test (hoặc header `X-Mock-Scenario` ở môi trường dev)
-| Số thẻ / kịch bản | Kết quả |
+### 3.2 Thẻ test (cố định, `confirm.go`)
+| Số thẻ | Kết quả |
 |---|---|
 | `4242 4242 4242 4242` | thành công ngay |
-| `4000 0000 0000 0002` | bị từ chối (`card_declined`) |
-| `4000 0000 0000 9995` | không đủ tiền (`insufficient_funds`) |
-| `4000 0000 0000 3220` | cần xác thực 3-D Secure giả (bước OTP `123456`) rồi thành công |
-| `4000 0000 0000 0119` | lỗi nhà cung cấp tạm thời (`provider_error`) → cho phép thử lại |
-| `4000 0000 0000 0341` | **timeout**: kết quả không về; webhook đến trễ sau 30 s |
-| `4000 0000 0000 0259` | thành công nhưng webhook **gửi 2 lần** (kiểm tra idempotency) |
-| `4000 0000 0000 0067` | thành công, webhook **đến sau khi đơn đã EXPIRED** (kiểm tra hoàn tiền tự động) |
-Bảng này cố định, ghi trong repo để test E2E lặp lại được. Số thẻ lưu **chỉ 4 số cuối** và `scenario`; không bao giờ lưu số thẻ đầy đủ/CVV (tập thói quen đúng).
+| `4000 0000 0000 0002` | `card_declined` |
+| `4000 0000 0000 9995` | `insufficient_funds` |
+| `4000 0000 0000 3220` | 3-D Secure: lần 1 trả `next_action:"otp"`; lần 2 `{"otp":"123456"}` → thành công (OTP sai → `otp_incorrect`) |
+| `4000 0000 0000 0119` | `provider_error` (thử lại được) |
+| `4000 0000 0000 0341` | "timeout": `PROCESSING`, webhook thành công sau `MOCK_TIMEOUT_DELAY_MS` (30 s) |
+| `4000 0000 0000 0259` | thành công, webhook gửi **2 lần** (cùng `provider_event_id`) |
+| `4000 0000 0000 0067` | thành công, webhook đến **sau hạn thanh toán** (sau `expires_at`, ≥ +2 s) |
+| số khác (12–19 chữ số) | `do_not_honor` |
+Mỗi thất bại phát `payment.failed` (`terminal=false`); đến lần **5** thì payment `FAILED` (`terminal=true`). Chỉ lưu `card_last4` và `attempts.scenario`; không số thẻ đầy đủ/CVV.
 
 ### 3.3 Luồng
 ```
-POST /orders {payment_method:"MOCK_CARD", …}  ──▶ order PENDING ─▶ (reserve OK) AWAITING_PAYMENT
-order-service ─gRPC CreatePayment(order_id, amount, method, idempotency_key)─▶ payment-service  (status=REQUIRES_ACTION, trả `payment_id`, `pay_url`)
-Buyer ─▶ /pay/{payment_id}  (UI giả)  ─POST /payments/{id}/confirm {card…}─▶ gateway ─▶ payment-service
-payment-service: chọn kịch bản → cập nhật payments/attempts → outbox `payment.succeeded|failed`
-   + (mô phỏng provider) bắn **webhook nội bộ có chữ ký HMAC** tới `POST /internal/payments/webhook` của chính nó
-     (retry mũ, có thể trễ/ trùng theo kịch bản) → xử lý idempotent theo `provider_event_id`
-order-service consume `payment.succeeded` → AWAITING_PAYMENT→PAID  (nếu đơn đã EXPIRED/CANCELED ⇒ yêu cầu refund tự động)
+POST /orders {payment_method:"MOCK_CARD"} ─▶ orders PENDING ─▶ (giữ hàng OK) AWAITING_PAYMENT ─▶ [mọi đơn rời PENDING] payment.requested
+payment-service: HandlePaymentRequested ─▶ payments(REQUIRES_ACTION, expires_at) ; gateway ghép `payment` vào GET /checkouts/:id (pay_url=/pay/<id>)
+buyer ─▶ POST /payments/:id/confirm
+   thẻ thành công ─▶ SUCCEEDED + payment.succeeded           ví/chuyển khoản/timeout/webhook đôi/sau hạn ─▶ PROCESSING + webhook_deliveries
+   worker 1 s: gửi webhook ký HMAC tới http://127.0.0.1:8081/internal/payments/webhook (retry 2 s,10 s,30 s,2 min,10 min; bỏ cuộc sau 6 lần = GAVE_UP)
+   webhook ─▶ processed_events (khử trùng theo provider_event_id) ─▶ SUCCEEDED + payment.succeeded
+order-service: HandlePaymentSucceeded ─▶ mọi đơn AWAITING_PAYMENT của checkout ─▶ PAID
+   tiền > tổng đơn đã PAID (đơn đã huỷ/hết hạn) ─▶ order.refund_requested "checkout:<id>:overpay" ─▶ payment.refunded
 ```
-- **Idempotency**: `payments.idempotency_key UNIQUE`; webhook trùng không đổi trạng thái hai lần.
-- **Kiểm tra số tiền**: `amount` payment phải bằng `orders.total_price` (so bằng cent nguyên); lệch ⇒ `FAILED` + log lỗi + metric `mm_payment_amount_mismatch_total`.
-- **Chữ ký webhook**: `X-Signature: t=<ts>,v1=HMAC_SHA256(secret, ts + "." + body)`, từ chối nếu lệch giờ > 5 phút (tập đúng cách làm với cổng thật). Secret `PAYMENT_WEBHOOK_SECRET`.
-- **Hoàn tiền**: `POST /payments/:id/refund` (nội bộ/ seller/ admin theo luồng đơn) → `refunds` → `payment.refunded`; hoàn một phần được; tổng hoàn ≤ đã thu.
-- **Trạng thái payment**: `REQUIRES_ACTION → PROCESSING → SUCCEEDED | FAILED | CANCELED`; `SUCCEEDED → PARTIALLY_REFUNDED | REFUNDED`.
-- **Tương lai**: thêm provider thật = thêm một `Provider` implementation (interface `Charge/Refund/VerifyWebhook`) – mockpay chỉ là một implementation.
+- **Idempotency**: `payments.checkout_id UNIQUE`; webhook trùng không đổi trạng thái hai lần; refund theo `refund_key UNIQUE`.
+- **Số tiền**: payment dùng `amount_minor` từ `payment.requested`; order-service so với tổng đơn khi nhận `payment.succeeded` (khác thiết kế: không có metric `mm_payment_amount_mismatch_total`).
+- **Chữ ký webhook**: `X-Signature: t=<unix>,v1=HMAC_SHA256(PAYMENT_WEBHOOK_SECRET, t + "." + body)`; lệch giờ > 5 phút ⇒ 401; sai chữ ký ⇒ 401. Secret < 16 ký tự ⇒ service không khởi động.
+- **Hoàn tiền**: tự động khi huỷ đơn đã trả online / duyệt trả hàng / tiền về cho đơn không còn thanh toán được; thủ công `POST /admin/payments/:id/refund {amount_minor, reason}`. Hoàn một phần được (`PARTIALLY_REFUNDED`), tổng hoàn ≤ đã thu (`exceeds_paid_amount` ⇒ dòng refund `FAILED`). Hoàn tiền mô phỏng thành công ngay.
+- **Trạng thái payment**: `REQUIRES_ACTION → PROCESSING → SUCCEEDED | FAILED | CANCELED | EXPIRED`; `SUCCEEDED → PARTIALLY_REFUNDED → REFUNDED`. `CANCELED` chỉ khi chưa gửi (`POST /payments/:id/cancel`); `EXPIRED` (worker 1 s) chỉ với `REQUIRES_ACTION` quá `expires_at`, **không phát event**; `PROCESSING` không tự hết hạn.
+- **Tiền về muộn**: webhook đến sau khi payment `EXPIRED/CANCELED` vẫn đặt `SUCCEEDED` (tiền là tiền) → order-service hoàn phần không còn đơn nào cần.
+- **Mở rộng**: provider là code trong `service` (chưa có interface `Provider`); thêm provider thật = tách interface (`Charge/Refund/VerifyWebhook`).
 
-### 3.4 Chủ động bất thường (để luyện vận hành)
-Công cụ admin dev-only `POST /admin/dev/payments/:id/force {status}`; `PAYMENT_CHAOS_RATE` (0–1) tỉ lệ lỗi ngẫu nhiên khi chạy kiểm thử tải. Tắt hẳn ở production-like (`PAYMENTS_MODE` + `ENV`).
+### 3.4 Chủ động bất thường (luyện vận hành)
+`POST /admin/dev/payments/:id/force {status: SUCCEEDED|FAILED|EXPIRED}` và `PAYMENT_CHAOS_RATE` (0–1, tỉ lệ thẻ ngẫu nhiên `provider_error`) – cả hai **chỉ khi `ENV=dev`**.
 
-## 4. Phí vận chuyển (mô phỏng tối thiểu)
-- `shipping_fee`: công thức đơn giản theo tổng khối lượng (cấu hình `SHIPPING_FLAT_FEE`, `FREE_SHIP_OVER`). **Không có mã giảm giá/ coupon** (đã loại khỏi phạm vi).
-- Tổng = `subtotal + shipping_fee`, tính bằng cent nguyên, server tính, không tin client.
+## 4. Phí vận chuyển
+`shipping_fee` cho **mỗi đơn-store**: `SHIPPING_FLAT_FEE` (30000 VND), miễn phí khi `subtotal ≥ FREE_SHIP_OVER` (500000; 0 = không bao giờ miễn phí). Không theo cân nặng. Không có mã giảm giá/ coupon (đã loại khỏi phạm vi). Tổng đơn = `subtotal + shipping_fee`, tính bằng cent nguyên ở server. Doanh thu analytics **không** gồm phí ship.
 
-## 5. Kiểm thử bắt buộc (bổ sung testing.md)
-Unit (Postgres thật): chuyển trạng thái hợp lệ/không hợp lệ theo từng actor; reserve/release không lệch ledger; hết hạn giải phóng đúng một lần; webhook trùng/ trễ/ sau EXPIRED; số tiền lệch; hoàn tiền vượt mức bị từ chối; COD → PAID khi DELIVERED; cạnh tranh: 12 người mua 5 hàng (đã có) vẫn đúng với reserve mới.
-E2E: bảng kịch bản thẻ ở 3.2, mỗi dòng một case; `resilience.sh`: payment-service down ⇒ tạo đơn online lỗi gọn (đơn giữ chỗ rồi hết hạn), Kafka down ⇒ outbox bù.
+## 5. Kiểm thử (đã có)
+- order-service (Postgres thật): `flow_test.go` (online đến trả hàng, COD, hết hàng một phần, hết hạn, quy tắc huỷ/hoàn, cửa sổ trả hàng, tự giao, phạm vi đọc, đồng thời), `checkout_test.go`, `cart_test.go`, `statemachine_test.go`.
+- payment-service: 20 test (thẻ test, 3DS, webhook đôi/trễ/sau hạn, chữ ký, retry/bỏ cuộc, 5 lần lỗi, hoàn tiền, xác nhận đồng thời chỉ trả một lần, không lưu dữ liệu thẻ).
+- product-service: giữ hàng → reserved → sold, giữ hàng đồng thời/ không bán quá tồn, ledger.
+- E2E trên Swarm cho từng thẻ test: **chưa có** (e2e hiện tại dùng API cũ – xem [../testing.md](../testing.md) §5).

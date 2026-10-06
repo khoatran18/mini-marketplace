@@ -2,19 +2,13 @@
 
 Áp dụng cho **mọi service tự viết** (gateway, auth, user, product, order, payment, analytics), frontend, và **mọi container hạ tầng**. Mục tiêu: orchestrator (Swarm/Traefik), Prometheus và con người biết chính xác *"sống chưa", "nhận request được chưa", "đang chạy phiên bản nào", "đang tải thế nào"*.
 
-## 0. Hiện trạng: vì sao cần cổng HTTP
-Kiểm tra code: **chỉ `api-gateway` có HTTP** (gin `:8080`, route `/health`). `auth/user/product/order` hiện chỉ có **gRPC server** (`:50051–50054`), không có HTTP, và chưa có healthcheck nào trong `deploy/services.yml` ngoài gateway và frontend. Hệ quả: Prometheus không scrape được (Prometheus cần HTTP `/metrics`), Docker không biết service có sống không, gateway không biết service nào sẵn sàng.
+> **Trạng thái: ✅ ĐÃ TRIỂN KHAI cho cả 7 service Go** (gateway, auth, user, product, order, payment, analytics). Chưa chạy thử trên Swarm thật (xem [09-roadmap.md](09-roadmap.md)).
 
-Có 3 cách; chọn **A**:
-| Cách | Mô tả | Đánh giá |
-|---|---|---|
-| **A. Thêm cổng admin HTTP `:8081` riêng** (đề xuất) | mỗi service chạy thêm 1 `http.Server` nhỏ (`/health /ready /metrics /version`) cạnh gRPC | đơn giản, tách biệt nghiệp vụ và vận hành, không publish ra ngoài; chỉ ~50 dòng/ service (viết một lần, copy theo ADR-8) |
-| B. Chỉ dùng `grpc.health.v1` | healthcheck bằng `grpc_health_probe` | đủ cho health/ready nhưng **không có `/metrics`** → vẫn phải mở HTTP |
-| C. Gộp HTTP + gRPC chung một cổng (cmux/h2c) | | phức tạp, dễ lỗi; không đáng |
-Vẫn đăng ký **`grpc.health.v1`** (cho gateway gọi kiểm tra downstream) **và** mở cổng HTTP `:8081` (cho Docker, Prometheus, con người). Gateway giữ `:8080` công khai (có `/health` hiện tại) và cũng mở `:8081` cho `/ready`, `/metrics`.
+## 0. Hiện trạng và quyết định
+Ban đầu chỉ `api-gateway` có HTTP; các service nội bộ chỉ có gRPC nên Prometheus/Docker không quan sát được. Đã chọn **cách A: cổng admin HTTP `:8081` riêng** (ADR-9) – mỗi service chạy thêm một `http.Server` nhỏ (`/health /healthz /ready /readyz /metrics /version`) cạnh gRPC bằng gói `pkg/ops` (**7 bản giống hệt nhau**, kiểm bằng `md5sum services/*/pkg/ops/ops.go`), đồng thời đăng ký `grpc.health.v1`. Gateway giữ `:8080` công khai (`GET /health`, `/healthz`) và mở `:8081` cho `/ready`, `/metrics`, `/version`. Cổng admin **không publish, không route qua Traefik**; payment-service gắn thêm `POST /internal/payments/webhook` lên cổng này.
 
-> **Tên endpoint**: hỗ trợ **cả hai kiểu** – `/health` = `/healthz` (liveness), `/ready` = `/readyz` (readiness). Hai tên trả cùng kết quả (alias); dùng tên nào cũng được (Docker/Traefik trong repo dùng `/healthz` và `/ready`).
-> **Trạng thái triển khai (P1, đã code)**: gói `pkg/ops` (5 bản giống hệt nhau trong gateway/auth/user/product/order), cổng admin `:8081`, `/health /healthz /ready /readyz /metrics /version`, `grpc.health.v1`, metrics gRPC/HTTP/DB pool/build info + Go/process (đều có nhãn `service`), tắt êm theo SIGTERM, healthcheck Docker/Traefik, frontend `/api/health|healthz|ready|readyz`, **`GET /admin/system/health`** (gateway gom `/ready` của các service, chỉ role `admin`) + trang `/admin/system`, **stack Prometheus/Grafana/cAdvisor/node-exporter/exporters** (`deploy/observability.yml`, 4 dashboard). **Chưa làm**: metric outbox/Kafka-lag của chính service (Kafka lag hiện lấy từ kafka-exporter), `/admin/system/metrics` (proxy PromQL), service payment/analytics.
+> **Tên endpoint**: hỗ trợ cả hai kiểu – `/health` = `/healthz` (liveness), `/ready` = `/readyz` (readiness), cùng kết quả. Docker/Traefik trong repo dùng `/healthz` và `/ready`.
+> **Đã làm**: `pkg/ops`, `:8081`, `grpc.health.v1`, metrics gRPC/HTTP/DB pool/build info + Go/process (nhãn `service`), tắt êm theo SIGTERM (`DRAIN_SECONDS`), healthcheck Docker + nhãn Traefik, frontend `/api/health|healthz|ready|readyz`, `GET /admin/system/health` (gom `/ready` của 7 service) + trang `/admin/system`, stack Prometheus/Grafana (5 dashboard), metric outbox (product/order/payment), worker (order/payment), pipeline (analytics). **Chưa làm**: `mm_kafka_consumer_lag`/`mm_grpc_client_*`/metric nghiệp vụ, `/admin/system/metrics`, `update_config: start-first` + `wait-ready.sh`.
 
 ## 1. Khác nhau giữa các endpoint
 | Endpoint | Câu hỏi | Kiểm tra gì | Khi lỗi | Ai dùng |
@@ -56,106 +50,103 @@ Quy tắc:
 - Không cần xác thực nhưng **chỉ lắng nghe cổng admin :8081 trong mạng nội bộ**. Riêng gateway/frontend có thêm bản công khai tối thiểu cho Traefik (mục 6).
 - `/metrics` luôn 200 kể cả khi not_ready (để quan sát chính lúc đang lỗi).
 
-## 3. Ma trận readiness theo service
-`C` = critical (fail ⇒ 503) · `N` = non-critical (fail ⇒ degraded).
+## 3. Ma trận readiness theo service (thực tế, theo `cmd/main.go` từng service)
+`C` = critical (fail ⇒ 503) · `N` = non-critical (fail ⇒ degraded, vẫn 200).
 
 | Service | Postgres | Redis | Kafka | gRPC downstream | Khác |
 |---|---|---|---|---|---|
-| api-gateway | – | N *(rate limiter fail-open, ADR hiện có)* | C *(consumer `auth.change_password`)* | auth C · user C · product C · order C · payment N · analytics N | chưa drain |
-| auth-service | C | N | C | – | migration, admin bootstrap xong |
-| user-service | C | N | C | auth C | |
-| product-service | C | N | C | – | outbox worker, MinIO N |
-| order-service | C | N | C | product C · payment C | outbox worker, expiry worker |
-| payment-service | C | C *(idempotency/lock)* | C | – | outbox worker, webhook signer key đã nạp |
-| analytics-service | N *(chỉ đối soát)* | N | C | – | **ClickHouse C**, consumer đang chạy, lag < ngưỡng (non-critical: degraded) |
-| frontend | – | – | – | – | gateway N (UI vẫn hiển thị trang lỗi thân thiện) |
+| api-gateway | – | N | C | `AuthClient` C · `OrderClient` C · `ProductClient` C · `UserClient` C · `PaymentClient` **N** · `AnalyticsClient` **N** | chưa drain (SIGTERM ⇒ 503) |
+| auth-service | C | N | C | – | |
+| user-service | C | N | C | auth-service C | |
+| product-service | C | N | C | – | |
+| order-service | C | N | C | product-service C | `timers_worker` C (không tick quá 3 × 30 s) |
+| payment-service | C | N | C | – | `workers` C (không tick quá 30 × 1 s) |
+| analytics-service | – (không dùng Postgres) | N (chỉ khi có `REDIS_ADDR`) | C | – | **`clickhouse` C**; `insert_pipeline` N (có hàng đợi mà > 1 phút chưa insert được) |
+| frontend | – | – | – | – | gateway N |
+Lưu ý: check Kafka chỉ **dial TCP** tới broker (chưa kiểm consumer/lag); chưa có check MinIO/migrations/signer key (không cần hoặc chưa có). Khác thiết kế: payment-service **không** coi Redis là critical, product-service không có check outbox worker.
 
 Cách kiểm tra từng loại:
 | Dependency | Cách check (timeout 1 s) |
 |---|---|
 | Postgres | `db.PingContext` + `SELECT 1`; (tuỳ chọn) pool không cạn: `in_use < max_open` |
 | Redis | `PING` |
-| Kafka | `Metadata`/dial tới broker; kiểm tra consumer goroutine còn heartbeat; lag chỉ cảnh báo (degraded) |
+| Kafka | dial TCP tới broker (chưa kiểm consumer/lag) |
 | gRPC downstream | gọi `grpc.health.v1.Health/Check` của service đó (mỗi service gRPC **phải** đăng ký health server) |
-| ClickHouse | HTTP `GET /ping` + `SELECT 1` |
-| MinIO | HTTP `/minio/health/ready` |
-| Worker (outbox, expiry, scheduler) | gauge `last_tick_unix`; fail nếu quá `3 × interval` |
-| Migration | cờ nội bộ đặt sau khi migrate xong |
+| ClickHouse | `ch.Client.Ping` = HTTP `GET /ping` |
+| MinIO | – (chưa có MinIO) |
+| Worker (order timers, payment workers) | thời điểm tick cuối; fail nếu quá ngưỡng (order 3 × 30 s, payment 30 × 1 s); outbox worker **chưa** có check |
+| Migration | – (service chỉ mở cổng sau khi migrate; `/ready` 503 cho tới `MarkStarted`) |
 
 ## 4. gRPC health
-Mỗi service gRPC đăng ký `grpc.health.v1.Health` (service name rỗng = toàn bộ; thêm tên con như `order.OrderService`). `SERVING` khi ready; `NOT_SERVING` khi drain/critical fail. Gateway và `grpc_health_probe` dùng cái này. Thêm gRPC **reflection chỉ ở dev**.
+Mỗi service gRPC đăng ký `grpc.health.v1.Health` (service name rỗng = toàn bộ; thêm tên con như `order.OrderService`). `SERVING` khi ready; `NOT_SERVING` khi drain/critical fail. Gateway và `grpc_health_probe` dùng cái này. gRPC **reflection hiện được bật ở mọi môi trường** (`reflection.Register` trong `cmd/main.go`; thiết kế là chỉ dev – chưa tắt theo `ENV`).
 
 ## 5. Vòng đời & graceful shutdown
 ```
 start ─▶ [startup: chưa ready: /health 200, /ready 503] ─▶ migrate, kết nối, nạp cache ─▶ READY
-SIGTERM ─▶ đặt NOT_SERVING + /ready 503 ─▶ chờ `DRAIN_SECONDS` (mặc định 10 s) cho LB rút ─▶ GracefulStop gRPC / http.Shutdown (timeout 20 s)
-        ─▶ dừng consumer (commit offset) ─▶ flush outbox tick cuối ─▶ đóng DB ─▶ exit 0
+SIGTERM ─▶ đặt NOT_SERVING + /ready 503 ─▶ chờ `DRAIN_SECONDS` (mặc định 10 s) cho LB rút ─▶ GracefulStop gRPC (ép dừng sau 20 s) / http.Shutdown (timeout 20 s) ─▶ tắt cổng admin ─▶ thoát
 ```
-Swarm: `stop_grace_period: 30s`. Đây cũng là bản sửa cho nợ "graceful shutdown" trong roadmap.
+Đã làm đúng tới đây (`pkg/ops` `handleSignals`). **Chưa làm**: dừng có chủ đích consumer Kafka (commit offset) và outbox/timer worker khi tắt (chúng dùng context nền và chết cùng process; an toàn vì outbox at-least-once, consumer idempotent). Swarm: `stop_grace_period: 30s`.
 
 ## 6. Cổng, docker healthcheck, Traefik
 | Thành phần | Probe | Cấu hình |
 |---|---|---|
-| Container Go (mỗi service) | Docker `HEALTHCHECK` → **`/health`** trên `:8081` | `interval 10s, timeout 3s, retries 3, start_period 20s`. Image dùng binary nhỏ `healthcheck` (hoặc `wget -qO-`) vì image distroless không có shell |
-| api-gateway qua Traefik | label `traefik.http.services.api.loadbalancer.healthcheck.path=/ready`, `.interval=5s`, `.timeout=2s`, port `8081` | rút replica not_ready khỏi LB; **public `GET /health` giữ nguyên** (đã có) trả `{"status":"ok"}` cho bên ngoài |
+| Container Go (mỗi service) | healthcheck compose → **`/healthz`** trên `:8081` (`wget -qO-` trong image alpine) | `interval 10s, timeout 3s, retries 3, start_period 20s` (analytics 30s), `stop_grace_period: 30s` |
+| api-gateway qua Traefik | label `…healthcheck.path=/ready`, `.interval=5s`, `.timeout=2s`, `.port=8081` | ✅ rút replica not_ready khỏi LB; public `GET /health` trả `{"status":"ok"}` |
 | frontend | `GET /api/health` (liveness), `GET /api/ready` (ready: gọi gateway `/health`) | Next route handler; nhớ `HOSTNAME=0.0.0.0` (đã ghi trong deployment.md) |
-| Rolling update | `update_config: order: start-first, monitor: 30s, failure_action: rollback` | task mới phải `healthy` rồi mới tắt task cũ; thêm bước `scripts/wait-ready.sh` trong `deploy.sh` đợi mọi `/ready` = 200 |
+| Rolling update | **chưa làm**: `update_config: order: start-first, monitor: 30s, failure_action: rollback` và `scripts/wait-ready.sh` không có trong repo | thiết kế: task mới `healthy` rồi mới tắt task cũ |
 | Hạ tầng | xem bảng 7 | |
 
-## 7. Health/ready của container hạ tầng
-| Container | Liveness | Readiness | Metrics |
-|---|---|---|---|
-| postgres | `pg_isready -U $POSTGRES_USER` (đã có) | `psql -c 'select 1'` | `postgres-exporter :9187` |
-| redis | `redis-cli ping` | cùng lệnh (+ `INFO persistence` loading:0) | `redis-exporter :9121` |
-| kafka (KRaft) | `kafka-broker-api-versions.sh --bootstrap-server localhost:9092` | cùng lệnh + topic cần thiết tồn tại (do service tự tạo) | `kafka-exporter :9308` (lag, offset) |
-| clickhouse | `GET :8123/ping` → `Ok.` | `SELECT 1` qua HTTP | built-in `:9363/metrics` (bật `prometheus` trong config) |
-| minio | `GET :9000/minio/health/live` | `…/health/ready` | `/minio/v2/metrics/cluster` |
-| prometheus | `GET :9090/-/healthy` | `GET :9090/-/ready` | tự scrape |
-| grafana | `GET :3000/api/health` | cùng | `/metrics` |
-| cadvisor | `GET :8080/health` | – | `/metrics` |
-| node-exporter | `GET :9100/` | – | `/metrics` |
-| traefik | `traefik healthcheck --ping` (bật `--ping`) | cùng | `--metrics.prometheus` `:8082` |
+## 7. Health/ready của container hạ tầng (thực tế trong compose)
+| Container | Healthcheck (compose) | Metrics |
+|---|---|---|
+| postgres | `pg_isready -U $POSTGRES_USER -d $POSTGRES_DB` | `postgres-exporter :9187` |
+| redis | `redis-cli ping` | `redis-exporter :9121` |
+| kafka (KRaft) | `kafka-broker-api-versions.sh --bootstrap-server localhost:9092` | `kafka-exporter :9308` (lag, offset) |
+| clickhouse | `wget -qO- http://localhost:8123/ping` | ❌ chưa bật endpoint metrics/exporter của ClickHouse server |
+| minio | – (chưa có MinIO) | – |
+| prometheus | `wget … :9090/-/ready` | tự scrape |
+| grafana | `wget … :3000/api/health` | – (chưa scrape) |
+| cadvisor | `wget … :8080/healthz` | `/metrics` |
+| node-exporter | `wget … :9100/` | `/metrics` |
+| traefik | `traefik healthcheck --ping` (`--ping=true`) | `--metrics.prometheus` entrypoint `metrics` `:8082` |
+| postgres/redis/kafka-exporter | – (chưa có healthcheck) | – |
+Mọi service Go: Docker healthcheck `/healthz` :8081 (xem §6). Frontend: `wget :3000/api/healthz`.
 
-## 8. Chuẩn `/metrics` (Prometheus)
-Thư viện: `prometheus/client_golang`. Đăng ký collector Go + process. Quy ước tên: tiền tố `mm_` cho metric tự định nghĩa, `snake_case`, đơn vị cuối tên (`_seconds`, `_bytes`, `_total`).
+## 8. `/metrics` (Prometheus) – thực tế
+Thư viện: `prometheus/client_golang`, registry riêng trong `pkg/ops`; collector Go + process (nhãn `service`). Tiền tố `mm_` cho metric tự định nghĩa.
 
-**Bắt buộc ở mọi service**
+**Có ở mọi service Go** (đã triển khai)
 | Metric | Loại | Nhãn | Ghi chú |
 |---|---|---|---|
-| `mm_build_info` | gauge=1 | `service, version, commit` | |
-| `mm_http_requests_total` | counter | `service, method, route, status` | `route` là **mẫu** (`/orders/:id`), không phải đường dẫn thật (tránh bùng nổ cardinality) |
-| `mm_http_request_duration_seconds` | histogram | `service, method, route` | bucket 5ms…10s |
-| `mm_grpc_server_handled_total` / `_duration_seconds` | counter/hist | `service, grpc_service, grpc_method, grpc_code` | interceptor |
-| `mm_grpc_client_handled_total` / `_duration_seconds` | | `service, target, grpc_method, grpc_code` | |
-| `mm_db_pool_connections` | gauge | `service, state=open|in_use|idle`; `mm_db_pool_wait_seconds_total` | từ `sql.DBStats` |
-| `mm_db_query_duration_seconds` | histogram | `service, op` | tuỳ chọn |
-| `mm_kafka_consumer_lag` | gauge | `service, topic, group, partition` | |
-| `mm_kafka_messages_processed_total` | counter | `service, topic, result=ok|retry|dropped` | |
-| `mm_outbox_pending` / `mm_outbox_oldest_age_seconds` | gauge | `service, table` | cảnh báo đơn kẹt |
-| `mm_outbox_published_total` | counter | `service, topic, result` | |
-| `mm_worker_last_tick_timestamp_seconds` | gauge | `service, worker` | cho /ready |
-| `mm_ready` | gauge 0/1 | `service` | phản ánh `/ready` |
-| `process_*`, `go_*` | chuẩn | | CPU/RAM của process |
-**Nghiệp vụ**
-- order: `mm_orders_created_total`, `mm_order_status_transitions_total{from,to}`, `mm_orders_awaiting_payment`, `mm_reservations_expired_total`
-- payment: `mm_payments_total{method,status}`, `mm_payment_amount_vnd_sum`, `mm_refunds_total`, `mm_webhook_deliveries_total{result}`
-- product: `mm_inventory_reserve_total{result}`, `mm_products_low_stock`
-- gateway: `mm_rate_limited_total{scope}`, `mm_events_ingested_total{result}`, `mm_events_rejected_total{reason}`
-- analytics: `mm_ch_insert_rows_total`, `mm_ch_insert_lag_seconds`, `mm_events_consumed_total`
-**Quy tắc**: không đặt `user_id`, `order_id`, `product_id` làm nhãn (cardinality); chỉ lộ `/metrics` trong mạng nội bộ; middleware đo **sau** khi router khớp để có `route` mẫu.
+| `mm_build_info` | gauge = 1 | `service, version, commit` | |
+| `mm_ready` | gauge 0/1 | `service` | 1 khi `/ready` là ready hoặc degraded |
+| `mm_http_requests_total` | counter | `service, method, route, status` | chỉ gateway; `route` là **mẫu** (`/orders/:id`), `unmatched` khi không khớp |
+| `mm_http_request_duration_seconds` | histogram | `service, method, route` | bucket 5 ms … 10 s |
+| `mm_grpc_server_handled_total` | counter | `service, grpc_method, grpc_code` | interceptor (unary + stream) |
+| `mm_grpc_server_handling_seconds` | histogram | `service, grpc_method` | |
+| `mm_db_pool_open_connections`, `_in_use_connections`, `_idle_connections` | gauge | `service` | từ `sql.DBStats` (service có Postgres) |
+| `mm_db_pool_wait_seconds_total` | counter | `service` | |
+| `go_*`, `process_*` | chuẩn | `service` | |
+**Chỉ ở một số service**
+| Metric | Service | Ghi chú |
+|---|---|---|
+| `mm_outbox_pending{table="domain_events"}`, `mm_outbox_oldest_age_seconds` | product, order, payment | đếm **cả bảng chung** `domain_events` (xem data-model §1.5) |
+| `mm_worker_last_tick_timestamp_seconds{worker}` | order (`order_timers`), payment (`payment_workers`) | |
+| `mm_ch_buffer_rows`, `mm_ch_insert_lag_seconds`, `mm_ch_rows_inserted_total`, `mm_ch_insert_failures_total`, `mm_ch_rows_dropped_total`, `mm_events_accepted_total`, `mm_events_rejected_total` | analytics | đăng ký là gauge (giá trị tăng dần) |
+**CHƯA có** (thiết kế, chưa làm): `mm_grpc_client_*`, `mm_kafka_consumer_lag`, `mm_kafka_messages_processed_total`, `mm_outbox_published_total`, `mm_db_query_duration_seconds`, metric nghiệp vụ (`mm_orders_*`, `mm_payments_total`, `mm_refunds_total`, `mm_webhook_deliveries_total`, `mm_inventory_reserve_total`, `mm_products_low_stock`, `mm_rate_limited_total`), `mm_reconcile_diff_ratio`. Lag Kafka hiện lấy từ kafka-exporter (`kafka_consumergroup_lag`).
+**Quy tắc**: không đặt `user_id`, `order_id`, `product_id` làm nhãn; chỉ lộ `/metrics` trong mạng nội bộ; middleware đo **sau** khi router khớp để có `route` mẫu.
 
-## 9. API vận hành khác (admin, nội bộ hoặc qua gateway cho role `admin`)
-| Endpoint | Mục đích |
+## 9. API vận hành khác
+| Endpoint | Trạng thái |
 |---|---|
-| `GET /version` | build info (mọi service) |
-| `GET /admin/system/health` (gateway, role admin) | tổng hợp `ready` của mọi service + hạ tầng thành một bảng cho UI `/admin/system` |
-| `GET /admin/system/metrics?q=…` (gateway, admin) | proxy Prometheus **theo tên truy vấn whitelist** (cpu_by_service, mem_by_service, p95_latency, error_rate, kafka_lag, node_cpu, node_mem, outbox_oldest) |
-| `GET /admin/system/outbox` | backlog outbox từng service (đã có gauge) |
-| `POST /admin/system/outbox/requeue` (admin, audit) | đặt lại hàng FAILED→PENDING có điều kiện (thay cho SQL tay trong runbook) – tuỳ chọn P4 |
-| `GET /debug/pprof/*` | **tắt mặc định**; chỉ bật bằng `PPROF_ENABLED=true` trên :8081 |
-| `GET /config/features` (gateway công khai) | cờ tính năng giao diện (vd. `tracking`, `payments.mock`) |
+| `GET /version` | ✅ mọi service (`{service, version, commit, built_at}`) |
+| `GET /admin/system/health` (gateway, role admin) | ✅ gom `/ready` của 7 service (timeout 2 s mỗi probe) |
+| `GET /admin/system/metrics?q=…` (proxy Prometheus whitelist) | ❌ chưa làm |
+| `GET /admin/system/outbox`, `/admin/system/kafka`, `POST /admin/system/outbox/requeue` | ❌ chưa làm (dùng SQL/runbook) |
+| `GET /debug/pprof/*` | ✅ tắt mặc định; chỉ bật bằng `PPROF_ENABLED=true` trên :8081 |
+| `GET /config/features` | ❌ |
 
-## 10. Kiểm thử bắt buộc
-- Unit: handler health/ready với fake dependency (fail/ok/timeout) → đúng `status` & HTTP code; cache 3 s; timeout 1 s.
-- E2E (`scripts/e2e`): dừng Postgres ⇒ `/ready` của service DB-bound = 503, `/health` vẫn 200, **container không bị restart**; dừng Redis ⇒ gateway `degraded` (200); SIGTERM ⇒ 503 trước khi thoát; Prometheus có đủ target `up==1`.
-- CI: lint kiểm tra tên metric/nhãn (không nhãn id), service mới không merge nếu thiếu 4 endpoint.
+## 10. Kiểm thử
+- ✅ Unit `pkg/ops/ops_test.go` (7 bản): liveness không đụng dependency, ready/degraded/not_ready, lỗi đã làm sạch, timeout, cache, draining, nhãn metric, test socket thật cho cổng admin + gRPC health. Gateway: `TestAdminSystemHealthIsAdminOnly` (ready/not_ready/unreachable).
+- ❌ E2E (`scripts/e2e`): dừng Postgres ⇒ `/ready` 503 mà container không restart; SIGTERM ⇒ 503 trước khi thoát; Prometheus target `up==1` – chưa viết/ chưa chạy (xem [../testing.md](../testing.md) §5).
+- ❌ CI lint tên metric/nhãn; test chung "đủ 4 endpoint".

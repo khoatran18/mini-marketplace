@@ -86,3 +86,14 @@ Token localStorage là nợ đã ghi (security.md) → chuyển cookie httpOnly 
 - Trạng thái đơn/ thanh toán/ tồn kho: một bảng ánh xạ duy nhất `lib/status.ts` → token màu (có biến thể sáng/tối).
 - Bo `xl`, bóng nhẹ (tối: dùng viền thay bóng), font hệ thống.
 - Kiểm thử: snapshot hai theme cho component chính; không có chữ/ icon "mất hút" ở theme tối (kiểm tra thủ công + axe).
+
+## 9. Trạng thái triển khai (frontend)
+**Đã làm** (`apps/frontend`, `tsc` + `eslint` + `next build` sạch; chưa chạy cùng gateway thật trong trình duyệt):
+- Nền: dark mode (Tailwind `class`, CSS variables, cookie `mm_theme` + script chống nháy, `ThemeToggle`), `lib/format.ts` (vi-VN, VND, múi giờ cố định Asia/Ho_Chi_Minh), `lib/status.ts` (một nơi ánh xạ trạng thái đơn/thanh toán/tồn), `lib/api.ts` (ApiError, Idempotency-Key), role `admin`.
+- Người mua: `/`, `/products` (tìm kiếm, lọc, sắp xếp lưu trên URL), `/categories/[slug]`, `/products/[id]` (mức tồn), `/cart` (giỏ server + giỏ khách gộp khi đăng nhập), `/checkout` (địa chỉ, phương thức, tóm tắt tính ở server), `/pay/[id]` (trang thanh toán MÔ PHỎNG: thẻ, 3-D Secure OTP, ví, chuyển khoản, bảng thẻ test), `/orders`, `/orders/[id]` (timeline, huỷ, đã nhận, đổi trả), `/profile` (địa chỉ).
+- Người bán `/seller/*`: tổng quan, hộp thư đơn (ship/giao/huỷ/duyệt trả), sản phẩm (form đủ trường), tồn kho (điều chỉnh + sổ cái), analytics.
+- Quản trị `/admin/*`: tổng quan, đơn, thanh toán (hoàn tiền, ép trạng thái ở dev), danh mục, `/admin/system`, analytics (doanh thu, traffic, thanh toán, tìm kiếm, data-health).
+- Tracking SDK `lib/tracking.ts` (gộp lô, `sendBeacon`, `mm_aid`, phiên 30 phút, chống trùng impression) + `/dev/tracking`. Biến build: `NEXT_PUBLIC_APP_ENV=dev` (hiện công cụ dev), `NEXT_PUBLIC_TRACKING_ENABLED=false` (tắt tracking) — xem `apps/frontend/.env.example`.
+- Biểu đồ là SVG thuần (không thêm Recharts).
+
+**Chưa làm:** gợi ý khi gõ, review, wishlist, mã giảm giá (đã loại bỏ), upload ảnh (nhập URL https), `/seller/team`, `/admin/{users,stores,audit}`, banner đồng ý (consent mặc định "đồng ý"), test tự động cho frontend (chưa có test runner).

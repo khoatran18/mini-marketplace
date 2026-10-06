@@ -1,5 +1,7 @@
 # Regenerating protobuf code
 
+> **Cách nhanh (tiếng Việt):** `scripts/protogen/gen.sh <service-dir>` (vd. `scripts/protogen/gen.sh payment-service`) tự làm toàn bộ quy trình bên dưới: dựng `validate.proto` từ descriptor (`scripts/protogen/printer`), chạy `buf`/`protoc-gen-go`/`protoc-gen-go-grpc` cục bộ (cài vào `.tools/`, đúng phiên bản trong header file sinh) và chép `.pb.go` tới mọi thư mục `out:` của `services/<svc>/buf.gen.yaml` (gói của chính nó + bản sao ở gateway/consumer). Cần `go` và truy cập Go module proxy lần đầu. Sáu service có proto: `auth`, `user`, `product`, `order`, `payment`, `analytics` (gateway chỉ là consumer).
+
 `.pb.go` files are generated and must not be edited. The normal flow is `buf generate` from the owning service (`services/<svc>/buf.gen.yaml`, remote plugins on buf.build and the `buf.build/bufbuild/protovalidate` dependency). When buf.build is not reachable (offline, restricted proxy) use the local method below; it reproduces the current output **byte-for-byte** (verified for `auth.proto`), so it is safe.
 
 ## Tools (versions must match the headers of the existing generated files)
@@ -31,3 +33,7 @@ Always first regenerate the **unchanged** proto and diff against the repo (must 
 
 ## History
 - Role `admin` was added to `LoginRequest` and `ChangePasswordRequest` (`string.in`), not to `RegisterRequest`/`Account` (admin can never self-register). See security.md.
+- `product.proto`: thêm `Product` (mô tả, danh mục, brand, tags, ảnh, status, sku, ngưỡng tồn, reserved/sold/version, `stock_level`), danh mục, `SearchProducts`, `SetProductStatus`, `AdjustInventory`, `GetInventoryLedger`, `ListLowStock`.
+- `order.proto`: viết lại cho checkout theo store, giỏ hàng, `ApplyAction`, `ListOrders/GetOrder/CountOrders`, `PreviewCheckout`.
+- `user.proto`: thêm RPC địa chỉ (`UpsertAddress`, `ListAddresses`, `GetAddress`, `DeleteAddress`).
+- `payment.proto` (mới, :50057) và `analytics.proto` (mới, :50055: `IngestEvents`, `Query`) – sinh vào `pkg/pb` của chính chúng và `api-gateway/pkg/pb/{paymentservice,analyticsservice}`.

@@ -10,22 +10,26 @@ manage a store and its catalog; inventory is reserved asynchronously through Kaf
 | Component | Tech | Role |
 |---|---|---|
 | `apps/frontend` | Next.js 14, Tailwind | UI (talks only to the gateway) |
-| `services/api-gateway` | Go, gin | REST API, JWT auth, RBAC/ownership checks, rate limiting, Swagger |
+| `services/api-gateway` | Go, gin | REST API, JWT auth, RBAC/ownership checks, rate limiting, tracking endpoint |
 | `services/auth-service` | Go, gRPC | accounts, passwords, JWT issue/refresh |
 | `services/user-service` | Go, gRPC | buyer and seller (store) profiles |
-| `services/product-service` | Go, gRPC | catalog and inventory reserve/release |
-| `services/order-service` | Go, gRPC | orders, status state machine, cancel |
-| Postgres · Redis · Kafka | `deploy/infra.yml` | data, cache/rate limits, events |
+| `services/product-service` | Go, gRPC | catalog/search, inventory reserve/release/ship + ledger |
+| `services/order-service` | Go, gRPC | cart, checkout (one order per store), order lifecycle |
+| `services/payment-service` | Go, gRPC | **simulated** payments (test cards, webhooks, refunds) |
+| `services/analytics-service` | Go, gRPC | tracking + events → ClickHouse, seller/admin reports |
+| Postgres · Redis · Kafka · ClickHouse | `deploy/infra.yml` | data, cache/rate limits, events, analytics |
+| Prometheus · Grafana | `deploy/observability.yml` | metrics dashboards (no alerting) |
 | Traefik | `deploy/services.yml` | TLS termination and routing |
 
-Order flow: `POST /orders` → server-side pricing → order saved `PENDING` + outbox → Kafka → product-service reserves
-inventory → result event → order becomes `SUCCESS` or `FAILED`. A `SUCCESS` order can be canceled, which releases the inventory.
-Details: [`.claude/docs/architecture.md`](.claude/docs/architecture.md).
+Order flow: `POST /orders` (with `Idempotency-Key`) → server-side pricing → one order per store saved `PENDING` + outbox → Kafka →
+product-service reserves inventory → `AWAITING_PAYMENT` (online, simulated payment) or `CONFIRMED` (COD) or `FAILED` → `PAID` →
+`SHIPPED` → `DELIVERED` (→ return/refund); unpaid orders expire and release stock.
+Details: [`.claude/docs/architecture.md`](.claude/docs/architecture.md), REST reference [`.claude/docs/api.md`](.claude/docs/api.md).
 
 ## Quick start (Docker Swarm)
 
 ```bash
-cp deploy/.env.example deploy/.env     # set POSTGRES_PASSWORD, JWT_SECRET, TRAEFIK_DASHBOARD_USERS
+cp deploy/.env.example deploy/.env     # set POSTGRES_PASSWORD, JWT_SECRET, TRAEFIK_DASHBOARD_USERS, GRAFANA_ADMIN_PASSWORD, CLICKHOUSE_PASSWORD, PAYMENT_WEBHOOK_SECRET
 ./scripts/gen-dev-certs.sh             # self-signed TLS for *.marketplace.swarm.localhost
 ./scripts/build-images.sh              # builds marketplace/<service>:latest
 docker swarm init
@@ -39,7 +43,7 @@ accounts (`buyer1` / `seller1`, password `password`) and sample products.
 ## Development
 
 ```bash
-cd services/<name> && go build ./... && go test ./...        # Postgres-backed tests need TEST_POSTGRES_DSN
+cd services/<name> && go build ./... && go test ./...        # needs TEST_POSTGRES_DSN / TEST_CLICKHOUSE_URL for DB tests
 cd apps/frontend && npm install && npm run dev
 ```
 See [`CLAUDE.md`](CLAUDE.md) for conventions and [`.claude/docs/`](.claude/docs/README.md) for the full documentation
