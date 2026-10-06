@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { AnalyticsPanel } from '../../../components/analytics/AnalyticsPanel';
-import { AutoData } from '../../../components/analytics/AutoData';
+import { KpiRow } from '../../../components/analytics/KpiRow';
+import { parsePayments, rangeParams } from '../../../lib/analytics';
 import { EmptyBlock, ErrorBlock, LoadingBlock, Notice, SimulatedBadge } from '../../../components/ui/StateBlock';
 import { Pagination } from '../../../components/ui/Pagination';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { forcePaymentStatusRequest, getAdminPaymentRequest, listAdminPaymentsRequest, refundPaymentRequest } from '../../../lib/api';
-import { formatDateTime, formatVND } from '../../../lib/format';
+import { formatDateTime, formatNumber, formatPercent, formatVND } from '../../../lib/format';
 import { useApiData, useAuthedAction } from '../../../lib/hooks';
 import { paymentMethodLabel, paymentMethods } from '../../../lib/status';
 import type { Payment } from '../../../lib/types';
@@ -157,7 +158,31 @@ export function AdminPaymentsClient() {
         <p className="text-sm text-muted">Giao dịch do nhà cung cấp giả lập tạo ra: không có tiền thật.</p>
       </header>
 
-      <AnalyticsPanel title="Tỉ lệ thành công & lỗi" scope="admin" report="payments" params={{ period: '7d' }} definition="Tỉ lệ thành công = SUCCEEDED / (SUCCEEDED + FAILED), 7 ngày gần nhất." render={(data) => <AutoData data={data} />} />
+      <AnalyticsPanel
+        title="Tỉ lệ thành công & lỗi"
+        scope="admin"
+        report="payments"
+        params={rangeParams({ period: '7d' })}
+        definition="Tỉ lệ thành công = SUCCEEDED / (SUCCEEDED + FAILED), 7 ngày gần nhất."
+        parse={parsePayments}
+        render={(p) => (
+          <div className="grid gap-4">
+            <KpiRow
+              kpis={[
+                { key: 'succeeded', label: 'Thành công', value: formatNumber(p.succeeded) },
+                { key: 'failed', label: 'Thất bại', value: formatNumber(p.failed), goodWhenDown: true },
+                { key: 'rate', label: 'Tỉ lệ thành công', value: formatPercent(p.success_rate) },
+                { key: 'awaiting', label: 'Đơn chờ thanh toán', value: formatNumber(p.orders_awaiting_payment) }
+              ]}
+            />
+            {p.failure_codes.length > 0 ? (
+              <p className="text-sm text-muted">
+                Mã lỗi hàng đầu: {p.failure_codes.slice(0, 5).map((item) => `${item.key} (${item.count})`).join(', ')}
+              </p>
+            ) : null}
+          </div>
+        )}
+      />
 
       <section className="card grid gap-4">
         <div className="flex flex-wrap items-center gap-3">

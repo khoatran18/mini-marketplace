@@ -2,12 +2,12 @@
 
 import type { ReactNode } from 'react';
 import { getAnalyticsRequest } from '../../lib/api';
-import { isEmptyData, unwrap } from '../../lib/analytics';
+import { unwrap } from '../../lib/analytics';
 import { useApiData } from '../../lib/hooks';
 import { AsOfBadge } from './AsOfBadge';
 import { DefinitionTooltip } from './DefinitionTooltip';
 
-interface Props {
+interface Props<T> {
   title: string;
   scope: 'seller' | 'admin';
   report: string;
@@ -16,17 +16,22 @@ interface Props {
   definition?: string;
   /** controls rendered in the header (selectors) */
   controls?: ReactNode;
-  render: (data: unknown, meta: { asOf?: string; source?: string }) => ReactNode;
+  /** strict parser for `data`; null = unexpected shape, shown as "no data" */
+  parse: (data: unknown) => T | null;
+  isEmpty?: (value: T) => boolean;
+  render: (value: T, meta: { asOf?: string; source?: string }) => ReactNode;
   emptyText?: string;
 }
 
 /**
  * One analytics region with the four states of the UI guide: loading, error, empty and stale (AsOfBadge).
- * The analytics endpoints are being built in parallel: 404/5xx are shown as a friendly "not available yet", never as a crash.
+ * 404/501 are shown as "not available", other errors with a retry button.
  */
-export function AnalyticsPanel({ title, scope, report, params = {}, definition, controls, render, emptyText = 'Chưa có dữ liệu cho khoảng thời gian này.' }: Props) {
+export function AnalyticsPanel<T>({ title, scope, report, params = {}, definition, controls, parse, isEmpty, render, emptyText = 'Chưa có dữ liệu cho khoảng thời gian này.' }: Props<T>) {
   const state = useApiData((token) => getAnalyticsRequest(scope, report, params, token as string), [scope, report, JSON.stringify(params)]);
-  const { data, asOf, source } = unwrap(state.data);
+  const { data, asOf, source, cached } = unwrap(state.data);
+  const parsed = state.data ? parse(data) : null;
+  const empty = state.data !== null && (parsed === null || (isEmpty ? isEmpty(parsed) : false));
 
   return (
     <section className="card grid content-start gap-4" aria-busy={state.loading}>
@@ -36,7 +41,7 @@ export function AnalyticsPanel({ title, scope, report, params = {}, definition, 
             {title}
             {definition ? <DefinitionTooltip>{definition}</DefinitionTooltip> : null}
           </h2>
-          {state.data ? <AsOfBadge asOf={asOf} source={source} /> : null}
+          {state.data ? <AsOfBadge asOf={asOf} source={source ? `${source}${cached ? ' (cache)' : ''}` : undefined} /> : null}
         </div>
         {controls}
       </header>
@@ -44,18 +49,14 @@ export function AnalyticsPanel({ title, scope, report, params = {}, definition, 
       {state.loading && !state.data ? <p role="status" className="text-sm text-muted">Đang tải…</p> : null}
       {state.error ? (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
-          <span>
-            {state.status === 404 || state.status === 501
-              ? 'Chức năng phân tích này chưa sẵn sàng trên máy chủ.'
-              : `Không tải được dữ liệu: ${state.error}`}
-          </span>
+          <span>{state.status === 404 || state.status === 501 ? 'Báo cáo này chưa sẵn sàng trên máy chủ.' : `Không tải được dữ liệu: ${state.error}`}</span>
           <button type="button" className="btn" onClick={state.reload}>
             Thử lại
           </button>
         </div>
       ) : null}
-      {!state.loading && !state.error && state.data && isEmptyData(data) ? <p className="text-sm text-muted">{emptyText}</p> : null}
-      {!state.error && state.data && !isEmptyData(data) ? render(data, { asOf, source }) : null}
+      {!state.error && empty ? <p className="text-sm text-muted">{emptyText}</p> : null}
+      {!state.error && parsed !== null && !empty ? render(parsed, { asOf, source }) : null}
     </section>
   );
 }

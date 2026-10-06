@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { AnalyticsPanel } from '../../components/analytics/AnalyticsPanel';
 import { DateRangePicker } from '../../components/analytics/DateRangePicker';
+import { summaryKpis } from '../../components/analytics/AnalyticsDashboard';
 import { KpiRow } from '../../components/analytics/KpiRow';
 import { StockBadge } from '../../components/shop/StockBadge';
 import { ErrorBlock, LoadingBlock } from '../../components/ui/StateBlock';
 import { countOrdersRequest, getLowStockRequest } from '../../lib/api';
-import { rangeParams, toKpis, type RangeValue } from '../../lib/analytics';
+import { parseSummary, rangeParams, type RangeValue } from '../../lib/analytics';
 import { useApiData } from '../../lib/hooks';
 
 export function SellerOverviewClient() {
@@ -33,7 +34,7 @@ export function SellerOverviewClient() {
         <DateRangePicker value={range} onChange={setRange} />
       </header>
 
-      <AnalyticsPanel title="Kết quả kinh doanh" scope="seller" report="summary" params={rangeParams(range)} render={(data) => <KpiRow kpis={toKpis(data)} />} />
+      <AnalyticsPanel title="Kết quả kinh doanh" scope="seller" report="summary" params={rangeParams(range)} parse={parseSummary} render={(summary) => <KpiRow kpis={summaryKpis(summary)} />} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <section className="card grid content-start gap-4">

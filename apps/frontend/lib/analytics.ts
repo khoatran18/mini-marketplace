@@ -1,8 +1,9 @@
-// Helpers for the analytics endpoints (docs 05/06). The gateway endpoints are built in parallel and the exact JSON
-// is not final, so everything here is tolerant: it accepts the documented envelope `{ as_of, tz, source, data }`
-// and several reasonable shapes for `data`, and returns empty results instead of throwing.
+// Typed parsing of the analytics endpoints (gateway: /seller/analytics/*, /admin/analytics/*).
+// The gateway wraps every report as { as_of, source, cached, timezone, data }. Money is VND (float), rates are
+// fractions (0.12 = 12 %), buckets are local Asia/Ho_Chi_Minh time. Parsers never throw: a payload that does not have
+// the expected top-level shape yields `null`, which the panels render as the "no data" state.
 
-import { formatCompact, formatNumber, formatPercent, formatVND, formatDateTime, formatDayMonth, formatDayHour, toNumber } from './format';
+import { formatDayMonth, toLocalISODate } from './format';
 import type { AnalyticsEnvelope } from './types';
 
 export type Period = 'today' | '7d' | '30d' | 'mtd' | 'custom';
@@ -15,264 +16,342 @@ export interface RangeValue {
 
 export const periodLabels: Record<Exclude<Period, 'custom'>, string> = { today: 'Hôm nay', '7d': '7 ngày', '30d': '30 ngày', mtd: 'Tháng này' };
 
-export function rangeParams(range: RangeValue, compare = true): Record<string, string> {
-  const params: Record<string, string> = { period: range.period };
-  if (range.period === 'custom') {
-    if (range.from) params.from = range.from;
-    if (range.to) params.to = range.to;
-  }
-  if (compare) params.compare = 'prev';
-  return params;
+function shiftDay(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
-export function unwrap(envelope: AnalyticsEnvelope | null | undefined): { data: unknown; asOf?: string; source?: string; tz?: string } {
-  if (!envelope || typeof envelope !== 'object') return { data: null };
-  if ('data' in envelope && envelope.data !== undefined) {
-    return { data: envelope.data, asOf: envelope.as_of, source: envelope.source, tz: envelope.tz };
+/** from/to (yyyy-mm-dd in Asia/Ho_Chi_Minh, `to` inclusive) for a range selection. */
+export function rangeParams(range: RangeValue, now: Date = new Date()): { from: string; to: string } {
+  const today = toLocalISODate(now);
+  switch (range.period) {
+    case 'today':
+      return { from: today, to: today };
+    case '7d':
+      return { from: shiftDay(today, -6), to: today };
+    case '30d':
+      return { from: shiftDay(today, -29), to: today };
+    case 'mtd':
+      return { from: `${today.slice(0, 8)}01`, to: today };
+    default:
+      return { from: range.from || today, to: range.to || today };
   }
-  const { as_of, source, tz, ...rest } = envelope;
-  return { data: rest, asOf: as_of, source, tz };
 }
+
+// ---- envelope ----------------------------------------------------------------------------------------------------------
+
+export interface Unwrapped {
+  data: unknown;
+  asOf?: string;
+  source?: string;
+  cached?: boolean;
+}
+
+export function unwrap(envelope: AnalyticsEnvelope | null | undefined): Unwrapped {
+  if (!envelope || typeof envelope !== 'object') return { data: null };
+  return { data: envelope.data ?? null, asOf: str(envelope.as_of) || undefined, source: str(envelope.source) || undefined, cached: envelope.cached === true };
+}
+
+// ---- tiny strict readers -----------------------------------------------------------------------------------------------
 
 type Json = Record<string, unknown>;
-const isObject = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value);
-const isScalar = (value: unknown): value is string | number | boolean | null => value === null || ['string', 'number', 'boolean'].includes(typeof value);
-const numeric = (value: unknown): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return Number(value);
-  return null;
-};
+const obj = (v: unknown): Json | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Json) : null);
+const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+const numOrNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+const rows = <T>(v: unknown, map: (row: Json) => T): T[] => arr(v).flatMap((item) => {
+  const row = obj(item);
+  return row ? [map(row)] : [];
+});
 
-// ---- labels & value kinds ------------------------------------------------------------------------------------------
+// ---- summary -----------------------------------------------------------------------------------------------------------
 
-export const metricLabels: Record<string, string> = {
-  revenue: 'Doanh thu',
-  gmv: 'GMV',
-  orders: 'Đơn hàng',
-  order_count: 'Số đơn',
-  units: 'Số lượng bán',
-  units_sold: 'Số lượng bán',
-  aov: 'Giá trị TB/đơn (AOV)',
-  cancel_rate: 'Tỉ lệ huỷ',
-  cancellation_rate: 'Tỉ lệ huỷ',
-  refund_rate: 'Tỉ lệ hoàn',
-  conversion: 'Chuyển đổi',
-  conversion_rate: 'Tỉ lệ chuyển đổi',
-  views: 'Lượt xem',
-  page_views: 'Lượt xem trang',
-  sessions: 'Phiên',
-  unique_visitors: 'Người dùng duy nhất',
-  uv: 'Người dùng duy nhất',
-  active_users: 'Người dùng hoạt động',
-  cart: 'Giỏ hàng',
-  carts: 'Giỏ hàng',
-  checkout: 'Thanh toán',
-  checkouts: 'Bắt đầu thanh toán',
-  paid: 'Đã thanh toán',
-  name: 'Tên',
-  product_id: 'Mã SP',
-  product_name: 'Sản phẩm',
-  success_rate: 'Tỉ lệ thành công',
-  failure_code: 'Mã lỗi',
-  failures: 'Số lần lỗi',
-  count: 'Số lượng',
-  method: 'Phương thức',
-  status: 'Trạng thái',
-  lag_seconds: 'Độ trễ (giây)',
-  events_per_min: 'Event/phút',
-  rejected_rate: 'Tỉ lệ bị loại',
-  inventory: 'Tồn kho',
-  days_of_stock: 'Ngày còn bán',
-  stock: 'Tồn kho'
-};
-
-export function labelFor(key: string): string {
-  if (metricLabels[key]) return metricLabels[key];
-  const text = key.replace(/[_-]+/g, ' ').trim();
-  return text.charAt(0).toUpperCase() + text.slice(1);
+export interface SummaryBlock {
+  revenue: number;
+  refunds: number;
+  net_revenue: number;
+  gmv: number;
+  orders_placed: number;
+  orders_recognized: number;
+  aov: number;
+  canceled: number;
+  expired: number;
+  refunded: number;
+  cancel_rate: number;
 }
 
-export type ValueKind = 'money' | 'percent' | 'number' | 'date' | 'text';
-
-export function kindFor(key: string, sample?: unknown): ValueKind {
-  if (/(^|_)(revenue|gmv|aov|amount|sales|price|total_vnd|refunded)(_|$)/i.test(key) && !/count|rate/i.test(key)) return 'money';
-  if (/(rate|ratio|conversion|pct|percent|share)/i.test(key)) return 'percent';
-  if (/(^|_)(at|ts|time|date|day|hour|bucket)$/i.test(key) && typeof sample === 'string') return 'date';
-  if (numeric(sample) !== null) return 'number';
-  return 'text';
+export interface Summary {
+  current: SummaryBlock;
+  previous: SummaryBlock | null;
+  from: string;
+  to: string;
 }
 
-export function formatByKind(value: unknown, kind: ValueKind): string {
-  if (value === null || value === undefined || value === '') return '–';
-  if (isObject(value) && 'amount' in value) return formatVND(value as unknown as { amount: number | string });
-  switch (kind) {
-    case 'money':
-      return formatVND(value as number | string);
-    case 'percent': {
-      const n = toNumber(value as number | string);
-      return n !== 0 && Math.abs(n) <= 1 ? formatPercent(n) : `${formatNumber(n)}%`;
-    }
-    case 'number':
-      return Math.abs(toNumber(value as number | string)) >= 100000 ? formatCompact(value as number | string) : formatNumber(value as number | string);
-    case 'date':
-      return formatDateTime(String(value));
-    default:
-      return typeof value === 'object' ? JSON.stringify(value) : String(value);
-  }
+function summaryBlock(v: unknown): SummaryBlock | null {
+  const o = obj(v);
+  if (!o) return null;
+  return {
+    revenue: num(o.revenue),
+    refunds: num(o.refunds),
+    net_revenue: num(o.net_revenue),
+    gmv: num(o.gmv),
+    orders_placed: num(o.orders_placed),
+    orders_recognized: num(o.orders_recognized),
+    aov: num(o.aov),
+    canceled: num(o.canceled),
+    expired: num(o.expired),
+    refunded: num(o.refunded),
+    cancel_rate: num(o.cancel_rate)
+  };
 }
 
-export function formatByKindDelta(delta: number): string {
-  const sign = delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '';
-  return `${sign}${(delta * 100).toFixed(1).replace('.', ',')}%`;
+export function parseSummary(data: unknown): Summary | null {
+  const o = obj(data);
+  const current = summaryBlock(o?.current);
+  if (!o || !current) return null;
+  return { current, previous: summaryBlock(o.previous), from: str(o.from), to: str(o.to) };
 }
 
-// ---- KPIs ------------------------------------------------------------------------------------------------------------
-
-export interface Kpi {
-  key: string;
-  label: string;
-  value: unknown;
-  kind: ValueKind;
-  previous?: number | null;
-  /** relative change vs the previous period as a fraction (0.12 = +12 %) */
-  delta?: number | null;
+/** Relative change vs the previous period as a fraction; null when there is nothing to compare with. */
+export function change(current: number, previous: number | undefined | null): number | null {
+  if (previous === undefined || previous === null || previous === 0) return null;
+  return (current - previous) / Math.abs(previous);
 }
 
-function scalarOf(value: unknown): unknown {
-  if (isObject(value)) {
-    if ('amount' in value) return value; // money object
-    if ('value' in value) return value.value;
-  }
-  return value;
+// ---- timeseries --------------------------------------------------------------------------------------------------------
+
+export interface RevenuePoint {
+  bucket: string; // "YYYY-MM-DD HH:MM:SS", local time
+  revenue: number;
+  refunds: number;
+  orders: number;
+  placed: number;
 }
 
-export function toKpis(data: unknown): Kpi[] {
-  if (Array.isArray(data)) {
-    return data
-      .filter(isObject)
-      .map((row, index) => {
-        const key = String(row.key ?? row.metric ?? row.name ?? `m${index}`);
-        return buildKpi(key, row.value ?? row.current, row.previous ?? row.prev, row.delta ?? row.change, row.label as string | undefined);
-      });
-  }
-  if (!isObject(data)) return [];
-  const current = isObject(data.current) ? data.current : data;
-  const previous = isObject(data.previous) ? data.previous : isObject(data.prev) ? data.prev : null;
-  const kpis: Kpi[] = [];
-  for (const [key, raw] of Object.entries(current)) {
-    if (['as_of', 'tz', 'source', 'period', 'from', 'to', 'currency'].includes(key)) continue;
-    const value = scalarOf(raw);
-    if (!isScalar(value) && !(isObject(value) && 'amount' in value)) continue;
-    const obj = isObject(raw) ? raw : null;
-    const prevRaw = obj ? obj.previous ?? obj.prev : previous ? previous[key] : undefined;
-    kpis.push(buildKpi(key, value, scalarOf(prevRaw), obj?.delta ?? obj?.change ?? obj?.change_pct));
-  }
-  return kpis;
+export type RevenueMetric = 'revenue' | 'refunds' | 'orders' | 'placed';
+
+export function parseTimeseries(data: unknown): RevenuePoint[] | null {
+  if (!Array.isArray(data)) return null;
+  return rows(data, (r) => ({ bucket: str(r.bucket), revenue: num(r.revenue), refunds: num(r.refunds), orders: num(r.orders), placed: num(r.placed) }));
 }
 
-function buildKpi(key: string, value: unknown, prev: unknown, delta: unknown, label?: string): Kpi {
-  const kind = kindFor(key, isObject(value) ? 1 : value);
-  const previous = numeric(isObject(prev) ? prev.amount : prev);
-  const current = numeric(isObject(value) ? value.amount : value);
-  let change = numeric(delta);
-  if (change === null && previous !== null && current !== null && previous !== 0) change = (current - previous) / Math.abs(previous);
-  return { key, label: label ?? labelFor(key), value, kind: isObject(value) ? 'money' : kind === 'text' && current !== null ? 'number' : kind, previous, delta: change };
+/** "05/10" for day/week/month buckets, "05/10 14:00" for hours. The bucket is already local time: no Date parsing. */
+export function formatBucket(bucket: string, granularity: string): string {
+  const m = bucket.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+  if (!m) return bucket;
+  if (granularity === 'hour' && m[4]) return `${m[3]}/${m[2]} ${m[4]}:${m[5]}`;
+  if (granularity === 'month') return `${m[2]}/${m[1]}`;
+  return formatDayMonth(`${m[1]}-${m[2]}-${m[3]}T12:00:00+07:00`);
 }
 
-// ---- series ----------------------------------------------------------------------------------------------------------
+// ---- top products ------------------------------------------------------------------------------------------------------
 
-export interface SeriesPoint {
-  x: string;
-  y: number;
-  prev?: number;
+export interface TopProduct {
+  product_id: number;
+  name: string;
+  status: string;
+  units: number;
+  revenue: number;
+  impressions: number;
+  clicks: number;
+  views: number;
+  carts: number;
+  conversion: number;
 }
 
-const xKeys = ['ts', 't', 'time', 'bucket', 'date', 'day', 'hour', 'period', 'x', 'label'];
-const yKeys = ['value', 'v', 'y'];
-const prevKeys = ['prev', 'previous', 'prev_value', 'compare', 'previous_value'];
+export type TopSort = 'revenue' | 'units' | 'views' | 'conversion' | 'viewed_unsold';
 
-export function toSeries(data: unknown, metric?: string): SeriesPoint[] {
-  let rows: unknown = data;
-  if (isObject(data)) {
-    if (Array.isArray(data.labels) && Array.isArray(data.values)) {
-      const previous = Array.isArray(data.previous) ? data.previous : [];
-      const values = data.values as unknown[];
-      return (data.labels as unknown[]).map((label, index) => ({
-        x: String(label),
-        y: toNumber(values[index] as number),
-        prev: previous[index] !== undefined ? toNumber(previous[index] as number) : undefined
-      }));
-    }
-    rows = data.points ?? data.series ?? data.buckets ?? data.items ?? data.rows ?? data.data ?? [];
-  }
-  if (!Array.isArray(rows)) return [];
-  const points: SeriesPoint[] = [];
-  for (const row of rows) {
-    if (!isObject(row)) continue;
-    const xKey = xKeys.find((key) => key in row);
-    let yKey = [metric, ...yKeys].find((key): key is string => Boolean(key) && key! in row);
-    if (!yKey) yKey = Object.keys(row).find((key) => key !== xKey && !prevKeys.includes(key) && numeric(scalarOf(row[key])) !== null);
-    if (!xKey || !yKey) continue;
-    const prevKey = prevKeys.find((key) => key in row);
-    points.push({
-      x: String(row[xKey]),
-      y: toNumber(scalarOf(row[yKey]) as number),
-      prev: prevKey ? toNumber(scalarOf(row[prevKey]) as number) : undefined
-    });
-  }
-  return points;
+export function parseTopProducts(data: unknown): TopProduct[] | null {
+  if (!Array.isArray(data)) return null;
+  return rows(data, (r) => ({
+    product_id: num(r.product_id),
+    name: str(r.name),
+    status: str(r.status),
+    units: num(r.units),
+    revenue: num(r.revenue),
+    impressions: num(r.impressions),
+    clicks: num(r.clicks),
+    views: num(r.views),
+    carts: num(r.carts),
+    conversion: num(r.conversion)
+  }));
 }
 
-export function formatX(x: string, granularity?: string): string {
-  const parsed = new Date(x);
-  if (Number.isNaN(parsed.getTime()) || !/\d{4}-\d{2}-\d{2}/.test(x)) return x;
-  return granularity === 'hour' || /T\d{2}:/.test(x) ? formatDayHour(x) : formatDayMonth(x);
-}
-
-// ---- rows & funnel ---------------------------------------------------------------------------------------------------
-
-export function toRows(data: unknown): Json[] {
-  if (Array.isArray(data)) return data.filter(isObject);
-  if (isObject(data)) {
-    for (const key of ['items', 'rows', 'products', 'top', 'results', 'data', 'list']) {
-      if (Array.isArray(data[key])) return (data[key] as unknown[]).filter(isObject);
-    }
-  }
-  return [];
-}
+// ---- funnel ------------------------------------------------------------------------------------------------------------
 
 export interface FunnelStep {
-  label: string;
-  value: number;
+  step: 'view' | 'cart' | 'checkout' | 'paid' | string;
+  count: number | null; // null = not measurable for this scope
 }
 
-const funnelLabelKeys = ['step', 'stage', 'name', 'label', 'event'];
-const funnelValueKeys = ['count', 'value', 'users', 'sessions', 'total'];
-
-export function toFunnel(data: unknown): FunnelStep[] {
-  const rows = isObject(data) && Array.isArray(data.steps) ? data.steps : isObject(data) && Array.isArray(data.stages) ? data.stages : null;
-  if (Array.isArray(data) || rows) {
-    const list = (rows ?? (data as unknown[])) as unknown[];
-    return list.filter(isObject).flatMap((row) => {
-      const labelKey = funnelLabelKeys.find((key) => key in row);
-      const valueKey = funnelValueKeys.find((key) => key in row);
-      return labelKey && valueKey ? [{ label: labelFor(String(row[labelKey])), value: toNumber(row[valueKey] as number) }] : [];
-    });
-  }
-  if (isObject(data)) {
-    const order = ['impressions', 'views', 'product_views', 'view', 'carts', 'cart', 'add_to_cart', 'checkouts', 'checkout', 'paid', 'orders'];
-    const entries = Object.entries(data).filter(([, value]) => numeric(value) !== null);
-    entries.sort(([a], [b]) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)));
-    return entries.map(([key, value]) => ({ label: labelFor(key), value: toNumber(value as number) }));
-  }
-  return [];
+export interface DeviceFunnel {
+  device_type: string;
+  views: number;
+  carts: number;
+  checkouts: number;
 }
 
-export function isEmptyData(data: unknown): boolean {
-  if (data === null || data === undefined) return true;
-  if (Array.isArray(data)) return data.length === 0;
-  if (isObject(data)) return Object.keys(data).length === 0;
-  return false;
+export interface Funnel {
+  steps: FunnelStep[];
+  unit: string;
+  by_device: DeviceFunnel[];
 }
 
-export { isObject, isScalar };
+export const funnelLabels: Record<string, string> = { view: 'Xem sản phẩm', cart: 'Thêm vào giỏ', checkout: 'Bắt đầu thanh toán', paid: 'Đã thanh toán' };
+
+export function parseFunnel(data: unknown): Funnel | null {
+  const o = obj(data);
+  if (!o || !Array.isArray(o.steps)) return null;
+  return {
+    steps: rows(o.steps, (r) => ({ step: str(r.step), count: numOrNull(r.count) })),
+    unit: str(o.unit),
+    by_device: rows(o.by_device, (r) => ({ device_type: str(r.device_type), views: num(r.views), carts: num(r.carts), checkouts: num(r.checkouts) }))
+  };
+}
+
+// ---- low stock ---------------------------------------------------------------------------------------------------------
+
+export interface LowStockRow {
+  product_id: number;
+  name: string;
+  available: number;
+  reserved: number;
+  level: string;
+  units_per_day: number;
+  days_left: number | null;
+  store_id: number | null;
+}
+
+export function parseLowStock(data: unknown): LowStockRow[] | null {
+  if (!Array.isArray(data)) return null;
+  return rows(data, (r) => ({
+    product_id: num(r.product_id),
+    name: str(r.name),
+    available: num(r.available),
+    reserved: num(r.reserved),
+    level: str(r.level),
+    units_per_day: num(r.units_per_day),
+    days_left: numOrNull(r.days_left),
+    store_id: numOrNull(r.store_id)
+  }));
+}
+
+// ---- traffic -----------------------------------------------------------------------------------------------------------
+
+export interface KeyCount {
+  key: string;
+  count: number;
+}
+
+export interface TrafficPoint {
+  bucket: string;
+  page_views: number;
+  sessions: number;
+  visitors: number;
+}
+
+export interface Traffic {
+  page_views: number;
+  sessions: number;
+  visitors: number;
+  client_errors: number;
+  new_visitors: number;
+  returning_visitors: number;
+  series: TrafficPoint[];
+  top_paths: KeyCount[];
+  top_referrers: KeyCount[];
+  devices: KeyCount[];
+  countries: KeyCount[];
+}
+
+const keyCounts = (v: unknown): KeyCount[] => rows(v, (r) => ({ key: str(r.key), count: num(r.count) }));
+
+export function parseTraffic(data: unknown): Traffic | null {
+  const o = obj(data);
+  if (!o) return null;
+  return {
+    page_views: num(o.page_views),
+    sessions: num(o.sessions),
+    visitors: num(o.visitors),
+    client_errors: num(o.client_errors),
+    new_visitors: num(o.new_visitors),
+    returning_visitors: num(o.returning_visitors),
+    series: rows(o.series, (r) => ({ bucket: str(r.bucket), page_views: num(r.page_views), sessions: num(r.sessions), visitors: num(r.visitors) })),
+    top_paths: keyCounts(o.top_paths),
+    top_referrers: keyCounts(o.top_referrers),
+    devices: keyCounts(o.devices),
+    countries: keyCounts(o.countries)
+  };
+}
+
+// ---- payments ----------------------------------------------------------------------------------------------------------
+
+export interface PaymentMethodStat {
+  method: string;
+  succeeded: number;
+  failed: number;
+  success_rate: number;
+  amount: number;
+}
+
+export interface PaymentsReport {
+  succeeded: number;
+  failed: number;
+  success_rate: number;
+  amount_succeeded: number;
+  by_method: PaymentMethodStat[];
+  failure_codes: KeyCount[];
+  refunds: { count: number; amount: number };
+  orders_awaiting_payment: number;
+}
+
+export function parsePayments(data: unknown): PaymentsReport | null {
+  const o = obj(data);
+  if (!o) return null;
+  const refunds = obj(o.refunds);
+  return {
+    succeeded: num(o.succeeded),
+    failed: num(o.failed),
+    success_rate: num(o.success_rate),
+    amount_succeeded: num(o.amount_succeeded),
+    by_method: rows(o.by_method, (r) => ({ method: str(r.method), succeeded: num(r.succeeded), failed: num(r.failed), success_rate: num(r.success_rate), amount: num(r.amount) })),
+    failure_codes: keyCounts(o.failure_codes),
+    refunds: { count: num(refunds?.count), amount: num(refunds?.amount) },
+    orders_awaiting_payment: num(o.orders_awaiting_payment)
+  };
+}
+
+// ---- search terms ------------------------------------------------------------------------------------------------------
+
+export interface SearchTerms {
+  top: { term: string; count: number; avg_results: number }[];
+  zero_results: { term: string; count: number }[];
+}
+
+export function parseSearchTerms(data: unknown): SearchTerms | null {
+  const o = obj(data);
+  if (!o) return null;
+  return {
+    top: rows(o.top, (r) => ({ term: str(r.term), count: num(r.count), avg_results: num(r.avg_results) })),
+    zero_results: rows(o.zero_results, (r) => ({ term: str(r.term), count: num(r.count) }))
+  };
+}
+
+// ---- data health -------------------------------------------------------------------------------------------------------
+
+export interface DataHealth {
+  tables: { table: string; rows: number; last_event_at: string; avg_lag_seconds_15m: number | null }[];
+  events_last_hour_by_type: KeyCount[];
+  reconciliation: string;
+}
+
+export function parseDataHealth(data: unknown): DataHealth | null {
+  const o = obj(data);
+  if (!o) return null;
+  return {
+    tables: rows(o.tables, (r) => ({ table: str(r.table), rows: num(r.rows), last_event_at: str(r.last_event_at), avg_lag_seconds_15m: numOrNull(r.avg_lag_seconds_15m) })),
+    events_last_hour_by_type: keyCounts(o.events_last_hour_by_type),
+    reconciliation: str(o.reconciliation)
+  };
+}

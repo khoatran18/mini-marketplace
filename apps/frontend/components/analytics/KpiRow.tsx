@@ -1,26 +1,38 @@
-import { formatByKind, formatByKindDelta, type Kpi } from '../../lib/analytics';
 import { DefinitionTooltip } from './DefinitionTooltip';
 
-export function KpiRow({ kpis, definitions = {} }: { kpis: Kpi[]; definitions?: Record<string, string> }) {
+export interface Kpi {
+  key: string;
+  label: string;
+  /** already formatted */
+  value: string;
+  /** relative change vs the previous period (fraction) */
+  delta?: number | null;
+  /** for cancel/refund-like metrics a decrease is the good direction */
+  goodWhenDown?: boolean;
+  definition?: string;
+}
+
+function formatDelta(delta: number): string {
+  const sign = delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '';
+  return `${sign}${(delta * 100).toFixed(1).replace('.', ',')}%`;
+}
+
+export function KpiRow({ kpis }: { kpis: Kpi[] }) {
   if (kpis.length === 0) return null;
   return (
     <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {kpis.map((kpi) => {
         const delta = kpi.delta;
-        // for cancel/refund-like rates a decrease is good; keep colours neutral-by-meaning
-        const goodWhenDown = /cancel|refund|fail|error|lag|reject|stock/i.test(kpi.key);
-        const positive = delta !== null && delta !== undefined && (goodWhenDown ? delta < 0 : delta > 0);
+        const good = delta !== null && delta !== undefined && (kpi.goodWhenDown ? delta < 0 : delta > 0);
         return (
           <div key={kpi.key} className="rounded-xl border border-line bg-surface2 p-4">
             <dt className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted">
               {kpi.label}
-              {definitions[kpi.key] ? <DefinitionTooltip>{definitions[kpi.key]}</DefinitionTooltip> : null}
+              {kpi.definition ? <DefinitionTooltip>{kpi.definition}</DefinitionTooltip> : null}
             </dt>
-            <dd className="mt-1 text-2xl font-bold text-text">{formatByKind(kpi.value, kpi.kind)}</dd>
+            <dd className="mt-1 text-2xl font-bold text-text">{kpi.value}</dd>
             {delta !== null && delta !== undefined ? (
-              <dd className={`text-xs font-semibold ${delta === 0 ? 'text-muted' : positive ? 'text-success' : 'text-danger'}`}>
-                {formatByKindDelta(delta)} so với kỳ trước
-              </dd>
+              <dd className={`text-xs font-semibold ${delta === 0 ? 'text-muted' : good ? 'text-success' : 'text-danger'}`}>{formatDelta(delta)} so với kỳ trước</dd>
             ) : null}
           </div>
         );
