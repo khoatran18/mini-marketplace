@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../components/auth/AuthProvider';
-import type { RegisterInput, Role } from '../../../lib/types';
+import type { RegisterInput, RegisterableRole } from '../../../lib/types';
 
-const roles: Role[] = ['buyer', 'seller_admin', 'seller_employee'];
+const roles: RegisterableRole[] = ['buyer', 'seller_admin', 'seller_employee'];
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -59,7 +59,7 @@ export default function RegisterPage() {
         Vai trò
         <select
           value={formState.role}
-          onChange={(event) => setFormState((prev) => ({ ...prev, role: event.target.value as Role }))}
+          onChange={(event) => setFormState((prev) => ({ ...prev, role: event.target.value as RegisterableRole }))}
           className="w-full rounded-xl border border-slate-300 px-3 py-2 text-base shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
         >
           {roles.map((role) => (

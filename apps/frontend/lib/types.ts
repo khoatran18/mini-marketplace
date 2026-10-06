@@ -1,4 +1,7 @@
-export type Role = 'buyer' | 'seller_admin' | 'seller_employee';
+export type Role = 'buyer' | 'seller_admin' | 'seller_employee' | 'admin';
+
+// Roles that can sign up from the UI; admin accounts are created by the operator (ADMIN_BOOTSTRAP_*).
+export type RegisterableRole = Exclude<Role, 'admin'>;
 
 export interface LoginInput {
   username: string;
@@ -177,4 +180,22 @@ export interface GetProductByIdOutput {
   success?: boolean;
   message?: string;
   product?: Product;
+}
+
+// GET /admin/system/health
+export type ServiceStatus = 'ready' | 'degraded' | 'not_ready' | 'unreachable';
+
+export interface ServiceHealth {
+  name: string;
+  status: ServiceStatus;
+  latency_ms: number;
+  version?: string;
+  uptime_s?: number;
+  checks?: Record<string, { status: 'ok' | 'fail'; latency_ms?: number; critical?: boolean; error?: string }>;
+}
+
+export interface SystemHealthOutput {
+  as_of: string;
+  status: ServiceStatus;
+  services: ServiceHealth[];
 }

@@ -6,6 +6,9 @@
 - Gateway accepts only `Type=="access"` tokens. Refresh tokens are only accepted by auth-service, which also compares `PwdVersion` with the DB.
 - Password change bumps `pwd_version`; the gateway caches the new version in Redis for `JWT_EXPIRE_TIME + 1 min` (= access token lifetime) so older access tokens are rejected immediately. A missing key is fine: tokens older than the TTL are expired anyway.
 
+## Administrator role
+`admin` is a fourth role that can **never** be self-registered: `Register` (gateway and auth-service) rejects it, and the protobuf `RegisterRequest` does not allow it. The only way to create one is `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` read by auth-service at start-up (idempotent; an existing admin's password is never overwritten; credentials must satisfy the login contract: 3–16 characters `[a-zA-Z0-9_]`, password ≥ 8). Only `Login` and `ChangePassword` accept `admin`. Admin routes live under `/admin/*` (`AuthMiddleware` + role `admin`). Change the bootstrap password after the first login and remove the variables from the environment afterwards.
+
 ## Authorization rules (enforced in the gateway handlers, covered by tests)
 - Identity (`userID`, username, role) comes from the token only.
 - Orders: buyer role, scoped to own orders; foreign order → 404.
@@ -25,5 +28,5 @@ Nothing sensitive is committed. Use `.env.example` templates; real values live i
 - Tokens are stored in `localStorage` by the frontend (XSS exposure); prefer httpOnly cookies.
 - gRPC between services and Postgres connections are plaintext inside the overlay network (`sslmode=disable`).
 - No account lockout / email verification / password reset (see roadmap).
-- The gateway accepts JSON bodies of unbounded size; add `http.MaxBytesReader` or a body-limit middleware.
+- Request bodies are capped by `MAX_BODY_BYTES` (default 1 MiB, HTTP 413 when `Content-Length` is larger; undeclared/chunked bodies fail while reading).
 - Traefik dashboard is protected only by basic auth (`TRAEFIK_DASHBOARD_USERS`).

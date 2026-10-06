@@ -2,6 +2,8 @@
 
 Mở rộng `deploy/` theo cách hiện có. Secrets như cũ: giá trị thật ở `deploy/.env` (ignored), biến mới thêm vào `.env.example`.
 
+> **Đã làm**: `deploy/observability.yml`, `deploy/prometheus/`, `deploy/grafana/`, healthcheck + limits cho service Go, Traefik `--ping` + metrics, `scripts/deploy.sh observability`, biến `GRAFANA_*`, `PROMETHEUS_RETENTION`, `ADMIN_BOOTSTRAP_*`, `MAX_BODY_BYTES`, `SYSTEM_HEALTH_TARGETS`. Chưa làm: ClickHouse, MinIO, payment/analytics.
+
 ## 1. Stack
 | File | Thay đổi |
 |---|---|

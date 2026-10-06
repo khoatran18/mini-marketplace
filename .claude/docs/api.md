@@ -23,6 +23,11 @@ Auth: `Authorization: Bearer <access_token>`. Errors: `{"error": "message"}`.
 | GET `/orders/:id` | `buyer` | 404 for orders of other buyers |
 | DELETE `/orders/:id` | `buyer` | cancel; only `SUCCESS` orders, 422 otherwise |
 
+| GET `/admin/system/health` | `admin` | aggregated `/ready` of every service (`status`, per-service checks, version, uptime) |
+| GET `/health`, `/healthz` | public | liveness of the gateway (admin port `:8081` also serves `/ready`, `/readyz`, `/metrics`, `/version`) |
+
+Request bodies larger than `MAX_BODY_BYTES` (default 1 MiB) are rejected with 413.
+
 There is deliberately no `PUT /orders/:id` (it allowed rewriting status/price/buyer).
 
 ## Error mapping (`handler/helpers.go`)

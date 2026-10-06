@@ -20,6 +20,7 @@ import type {
   RefreshTokenOutput,
   RegisterInput,
   RegisterOutput,
+  SystemHealthOutput,
   UpdateBuyerProfileInput,
   UpdateBuyerProfileOutput,
   UpdateSellerProfileInput,
@@ -240,4 +241,8 @@ export async function cancelOrderRequest(
     method: 'DELETE',
     token
   });
+}
+
+export async function getSystemHealthRequest(token: string): Promise<SystemHealthOutput> {
+  return apiFetch<SystemHealthOutput>('/admin/system/health', { method: 'GET', token });
 }

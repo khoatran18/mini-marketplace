@@ -12,9 +12,9 @@ Tài liệu này; chủ dự án duyệt. **Chưa code.**
 | ✅ *đã làm* Thư viện chung nhỏ (`pkg/ops` copy vào từng module, theo ADR-8): admin HTTP :8081 với `/health /ready /metrics /version`, grpc health, interceptor metrics, graceful shutdown | test health (fake dep) · mọi service hiện có trả đúng · SIGTERM ⇒ ready 503 rồi thoát sạch |
 | ✅ *đã làm (chưa chạy thử trên Swarm thật)* Docker `HEALTHCHECK` + Traefik `/ready` + `update_config start-first` + `wait-ready.sh` | rolling update không rớt request (e2e) |
 | Healthcheck cho mọi container hạ tầng | `docker service ls` toàn healthy |
-| Prometheus + exporters + cAdvisor + node-exporter + Grafana (dashboard Overview/Services/Containers/Nodes) | thấy CPU/RAM từng service; target `up==1` |
-| Role `admin` + bootstrap + `Role` ở frontend + khoá tạm đăng nhập + `audit_log` | `/auth/register` từ chối admin; test RBAC; test khoá |
-| Gateway: giới hạn body, nhóm route công khai, rate-limit riêng | test |
+| ✅ *đã làm (chưa chạy thử trên Swarm thật)* Prometheus + exporters + cAdvisor + node-exporter + Grafana (4 dashboard) | thấy CPU/RAM từng service; target `up==1` |
+| ✅ *đã làm*: role `admin` (proto Login/ChangePassword, bootstrap `ADMIN_BOOTSTRAP_*`, `Role` ở frontend, `/admin/system/health`). *Chưa*: khoá tạm đăng nhập, `audit_log` | `/auth/register` từ chối admin; test RBAC; test khoá |
+| ✅ giới hạn body (`MAX_BODY_BYTES`, 413). *Chưa*: nhóm route công khai, rate-limit riêng cho `/events` | test |
 
 ### P2 – Catalog, giỏ hàng, thanh toán mô phỏng, vòng đời đơn
 | Việc | Nghiệm thu |

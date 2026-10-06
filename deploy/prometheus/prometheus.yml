@@ -1,0 +1,54 @@
+# Prometheus scrape configuration (Docker Swarm). Service discovery uses Swarm's `tasks.<service>` DNS,
+# which returns one A record per running replica, so scaling a service needs no config change.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Our Go services: admin port :8081/metrics (gateway, auth, user, product, order)
+  - job_name: mm-services
+    dns_sd_configs:
+      - names:
+          - tasks.api-gateway
+          - tasks.auth-service
+          - tasks.user-service
+          - tasks.product-service
+          - tasks.order-service
+        type: A
+        port: 8081
+        refresh_interval: 15s
+    relabel_configs:
+      # `service` already comes from the metrics themselves; keep the swarm service name as a separate label for `up`
+      - source_labels: [__meta_dns_name]
+        regex: tasks\.(.*)
+        target_label: swarm_service
+        replacement: $1
+
+  - job_name: cadvisor
+    dns_sd_configs:
+      - {names: [tasks.cadvisor], type: A, port: 8080, refresh_interval: 15s}
+
+  - job_name: node-exporter
+    dns_sd_configs:
+      - {names: [tasks.node-exporter], type: A, port: 9100, refresh_interval: 15s}
+
+  - job_name: postgres
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: redis
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  - job_name: kafka
+    static_configs:
+      - targets: ['kafka-exporter:9308']
+
+  # Traefik (internal "metrics" entrypoint, not published)
+  - job_name: traefik
+    dns_sd_configs:
+      - {names: [tasks.traefik], type: A, port: 8082, refresh_interval: 15s}

@@ -18,6 +18,9 @@ DB tests create a throw-away database (`CREATE DATABASE …_test_<rand>`) per te
 
 Shared ops package (`services/*/pkg/ops`): `go test -race ./pkg/ops/` – liveness ignores dependencies, ready/degraded/not-ready, sanitized errors, timeouts, caching, draining, metrics labels, and a real-socket test of the admin port + gRPC health. The five copies must stay byte-identical (`md5sum services/*/pkg/ops/*.go`).
 
+Admin role: `auth-service/internal/service/admin_test.go` (bootstrap rules, idempotency, no password takeover, admin can't be registered, admin credentials don't work for other roles; needs `TEST_POSTGRES_DSN`); gateway `router_test.go` (`/admin/system/health` is admin-only and aggregates ready/not_ready/unreachable; body limit returns 413) and `middleware/bodylimit_test.go`.
+Local Postgres for DB tests: `initdb`/`pg_ctl` from `/usr/lib/postgresql/16/bin` as the `postgres` OS user (data dir outside `/tmp/claude-*`), then `export TEST_POSTGRES_DSN="host=localhost port=5433 user=postgres sslmode=disable"`.
+
 ## Writing tests
 - Fake a gRPC dependency by embedding the generated client interface in a struct and overriding the methods you need (see `fakeProductClient`, `fakeOrderClient`).
 - Gateway tests build gin engines with a stub middleware that sets `userID`/`userRole`; Redis is `miniredis`.

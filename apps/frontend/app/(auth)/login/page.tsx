@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import type { LoginInput, Role } from '../../../lib/types';
 
-const roles: Role[] = ['buyer', 'seller_admin', 'seller_employee'];
+const roles: Role[] = ['buyer', 'seller_admin', 'seller_employee', 'admin'];
 
 export default function LoginPage() {
   const router = useRouter();

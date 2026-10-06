@@ -22,6 +22,9 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		MaxAge:           12 * time.Hour,
 	}))
 
+	if envConfig.MaxBodyBytes > 0 {
+		router.Use(middleware.BodyLimitMiddleware(envConfig.MaxBodyBytes))
+	}
 	router.Use(middleware.RequestLoggingMiddleware(serviceConfig.ZapLogger))
 	if envConfig.RateLimit > 0 {
 		router.Use(middleware.RateLimitingMiddleware("global", envConfig.RateLimit, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
@@ -76,6 +79,17 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		productRoute.GET("/:id", h.ProductHandler.GetProductByID)
 		productRoute.GET("", h.ProductHandler.GetProducts)
 		productRoute.GET("/seller/:seller_id", h.ProductHandler.GetProductsBySellerID)
+	}
+
+	// Platform administrators only
+	var systemTargets []handler.SystemTarget
+	for name, url := range envConfig.SystemTargets {
+		systemTargets = append(systemTargets, handler.SystemTarget{Name: name, URL: url})
+	}
+	systemHandler := handler.NewSystemHandler(systemTargets, serviceConfig.ZapLogger)
+	adminRoute := router.Group("/admin", authenticated, middleware.AuthorizationMiddleware([]string{"admin"}, serviceConfig.ZapLogger))
+	{
+		adminRoute.GET("/system/health", systemHandler.Health)
 	}
 
 	orderRoute := router.Group("/orders")

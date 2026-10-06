@@ -9,9 +9,11 @@ import (
 	"auth-service/pkg/model"
 	"context"
 	"errors"
+	"fmt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log"
+	"regexp"
 	"time"
 
 	"go.uber.org/zap"
@@ -21,7 +23,15 @@ import (
 
 const minPasswordLength = 8
 
+// validRoles are the roles that can be registered through the API. "admin" is deliberately not
+// in this list: administrators are only created by EnsureAdmin (ADMIN_BOOTSTRAP_* at start-up).
 var validRoles = map[string]bool{"buyer": true, "seller_admin": true, "seller_employee": true}
+
+// RoleAdmin is the platform administrator role (cannot be self-registered).
+const RoleAdmin = "admin"
+
+// credentialPattern mirrors the login contract in auth.proto (username/password: 3-16 letters, digits, underscore).
+var credentialPattern = regexp.MustCompile(`^[a-zA-Z0-9_]{3,16}$`)
 
 // AuthService is responsible for interacting with AuthServer and AccountRepository
 type AuthService struct {
@@ -99,6 +109,34 @@ func (s *AuthService) Register(ctx context.Context, input *dto.RegisterInput) (*
 		Message: "Registered successfully",
 		Success: true,
 	}, nil
+}
+
+// EnsureAdmin creates the platform administrator if no account with that username and role "admin"
+// exists yet. It is idempotent and never changes the password of an existing admin. The credentials
+// must satisfy the same rules as login (auth.proto), otherwise the admin could never sign in.
+func (s *AuthService) EnsureAdmin(ctx context.Context, username, password string) (created bool, err error) {
+	if !credentialPattern.MatchString(username) || !credentialPattern.MatchString(password) {
+		return false, errors.New("admin username/password must be 3-16 characters of letters, digits or underscore")
+	}
+	if len(password) < minPasswordLength {
+		return false, fmt.Errorf("admin password must be at least %d characters", minPasswordLength)
+	}
+	existing, err := s.AccountRepo.GetAccountByUsernameRole(ctx, username, RoleAdmin)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, err
+	}
+	if existing != nil {
+		return false, nil
+	}
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return false, err
+	}
+	if err := s.AccountRepo.CreateAccount(ctx, &model.Account{Username: username, Password: string(hashed), Role: RoleAdmin}); err != nil {
+		return false, err
+	}
+	s.ZapLogger.Info("AuthService: admin account created", zap.String("username", username))
+	return true, nil
 }
 
 // Login handle logic login

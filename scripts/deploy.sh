@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploy (or update) the infra and application stacks on the local Docker Swarm.
-# Usage: scripts/deploy.sh [infra|services|all]   (default: all)
+# Usage: scripts/deploy.sh [infra|observability|services|all]   (default: all = infra + observability + services)
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 env_file="${ENV_FILE:-$root/deploy/.env}"
@@ -17,7 +17,8 @@ deploy() { render "$root/deploy/$1.yml" | docker stack deploy --detach=true -c -
 
 case "${1:-all}" in
   infra)    deploy infra marketplace-infra ;;
+  observability) deploy observability marketplace-obs ;;
   services) deploy services marketplace ;;
-  all)      deploy infra marketplace-infra; deploy services marketplace ;;
-  *) echo "usage: $0 [infra|services|all]"; exit 1 ;;
+  all)      deploy infra marketplace-infra; deploy observability marketplace-obs; deploy services marketplace ;;
+  *) echo "usage: $0 [infra|observability|services|all]"; exit 1 ;;
 esac

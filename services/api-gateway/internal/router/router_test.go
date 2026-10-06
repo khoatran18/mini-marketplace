@@ -5,8 +5,10 @@ import (
 	"api-gateway/internal/config"
 	"api-gateway/internal/handler"
 	"api-gateway/internal/middleware"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,11 +23,20 @@ const secret = "router-test-secret-long-enough"
 
 func newEngine(t *testing.T) *gin.Engine {
 	t.Helper()
+	return newEngineEnv(t, nil)
+}
+
+// newEngineEnv builds the engine and lets the test adjust the environment config first.
+func newEngineEnv(t *testing.T, mutate func(*config.EnvConfig)) *gin.Engine {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 	mr := miniredis.RunT(t)
 	logger := zap.NewNop()
 	serviceConfig := &config.ServiceConfig{ZapLogger: logger, RedisClient: redis.NewClient(&redis.Options{Addr: mr.Addr()})}
 	envConfig := &config.EnvConfig{JWTSecret: secret, AllowedOrigins: []string{"https://shop.example.com"}, RateLimit: 1000, AuthRateLimit: 1000}
+	if mutate != nil {
+		mutate(envConfig)
+	}
 	engine := gin.New()
 	SetupRouter(engine, handler.NewHandlerManager(client.NewClientManager(), logger), serviceConfig, envConfig)
 	return engine
@@ -121,5 +132,66 @@ func TestCORSAllowlist(t *testing.T) {
 	}
 	if got := preflight("https://evil.example.com").Header().Get("Access-Control-Allow-Origin"); got != "" {
 		t.Errorf("foreign origin must not be allowed, got %q", got)
+	}
+}
+
+func TestAdminSystemHealthIsAdminOnly(t *testing.T) {
+	ready := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/ready" {
+			t.Errorf("probe must call /ready, got %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ready","service":"order-service","version":"1.0.0","uptime_s":5,"checks":{"postgres":{"status":"ok"}}}`))
+	}))
+	defer ready.Close()
+	degraded := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"status":"not_ready","checks":{"kafka":{"status":"fail","error":"refused"}}}`))
+	}))
+	defer degraded.Close()
+	e := newEngineEnv(t, func(c *config.EnvConfig) {
+		c.SystemTargets = map[string]string{"order-service": ready.URL, "product-service": degraded.URL, "ghost": "http://127.0.0.1:1"}
+	})
+
+	if w := request(e, "GET", "/admin/system/health", ""); w.Code != http.StatusUnauthorized {
+		t.Errorf("no token: %d", w.Code)
+	}
+	for _, role := range []string{"buyer", "seller_admin", "seller_employee"} {
+		if w := request(e, "GET", "/admin/system/health", token(t, role)); w.Code != http.StatusForbidden {
+			t.Errorf("%s must be forbidden, got %d", role, w.Code)
+		}
+	}
+	w := request(e, "GET", "/admin/system/health", token(t, "admin"))
+	if w.Code != 200 {
+		t.Fatalf("admin: %d %s", w.Code, w.Body.String())
+	}
+	var out struct {
+		Status   string `json:"status"`
+		Services []struct {
+			Name, Status, Version string
+		} `json:"services"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, s := range out.Services {
+		got[s.Name] = s.Status
+	}
+	if got["order-service"] != "ready" || got["product-service"] != "not_ready" || got["ghost"] != "unreachable" {
+		t.Errorf("unexpected service statuses: %v", got)
+	}
+	if out.Status != "unreachable" || len(out.Services) != 3 || out.Services[0].Name != "ghost" {
+		t.Errorf("worst status / ordering wrong: %+v", out)
+	}
+}
+
+func TestBodyLimitAppliesToEveryRoute(t *testing.T) {
+	e := newEngineEnv(t, func(c *config.EnvConfig) { c.MaxBodyBytes = 64 })
+	req := httptest.NewRequest("POST", "/auth/login", strings.NewReader(strings.Repeat("a", 65)))
+	w := httptest.NewRecorder()
+	e.ServeHTTP(w, req)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("want 413, got %d", w.Code)
 	}
 }

@@ -20,16 +20,17 @@ const baseLinks: NavLink[] = [
     href: '/products/mine',
     label: 'Sản phẩm của tôi',
     requiresAuth: true,
-    hiddenForRoles: ['buyer']
+    hiddenForRoles: ['buyer', 'admin']
   },
   {
     href: '/orders',
     label: 'Đơn hàng',
     requiresAuth: true,
-    hiddenForRoles: ['seller_admin', 'seller_employee']
+    hiddenForRoles: ['seller_admin', 'seller_employee', 'admin']
   },
   { href: '/profile', label: 'Thông tin cá nhân', requiresAuth: true },
-  { href: '/dashboard', label: 'Bảng điều khiển', requiresAuth: true, hiddenForRoles: ['buyer'] }
+  { href: '/dashboard', label: 'Bảng điều khiển', requiresAuth: true, hiddenForRoles: ['buyer', 'admin'] },
+  { href: '/admin/system', label: 'Hệ thống', requiresAuth: true, hiddenForRoles: ['buyer', 'seller_admin', 'seller_employee'] }
 ];
 
 export function NavBar() {

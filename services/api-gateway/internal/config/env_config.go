@@ -17,6 +17,10 @@ type EnvConfig struct {
 	// AuthRateLimit is the stricter per-minute limit applied to /auth routes.
 	AuthRateLimit  int
 	TrustedProxies []string
+	// MaxBodyBytes caps request bodies (0 disables the limit).
+	MaxBodyBytes int64
+	// SystemTargets lists "name=adminURL" pairs the admin system-health endpoint aggregates.
+	SystemTargets map[string]string
 }
 
 // InitJWTSecret load env about jwt
@@ -52,6 +56,21 @@ func envList(key string, def []string) []string {
 	return out
 }
 
+// envPairs parses "name=url,name=url".
+func envPairs(key string, def map[string]string) map[string]string {
+	items := envList(key, nil)
+	if items == nil {
+		return def
+	}
+	out := map[string]string{}
+	for _, item := range items {
+		if k, v, ok := strings.Cut(item, "="); ok && k != "" && v != "" {
+			out[strings.TrimSpace(k)] = strings.TrimSpace(v)
+		}
+	}
+	return out
+}
+
 // NewEnvConfig load env config
 func NewEnvConfig() (*EnvConfig, error) {
 	jwtSecret, err := InitJWTSecret()
@@ -66,5 +85,13 @@ func NewEnvConfig() (*EnvConfig, error) {
 		RateLimit:      envInt("RATE_LIMIT_PER_MINUTE", 300),
 		AuthRateLimit:  envInt("AUTH_RATE_LIMIT_PER_MINUTE", 20),
 		TrustedProxies: envList("TRUSTED_PROXIES", nil),
+		MaxBodyBytes:   int64(envInt("MAX_BODY_BYTES", 1<<20)),
+		SystemTargets: envPairs("SYSTEM_HEALTH_TARGETS", map[string]string{
+			"api-gateway":     "http://localhost:8081", // this replica only
+			"auth-service":    "http://auth-service:8081",
+			"user-service":    "http://user-service:8081",
+			"product-service": "http://product-service:8081",
+			"order-service":   "http://order-service:8081",
+		}),
 	}, nil
 }

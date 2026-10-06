@@ -81,6 +81,8 @@ Tất cả `S`, ép `store_id` từ JWT:
 `GET /seller/analytics/summary?period=today|7d|30d|mtd|custom&from=&to=&compare=prev` · `/timeseries?metric=revenue|orders|units|aov&granularity=hour|day|week` · `/top-products?by=revenue|units|views|conversion&k=` · `/low-stock` · `/stockout-forecast` · `/products/:id/funnel` · `/payments-breakdown` · `/export.csv?report=orders|products`.
 
 ### 2.7 Analytics & hệ thống (admin)
+> Đã code: `GET /admin/system/health` (role `admin`; gom `/ready` của api-gateway(replica này), auth, user, product, order qua `SYSTEM_HEALTH_TARGETS`; trả `{as_of,status,services[]}`, `status` = trạng thái xấu nhất). Các endpoint còn lại ở mục này chưa làm.
+
 `GET /admin/analytics/summary` · `/timeseries` · `/traffic` · `/funnel` · `/top-stores` · `/top-categories` · `/payments` · `/search-terms` · `/data-health`
 `GET /admin/system/health` · `/admin/system/metrics?q=&service=&range=&step=` · `/admin/system/outbox` · `/admin/system/kafka` (lag theo group) · `POST /admin/system/outbox/requeue`
 Phản hồi chung: `{ "as_of": "...", "tz":"Asia/Ho_Chi_Minh", "source":"clickhouse|postgres|prometheus", "data": … }`.

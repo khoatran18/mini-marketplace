@@ -71,6 +71,15 @@ func main() {
 	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	authpb.RegisterAuthServiceServer(s, &authServer)
 
+	// Platform administrator (never self-registered): created once from ADMIN_BOOTSTRAP_USERNAME/PASSWORD
+	if u, pw := os.Getenv("ADMIN_BOOTSTRAP_USERNAME"), os.Getenv("ADMIN_BOOTSTRAP_PASSWORD"); u != "" || pw != "" {
+		created, err := authService.EnsureAdmin(context.Background(), u, pw)
+		if err != nil {
+			log.Fatalf("ADMIN_BOOTSTRAP_* rejected: %v", err)
+		}
+		log.Printf("Admin bootstrap: user %q (created=%v)", u, created)
+	}
+
 	// Demo accounts only when explicitly requested (never in production)
 	if os.Getenv("SEED_DEMO_DATA") == "true" {
 		SeedAccounts(&authServer)

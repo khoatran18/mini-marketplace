@@ -24,6 +24,14 @@ Consumer idempotent (ReplacingMergeTree + `event_id`); batch insert 1–5 s ho�
 - Grafana cho SRE: dashboards Overview, Services (RED), Containers, Nodes, Kafka & Outbox, Postgres, Redis, ClickHouse, Payments, Business.
 - Cần đặt `resources.limits.memory`/`cpus` trong `services.yml` để "RAM % theo limit" có nghĩa.
 
+### 2.1 Đã triển khai (P1)
+- `deploy/observability.yml` (stack `marketplace-obs`): Prometheus 2.55 (retention `PROMETHEUS_RETENTION`, mặc định 15d), Grafana 11 (`https://grafana.$PUBLIC_HOST`, đăng nhập bằng `GRAFANA_ADMIN_*`, không anonymous), cAdvisor + node-exporter (global), postgres/redis/kafka-exporter. **Không có Alertmanager.**
+- `deploy/prometheus/prometheus.yml`: scrape `tasks.<service>:8081/metrics` bằng DNS service discovery của Swarm (thêm replica không cần sửa cấu hình), cAdvisor, node-exporter, exporters, Traefik (`:8082`, đã bật `--metrics.prometheus`).
+- Grafana provisioning bằng file (`deploy/grafana/provisioning`, dashboard JSON ở `deploy/grafana/dashboards`, `allowUiUpdates: false`): **Overview**, **Services (RED)** (có biến `service`), **Containers & hosts**, **Kafka/Postgres/Redis/Traefik**. Cấu hình và 52 biểu thức PromQL đã được kiểm cú pháp bằng thư viện Prometheus (`config.LoadFile` + `promql/parser`).
+- Giới hạn bộ nhớ (`resources.limits.memory`) đã đặt cho các service Go và container giám sát để panel "Memory % of limit" có nghĩa.
+- Chưa chạy thử trên Swarm thật (sandbox không có Docker): lần deploy đầu cần kiểm tra Targets trong Prometheus (Status → Targets) và dashboard.
+- Chạy: `scripts/deploy.sh observability` (hoặc `all`).
+
 ## 3. Cảnh báo: CHƯA LÀM
 Quyết định: **giai đoạn này không có cảnh báo.** Không có `alert-service`, Alertmanager, bảng `alerts/notifications`, chuông, SSE hay email. Chỉ có **Grafana để người vận hành tự nhìn metric**.
 - Giá trị ngưỡng bên dưới chỉ để **tô màu panel** (xanh/vàng/đỏ) trên Grafana và trên bảng `/admin/system` – không phát thông báo.

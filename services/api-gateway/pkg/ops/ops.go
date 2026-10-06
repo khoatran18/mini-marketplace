@@ -127,7 +127,8 @@ func New(opts Options) *Server {
 		registry:     prometheus.NewRegistry(),
 	}
 	constLabels := prometheus.Labels{"service": svc}
-	s.registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	// Go runtime and process metrics carry the same service label as every other mm_ metric
+	prometheus.WrapRegistererWith(constLabels, s.registry).MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	buildInfo := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:        "mm_build_info",

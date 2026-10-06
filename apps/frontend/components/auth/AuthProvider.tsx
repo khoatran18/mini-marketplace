@@ -36,7 +36,7 @@ interface AuthContextValue extends AuthState {
   getValidAccessToken: () => Promise<string | null>;
 }
 
-const validRoles: Role[] = ['buyer', 'seller_admin', 'seller_employee'];
+const validRoles: Role[] = ['buyer', 'seller_admin', 'seller_employee', 'admin'];
 
 const defaultState: AuthState = {
   accessToken: null,

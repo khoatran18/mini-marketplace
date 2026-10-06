@@ -810,11 +810,11 @@ const file_auth_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x127\n" +
 	"\busername\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\busername\x127\n" +
 	"\bpassword\x18\x03 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12?\n" +
-	"\x04role\x18\x04 \x01(\tB+\xbaH(r&R\x05buyerR\fseller_adminR\x0fseller_employeeR\x04role\"\xc1\x01\n" +
+	"\x04role\x18\x04 \x01(\tB+\xbaH(r&R\x05buyerR\fseller_adminR\x0fseller_employeeR\x04role\"\xc8\x01\n" +
 	"\fLoginRequest\x127\n" +
 	"\busername\x18\x01 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\busername\x127\n" +
-	"\bpassword\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12?\n" +
-	"\x04role\x18\x03 \x01(\tB+\xbaH(r&R\x05buyerR\fseller_adminR\x0fseller_employeeR\x04role\"\x8b\x01\n" +
+	"\bpassword\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12F\n" +
+	"\x04role\x18\x03 \x01(\tB2\xbaH/r-R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\x04role\"\x8b\x01\n" +
 	"\rLoginResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12#\n" +
@@ -833,12 +833,12 @@ const file_auth_proto_rawDesc = "" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\x12\x18\n" +
-	"\asuccess\x18\x04 \x01(\bR\asuccess\"\xfd\x01\n" +
+	"\asuccess\x18\x04 \x01(\bR\asuccess\"\x84\x02\n" +
 	"\x15ChangePasswordRequest\x12#\n" +
 	"\busername\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\busername\x12>\n" +
 	"\fold_password\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\voldPassword\x12>\n" +
-	"\fnew_password\x18\x03 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\vnewPassword\x12?\n" +
-	"\x04role\x18\x04 \x01(\tB+\xbaH(r&R\x05buyerR\fseller_adminR\x0fseller_employeeR\x04role\"L\n" +
+	"\fnew_password\x18\x03 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\vnewPassword\x12F\n" +
+	"\x04role\x18\x04 \x01(\tB2\xbaH/r-R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\x04role\"L\n" +
 	"\x16ChangePasswordResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\"\x90\x01\n" +

@@ -23,6 +23,9 @@ Hosts: `https://marketplace.swarm.localhost` (UI), `https://api.marketplace.swar
 | `POSTGRES_DSN`, `REDIS_ADDR`, `KAFKA_BROKERS_ADDR` | services | built in `services.yml`; for local runs see `services/*/cmd/.env.example` |
 | `KAFKA_PRODUCER_RETRY/BACKOFF`, `KAFKA_CONSUMER_BACKOFF` | services | 2 / 100 ms / 100 ms |
 | `ALLOWED_ORIGINS`, `RATE_LIMIT_PER_MINUTE`, `AUTH_RATE_LIMIT_PER_MINUTE`, `TRUSTED_PROXIES` | gateway | see security.md |
+| `ADMIN_BOOTSTRAP_USERNAME/PASSWORD` | auth | creates the platform admin once (see security.md); empty = none |
+| `MAX_BODY_BYTES`, `SYSTEM_HEALTH_TARGETS` | gateway | body cap (default 1048576); `name=http://host:8081,…` list for `/admin/system/health` |
+| `GRAFANA_ADMIN_USER/PASSWORD`, `PROMETHEUS_RETENTION` | observability.yml | password required |
 | `SEED_DEMO_DATA` | auth, product | `true` creates `buyer1`/`seller1` (password `password`) and sample products |
 | `PUBLIC_HOST`, `TRAEFIK_DASHBOARD_USERS` | services.yml | routing and dashboard auth |
 
@@ -35,6 +38,9 @@ Start infra with `docker compose --env-file deploy/.env -f deploy/infra.yml up -
 - The shared network is explicitly named `marketplace-net` (created by `infra.yml`, external in `services.yml`).
 - The frontend image must listen on `0.0.0.0` (`HOSTNAME=0.0.0.0`), otherwise its healthcheck on `localhost` fails and Swarm kills it.
 - Docker Hub rate limits (HTTP 429) can interrupt image pulls/builds on shared egress IPs; retry or use a registry mirror.
+
+## Monitoring (Prometheus + Grafana)
+`scripts/deploy.sh observability` deploys stack `marketplace-obs` (`deploy/observability.yml`): Prometheus, Grafana (`https://grafana.<PUBLIC_HOST>`, user/password from `GRAFANA_ADMIN_USER/PASSWORD`), cAdvisor and node-exporter on every node, and Postgres/Redis/Kafka exporters. It is view-only: there is no alerting. Dashboards (Overview, Services (RED), Containers & hosts, Kafka/Postgres/Redis/Traefik) are provisioned from `deploy/grafana/dashboards`. After the first deploy open Prometheus → Status → Targets (port-forward or `docker exec`) and check every job is UP. Details: [platform/05-analytics-monitoring.md](platform/05-analytics-monitoring.md).
 
 ## Operational endpoints
 Every Go service listens on an extra **internal** HTTP port `ADMIN_PORT` (default `8081`, not published, not routed by Traefik): `/health` = `/healthz` (liveness), `/ready` = `/readyz` (readiness: Postgres, Kafka, downstream gRPC health are critical; Redis is non-critical), `/metrics` (Prometheus), `/version`. gRPC services also register `grpc.health.v1`. On SIGTERM a service reports not-ready for `DRAIN_SECONDS` (default 10) before stopping. Docker healthchecks use `/healthz`; Traefik routes to the gateway only while its `/ready` is 200. The frontend exposes `/api/health|healthz|ready|readyz`. Details: [platform/02-health-ready-metrics.md](platform/02-health-ready-metrics.md).

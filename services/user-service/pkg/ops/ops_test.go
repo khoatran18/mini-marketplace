@@ -130,7 +130,7 @@ func TestVersionAndMetrics(t *testing.T) {
 	_, _, m := get(t, s.Handler(), "/metrics")
 	for _, want := range []string{
 		`mm_build_info{commit=`, `mm_http_requests_total{method="GET",route="/orders/:id",service="test-service",status="200"} 1`,
-		`mm_grpc_server_handled_total{grpc_code="OK"`, `mm_ready{service="test-service"} 1`, "go_goroutines",
+		`mm_grpc_server_handled_total{grpc_code="OK"`, `mm_ready{service="test-service"} 1`, `go_goroutines{service="test-service"}`, `process_resident_memory_bytes{service="test-service"}`,
 	} {
 		if !strings.Contains(m, want) {
 			t.Errorf("metrics missing %q", want)

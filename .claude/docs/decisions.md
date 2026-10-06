@@ -23,3 +23,15 @@ Changing the protobuf `double` fields to integer minor units needs regenerated c
 
 ## ADR-8 One Go module per service (kept)
 A shared module for generated protobuf and `kafkaimpl` would remove the copies in each service but requires building Docker images from the repository root and a `go.work`/`replace` setup. Deferred; the copies are kept identical (`kafkaimpl` was normalized in all five).
+
+## ADR-9 Operational endpoints on a separate admin port (P-2)
+Every Go service runs a second, internal-only HTTP server (`:8081`) with `/health`=`/healthz`, `/ready`=`/readyz`, `/metrics`, `/version`, next to its gRPC port, via one identical `pkg/ops` file per module (ADR-8 style). Liveness never touches dependencies; readiness distinguishes critical (503) and non-critical (degraded, 200) failures; on SIGTERM readiness flips to 503 for `DRAIN_SECONDS` before the server stops.
+
+## ADR-10 `admin` role, never self-registered (P-11)
+Needed for operations (`/admin/*`). Created only through `ADMIN_BOOTSTRAP_*`; `Register` keeps its role whitelist; only `Login`/`ChangePassword` protos accept `admin`.
+
+## ADR-11 Regenerating protobuf code without buf.build
+buf.build can be unreachable (proxy/offline). The generated Go code is reproduced byte-for-byte using a local `buf`, local `protoc-gen-go`/`protoc-gen-go-grpc` (same versions as in the file headers) and a `buf/validate/validate.proto` reconstructed from the compiled descriptor in the protovalidate Go module. See [protobuf.md](protobuf.md).
+
+## ADR-12 Monitoring only, no alerting (P-8)
+Prometheus + Grafana (dashboards provisioned from files). No Alertmanager, no alert-service, no notifications; thresholds only colour panels.

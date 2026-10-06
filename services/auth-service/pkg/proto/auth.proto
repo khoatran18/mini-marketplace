@@ -17,7 +17,7 @@ message Account {
 message LoginRequest {
   string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string role = 3 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee"];
+  string role = 3 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee", (buf.validate.field).string.in = "admin"];
 }
 message LoginResponse {
   string message = 1;
@@ -53,7 +53,7 @@ message ChangePasswordRequest {
   string username = 1 [(buf.validate.field).string.min_len = 1];
   string old_password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string new_password = 3 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string role = 4 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee"];
+  string role = 4 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee", (buf.validate.field).string.in = "admin"];
 }
 message ChangePasswordResponse {
   string message = 1;
