@@ -12,5 +12,6 @@
 | [runbook.md](runbook.md) | Troubleshooting stuck orders, outbox, tokens, Kafka |
 | [decisions.md](decisions.md) | Architecture decision records |
 | [roadmap.md](roadmap.md) | Remaining tech debt and proposed business features |
+| [ai/README.md](ai/README.md) | **AI Platform** (thiết kế, chưa code): agent, recsys, RAG chính sách, giám sát/cảnh báo, UI, API contract, hạ tầng, lộ trình |
 
 The OpenAPI spec is generated into `services/api-gateway/docs/` (`swag init -g cmd/main.go -o docs --parseInternal`, run from `services/api-gateway`).
