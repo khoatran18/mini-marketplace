@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package payment_service.pkg.pb;
+
+import "buf/validate/validate.proto";
+
+option go_package = "payment-service/paymentpb";
+
+// A payment covers a whole checkout (all orders of the checkout that await payment). The provider is a
+// SIMULATION ("mockpay"): see .claude/docs/platform/04-orders-payments.md for the test cards.
+//
+// Statuses: REQUIRES_ACTION, PROCESSING, SUCCEEDED, FAILED, CANCELED, EXPIRED, PARTIALLY_REFUNDED, REFUNDED
+message Attempt {
+  uint64 id = 1;
+  string scenario = 2; // card_declined, insufficient_funds, requires_3ds, provider_error, timeout, success, ...
+  string status = 3;   // SUCCEEDED | FAILED | PENDING
+  string failure_code = 4;
+  string at = 5;
+}
+
+message Refund {
+  uint64 id = 1;
+  uint64 payment_id = 2;
+  uint64 order_id = 3;
+  int64 amount_minor = 4;
+  string reason = 5;
+  string status = 6; // SUCCEEDED | FAILED
+  string refund_key = 7;
+  string at = 8;
+}
+
+message Payment {
+  uint64 id = 1;
+  string checkout_id = 2;
+  uint64 buyer_id = 3;
+  string method = 4;
+  string status = 5;
+  int64 amount_minor = 6;
+  string currency = 7;
+  string provider = 8;
+  string provider_ref = 9; // bank transfer content / reference shown to the buyer
+  string failure_code = 10; // last failed attempt
+  string card_last4 = 11;
+  string expires_at = 12;
+  string paid_at = 13;
+  string created_at = 14;
+  int64 refunded_minor = 15;
+  // what the buyer should do next: enter_card | otp | approve_in_wallet | transfer_and_confirm | wait | none
+  string next_action = 16;
+  repeated Attempt attempts = 17; // admin view only
+  repeated Refund refunds = 18;   // admin view only
+  repeated uint64 order_ids = 19;
+}
+
+message GetPaymentRequest {
+  uint64 id = 1;
+  uint64 buyer_id = 2; // buyer view: must own the payment
+  bool is_admin = 3;
+}
+message GetPaymentByCheckoutRequest {
+  string checkout_id = 1;
+  uint64 buyer_id = 2;
+  bool is_admin = 3;
+}
+
+// ConfirmPayment submits the buyer's action on the (simulated) payment page.
+message ConfirmPaymentRequest {
+  uint64 payment_id = 1;
+  uint64 buyer_id = 2;
+  string card_number = 3; // MOCK_CARD: only used to choose the simulated outcome, never stored (last 4 digits only)
+  string card_exp = 4;    // MM/YY
+  string card_cvc = 5;
+  string otp = 6;         // 3-D Secure code
+  bool approve = 7;       // MOCK_WALLET / MOCK_BANK_TRANSFER
+}
+
+message CancelPaymentRequest {
+  uint64 payment_id = 1;
+  uint64 buyer_id = 2;
+}
+
+message ListPaymentsRequest {
+  string status = 1;
+  string method = 2;
+  uint64 page = 3;
+  uint64 page_size = 4;
+}
+message ListPaymentsResponse {
+  repeated Payment payments = 1;
+  uint64 total = 2;
+}
+
+message RefundPaymentRequest {
+  uint64 payment_id = 1;
+  int64 amount_minor = 2 [(buf.validate.field).int64 = {gt: 0}];
+  string reason = 3;
+}
+
+// ForceStatus is a development tool (ENV=dev only): apply a provider outcome right now.
+message ForceStatusRequest {
+  uint64 payment_id = 1;
+  string status = 2; // SUCCEEDED | FAILED | EXPIRED
+}
+
+service PaymentService {
+  rpc GetPayment(GetPaymentRequest) returns (Payment);
+  rpc GetPaymentByCheckout(GetPaymentByCheckoutRequest) returns (Payment);
+  rpc ConfirmPayment(ConfirmPaymentRequest) returns (Payment);
+  rpc CancelPayment(CancelPaymentRequest) returns (Payment);
+  rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+  rpc RefundPayment(RefundPaymentRequest) returns (Payment);
+  rpc ForceStatus(ForceStatusRequest) returns (Payment);
+}

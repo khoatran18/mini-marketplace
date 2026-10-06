@@ -19,6 +19,7 @@ type ManagerHandler struct {
 	ProductHandler *ProductHandler
 	UserHandler    *UserHandler
 	CatalogHandler *CatalogHandler
+	PaymentHandler *PaymentHandler
 }
 
 // NewHandlerManager init handlers for ManagerHandler
@@ -42,6 +43,8 @@ func NewHandlerManager(cm *client.ClientManager, logger *zap.Logger) *ManagerHan
 	userHandler.Auth = authService
 
 	catalogHandler := NewCatalogHandler(cm, authService, logger)
+	paymentHandler := NewPaymentHandler(cm, logger)
+	orderHandler.Payments = paymentHandler
 
 	// Return ManagerHandler
 	return &ManagerHandler{
@@ -50,6 +53,7 @@ func NewHandlerManager(cm *client.ClientManager, logger *zap.Logger) *ManagerHan
 		ProductHandler: productHandler,
 		UserHandler:    userHandler,
 		CatalogHandler: catalogHandler,
+		PaymentHandler: paymentHandler,
 	}
 }
 

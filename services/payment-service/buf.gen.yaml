@@ -1,0 +1,18 @@
+version: v2
+inputs:
+  - directory: pkg/proto
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: pkg/pb
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: pkg/pb
+    opt: paths=source_relative
+
+  # For API Gateway
+  - remote: buf.build/protocolbuffers/go
+    out: ../api-gateway/pkg/pb/paymentservice
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: ../api-gateway/pkg/pb/paymentservice
+    opt: paths=source_relative

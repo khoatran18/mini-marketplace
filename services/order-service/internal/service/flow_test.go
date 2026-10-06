@@ -317,7 +317,7 @@ func TestCancelRulesAndRefunds(t *testing.T) {
 		t.Fatal("only the live order is paid")
 	}
 	refunds := emitted(t, db, repository.TopicRefundRequested)
-	if len(refunds) != 1 || refunds[0]["amount_minor"] != float64(toMinor(a.TotalPrice)) {
+	if len(refunds) != 1 || refunds[0]["amount_minor"] != float64(toMinor(a.TotalPrice)) || refunds[0]["order_id"] != float64(0) {
 		t.Fatalf("partial payment refund: %v (want %d)", refunds, toMinor(a.TotalPrice))
 	}
 	// cancelling a PAID order refunds it in full, once

@@ -7,6 +7,7 @@ import (
 	"api-gateway/internal/middleware"
 	"api-gateway/internal/router"
 	"api-gateway/internal/service"
+	"api-gateway/pkg/clientname"
 	"api-gateway/pkg/ops"
 	"context"
 	"log"
@@ -98,7 +99,8 @@ func main() {
 		ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
 	}
 	for name, addr := range grpcAddrs {
-		checks = append(checks, ops.GRPCHealthCheck(name, addr, true))
+		// payments are an add-on: the shop keeps working (COD) when payment-service is down
+		checks = append(checks, ops.GRPCHealthCheck(name, addr, name != clientname.PaymentClientName))
 	}
 	adm := ops.New(ops.Options{Service: "api-gateway", Checks: checks})
 	engine.Use(middleware.MetricsMiddleware(adm.ObserveHTTP))

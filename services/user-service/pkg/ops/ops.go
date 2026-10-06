@@ -59,6 +59,8 @@ type Check struct {
 type Options struct {
 	Service string
 	Checks  []Check
+	// Mount lets a service add its own internal-only routes to the admin port (e.g. a signed webhook endpoint).
+	Mount func(mux *http.ServeMux)
 }
 
 type checkResult struct {
@@ -81,6 +83,7 @@ type Server struct {
 	service string
 	addr    string
 	checks  []Check
+	mount   func(mux *http.ServeMux)
 	started time.Time
 
 	startedFlag atomicBool
@@ -120,6 +123,7 @@ func New(opts Options) *Server {
 		service:      svc,
 		addr:         ":" + envOr("ADMIN_PORT", defaultAdminPort),
 		checks:       opts.Checks,
+		mount:        opts.Mount,
 		started:      time.Now(),
 		cacheTTL:     time.Duration(envInt("READY_CACHE_SECONDS", defaultCacheSeconds)) * time.Second,
 		checkTimeout: time.Duration(envInt("READY_CHECK_TIMEOUT_MS", int(defaultCheckTimeout/time.Millisecond))) * time.Millisecond,
@@ -236,6 +240,9 @@ func (s *Server) Handler() http.Handler {
 		})
 	})
 	mux.Handle("GET /metrics", promhttp.HandlerFor(s.registry, promhttp.HandlerOpts{}))
+	if s.mount != nil {
+		s.mount(mux)
+	}
 	if os.Getenv("PPROF_ENABLED") == "true" {
 		registerPprof(mux)
 	}

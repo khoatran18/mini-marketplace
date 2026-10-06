@@ -92,6 +92,7 @@ func NewEnvConfig() (*EnvConfig, error) {
 			"user-service":    "http://user-service:8081",
 			"product-service": "http://product-service:8081",
 			"order-service":   "http://order-service:8081",
+			"payment-service": "http://payment-service:8081",
 		}),
 	}, nil
 }

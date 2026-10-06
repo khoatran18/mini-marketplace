@@ -112,7 +112,7 @@ func (s *OrderService) HandlePaymentSucceeded(ctx context.Context, msg *kafka.Me
 	}
 	if over := ev.AmountMinor - paidMinor; over > 0 {
 		// money arrived for orders that were canceled/expired in the meantime
-		return s.OrderRepo.RequestRefund(ctx, orders[0], over, "order_not_payable", "checkout:"+ev.CheckoutID+":overpay")
+		return s.OrderRepo.RequestRefund(ctx, ev.CheckoutID, over, "order_not_payable", "checkout:"+ev.CheckoutID+":overpay")
 	}
 	return nil
 }

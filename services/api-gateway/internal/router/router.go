@@ -111,6 +111,10 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		adminRoute.POST("/categories", h.CatalogHandler.CreateCategory)
 		adminRoute.PUT("/categories/:id", h.CatalogHandler.UpdateCategory)
 		adminRoute.PATCH("/products/:id/status", h.CatalogHandler.AdminSetStatus)
+		adminRoute.GET("/payments", h.PaymentHandler.AdminList)
+		adminRoute.GET("/payments/:id", h.PaymentHandler.AdminGet)
+		adminRoute.POST("/payments/:id/refund", h.PaymentHandler.AdminRefund)
+		adminRoute.POST("/dev/payments/:id/force", h.PaymentHandler.AdminForce)
 		adminRoute.GET("/orders", h.OrderHandler.ListAllOrders())
 		adminRoute.GET("/orders/:id", h.OrderHandler.GetAnyOrder())
 		adminRoute.POST("/orders/:id/cancel", h.OrderHandler.AdminCancel())
@@ -149,6 +153,15 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		addressRoute.POST("", h.OrderHandler.CreateAddress)
 		addressRoute.PUT("/:id", h.OrderHandler.UpdateAddress)
 		addressRoute.DELETE("/:id", h.OrderHandler.DeleteAddress)
+	}
+
+	// Payments (SIMULATED provider): a buyer pays only their own payments
+	router.GET("/payments/methods", h.PaymentHandler.Methods)
+	paymentRoute := router.Group("/payments", authenticated, buyerRoles)
+	{
+		paymentRoute.GET("/:id", h.PaymentHandler.Get)
+		paymentRoute.POST("/:id/confirm", h.PaymentHandler.Confirm)
+		paymentRoute.POST("/:id/cancel", h.PaymentHandler.Cancel)
 	}
 
 	// Sellers: the order inbox of their own store

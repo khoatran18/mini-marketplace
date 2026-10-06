@@ -87,6 +87,13 @@ services:
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-300}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
       MAX_BODY_BYTES: ${MAX_BODY_BYTES:-1048576}
+      # business rules read by order-service / payment-service (shared anchor, no secrets here)
+      ENV: ${ENV:-prod}
+      ORDER_PAYMENT_TTL_MIN: ${ORDER_PAYMENT_TTL_MIN:-15}
+      RETURN_WINDOW_DAYS: ${RETURN_WINDOW_DAYS:-7}
+      AUTO_DELIVER_DAYS: ${AUTO_DELIVER_DAYS:-7}
+      SHIPPING_FLAT_FEE: ${SHIPPING_FLAT_FEE:-30000}
+      FREE_SHIP_OVER: ${FREE_SHIP_OVER:-500000}
     # liveness only (never depends on other services); readiness (/ready) is used by Traefik below
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
@@ -180,6 +187,32 @@ services:
     hostname: order-service
     networks: [marketplace]
     environment: *svc_env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+      resources:
+        limits: {memory: 256M}
+
+  # SIMULATED payment provider (no real payment network is ever contacted)
+  payment-service:
+    image: marketplace/payment-service:latest
+    hostname: payment-service
+    networks: [marketplace]
+    environment:
+      <<: *svc_env
+      PAYMENTS_MODE: mock
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?set PAYMENT_WEBHOOK_SECRET (at least 16 characters)}
+      MOCK_WEBHOOK_DELAY_MS: ${MOCK_WEBHOOK_DELAY_MS:-3000}
+      MOCK_TRANSFER_DELAY_MS: ${MOCK_TRANSFER_DELAY_MS:-8000}
+      MOCK_TIMEOUT_DELAY_MS: ${MOCK_TIMEOUT_DELAY_MS:-30000}
+      PAYMENT_CHAOS_RATE: ${PAYMENT_CHAOS_RATE:-0}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
       interval: 10s

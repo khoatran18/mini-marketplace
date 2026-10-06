@@ -237,3 +237,14 @@ func TestGaugeFunc(t *testing.T) {
 		t.Fatalf("gauge func not exported:\n%s", m)
 	}
 }
+
+func TestMountAddsServiceRoutes(t *testing.T) {
+	s := New(Options{Service: "svc", Mount: func(mux *http.ServeMux) {
+		mux.HandleFunc("POST /internal/ping", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusAccepted) })
+	}})
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/internal/ping", nil))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("mounted route: %d", rec.Code)
+	}
+}

@@ -5,4 +5,5 @@ const (
 	OrderClientName   string = "OrderClient"
 	ProductClientName string = "ProductClient"
 	UserClientName    string = "UserClient"
+	PaymentClientName string = "PaymentClient"
 )

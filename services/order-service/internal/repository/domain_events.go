@@ -133,8 +133,10 @@ func emitReleaseStock(tx *gorm.DB, o *model.Order) error {
 	return events.Emit(tx, TopicCancelOrder, orderKey(o.ID), StockEvent{OrderID: o.ID, Items: stockItems(o.OrderItems)})
 }
 
-func emitRefund(tx *gorm.DB, o *model.Order, amountMinor int64, reason, key string) error {
-	return events.Emit(tx, TopicRefundRequested, orderKey(o.ID), RefundRequestedEvent{
-		V: 1, CheckoutID: o.CheckoutID, OrderID: o.ID, AmountMinor: amountMinor, Reason: reason, RefundKey: key,
+// emitRefund asks payment-service for a refund. orderID is 0 for refunds that belong to the checkout as a whole
+// (money received for orders that could no longer be paid).
+func emitRefund(tx *gorm.DB, checkoutID string, orderID uint64, amountMinor int64, reason, key string) error {
+	return events.Emit(tx, TopicRefundRequested, checkoutID, RefundRequestedEvent{
+		V: 1, CheckoutID: checkoutID, OrderID: orderID, AmountMinor: amountMinor, Reason: reason, RefundKey: key,
 	})
 }

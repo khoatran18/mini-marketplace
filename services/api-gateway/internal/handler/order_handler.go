@@ -28,7 +28,7 @@ type OrderHandler struct {
 // PaymentComposer adds payment information to checkout responses (implemented by the payment handler).
 type PaymentComposer interface {
 	// ForCheckout returns the payment of a checkout as a JSON-ready map, or nil when none exists (yet).
-	ForCheckout(ctx context.Context, checkoutID string) map[string]any
+	ForCheckout(ctx context.Context, buyerID uint64, checkoutID string) map[string]any
 }
 
 // NewOrderHandler creates an OrderHandler.
@@ -304,13 +304,13 @@ func (h *OrderHandler) Checkout(c *gin.Context) {
 	if res.GetReplayed() {
 		code = http.StatusOK
 	}
-	h.writeCheckout(c, code, res)
+	h.writeCheckout(c, code, uid, res)
 }
 
-func (h *OrderHandler) writeCheckout(c *gin.Context, code int, res *orderpb.CheckoutResponse) {
+func (h *OrderHandler) writeCheckout(c *gin.Context, code int, buyerID uint64, res *orderpb.CheckoutResponse) {
 	out := messageToMap(res.ProtoReflect())
 	if h.Payments != nil {
-		if p := h.Payments.ForCheckout(c.Request.Context(), res.GetCheckoutId()); p != nil {
+		if p := h.Payments.ForCheckout(c.Request.Context(), buyerID, res.GetCheckoutId()); p != nil {
 			out["payment"] = p
 		}
 	}
@@ -333,7 +333,7 @@ func (h *OrderHandler) GetCheckout(c *gin.Context) {
 		respondError(c, h.Logger, "OrderHandler: GetCheckout", err)
 		return
 	}
-	h.writeCheckout(c, http.StatusOK, res)
+	h.writeCheckout(c, http.StatusOK, uid, res)
 }
 
 // ---- orders --------------------------------------------------------------------------------------

@@ -319,12 +319,12 @@ func (r *OrderRepository) Transition(ctx context.Context, orderID uint64, p Tran
 		}
 		// money: a paid order that is canceled before shipping, or a return that was approved, is refunded
 		if p.To == model.StatusCanceled && o.PaymentStatus == model.PaymentPaid && model.IsOnline(o.PaymentMethod) {
-			if err := emitRefund(tx, &o, minor(o.TotalPrice), "order_canceled", "order:"+orderKey(o.ID)+":cancel"); err != nil {
+			if err := emitRefund(tx, o.CheckoutID, o.ID, minor(o.TotalPrice), "order_canceled", "order:"+orderKey(o.ID)+":cancel"); err != nil {
 				return err
 			}
 		}
 		if p.To == model.StatusRefunded && model.IsOnline(o.PaymentMethod) {
-			if err := emitRefund(tx, &o, minor(o.TotalPrice), "return_approved", "order:"+orderKey(o.ID)+":return"); err != nil {
+			if err := emitRefund(tx, o.CheckoutID, o.ID, minor(o.TotalPrice), "return_approved", "order:"+orderKey(o.ID)+":return"); err != nil {
 				return err
 			}
 		}
@@ -398,9 +398,10 @@ func (r *OrderRepository) OrdersInCheckout(ctx context.Context, checkoutID strin
 	return orders, err
 }
 
-// RequestRefund emits a refund request (used when a payment arrived for orders that can no longer be paid).
-func (r *OrderRepository) RequestRefund(ctx context.Context, o *model.Order, amountMinor int64, reason, key string) error {
-	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error { return emitRefund(tx, o, amountMinor, reason, key) })
+// RequestRefund emits a checkout-level refund request (used when a payment arrived for orders that can no longer
+// be paid); it is not attached to any single order.
+func (r *OrderRepository) RequestRefund(ctx context.Context, checkoutID string, amountMinor int64, reason, key string) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error { return emitRefund(tx, checkoutID, 0, amountMinor, reason, key) })
 }
 
 // MarkPaymentRefunded records that the money of an order went back to the buyer (event from payment-service).

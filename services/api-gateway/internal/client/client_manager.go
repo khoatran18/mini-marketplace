@@ -5,6 +5,7 @@ import (
 	"api-gateway/pkg/clientname"
 	"api-gateway/pkg/pb/authservice"
 	orderpb "api-gateway/pkg/pb/orderservice"
+	paymentpb "api-gateway/pkg/pb/paymentservice"
 	productpb "api-gateway/pkg/pb/productservice"
 	userpb "api-gateway/pkg/pb/userservice"
 	"errors"
@@ -101,11 +102,16 @@ func newClientConstructors() map[string]func(conn *grpc.ClientConn) any {
 		return userpb.NewUserServiceClient(conn)
 	}
 
+	paymentConstructor := func(conn *grpc.ClientConn) any {
+		return paymentpb.NewPaymentServiceClient(conn)
+	}
+
 	constructors := map[string]func(conn *grpc.ClientConn) any{
 		clientname.AuthClientName:    authConstructor,
 		clientname.OrderClientName:   orderConstructor,
 		clientname.ProductClientName: productConstructor,
 		clientname.UserClientName:    userConstructor,
+		clientname.PaymentClientName: paymentConstructor,
 	}
 
 	return constructors
@@ -181,6 +187,15 @@ func (cm *ClientManager) User() (userpb.UserServiceClient, error) {
 		return nil, err
 	}
 	return c.(userpb.UserServiceClient), nil
+}
+
+// Payment returns the payment-service client.
+func (cm *ClientManager) Payment() (paymentpb.PaymentServiceClient, error) {
+	c, err := cm.GetOrCreateServiceClient(clientname.PaymentClientName)
+	if err != nil {
+		return nil, err
+	}
+	return c.(paymentpb.PaymentServiceClient), nil
 }
 
 // GetOrCreateAuthClient is responsible for getting AuthClient if existed else creating AuthClient
