@@ -91,7 +91,7 @@ flowchart TD
   D -->|"chưa"| D1["Xem log reserve / validate của product-service"]
   D -->|"rồi"| E{"Group order-service-validate-result lag, hoặc log validate-order event ignored?"}
   E -->|"lag"| E1["Xem outbox product (topic product.validate_order) và consumer order-service"]
-  E -->|"ignored"| E2["Đơn không còn ở trạng thái hợp lệ để chuyển, xem trạng thái đơn"]
+  E -->|"ignored"| E2["Event bị bỏ qua có chủ ý, đối chiếu trạng thái hiện tại của đơn"]
 ```
 
 Đi từ producer (outbox order) qua consumer (product) tới kết quả quay về (order): chỗ nào đứt đầu tiên là nguyên nhân. Lệnh cụ thể ở dưới.

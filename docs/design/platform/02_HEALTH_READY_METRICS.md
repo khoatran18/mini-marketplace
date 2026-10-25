@@ -15,13 +15,48 @@ Ban đầu chỉ `api-gateway` có HTTP; các service nội bộ chỉ có gRPC 
 | Endpoint | Câu hỏi | Kiểm tra gì | Khi lỗi | Ai dùng |
 |---|---|---|---|---|
 | `GET /health` · `/healthz` (liveness) | "Tiến trình còn sống, không bị treo?" | **Chỉ** bản thân process (HTTP server trả lời được; tuỳ chọn: goroutine chính/ worker heartbeat không quá cũ). **Không** gọi DB/Kafka/service khác | 200 `{"status":"ok"}`; không 200 ⇒ restart container | Docker `HEALTHCHECK`, Swarm |
-| `GET /ready` · `/readyz` (readiness) | "Nhận được traffic và xử lý đúng chưa?" | Dependency **bắt buộc** (bảng 3) + trạng thái khởi động xong + không đang drain | 200 hoặc **503** kèm JSON chi tiết từng check | Traefik LB healthcheck, `deploy.sh` (chờ ready), e2e, UI trạng thái hệ thống |
+| `GET /ready` · `/readyz` (readiness) | "Nhận được traffic và xử lý đúng chưa?" | Dependency **bắt buộc** (bảng 3) + trạng thái khởi động xong + không đang drain | 200 hoặc **503** kèm JSON chi tiết từng check | Traefik LB healthcheck (chỉ api-gateway), `GET /admin/system/health` + UI trạng thái hệ thống, e2e (chưa có) |
 | `GET /metrics` | "Số đo Prometheus" | – | – | Prometheus |
 | `GET /version` | "Đang chạy build nào?" | – | – | người, CI, dashboard "đã deploy gì" |
+
+Ai gọi probe nào:
+
+```mermaid
+flowchart LR
+  DK["Docker HEALTHCHECK, mỗi 10 s"] -->|"GET /healthz :8081"| GO["container Go"]
+  DK2["Docker HEALTHCHECK của frontend"] -->|"GET /api/healthz :3000"| FE["frontend"]
+  TF["Traefik, mỗi 5 s, timeout 2 s"] -->|"GET /ready :8081"| GW["các replica api-gateway"]
+  PM["Prometheus"] -->|"GET /metrics :8081, qua tasks.service"| GO
+  ADM["api-gateway: GET /admin/system/health"] -->|"GET /ready của 7 service, timeout 2 s"| GO
+  FE -->|"/api/ready gọi gateway /health"| GW
+```
+
+Docker chỉ hỏi liveness (`/healthz`) để quyết định restart; Traefik chỉ hỏi readiness (`/ready`) của gateway để quyết định có route vào replica đó không; Prometheus lấy metrics và trang `/admin/system` gom `/ready` cho con người. Không thành phần nào dùng `/ready` để restart container.
+
+Trạng thái của một service từ lúc khởi động đến khi tắt:
+
+```mermaid
+stateDiagram-v2
+  [*] --> Starting
+  Starting --> Ready: migrate xong, MarkStarted, mọi check ok
+  Ready --> Degraded: check non-critical fail
+  Degraded --> Ready: check non-critical ok lại
+  Ready --> NotReady: check critical fail
+  Degraded --> NotReady: check critical fail
+  NotReady --> Ready: critical ok lại
+  Starting --> Draining: SIGTERM
+  Ready --> Draining: SIGTERM
+  Degraded --> Draining: SIGTERM
+  NotReady --> Draining: SIGTERM
+  Draining --> [*]: dừng server rồi thoát
+```
+
+`Starting`, `NotReady` và `Draining` đều trả `/ready` 503 (HTTP 200 chỉ ở `Ready` và `Degraded`), trong khi `/healthz` vẫn 200 ở cả năm trạng thái. `Draining` không quay lại được.
 
 Tại sao tách *liveness* và *readiness*: nếu `health` kiểm tra Postgres thì khi Postgres chậm, Swarm sẽ **restart cả đàn service** (cascade failure). Dependency lỗi ⇒ chỉ *rút khỏi load balancer* (ready 503), không giết process.
 
 ## 2. Hợp đồng phản hồi
+
 ```jsonc
 // GET /health  → 200
 { "status": "ok" }
@@ -44,6 +79,7 @@ Tại sao tách *liveness* và *readiness*: nếu `health` kiểm tra Postgres t
 // GET /version → 200
 { "service":"order-service", "version":"1.4.2", "commit":"2279fee", "built_at":"2026-10-06T08:00:00Z", "go":"go1.22" }
 ```
+
 Quy tắc:
 - `status`: `ready` (mọi check ok) · `degraded` (chỉ check **non-critical** fail → vẫn **HTTP 200**) · `not_ready` (≥1 check critical fail hoặc đang drain/chưa khởi động xong → **HTTP 503**).
 - Mỗi check có **timeout 1 s**, chạy **song song**, kết quả **cache 3 s** (tránh DDoS chính DB bởi healthcheck dày).
@@ -56,7 +92,7 @@ Quy tắc:
 
 | Service | Postgres | Redis | Kafka | gRPC downstream | Khác |
 |---|---|---|---|---|---|
-| api-gateway | – | N | C | `AuthClient` C · `OrderClient` C · `ProductClient` C · `UserClient` C · `PaymentClient` **N** · `AnalyticsClient` **N** | chưa drain (SIGTERM ⇒ 503) |
+| api-gateway | – | N | C | `AuthClient` C · `OrderClient` C · `ProductClient` C · `UserClient` C · `PaymentClient` **N** · `AnalyticsClient` **N** | drain khi SIGTERM như các service khác (`ServeHTTPMain`) |
 | auth-service | C | N | C | – | |
 | user-service | C | N | C | auth-service C | |
 | product-service | C | N | C | – | |
@@ -64,6 +100,7 @@ Quy tắc:
 | payment-service | C | N | C | – | `workers` C (không tick quá 30 × 1 s) |
 | analytics-service | – (không dùng Postgres) | N (chỉ khi có `REDIS_ADDR`) | C | – | **`clickhouse` C**; `insert_pipeline` N (có hàng đợi mà > 1 phút chưa insert được) |
 | frontend | – | – | – | – | gateway N |
+
 Lưu ý: check Kafka chỉ **dial TCP** tới broker (chưa kiểm consumer/lag); chưa có check MinIO/migrations/signer key (không cần hoặc chưa có). Khác thiết kế: payment-service **không** coi Redis là critical, product-service không có check outbox worker.
 
 Cách kiểm tra từng loại:
@@ -83,10 +120,32 @@ Cách kiểm tra từng loại:
 Mỗi service gRPC đăng ký `grpc.health.v1.Health` (service name rỗng = toàn bộ; thêm tên con như `order.OrderService`). `SERVING` khi ready; `NOT_SERVING` khi drain/critical fail. Gateway và `grpc_health_probe` dùng cái này. gRPC **reflection hiện được bật ở mọi môi trường** (`reflection.Register` trong `cmd/main.go`; thiết kế là chỉ dev – chưa tắt theo `ENV`).
 
 ## 5. Vòng đời & graceful shutdown
+
 ```
 start ─▶ [startup: chưa ready: /health 200, /ready 503] ─▶ migrate, kết nối, nạp cache ─▶ READY
 SIGTERM ─▶ đặt NOT_SERVING + /ready 503 ─▶ chờ `DRAIN_SECONDS` (mặc định 10 s) cho LB rút ─▶ GracefulStop gRPC (ép dừng sau 20 s) / http.Shutdown (timeout 20 s) ─▶ tắt cổng admin ─▶ thoát
 ```
+
+```mermaid
+sequenceDiagram
+  participant SW as Swarm
+  participant OPS as pkg ops
+  participant LB as Traefik
+  participant SRV as gRPC hoặc HTTP server
+  SW->>OPS: SIGTERM
+  OPS->>OPS: StartDraining, ready 503, gRPC NOT_SERVING
+  LB->>OPS: GET ready, chỉ với api-gateway
+  OPS-->>LB: 503, rút replica khỏi load balancer
+  Note over OPS: chờ DRAIN_SECONDS, mặc định 10 s
+  OPS->>SRV: GracefulStop hoặc Shutdown, tối đa 20 s rồi ép dừng
+  SRV-->>OPS: đã dừng
+  OPS->>OPS: tắt cổng admin 8081, tối đa 5 s
+  OPS-->>SW: process thoát
+  Note over SW: stop_grace_period 30 s, quá hạn thì SIGKILL
+```
+
+Thứ tự: báo not-ready trước, chờ load balancer rút, rồi mới dừng server, nên request đang tới không bị rơi. Trường hợp xấu nhất 10 s drain + 20 s dừng ép đã chạm `stop_grace_period` 30 s, nên cổng admin có thể bị SIGKILL trước khi tắt êm.
+
 Đã làm đúng tới đây (`pkg/ops` `handleSignals`). **Chưa làm**: dừng có chủ đích consumer Kafka (commit offset) và outbox/timer worker khi tắt (chúng dùng context nền và chết cùng process; an toàn vì outbox at-least-once, consumer idempotent). Swarm: `stop_grace_period: 30s`.
 
 ## 6. Cổng, docker healthcheck, Traefik
@@ -114,6 +173,7 @@ SIGTERM ─▶ đặt NOT_SERVING + /ready 503 ─▶ chờ `DRAIN_SECONDS` (m�
 | node-exporter | `wget … :9100/` | `/metrics` |
 | traefik | `traefik healthcheck --ping` (`--ping=true`) | `--metrics.prometheus` entrypoint `metrics` `:8082` |
 | postgres/redis/kafka-exporter | – (chưa có healthcheck) | – |
+
 Mọi service Go: Docker healthcheck `/healthz` :8081 (xem §6). Frontend: `wget :3000/api/healthz`.
 
 ## 8. `/metrics` (Prometheus) – thực tế
@@ -132,6 +192,7 @@ Thư viện: `prometheus/client_golang`, registry riêng trong `pkg/ops`; collec
 | `mm_db_pool_open_connections`, `_in_use_connections`, `_idle_connections` | gauge | `service` | từ `sql.DBStats` (service có Postgres) |
 | `mm_db_pool_wait_seconds_total` | counter | `service` | |
 | `go_*`, `process_*` | chuẩn | `service` | |
+
 **Chỉ ở một số service**
 
 | Metric | Service | Ghi chú |
@@ -139,6 +200,7 @@ Thư viện: `prometheus/client_golang`, registry riêng trong `pkg/ops`; collec
 | `mm_outbox_pending{table="domain_events"}`, `mm_outbox_oldest_age_seconds` | product, order, payment | đếm **cả bảng chung** `domain_events` (xem data-model §1.5) |
 | `mm_worker_last_tick_timestamp_seconds{worker}` | order (`order_timers`), payment (`payment_workers`) | |
 | `mm_ch_buffer_rows`, `mm_ch_insert_lag_seconds`, `mm_ch_rows_inserted_total`, `mm_ch_insert_failures_total`, `mm_ch_rows_dropped_total`, `mm_events_accepted_total`, `mm_events_rejected_total` | analytics | đăng ký là gauge (giá trị tăng dần) |
+
 **CHƯA có** (thiết kế, chưa làm): `mm_grpc_client_*`, `mm_kafka_consumer_lag`, `mm_kafka_messages_processed_total`, `mm_outbox_published_total`, `mm_db_query_duration_seconds`, metric nghiệp vụ (`mm_orders_*`, `mm_payments_total`, `mm_refunds_total`, `mm_webhook_deliveries_total`, `mm_inventory_reserve_total`, `mm_products_low_stock`, `mm_rate_limited_total`), `mm_reconcile_diff_ratio`. Lag Kafka hiện lấy từ kafka-exporter (`kafka_consumergroup_lag`).
 **Quy tắc**: không đặt `user_id`, `order_id`, `product_id` làm nhãn; chỉ lộ `/metrics` trong mạng nội bộ; middleware đo **sau** khi router khớp để có `route` mẫu.
 
