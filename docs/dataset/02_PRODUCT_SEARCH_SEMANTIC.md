@@ -2,7 +2,7 @@
 
 > Tìm sản phẩm bằng mô tả tự nhiên, từ khoá không dấu, đồng nghĩa; kết hợp BM25 và vector, rồi rerank theo mức độ liên quan query–sản phẩm. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp: không mở được trực tiếp Kaggle/HuggingFace/arXiv (lỗi DNS của công cụ fetch); các trang GitHub (ESCI, WANDS, mMARCO, ViRE) được đọc trực tiếp, phần còn lại qua kết quả tìm kiếm. Điều gì không thấy trong nguồn được ghi **"chưa xác minh"**.
+> Ghi chú phương pháp: không mở được trực tiếp Kaggle/HuggingFace/arXiv (lỗi DNS của công cụ fetch); các trang GitHub (ESCI, WANDS, mMARCO, ViRE, JDsearch, SQID, Baidu-ULTR) được đọc trực tiếp, phần còn lại qua kết quả WebSearch. Điều gì không thấy trong nguồn được ghi **"chưa xác minh"**. Phạm vi: dữ liệu tiếng Anh/đa ngôn ngữ dùng được để chọn phương pháp (hybrid, rerank, LTR); dữ liệu tiếng Việt: tự tạo (mục 5) hoặc các benchmark retrieval Việt nêu ở mục (a).
 
 | Liên quan | File |
 |---|---|
@@ -51,19 +51,21 @@
 | 6 | Mô hình/dữ liệu Việt: product-e5-small-vietnamese, hllj/synthetic-text-embedding | (a) | chưa xác minh | Việt | chưa xác minh | 3 |
 | 7 | Amazon ESCI Shopping Queries | (b) | 130.652 query, ~2,6M judgement (bản đầy đủ); 48.300 query/1.118.011 judgement (bản rút gọn) | Anh, Tây Ban Nha, Nhật | Apache-2.0 | 5 |
 | 8 | WANDS (Wayfair) | (b) | 480 query, 42.994 sản phẩm, 233.448 judgement | Anh | MIT | 5 |
-| 9 | Home Depot Product Search Relevance (Kaggle) | (b) | chưa xác minh số dòng (catalog ~124.428 sản phẩm theo một báo cáo) | Anh | điều khoản cuộc thi (chưa xác minh) | 3 |
+| 9 | Home Depot Product Search Relevance (Kaggle) | (b) | train 74.067 cặp, test ~166.693, 124.428 sản phẩm (đã xác minh, search) | Anh | điều khoản cuộc thi (chưa xác minh) | 3 |
 | 10 | Amazon-M2 (KDD Cup 2023) | (b)/(d) | hàng triệu session, 6 locale | Anh, Đức, Nhật, Pháp, Ý, Tây Ban Nha | Apache-2.0 (theo paper) | 2 |
 | 11 | Amazon Reviews 2023 (metadata) | (b) | chưa xác minh | Anh | chưa xác minh | 2 |
-| 12 | JDsearch (JD.com) | (b) | ~173.831 user, 12,87M sản phẩm, ~26,7M tương tác, 171.728 query test | Trung (văn bản bị ẩn danh) | chưa xác minh | 3 |
-| 13 | Baidu-ULTR | (b)/(c) | 1,2 tỷ session; 7.008 query có nhãn chuyên gia | Trung | chưa xác minh | 3 |
+| 12 | JDsearch (JD.com) | (b) | ~173.831 user, 12,87M sản phẩm, ~26,7M tương tác, 171.728 query test | Trung (văn bản bị ẩn danh) | CC BY-NC-SA 4.0 (đã xác minh, GitHub) | 3 |
+| 13 | Baidu-ULTR | (b)/(c) | 1,2 tỷ session; 7.008 query có nhãn chuyên gia (theo paper) | Trung | chưa xác minh; README: hiện không tải công khai được do hạn chế pháp lý với Baidu, phải xin link riêng | 3 |
 | 14 | Shopee Price Match (Kaggle 2021) | (d) | ~34K ảnh/tiêu đề, 11.014 nhóm | Chủ yếu Indonesia/Anh (chưa xác minh) | điều khoản cuộc thi (chưa xác minh) | 3 |
 | 15 | Marqo e-commerce evals (HF) | (b)/(d) | amazon-products-eval 1M–10M; google-shopping-general-eval 100K–1M | Anh | chưa xác minh | 2 |
 | 16 | MS MARCO / BEIR | (c) | 8,8M passage; 532.761 cặp train; BEIR 17–18 dataset | Anh | phi thương mại, nghiên cứu | 2 |
+| 18 | Shopping Queries Image Dataset (SQID) | (b) | >190.000 sản phẩm (164.900 từ ESCI test US + 27.139 bổ sung); URL ảnh 156.545 sản phẩm; CLIP embedding | Anh | MIT (đã xác minh, GitHub); dữ liệu gốc ESCI Apache-2.0 | 4 |
+| 19 | TREC Product Search Track (2023–2025) | (c) | topics + qrels + corpus (số liệu chưa xác minh) | Anh | chưa xác minh | 3 |
 | 17 | KuaiSearch (arXiv 2026) | (c) | chưa xác minh | Trung (chưa xác minh) | chưa xác minh | 2 |
 
 ### (a) Tiếng Việt / Việt Nam
 
-> Không tìm thấy bộ dữ liệu cặp truy vấn–sản phẩm TMĐT tiếng Việt công khai (kiểu Tiki/Shopee) trong phiên này. Chỉ thấy scraper Apify cho Tiki.vn (công cụ bên thứ ba, cần kiểm tra điều khoản của Tiki — không phải dataset). Với tìm kiếm sản phẩm Việt Nam, phải tự dựng nhãn (mục 5) và dùng các benchmark retrieval Việt chung để kiểm tra encoder.
+> Ghi chú: dữ liệu query–sản phẩm tiếng Việt: tự tạo (mục 5) và dùng các benchmark retrieval Việt chung dưới đây để kiểm tra encoder; tiếng Anh/đa ngôn ngữ (ESCI, WANDS, SQID...) dùng được để chọn phương pháp. (Scraper Apify cho Tiki.vn là công cụ bên thứ ba, không phải dataset; cần kiểm tra điều khoản của Tiki.)
 
 **VN-MTEB** — arXiv 2507.21500 (EACL 2026 Findings); dữ liệu trên Hugging Face (theo bài báo; tên repo cụ thể **chưa xác minh**). 41 dataset, 6 loại task (gồm retrieval, rerank...), tạo bằng cách dịch tự động từ MTEB bằng LLM + embedding để lọc, giữ nguyên thực thể và code. Dùng để chọn mô hình embedding tiếng Việt (trước khi fine-tune). Ánh xạ: không có cột sản phẩm; chọn encoder cho `products.name/description`. ★4. Hạn chế: dịch máy (nhiễu), không phải domain TMĐT.
 
@@ -71,7 +73,7 @@
 
 **Advancing Vietnamese Information Retrieval with Learning Objective and Benchmark** — arXiv 2503.07470 / ACL Anthology 2024.paclic-1.5. Benchmark retrieval tiếng Việt + objective huấn luyện; chi tiết dữ liệu và license **chưa xác minh**. ★3.
 
-**mMARCO** — https://github.com/unicamp-dl/mMARCO (đã đọc); HF `unicamp-dl/mmarco`. MS MARCO dịch máy sang 14 ngôn ngữ (bao gồm tiếng Anh gốc) bằng Helsinki-NLP opus-mt (một số phiên bản dùng Google Translate theo model card thứ cấp). README không liệt kê ngôn ngữ nên **chưa xác minh có tiếng Việt**; một model card cross-encoder liệt kê `vi`. License repo Apache-2.0. Dùng cho pretrain/fine-tune cross-encoder tiếng Việt. ★3. Hạn chế: passage Wikipedia/web, không phải sản phẩm; dịch máy.
+**mMARCO** — https://github.com/unicamp-dl/mMARCO (đã đọc); HF `unicamp-dl/mmarco`. MS MARCO dịch máy sang 14 ngôn ngữ (bao gồm tiếng Anh gốc) bằng Helsinki-NLP opus-mt (một số phiên bản dùng Google Translate theo model card thứ cấp). Đã xác minh (GitHub): 14 ngôn ngữ gồm tiếng Anh gốc, bản hiện hành là v2 (v1 ở README_old.md); README không liệt kê ngôn ngữ nên **chưa xác minh có tiếng Việt**; một model card cross-encoder liệt kê `vi`. License repo Apache-2.0. Dùng cho pretrain/fine-tune cross-encoder tiếng Việt. ★3. Hạn chế: passage Wikipedia/web, không phải sản phẩm; dịch máy.
 
 **TVPL / Zalo Legal Text Retrieval** — bài arXiv 2412.00657 mô tả TVPL (165.334 query train, 10.000 test, 224.006 passage) và Zalo Legal 2021; HF `GreenNode/TVPL-Retrieval` được nhắc đến. Chỉ dùng để thử encoder tiếng Việt (thuộc file 06). ★2.
 
@@ -83,17 +85,17 @@
 
 **WANDS** — https://github.com/wayfair/WANDS (đã đọc). `product.csv` 42.994 sản phẩm (product_name, product_class, category_hierarchy, product_description, product_features dạng `attr:value|...`, rating_count, average_rating, review_count), `query.csv` 480 query (query_class), `label.csv` 233.448 judgement với nhãn Exact/Partial/Irrelevant. License MIT. Ánh xạ: product_features→`products.attributes`, category_hierarchy→`categories`. ★5 vì nhãn chuyên gia sạch, nhỏ, chạy nhanh trên laptop. Hạn chế: đồ nội thất Mỹ, tiếng Anh, chỉ 480 query.
 
-**Home Depot Product Search Relevance (Kaggle)** — cuộc thi 2016 (không mở được trang Kaggle; qua blog/paper). Nhãn relevance trung bình 3 người chấm, thang 1–3, hồi quy RMSE; catalog ~124.428 sản phẩm (báo cáo Stanford CS224D). Số dòng train (con số 74.067 từng thấy ở nơi khác) **chưa xác minh**. Điều khoản dữ liệu = luật cuộc thi (tải cần tài khoản Kaggle, chưa xác minh). ★3.
+**Home Depot Product Search Relevance (Kaggle)** — cuộc thi 2016 (không mở được trang Kaggle; qua blog/paper). Nhãn relevance trung bình ≥3 người chấm, thang 1–3, hồi quy RMSE; đã xác minh (nguồn: WebSearch — towardsdatascience, NYC Data Science, báo cáo Stanford CS224D): train.csv 74.067 dòng, test ~166.693 (một nguồn ghi 166.694), 124.428 sản phẩm trong file mô tả. Điều khoản dữ liệu = luật cuộc thi (tải cần tài khoản Kaggle, chưa xác minh). ★3.
 
 **Amazon-M2** — arXiv 2307.09688 (NeurIPS 2023 D&B); tải từ AIcrowd. Session mua sắm đa locale (6 locale; en, de, ja, fr, it, es), phục vụ gợi ý và sinh tiêu đề; Apache-2.0 theo phụ lục bài báo. Dùng cho query-less session; ít liên quan search → ★2.
 
 **Amazon Reviews 2023** — https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023 : metadata (mô tả, giá, ảnh, bought-together) giúp tạo cặp tổng hợp (tiêu đề ↔ mô tả). ★2; số liệu/license **chưa xác minh**.
 
-**JDsearch** — https://github.com/rucliujn/jdsearch ; arXiv 2305.14810 (SIGIR 2023). Truy vấn thật + toàn bộ tương tác (click, cart, follow, purchase); README: 173.831 user, 12.872.636 item, 26.667.260 tương tác, 171.728 query test. Văn bản bị ẩn danh nên hạn chế cho mô hình ngữ nghĩa. Tải qua JD Cloud Disk. License **chưa xác minh**. ★3 (cho personalized search/LTR).
+**JDsearch** — https://github.com/rucliujn/jdsearch ; arXiv 2305.14810 (SIGIR 2023). Truy vấn thật + toàn bộ tương tác (click, cart, follow, purchase); README: 173.831 user, 12.872.636 item, 26.667.260 tương tác, 171.728 query test. Văn bản bị ẩn danh nên hạn chế cho mô hình ngữ nghĩa. Tải qua JD Cloud Disk (link có mật khẩu). License dữ liệu **CC BY-NC-SA 4.0**, repo Apache-2.0 (đã xác minh, GitHub). ★3 (cho personalized search/LTR).
 
-**Baidu-ULTR** — arXiv 2207.03051 (NeurIPS 2022 D&B). 1,2 tỷ session tìm kiếm; train ~383M query; 7.008 query/367.262 doc có nhãn chuyên gia; có `position`, chiều cao hiển thị. Dùng để thử khử position bias; ánh xạ `events_raw.position`. ★3. Hạn chế: tiếng Trung, search web (không TMĐT); nghiên cứu lặp lại (arXiv 2404.02543) cho thấy các kỹ thuật ULTR phổ biến không cải thiện ranking rõ rệt.
+**Baidu-ULTR** — arXiv 2207.03051 (NeurIPS 2022 D&B). 1,2 tỷ session tìm kiếm; train ~383M query; 7.008 query/367.262 doc có nhãn chuyên gia; có `position`, chiều cao hiển thị. Dùng để thử khử position bias; ánh xạ `events_raw.position`. Đã xác minh (GitHub README): hiện không tải công khai được do hạn chế pháp lý với Baidu, phải email tác giả xin link riêng; README không nêu license/kích thước. ★3. Hạn chế: tiếng Trung, search web (không TMĐT); nghiên cứu lặp lại (arXiv 2404.02543) cho thấy các kỹ thuật ULTR phổ biến không cải thiện ranking rõ rệt.
 
-**Marqo e-commerce evals (HF)** — `Marqo/amazon-products-eval` (1M–10M dòng, ảnh+text), `Marqo/amazon-products-eval-100k`, `Marqo/google-shopping-general-eval`, `Marqo/marqo-general-ecommerce-eval`. Nguồn: Marqo (vendor), blog giới thiệu mô hình Marqo-Ecommerce-B/L; các số liệu là vendor-reported. License **chưa xác minh**. ★2 (chủ yếu text-to-image).
+**Marqo e-commerce evals (HF)** — `Marqo/amazon-products-eval` (1M–10M dòng, ảnh+text), `Marqo/amazon-products-eval-100k`, `Marqo/google-shopping-general-eval`, `Marqo/marqo-general-ecommerce-eval`. Nguồn: Marqo (vendor), blog giới thiệu mô hình Marqo-Ecommerce-B/L; các số liệu là vendor-reported. Đã xác minh (nguồn: WebSearch): các repo `Marqo/marqo-general-ecommerce-eval` (nhóm 1M–10M, ảnh+text, có subset google_shopping) và `Marqo/google-shopping-general-eval` (100K–1M) tồn tại trên HF; không thấy license trong kết quả nên **license chưa xác minh**. ★2 (chủ yếu text-to-image).
 
 ### (c) Benchmark / paper học thuật
 
@@ -105,7 +107,9 @@
 
 **Shopee — Price Match Guarantee (Kaggle 2021)** — ~34.251 ảnh JPEG, 11.014 lớp (nguồn thứ cấp); train.csv: `posting_id, image, image_phash, title, label_group`. Tiêu đề lẫn ngôn ngữ (Indonesia/Anh/Malay, chưa xác minh). Dùng cho entity matching/dedupe sản phẩm trùng. Điều khoản cuộc thi (chưa xác minh). ★3.
 
-> Không thấy bộ dữ liệu search công khai của Tiki, Lazada, Zalo (ngoài Zalo AI Challenge pháp lý/QA) trong phiên này.
+**Shopping Queries Image Dataset (SQID)** — https://github.com/Crossing-Minds/shopping-queries-image-dataset (đã đọc). Bổ sung cho ESCI: URL ảnh (156.545 sản phẩm, ~95% của 164.900 sản phẩm lõi thuộc ESCI test US small; 442 mục trỏ tới ảnh nền chung), CLIP embedding (ViT-L/14) cho ảnh, query và tiêu đề, cộng 27.139 sản phẩm bổ sung. Tổng >190.000 sản phẩm. License MIT. Dùng thử multimodal/hybrid text+ảnh trên nền nhãn ESCI. ★4. Hạn chế: chỉ locale US, ảnh là URL có thể hỏng.
+
+**TREC Product Search Track (2023, 2024, 2025)** — https://trec.nist.gov/data/product2023.html ; https://trec.nist.gov/data/product.html . Đã xác minh (nguồn: WebSearch): NIST công bố topics, qrels và corpus (corpus trên GitHub của track) cho product search/discovery, mục tiêu benchmark công khai tái sử dụng. Số query/sản phẩm, nguồn gốc (có dựa trên ESCI hay không) và license: **chưa xác minh**. ★3.
 
 ## 5. Dữ liệu tự tạo / synthetic từ chính hệ thống
 

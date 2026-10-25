@@ -2,7 +2,7 @@
 
 > Gợi ý sản phẩm theo hành vi (session-based, co-visitation, collaborative filtering, ranking, dự đoán CTR) cho buyer trên sàn. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp tra cứu: phiên này không mở được trực tiếp trang Kaggle / HuggingFace / Tianchi (lỗi DNS của công cụ fetch), nên phần lớn thông tin lấy từ kết quả tìm kiếm web, bài báo và GitHub. Số liệu nào chỉ đến từ nguồn thứ cấp được ghi rõ; số liệu/license không thấy trong nguồn ghi **"chưa xác minh"**.
+> Ghi chú phương pháp tra cứu: công cụ fetch không mở được Kaggle / HuggingFace / arXiv / Tianchi (lỗi DNS), nên thông tin lấy từ GitHub (đọc trực tiếp) và kết quả WebSearch. Nguồn nào chỉ là kết quả search được ghi rõ; số liệu/license không thấy trong nguồn ghi **"chưa xác minh"**. Phạm vi dữ liệu: dữ liệu tiếng Anh/quốc tế dùng được để chọn phương pháp và dựng pipeline; dữ liệu tiếng Việt: tự tạo từ hệ thống (mục 5) hoặc ViEcomRec.
 
 | Liên quan | File |
 |---|---|
@@ -59,12 +59,14 @@
 | 10 | H&M Personalized Fashion (Kaggle) | (b) | 31.788.324 giao dịch, ~1,37M khách, 105.542 article | mua + ảnh/metadata | điều khoản cuộc thi (chưa xác minh) | 3 |
 | 11 | Instacart Market Basket | (b) | >3M đơn, >200K user | basket (mua) | "research use" (nguồn thứ cấp) | 3 |
 | 12 | Dunnhumby Complete Journey | (b) | 2.500 household, 2 năm | giao dịch + coupon | chưa xác minh | 2 |
-| 13 | Open Bandit Dataset (ZOZOTOWN) | (c) | ~26M dòng impression | impression + position + propensity | CC BY 4.0 (nguồn thứ cấp) | 4 (position bias) |
+| 13 | Open Bandit Dataset (ZOZOTOWN) | (c) | ~26M dòng impression (chưa xác minh trực tiếp; README chỉ nêu 7 ngày, 3 campaign, 2 policy) | impression + position + propensity | CC BY 4.0 (nguồn thứ cấp; README repo chỉ nêu Apache-2.0 cho code) | 4 (position bias) |
 | 14 | ViEcomRec (face cleanser, Việt Nam) | (a) | 369.099 interaction | user–item | chưa xác minh | 3 |
-| 15 | KuaiRec | (c) | 1.411 user × 3.327 video (ma trận gần đầy đủ) | xem/tương tác | chưa xác minh | 2 |
-| 16 | Tenrec (Tencent) | (c) | ~5M user, ~140M interaction | click/like/share/follow + negative thật | chưa xác minh | 2 |
-| 17 | Yambda (Yandex) | (d) | ~5B / 500M / 50M event | listen/like/dislike + `is_organic` | chưa xác minh | 2 |
-| 18 | Criteo 1TB Click Logs | (d) | ~4 tỷ dòng, 24 ngày | click quảng cáo (feature ẩn danh) | Terms of use (chưa xác minh) | 2 |
+| 15 | KuaiRec | (c) | small: 1.411 user × 3.327 video, 4.676.570 tương tác; big: 7.176 × 10.728, 12.530.806 | xem/tương tác | CC-BY-SA-4.0 (đã xác minh, GitHub) | 2 |
+| 16 | Tenrec (Tencent) | (c) | ~5M user, ~140M interaction (theo paper; README không nêu) | click/like/share/follow + negative thật | CC BY-NC 4.0 (đã xác minh, GitHub) | 2 |
+| 17 | Yambda (Yandex) | (d) | ~4,79–5 tỷ event (bản 500M, 50M), 10 tháng (nguồn: tin tức qua search) | listen/like/dislike + `is_organic` | chưa xác minh | 2 |
+| 18 | Amazon-M2 (KDD Cup 2023) | (c)/(d) | session đa locale (UK, JP, DE, ES, FR, IT); số liệu chưa xác minh | session-based + sinh tiêu đề | chưa xác minh | 4 |
+| 19 | Dressipi RecSys Challenge 2022 | (d) | ~1,1M session thời trang, ~24K item, 18 tháng (search) | view → 1 purchase + nhãn thuộc tính | chưa xác minh | 3 |
+| 20 | Criteo 1TB Click Logs | (d) | ~4 tỷ dòng, 24 ngày | click quảng cáo (feature ẩn danh) | Terms of use (chưa xác minh) | 2 |
 
 ### (a) Tiếng Việt / Việt Nam
 
@@ -75,7 +77,7 @@
 - Ánh xạ: user–item → `events_raw` (view/click) hoặc `fact_order_items`; dùng để thử pipeline gợi ý nội dung/popularity trên văn bản tiếng Việt.
 - Phù hợp ★3. Hạn chế: một ngành hàng, không có session/timestamp chắc chắn (chưa xác minh), quy mô nhỏ.
 
-> Không tìm thấy bộ dữ liệu hành vi công khai nào của Tiki/Shopee/Lazada trong các tìm kiếm của phiên này. Không bịa; xem mục 5 để tự dựng.
+> Ghi chú: dữ liệu hành vi tiếng Việt: tự tạo từ hệ thống (mục 5) hoặc dùng ViEcomRec; các bộ tiếng Anh/quốc tế bên dưới dùng được để chọn phương pháp và dựng pipeline (ID đã băm nên không phụ thuộc ngôn ngữ).
 
 ### (b) TMĐT công khai
 
@@ -86,15 +88,15 @@
 - ★5. Hạn chế: không có giá/danh mục/văn bản, không có impression/position, chỉ 4 tuần; lớn (cần chia nhỏ khi thử).
 
 **REES46 — eCommerce behavior data from multi category store** — Kaggle `mkechinov/ecommerce-behavior-data-from-multi-category-store` (tác giả Michael Kechinov, từ nền tảng REES46).
-- Cột (theo nguồn thứ cấp): event time, event type (view/cart/purchase, gồm cả remove_from_cart theo mô tả khác: chưa xác minh), product_id, category_id/code, brand, price, user_id, user_session. File 2019-Nov ~9 GB. Có dòng trùng hệt nhau (cần dedupe). Số dòng tổng và license: **chưa xác minh** (một thảo luận cộng đồng coi là dùng phi thương mại — không phải văn bản license).
+- Cột (theo nguồn thứ cấp): event time, event type (view/cart/purchase, gồm cả remove_from_cart theo mô tả khác: chưa xác minh), product_id, category_id/code, brand, price, user_id, user_session. File 2019-Nov ~9 GB. Có dòng trùng hệt nhau (cần dedupe). Quy mô theo search: ~9 triệu dòng cho 2 tháng (2019-10, 2019-11) từ cửa hàng mỹ phẩm/đa danh mục (nguồn thứ cấp; một nguồn khác nói file 900K dòng — khác file). License: **chưa xác minh** (một thảo luận cộng đồng coi là dùng phi thương mại — không phải văn bản license).
 - Ánh xạ gần như 1-1 với `events_raw` + `dim_products` (brand, price, category) → rất sát schema của ta. ★5. Hạn chế: không impression/position, giá USD, license chưa rõ.
 
 **RetailRocket** — Kaggle `retailrocket/ecommerce-dataset` (không mở được trang; thông tin qua GitHub/tài liệu thư viện).
 - 2.756.101 event (2.664.312 view, 69.332 addtocart, 22.457 transaction), 1.407.580 visitor, ~4,5 tháng; item properties 417.053 item (nguồn thứ cấp). File: `events.csv`, item properties, category tree. Giá trị đã băm. License: **chưa xác minh**.
 - Ánh xạ: events→`events_raw`, category tree→`categories`. ★4. Hạn chế: thưa, đã băm nên không có văn bản.
 
-**Amazon Reviews 2023** — https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023 ; site dự án amazon-reviews-2023.github.io; paper arXiv 2403.03952.
-- Gồm review (rating, text, helpful votes), item metadata (mô tả, giá, ảnh), link graph (bought-together); có split benchmark 5-core theo timestamp trong repo HF. Tổng số review/item, license: **chưa xác minh** (thẻ HF cho biết size 10B–100B).
+**Amazon Reviews 2023** — https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023 ; site dự án amazon-reviews-2023.github.io; paper arXiv 2403.03952. Đã xác minh (nguồn: WebSearch): ~570 triệu review, ~48 triệu sản phẩm, 33 danh mục (+ Unknown), dữ liệu tương tác đến 09/2023, tăng 245,2% so với bản trước; số chính xác 571,54M/48,19M không xác nhận được từ search.
+- Gồm review (rating, text, helpful votes), item metadata (mô tả, giá, ảnh), link graph (bought-together); có split benchmark 5-core theo timestamp trong repo HF. License: **chưa xác minh**.
 - Ánh xạ: rating/review→tín hiệu ngầm; metadata→`products`. ★3. Hạn chế: rating/review chứ không phải click; tiếng Anh; không session.
 
 **H&M Personalized Fashion Recommendations** — Kaggle (cuộc thi 2022).
@@ -115,19 +117,23 @@
 - ~26M dòng; mỗi dòng là một impression có feature, item được chọn, **position (1/2/3 = trái/giữa/phải)**, xác suất hành động logging và nhãn click; chiến dịch All/Men/Women. License **CC BY 4.0** (theo kết quả tìm kiếm; kiểm tra lại trang gốc).
 - Ánh xạ: `impression` + `position` → `events_raw.position`; dùng để validate IPS/DR và mô hình position bias. ★4 cho mảng debias. Hạn chế: chỉ 3 vị trí, 80 item.
 
-**KuaiRec** — https://kuairec.com ; https://github.com/chongminggao/KuaiRec ; arXiv 2202.10842. 1.411 user × 3.327 video, ma trận "small" quan sát gần đầy đủ để đánh giá không thiên lệch; có "big matrix" riêng. License: **chưa xác minh**. Dùng để thử đánh giá chống selection bias. ★2 (video, không phải TMĐT).
+**KuaiRec** — https://kuairec.com ; https://github.com/chongminggao/KuaiRec ; arXiv 2202.10842. 1.411 user × 3.327 video, ma trận "small" quan sát gần đầy đủ để đánh giá không thiên lệch; có "big matrix" riêng. License: **CC-BY-SA-4.0** (đã xác minh, GitHub). Tải từ Zenodo (https://zenodo.org/records/18164998). Small matrix 4.676.570 tương tác (mật độ 99,6%), big matrix 12.530.806 tương tác (mật độ 16,3%). Dùng để thử đánh giá chống selection bias. ★2 (video, không phải TMĐT).
 
-**Tenrec** — https://github.com/yuangh-x/2022-NIPS-Tenrec ; NeurIPS 2022 D&B. ~5M user, ~140M tương tác, 4 kịch bản, có negative thật, nhiều loại phản hồi. License: **chưa xác minh**. ★2 (nội dung/video).
+**Tenrec** — https://github.com/yuangh-x/2022-NIPS-Tenrec ; NeurIPS 2022 D&B. ~5M user, ~140M tương tác, 4 kịch bản, có negative thật, nhiều loại phản hồi (theo paper). Đã xác minh (GitHub): license **CC BY-NC 4.0** (phi thương mại), phải chấp nhận thỏa thuận ở trang chính thức khi tải; file QK-video/QB-video/QK-article/QB-article. ★2 (nội dung/video).
 
-**Yambda (Yandex)** — arXiv 2505.22238 ; Hugging Face (theo bài báo). ~5B event (cũng có bản 500M, 50M), ~1M user, ~9,4M track, flag `is_organic`, Parquet, chia theo thời gian toàn cục (GTS). License: **chưa xác minh**. Hữu ích để học cách chia theo thời gian & phân biệt organic/recommended. ★2.
+**Yambda (Yandex)** — arXiv 2505.22238 ; Hugging Face (theo bài báo). ~5B event (cũng có bản 500M, 50M), ~1M user, ~9,4M track, flag `is_organic`, Parquet, chia theo thời gian toàn cục (GTS). Đã xác minh (nguồn: WebSearch, tin tức): ~4,79 tỷ tương tác ẩn danh trong 10 tháng, phát hành 05/2025, có trên Hugging Face. License: **chưa xác minh**. Hữu ích để học cách chia theo thời gian & phân biệt organic/recommended. ★2.
 
 **Criteo 1TB Click Logs** — https://ailab.criteo.com/download-criteo-1tb-click-logs-dataset/ . 24 ngày, 13 feature số + 26 feature phân loại băm, ~4 tỷ dòng. Terms of use trên ailab.criteo.com: **chưa xác minh**. Dùng để thử mạng CTR (DeepFM, DCN). ★2.
 
 **Ali-CCP** — Tianchi (dataset 408 theo danh mục thứ cấp). ~84–85M exposure, ~3,3–3,4M click, ~18K conversion, 33 feature; chuẩn cho CTR/CVR đa tác vụ (ESMM). License **chưa xác minh**; có thể cần đăng ký Tianchi. ★3 vì có impression.
 
+**Amazon-M2 (NeurIPS 2023 D&B, KDD Cup 2023)** — paper arXiv 2307.09688; NeurIPS: https://papers.nips.cc/paper_files/paper/2023/hash/193df57a2366d032fb18dcac0698d09a-Abstract-Datasets_and_Benchmarks.html . Đã xác minh (nguồn: WebSearch): session mua sắm đa ngôn ngữ/đa locale (UK, JP, DE, ES, FR, IT; văn bản sản phẩm Anh/Đức/Nhật/Pháp/Ý/Tây Ban Nha), 3 tác vụ: next-product recommendation, next-product dưới domain shift, sinh tiêu đề sản phẩm tiếp theo; dùng cho KDD Cup 2023 (AIcrowd). Số session/sản phẩm và license: **chưa xác minh** (link GitHub `Amazon-M2/Amazon-M2` đoán thử trả 404). Có văn bản sản phẩm nên dùng cho session-based có content. ★4.
+
+**Dressipi — RecSys Challenge 2022 (1M Fashion Sessions)** — https://www.research-collection.ethz.ch/items/558fe8bb-63e0-47c9-a97f-ed5d9a493058 ; https://recsys.acm.org/recsys22/challenge/ . Đã xác minh (nguồn: WebSearch): session duyệt ẩn danh, mỗi session kết thúc bằng 1 lần mua, kèm nhãn thuộc tính sản phẩm (màu, cổ áo...); ~1,1 triệu session, ~24K item, 01/2020–06/2021; tháng cuối làm test, có item mới (cold-start). License: **chưa xác minh**. Dùng cho dự đoán item mua cuối phiên + cold-start bằng thuộc tính. ★3.
+
 ### (d) Cuộc thi / công ty
 
-**YooChoose — RecSys Challenge 2015** — (nguồn qua các paper). Train 9.249.729 session, 33.003.944 click, 1.150.753 buy (509.696 session có buy); test 2.312.432 session; ~6 tháng 2014, nhà bán lẻ châu Âu. License và nơi tải hiện nay: **chưa xác minh** (Kaggle/IEEE DataPort có bản; cần xác minh). Dùng cho dự đoán "session có mua không" và session-based. ★4.
+**YooChoose — RecSys Challenge 2015** — (nguồn qua các paper). Train 9.249.729 session, 33.003.944 click, 1.150.753 buy (509.696 session có buy); test 2.312.432 session; ~6 tháng 2014, nhà bán lẻ châu Âu. Đã xác minh (nguồn: WebSearch): trang chính thức RecSys Challenge 2015 mô tả "six months of activities of a big e-commerce business in Europe"; thư viện beta-recsys trỏ tới `yoochoose-data.7z` gồm file click và file buy (link S3 chưa kiểm tra còn sống). License: **chưa xác minh** (trang không nêu). Dùng cho dự đoán "session có mua không" và session-based. ★4.
 
 **Diginetica (CIKM Cup 2016 Track 2)** — https://competitions.codalab.org/competitions/11161 ; arXiv 1708.04479. 53.427 query có văn bản, 869.700 query không văn bản, 573.935 session, 1.127.764 click, 1.235.380 view, 18.025 purchase; metadata sản phẩm (danh mục, mô tả, giá). Nhiều user ẩn danh. Điều khoản tải: **chưa xác minh**. Vừa dùng cho recsys vừa cho search cá nhân hoá (file 02). ★4.
 
