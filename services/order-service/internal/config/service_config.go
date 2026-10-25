@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"order-service/internal/config/messagequeue/kafkaimpl"
-	"order-service/pkg/model"
-	"order-service/pkg/outbox"
 	"os"
 	"strconv"
 	"strings"
@@ -88,8 +86,6 @@ func initPostgresDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	db.AutoMigrate(&model.Order{}, &model.OrderItem{}, &outbox.CreateOrderEvent{}, &outbox.CancelOrderEvent{})
 
 	return db, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"order-service/internal/metrics"
 	"order-service/internal/repository"
 	"order-service/pkg/model"
 	"order-service/pkg/outbox"
@@ -150,6 +151,7 @@ func (s *OrderService) ExpireUnpaid(ctx context.Context, now time.Time) (int, er
 		switch {
 		case err == nil:
 			n++
+			metrics.OrdersPaymentExpiredTotal.Inc()
 		case ignorable(err):
 		default:
 			return n, err
@@ -173,6 +175,7 @@ func (s *OrderService) AutoDeliver(ctx context.Context, now time.Time) (int, err
 		switch {
 		case err == nil:
 			n++
+			metrics.OrdersAutoDeliveredTotal.Inc()
 		case ignorable(err):
 		default:
 			return n, err

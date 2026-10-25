@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"order-service/internal/client/productclient"
 	"order-service/internal/client/serviceclientmanager"
+	"order-service/internal/migrate"
 	"order-service/internal/repository"
 	productpb "order-service/pkg/client/productclient"
 	"order-service/pkg/events"
@@ -85,7 +86,7 @@ func testDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("connect test db: %v", err)
 	}
-	if err := repository.Migrate(db); err != nil {
+	if err := migrateDB(db); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	t.Cleanup(func() {
@@ -151,3 +152,12 @@ func emitted(t *testing.T, db *gorm.DB, topic string) []map[string]any {
 func statusOf(t *testing.T, s *OrderService, id uint64) string { return reload(t, s, id).Status }
 
 func msg(s string) *kafka.Message { return &kafka.Message{Value: []byte(s)} }
+
+// migrateDB chạy migration goose lên db (thay cho AutoMigrate cũ).
+func migrateDB(db *gorm.DB) error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	return migrate.Run(context.Background(), sqlDB)
+}

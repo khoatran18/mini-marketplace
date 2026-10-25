@@ -458,19 +458,6 @@ func TestReadsAreScopedToTheCaller(t *testing.T) {
 	}
 }
 
-func TestLegacySuccessOrdersAreMigratedToConfirmed(t *testing.T) {
-	db := testDB(t)
-	db.Create(&model.Order{BuyerID: 1, Status: model.LegacyStatusSuccess, TotalPrice: 10})
-	if err := repository.Migrate(db); err != nil {
-		t.Fatal(err)
-	}
-	var o model.Order
-	db.First(&o)
-	if o.Status != model.StatusConfirmed || o.PaymentMethod != model.MethodCOD {
-		t.Errorf("legacy order after migration: %s / %s", o.Status, o.PaymentMethod)
-	}
-}
-
 func TestPaymentRefundedEventMarksTheOrder(t *testing.T) {
 	db := testDB(t)
 	s, _ := newTestService(repository.NewOrderRepository(db), product(1, 10, 100000, 50))

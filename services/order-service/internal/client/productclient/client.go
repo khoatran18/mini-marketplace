@@ -3,6 +3,7 @@ package productclient
 import (
 	"context"
 	"order-service/internal/client/clientmanager"
+	"order-service/internal/requestid"
 	productpb "order-service/pkg/client/productclient"
 
 	"go.uber.org/zap"
@@ -37,7 +38,7 @@ func (p *ProductClient) GetProductsByID(ctx context.Context, input *GetProductsB
 		Id: input.IDs,
 	})
 	if err != nil {
-		p.ZapLogger.Error("ProductClient: GetProductsByID error", zap.Error(err))
+		requestid.Logger(ctx, p.ZapLogger).Error("ProductClient: GetProductsByID error", zap.Error(err))
 		return nil, err
 	}
 

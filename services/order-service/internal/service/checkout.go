@@ -8,12 +8,15 @@ import (
 	"errors"
 	"fmt"
 	"order-service/internal/client/productclient"
+	"order-service/internal/metrics"
 	"order-service/internal/repository"
+	"order-service/internal/requestid"
 	"order-service/pkg/model"
 	"regexp"
 	"slices"
 	"strings"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gorm.io/datatypes"
@@ -254,7 +257,17 @@ func newCheckoutID() (string, error) {
 
 // Checkout turns the cart (or explicit items) into one order per store. It is idempotent per
 // (buyer, idempotency key): repeating the call returns the same checkout without creating anything.
-func (s *OrderService) Checkout(ctx context.Context, in *CheckoutInput) (*CheckoutResult, error) {
+func (s *OrderService) Checkout(ctx context.Context, in *CheckoutInput) (res *CheckoutResult, err error) {
+	defer func() {
+		switch {
+		case err != nil:
+			metrics.CheckoutsTotal.WithLabelValues(metrics.ResultFailed).Inc()
+		case res != nil && res.Replayed:
+			metrics.CheckoutsTotal.WithLabelValues(metrics.ResultReplay).Inc()
+		default:
+			metrics.CheckoutsTotal.WithLabelValues(metrics.ResultSuccess).Inc()
+		}
+	}()
 	if in == nil || in.BuyerID == 0 {
 		return nil, status.Error(codes.InvalidArgument, "buyer_id is required")
 	}
@@ -330,7 +343,7 @@ func (s *OrderService) Checkout(ctx context.Context, in *CheckoutInput) (*Checko
 	}
 	c, orders, replayed, err := s.OrderRepo.CreateCheckout(ctx, create)
 	if err != nil {
-		s.ZapLogger.Error("OrderService: create checkout failed")
+		requestid.Logger(ctx, s.ZapLogger).Error("OrderService: create checkout failed", zap.Error(err))
 		return nil, status.Error(codes.Internal, "can not create the order")
 	}
 	return &CheckoutResult{Checkout: c, Orders: orders, Replayed: replayed}, nil

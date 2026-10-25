@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"order-service/internal/metrics"
 	"order-service/pkg/events"
 	"order-service/pkg/model"
 	"strings"
@@ -74,6 +75,8 @@ func (r *OrderRepository) CreateCheckout(ctx context.Context, in *CheckoutCreate
 		existing, orders, err := r.CheckoutByKey(ctx, in.Checkout.BuyerID, in.Checkout.IdempotencyKey)
 		return existing, orders, true, err
 	}
+	metrics.OrdersCreatedTotal.Add(float64(len(in.Orders)))
+	metrics.StatusTransitionsTotal.WithLabelValues(model.StatusPending).Add(float64(len(in.Orders)))
 	return in.Checkout, in.Orders, false, nil
 }
 
@@ -337,6 +340,10 @@ func (r *OrderRepository) Transition(ctx context.Context, orderID uint64, p Tran
 		out = &o
 		return nil
 	})
+	if err == nil && out != nil {
+		// the only place besides CreateCheckout that writes order_status_histories; counted after the commit
+		metrics.StatusTransitionsTotal.WithLabelValues(out.Status).Inc()
+	}
 	return out, err
 }
 

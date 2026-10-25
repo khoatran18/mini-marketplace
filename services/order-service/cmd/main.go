@@ -8,7 +8,10 @@ import (
 	"order-service/internal/client/clientmanager"
 	"order-service/internal/client/serviceclientmanager"
 	"order-service/internal/config"
+	"order-service/internal/metrics"
+	"order-service/internal/migrate"
 	"order-service/internal/repository"
+	"order-service/internal/requestid"
 	"order-service/internal/server"
 	"order-service/internal/service"
 	"order-service/pkg/events"
@@ -48,7 +51,11 @@ func main() {
 	}
 
 	// Schema (orders, items, history, checkouts, carts, outbox) and legacy data
-	if err := repository.Migrate(serviceConfig.PostgresDB); err != nil {
+	sqlDB, err := serviceConfig.PostgresDB.DB()
+	if err != nil {
+		log.Fatalf("Can not get sql.DB: %v", err)
+	}
+	if err := migrate.Run(context.Background(), sqlDB); err != nil {
 		log.Fatalf("Can not migrate database: %v", err)
 	}
 
@@ -124,11 +131,12 @@ func main() {
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
 		adm.AttachDB(sqlDB)
 	}
+	metrics.Register(adm.Registry(), "order-service")
 	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": "domain_events"}, func() float64 { n, _ := orderRepo.Backlog(); return float64(n) })
 	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": "domain_events"}, func() float64 { _, a := orderRepo.Backlog(); return a })
 	adm.GaugeFunc("mm_worker_last_tick_timestamp_seconds", "Unix time of the last timers round.", map[string]string{"worker": "order_timers"}, func() float64 { return float64(lastTick.Load()) })
 
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	orderpb.RegisterOrderServiceServer(s, &server.OrderServer{
 		OrderService: orderService,
 		ZapLogger:    serviceConfig.ZapLogger,

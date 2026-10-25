@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"order-service/internal/metrics"
 	"order-service/internal/repository"
 	"order-service/pkg/model"
 
@@ -136,5 +137,6 @@ func (s *OrderService) MergeCart(ctx context.Context, userID uint64, items []Lin
 	if err := s.OrderRepo.MergeCart(ctx, userID, lines); err != nil {
 		return nil, cartError(err)
 	}
+	metrics.CartMergesTotal.Inc()
 	return s.GetCart(ctx, userID)
 }

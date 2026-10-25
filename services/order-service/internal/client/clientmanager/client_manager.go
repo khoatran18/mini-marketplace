@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"order-service/internal/config"
+	"order-service/internal/requestid"
 	authpb "order-service/pkg/client/authclient"
 	productpb "order-service/pkg/client/productclient"
 
@@ -23,7 +24,7 @@ func NewServiceClient[T any](addr string, createClient func(conn *grpc.ClientCon
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
-		//grpc.WithUnaryInterceptor(interceptor),
+		grpc.WithChainUnaryInterceptor(requestid.UnaryClientInterceptor()),
 	)
 
 	if err != nil {
