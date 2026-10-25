@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"mini-marketplace/shared/events"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"payment-service/pkg/events"
 	"payment-service/pkg/model"
 	"strings"
 	"sync"
@@ -621,6 +621,11 @@ func TestCancelAndExpiry(t *testing.T) {
 	if h.reload(t, c.ID).Status != model.StatusExpired || h.reload(t, b.ID).Status != model.StatusProcessing {
 		t.Error("expiry must only close payments waiting for the buyer")
 	}
+	// R6: a payment stuck in PROCESSING (the provider never answered) is closed once the grace period is over
+	h.clock.advance(ProcessingGrace)
+	if n, err := h.ExpirePayments(ctx); err != nil || n != 1 || h.reload(t, b.ID).Status != model.StatusExpired {
+		t.Fatalf("stale PROCESSING payment: n=%d err=%v status=%s", n, err, h.reload(t, b.ID).Status)
+	}
 	// confirming after the deadline marks it expired and refuses
 	d := h.newPayment(t, "co_d", model.MethodCard, 100000)
 	h.clock.advance(20 * time.Minute)
@@ -675,6 +680,9 @@ func TestRefunds(t *testing.T) {
 		t.Errorf("fully refunded: %+v", got)
 	}
 	ev := h.emitted(t, "payment.refunded")
+	if len(ev) == 2 && (ev[0]["payment_status"] != "PARTIALLY_REFUNDED" || ev[1]["payment_status"] != "REFUNDED") {
+		t.Errorf("events must carry the payment status after the refund: %v", ev)
+	}
 	if len(ev) != 2 || ev[0]["order_id"] != float64(11) || ev[0]["amount_minor"] != float64(30000) || ev[0]["checkout_id"] != "co_1" || ev[1]["order_id"] != float64(0) {
 		t.Errorf("events: %v", ev)
 	}

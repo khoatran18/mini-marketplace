@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-	"user-service/internal/config/messagequeue/kafkaimpl"
 	"user-service/internal/migrate"
 
 	"github.com/redis/go-redis/v9"

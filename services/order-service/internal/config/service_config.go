@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"order-service/internal/config/messagequeue/kafkaimpl"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"os"
 	"strconv"
 	"strings"

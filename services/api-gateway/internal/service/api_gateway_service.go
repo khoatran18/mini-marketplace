@@ -1,8 +1,8 @@
 package service
 
 import (
-	"api-gateway/internal/config/messagequeue"
-	"api-gateway/internal/config/messagequeue/kafkaimpl"
+	"mini-marketplace/shared/messagequeue"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"time"
 
 	"github.com/redis/go-redis/v9"

@@ -270,3 +270,57 @@ func TestDomainMetricsExposed(t *testing.T) {
 		t.Error("unknown label values must be dropped")
 	}
 }
+
+func TestMetricsTokenGatesMetricsAndVersion(t *testing.T) {
+	t.Setenv("METRICS_TOKEN", "s3cret")
+	t.Setenv("PPROF_ENABLED", "true")
+	s := newTestServer()
+	s.MarkStarted()
+	do := func(path, auth string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		if auth != "" {
+			req.Header.Set("Authorization", auth)
+		}
+		rec := httptest.NewRecorder()
+		s.Handler().ServeHTTP(rec, req)
+		return rec
+	}
+	for _, p := range []string{"/metrics", "/version", "/debug/pprof/"} {
+		for _, auth := range []string{"", "Bearer wrong", "s3cret", "Basic s3cret"} {
+			if rec := do(p, auth); rec.Code != http.StatusUnauthorized || rec.Header().Get("WWW-Authenticate") == "" {
+				t.Fatalf("%s auth=%q: got %d, want 401", p, auth, rec.Code)
+			}
+		}
+		if rec := do(p, "Bearer s3cret"); rec.Code != http.StatusOK {
+			t.Fatalf("%s with token: got %d", p, rec.Code)
+		}
+	}
+	if rec := do("/metrics", "Bearer s3cret"); !strings.Contains(rec.Body.String(), "mm_build_info") {
+		t.Fatal("metrics body missing mm_build_info")
+	}
+	// probes stay open for Docker healthchecks and wait-ready.sh
+	for _, p := range []string{"/health", "/healthz", "/ready", "/readyz"} {
+		if rec := do(p, ""); rec.Code != http.StatusOK {
+			t.Fatalf("%s without token: got %d, want 200", p, rec.Code)
+		}
+	}
+}
+
+func TestMetricsTokenEmptyKeepsEndpointsOpenAndMountUngated(t *testing.T) {
+	t.Setenv("METRICS_TOKEN", "")
+	s := newTestServer()
+	for _, p := range []string{"/metrics", "/version"} {
+		if code, _, _ := get(t, s.Handler(), p); code != http.StatusOK {
+			t.Fatalf("%s with no token configured: got %d", p, code)
+		}
+	}
+	t.Setenv("METRICS_TOKEN", "tok")
+	m := New(Options{Service: "x", Mount: func(mux *http.ServeMux) {
+		mux.HandleFunc("POST /internal/hook", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusAccepted) })
+	}})
+	rec := httptest.NewRecorder()
+	m.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/internal/hook", nil))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("mounted route must not be gated by METRICS_TOKEN, got %d", rec.Code)
+	}
+}

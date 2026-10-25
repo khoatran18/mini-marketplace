@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"errors"
+	"mini-marketplace/shared/events"
 	"order-service/internal/metrics"
-	"order-service/pkg/events"
 	"order-service/pkg/model"
 	"strings"
 	"time"
@@ -414,6 +414,13 @@ func (r *OrderRepository) RequestRefund(ctx context.Context, checkoutID string, 
 // MarkPaymentRefunded records that the money of an order went back to the buyer (event from payment-service).
 func (r *OrderRepository) MarkPaymentRefunded(ctx context.Context, orderID uint64) error {
 	return r.DB.WithContext(ctx).Model(&model.Order{}).Where("id = ? AND payment_status = ?", orderID, model.PaymentPaid).
+		Update("payment_status", model.PaymentRefunded).Error
+}
+
+// MarkCheckoutPaymentRefunded marks every still-PAID order of a checkout as refunded: its payment was refunded in
+// full (for example by an administrator), so no order of it holds money any more.
+func (r *OrderRepository) MarkCheckoutPaymentRefunded(ctx context.Context, checkoutID string) error {
+	return r.DB.WithContext(ctx).Model(&model.Order{}).Where("checkout_id = ? AND payment_status = ?", checkoutID, model.PaymentPaid).
 		Update("payment_status", model.PaymentRefunded).Error
 }
 

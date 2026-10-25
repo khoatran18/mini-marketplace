@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
+	"mini-marketplace/shared/messagequeue"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"order-service/internal/client/productclient"
 	"order-service/internal/client/serviceclientmanager"
-	"order-service/internal/config/messagequeue"
-	"order-service/internal/config/messagequeue/kafkaimpl"
 	"order-service/internal/repository"
 	"os"
 	"strconv"

@@ -8,7 +8,7 @@ import { OrderSummary } from '../../components/checkout/OrderSummary';
 import { PaymentMethodPicker } from '../../components/checkout/PaymentMethodPicker';
 import { useCart } from '../../components/cart/CartProvider';
 import { EmptyBlock, ErrorBlock, LoadingBlock, Notice } from '../../components/ui/StateBlock';
-import { checkoutRequest, getPaymentMethodsRequest, previewCheckoutRequest } from '../../lib/api';
+import { checkoutRequest, getCheckoutRequest, getPaymentMethodsRequest, previewCheckoutRequest } from '../../lib/api';
 import { useApiData, useAuthedAction } from '../../lib/hooks';
 import { track } from '../../lib/tracking';
 import type { PaymentMethodInfo } from '../../lib/types';
@@ -62,6 +62,19 @@ export function CheckoutClient() {
       );
       keyRef.current = newKey();
       await refresh();
+      // The payment of an online checkout is created asynchronously (ADR-24): poll GET /checkouts/:id for a few
+      // seconds so the buyer lands on the payment page instead of an order that still says "processing".
+      if (!result.payment && result.checkout_id && method !== 'COD') {
+        for (let i = 0; i < 8 && !result.payment; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          try {
+            const polled = await run((token) => getCheckoutRequest(result.checkout_id, token));
+            if (polled.payment) result.payment = polled.payment;
+          } catch {
+            break; // fall back to the order page
+          }
+        }
+      }
       if (result.payment && result.payment.next_action !== 'none') {
         router.push(result.payment.pay_url || `/pay/${result.payment.id}`);
       } else if (result.orders?.length === 1) {

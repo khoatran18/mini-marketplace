@@ -3,12 +3,13 @@
 // (readiness), /metrics (Prometheus) and /version. It also registers the standard
 // gRPC health service and records gRPC/HTTP/DB-pool metrics.
 //
-// The package has no dependencies on service code; the same file is copied into each
-// service module (see ADR-8). Keep the copies identical.
+// Gateway keeps its own copy because it adds gateway metrics in this package (see ADR-33). Based on the shared ops.
 package ops
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -85,6 +86,8 @@ type Server struct {
 	checks  []Check
 	mount   func(mux *http.ServeMux)
 	started time.Time
+	// metricsToken (env METRICS_TOKEN) protects /metrics, /version and /debug/pprof with a bearer token; empty = open.
+	metricsToken string
 
 	startedFlag atomicBool
 	draining    atomicBool
@@ -125,6 +128,7 @@ func New(opts Options) *Server {
 		checks:       opts.Checks,
 		mount:        opts.Mount,
 		started:      time.Now(),
+		metricsToken: strings.TrimSpace(os.Getenv("METRICS_TOKEN")),
 		cacheTTL:     time.Duration(envInt("READY_CACHE_SECONDS", defaultCacheSeconds)) * time.Second,
 		checkTimeout: time.Duration(envInt("READY_CHECK_TIMEOUT_MS", int(defaultCheckTimeout/time.Millisecond))) * time.Millisecond,
 		drain:        time.Duration(envInt("DRAIN_SECONDS", defaultDrainSeconds)) * time.Second,
@@ -247,7 +251,29 @@ func (s *Server) Handler() http.Handler {
 	if os.Getenv("PPROF_ENABLED") == "true" {
 		registerPprof(mux)
 	}
-	return mux
+	return s.guard(mux)
+}
+
+// guard requires "Authorization: Bearer <METRICS_TOKEN>" on /metrics, /version and /debug/pprof/* when a token is
+// configured. Probes (/health /healthz /ready /readyz) and service-mounted routes (e.g. the HMAC-signed payment
+// webhook) are never gated here. With no token configured the handler is returned unchanged.
+func (s *Server) guard(next http.Handler) http.Handler {
+	if s.metricsToken == "" {
+		return next
+	}
+	want := sha256.Sum256([]byte(s.metricsToken))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		if p == "/metrics" || p == "/version" || strings.HasPrefix(p, "/debug/pprof") {
+			got := sha256.Sum256([]byte(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")))
+			if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") || subtle.ConstantTimeCompare(got[:], want[:]) != 1 {
+				w.Header().Set("WWW-Authenticate", `Bearer realm="metrics"`)
+				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Start listens on the admin port in the background.

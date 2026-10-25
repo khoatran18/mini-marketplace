@@ -114,3 +114,36 @@ func (r *ProductRepository) MarkShipped(ctx context.Context, orderID uint64, ite
 	}
 	return err
 }
+
+// ReturnInventory puts the goods of a returned (REFUNDED) order back on the shelf: available goes up and the
+// sold counter down. Exactly once per order; no-op when the order never shipped (nothing was sold) or was
+// already returned.
+func (r *ProductRepository) ReturnInventory(ctx context.Context, orderID uint64, items []ItemQuantity) error {
+	done := false
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var event outbox.ValidateOrderEvent
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("order_id = ?", orderID).First(&event).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if !event.Success || !event.Shipped || event.Restored || event.Returned {
+			return nil
+		}
+		ref := strconv.FormatUint(orderID, 10)
+		for _, item := range sortItems(items) {
+			if _, err := applyStock(tx, item.ProductID, item.Quantity, 0, -item.Quantity, model.ReasonReturn, "order", ref); err != nil {
+				return err
+			}
+		}
+		if err := tx.Model(&outbox.ValidateOrderEvent{}).Where("order_id = ?", orderID).Update("returned", true).Error; err != nil {
+			return err
+		}
+		done = true
+		return nil
+	})
+	_ = done // no dedicated reservation metric label (pkg/ops is shared); the ledger row (reason "return") records it
+	return err
+}

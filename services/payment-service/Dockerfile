@@ -1,9 +1,16 @@
 # syntax=docker/dockerfile:1
 FROM golang:1.25-alpine AS builder
-WORKDIR /app
-COPY go.mod go.sum ./
+# Build context = REPO ROOT (the service imports the shared module via "replace ../../shared"):
+#   docker build -f services/payment-service/Dockerfile .
+WORKDIR /src
+COPY shared/go.mod shared/go.sum ./shared/
+COPY services/payment-service/go.mod services/payment-service/go.sum ./services/payment-service/
+WORKDIR /src/services/payment-service
 RUN go mod download
-COPY . .
+WORKDIR /src
+COPY shared ./shared
+COPY services/payment-service ./services/payment-service
+WORKDIR /src/services/payment-service
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/web ./cmd
 
 FROM alpine:3.20

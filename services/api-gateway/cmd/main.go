@@ -96,7 +96,7 @@ func main() {
 	grpcAddrs := config.NewGRPCAddrConfig()
 	checks := []ops.Check{
 		ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
-		ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+		ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
 	}
 	for name, addr := range grpcAddrs {
 		// payments and analytics are add-ons: the shop keeps working (COD, no dashboards) when they are down

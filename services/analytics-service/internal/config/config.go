@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"analytics-service/internal/config/messagequeue/kafkaimpl"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 )
 
 // Kafka bundles the Kafka helpers shared by all services.
@@ -28,6 +28,8 @@ type Config struct {
 	FlushInterval      time.Duration
 	FlushRows          int
 	BufferMax          int
+	SpoolDir           string // durable spool for rows ClickHouse could not take (empty = disabled)
+	SpoolMaxBytes      int64
 	Brokers            []string
 	// Retention of raw events in months (the TTL of events_raw)
 	EventsRetentionMonths int
@@ -59,6 +61,8 @@ func FromEnv() (*Config, error) {
 		FlushInterval:         time.Duration(envInt("ANALYTICS_FLUSH_INTERVAL_MS", 2000)) * time.Millisecond,
 		FlushRows:             envInt("ANALYTICS_FLUSH_ROWS", 5000),
 		BufferMax:             envInt("ANALYTICS_BUFFER_MAX_ROWS", 100000),
+		SpoolDir:              os.Getenv("ANALYTICS_SPOOL_DIR"),
+		SpoolMaxBytes:         int64(envInt("ANALYTICS_SPOOL_MAX_MB", 256)) << 20,
 		EventsRetentionMonths: envInt("EVENTS_RETENTION_MONTHS", 13),
 	}
 	for _, b := range strings.Split(os.Getenv("KAFKA_BROKERS_ADDR"), ",") {

@@ -10,7 +10,9 @@ type ValidateOrderEvent struct {
 	// Restored is set once the reserved inventory has been given back after an order cancellation.
 	Restored bool `gorm:"notnull;default:false"`
 	// Shipped is set once the reserved quantity has left the warehouse (order shipped).
-	Shipped   bool      `gorm:"notnull;default:false"`
+	Shipped bool `gorm:"notnull;default:false"`
+	// Returned is set once the shipped goods of a refunded (returned) order went back to available stock.
+	Returned  bool      `gorm:"notnull;default:false"`
 	CreatedAt time.Time `gorm:"notnull;index:idx_status_created_at,priority:2"`
 }
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log"
+	"mini-marketplace/shared/events"
+	"mini-marketplace/shared/ops"
 	"net"
 	"order-service/internal/client/clientmanager"
 	"order-service/internal/client/serviceclientmanager"
@@ -14,8 +16,6 @@ import (
 	"order-service/internal/requestid"
 	"order-service/internal/server"
 	"order-service/internal/service"
-	"order-service/pkg/events"
-	"order-service/pkg/ops"
 	orderpb "order-service/pkg/pb"
 	"os"
 	"sync/atomic"
@@ -118,7 +118,7 @@ func main() {
 		Checks: []ops.Check{
 			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
 			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
-			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
 			ops.GRPCHealthCheck("product-service", config.NewGRPCAddrConfig()["ProductClientAddr"], true),
 			ops.FuncCheck("timers_worker", true, func(ctx context.Context) error {
 				if time.Since(time.Unix(lastTick.Load(), 0)) > 3*timersInterval {
@@ -134,6 +134,7 @@ func main() {
 	metrics.Register(adm.Registry(), "order-service")
 	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": "domain_events"}, func() float64 { n, _ := orderRepo.Backlog(); return float64(n) })
 	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": "domain_events"}, func() float64 { _, a := orderRepo.Backlog(); return a })
+	events.Register(adm.Registry(), "order-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
 	adm.GaugeFunc("mm_worker_last_tick_timestamp_seconds", "Unix time of the last timers round.", map[string]string{"worker": "order_timers"}, func() float64 { return float64(lastTick.Load()) })
 
 	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))

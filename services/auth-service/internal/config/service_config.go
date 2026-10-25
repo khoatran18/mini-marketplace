@@ -1,11 +1,11 @@
 package config
 
 import (
-	"auth-service/internal/config/messagequeue/kafkaimpl"
 	"auth-service/internal/migrate"
 	"context"
 	"errors"
 	"fmt"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"os"
 	"strconv"
 	"strings"

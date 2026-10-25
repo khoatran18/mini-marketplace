@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"product-service/internal/config/messagequeue"
-	"product-service/internal/config/messagequeue/kafkaimpl"
+	"mini-marketplace/shared/messagequeue"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"product-service/internal/repository"
 	"product-service/internal/service/adapter"
 	"product-service/pkg/dto"
@@ -240,6 +240,9 @@ func (s *ProductService) GetProductByID(ctx context.Context, input *dto.GetProdu
 	product, err := s.ProductRepo.GetProductByID(ctx, input.ID)
 	if err != nil {
 		s.ZapLogger.Warn("ProductService: failed to get product", zap.Error(err))
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, status.Error(codes.NotFound, "product not found")
+		}
 		return nil, err
 	}
 

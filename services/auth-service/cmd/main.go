@@ -6,10 +6,10 @@ import (
 	"auth-service/internal/requestid"
 	"auth-service/internal/server"
 	"auth-service/internal/service"
-	"auth-service/pkg/ops"
 	authpb "auth-service/pkg/pb"
 	"context"
 	"log"
+	"mini-marketplace/shared/ops"
 	"net"
 	"os"
 	"time"
@@ -54,7 +54,7 @@ func main() {
 		Checks: []ops.Check{
 			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
 			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
-			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
 		},
 	})
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {

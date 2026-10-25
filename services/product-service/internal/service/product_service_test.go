@@ -320,3 +320,43 @@ func TestGetProductsPaginationIsBounded(t *testing.T) {
 }
 
 func jsonMarshal(v any) ([]byte, error) { return json.Marshal(v) }
+
+func statusMsg(orderID uint64, status string, productID uint64, qty int64) *kafka.Message {
+	b, _ := jsonMarshal(map[string]any{"order_id": orderID, "status": status, "items": []map[string]any{{"product_id": productID, "quantity": qty}}})
+	return &kafka.Message{Value: b}
+}
+
+// R6: an approved return (REFUNDED) puts shipped goods back on the shelf, exactly once, and only after shipping.
+func TestReturnedOrderRestocksOnce(t *testing.T) {
+	s := testService(t)
+	ctx := context.Background()
+	a := seed(t, s, 1, 10, 10)
+	item := dto.ItemEvent{ProductID: a, Quantity: 4}
+	if err := s.ValidateProductInventory(ctx, createOrderMsg(20, item)); err != nil {
+		t.Fatal(err)
+	}
+	// REFUNDED before SHIPPED (out of order / never shipped) must not touch stock
+	if err := s.MarkShippedFromOrderEvent(ctx, statusMsg(20, "REFUNDED", a, 4)); err != nil {
+		t.Fatal(err)
+	}
+	if got := inventoryOf(t, s, a); got != 6 {
+		t.Fatalf("unshipped order restocked: %d", got)
+	}
+	if err := s.MarkShippedFromOrderEvent(ctx, statusMsg(20, "SHIPPED", a, 4)); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ { // duplicate deliveries
+		if err := s.MarkShippedFromOrderEvent(ctx, statusMsg(20, "REFUNDED", a, 4)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p, _ := s.ProductRepo.GetProductByID(ctx, a)
+	if p.Inventory != 10 || p.Reserved != 0 || p.Sold != 0 {
+		t.Errorf("after return: inventory=%d reserved=%d sold=%d, want 10/0/0", p.Inventory, p.Reserved, p.Sold)
+	}
+	var n int64
+	s.ProductRepo.DB.Model(&model.InventoryLedger{}).Where("product_id = ? AND reason = ?", a, model.ReasonReturn).Count(&n)
+	if n != 1 {
+		t.Errorf("return ledger rows = %d, want 1", n)
+	}
+}

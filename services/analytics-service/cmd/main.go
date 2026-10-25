@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	_ "time/tzdata" // Asia/Ho_Chi_Minh must resolve inside the minimal alpine image
@@ -22,8 +23,8 @@ import (
 	"analytics-service/internal/server"
 	"analytics-service/internal/service"
 	"analytics-service/internal/store"
-	"analytics-service/pkg/ops"
 	pb "analytics-service/pkg/pb"
+	"mini-marketplace/shared/ops"
 )
 
 func main() {
@@ -52,7 +53,18 @@ func main() {
 	db := root.WithDatabase(cfg.ClickHouseDB)
 
 	sink := store.NewSink(db, cfg.FlushInterval, cfg.FlushRows, cfg.BufferMax)
-	go sink.Run(ctx)
+	if cfg.SpoolDir != "" {
+		sp, err := store.NewSpool(cfg.SpoolDir, cfg.SpoolMaxBytes)
+		if err != nil {
+			log.Fatalf("ANALYTICS_SPOOL_DIR %q: %v", cfg.SpoolDir, err)
+		}
+		sink.WithSpool(sp)
+		log.Printf("durable spool enabled: %s (max %d MiB)", cfg.SpoolDir, cfg.SpoolMaxBytes>>20)
+	}
+	sinkCtx, stopSink := context.WithCancel(ctx)
+	var sinkWG sync.WaitGroup
+	sinkWG.Add(1)
+	go func() { defer sinkWG.Done(); sink.Run(sinkCtx) }()
 
 	var rdb *redis.Client
 	var cache service.Cache
@@ -83,7 +95,7 @@ func main() {
 	}
 	checks := []ops.Check{
 		ops.FuncCheck("clickhouse", true, func(ctx context.Context) error { return db.Ping(ctx) }),
-		ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+		ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
 		ops.FuncCheck("insert_pipeline", false, func(ctx context.Context) error {
 			if st := sink.Stats(); st.Buffered > 0 && time.Since(st.LastSuccess) > time.Minute {
 				return errors.New("inserts are failing")
@@ -100,7 +112,10 @@ func main() {
 	g("mm_ch_insert_lag_seconds", "Age of the oldest row still waiting for insertion.", func() float64 { return sink.Stats().OldestAgeSeconds })
 	g("mm_ch_rows_inserted_total", "Rows inserted into ClickHouse.", func() float64 { return float64(sink.Stats().Inserted) })
 	g("mm_ch_insert_failures_total", "Failed insert batches.", func() float64 { return float64(sink.Stats().FailedBatches) })
-	g("mm_ch_rows_dropped_total", "Rows dropped because the buffer was full.", func() float64 { return float64(sink.Stats().Dropped) })
+	g("mm_ch_rows_dropped_total", "Rows lost: RAM buffer full and no room in (or no) durable spool, or corrupt spool lines.", func() float64 { return float64(sink.Stats().Dropped) })
+	g("mm_ch_rows_spooled_total", "Rows written to the durable spool (ANALYTICS_SPOOL_DIR) instead of being dropped.", func() float64 { return float64(sink.Stats().Spooled) })
+	g("mm_ch_rows_replayed_total", "Rows replayed from the durable spool into ClickHouse.", func() float64 { return float64(sink.Stats().Replayed) })
+	g("mm_ch_spool_bytes", "Current size of the durable spool file.", func() float64 { return float64(sink.Stats().SpoolBytes) })
 	g("mm_events_accepted_total", "Tracking events accepted.", func() float64 { a, _ := svc.Counters(); return float64(a) })
 	g("mm_events_rejected_total", "Tracking events rejected (validation).", func() float64 { _, r := svc.Counters(); return float64(r) })
 
@@ -109,7 +124,11 @@ func main() {
 	reflection.Register(s)
 
 	log.Printf("Analytics Server listening at %v", lis.Addr())
-	if err := adm.ServeGRPC(s, lis); err != nil {
+	err = adm.ServeGRPC(s, lis)
+	// Graceful stop (SIGTERM): flush the buffer into ClickHouse, spooling whatever it cannot take.
+	stopSink()
+	sinkWG.Wait()
+	if err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 }

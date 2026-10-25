@@ -2,7 +2,7 @@ package repository
 
 import (
 	"errors"
-	"product-service/pkg/events"
+	"mini-marketplace/shared/events"
 	"product-service/pkg/model"
 	"product-service/pkg/ops"
 	"strconv"

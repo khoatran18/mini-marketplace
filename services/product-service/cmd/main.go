@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"mini-marketplace/shared/events"
 	"net"
 	"os"
 	"product-service/internal/config"
@@ -10,7 +11,6 @@ import (
 	"product-service/internal/requestid"
 	"product-service/internal/server"
 	"product-service/internal/service"
-	"product-service/pkg/events"
 	"product-service/pkg/ops"
 	productpb "product-service/pkg/pb"
 	"time"
@@ -110,7 +110,7 @@ func main() {
 		Checks: []ops.Check{
 			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
 			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
-			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
 		},
 	})
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
@@ -123,6 +123,7 @@ func main() {
 	}
 	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": "domain_events"}, func() float64 { n, _ := backlog(); return n })
 	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": "domain_events"}, func() float64 { _, a := backlog(); return a })
+	events.Register(adm.Registry(), "product-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
 	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	productpb.RegisterProductServiceServer(s, &productServer)
 	log.Printf("Product Server Listen at %v", lis.Addr())

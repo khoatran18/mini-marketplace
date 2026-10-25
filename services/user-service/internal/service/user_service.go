@@ -1,9 +1,9 @@
 package service
 
 import (
+	"mini-marketplace/shared/messagequeue"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"user-service/internal/client/serviceclientmanager"
-	"user-service/internal/config/messagequeue"
-	"user-service/internal/config/messagequeue/kafkaimpl"
 	"user-service/internal/repository"
 
 	"go.uber.org/zap"

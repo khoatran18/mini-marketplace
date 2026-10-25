@@ -102,6 +102,21 @@ func msg(v any) *kafka.Message {
 	return &kafka.Message{Value: b}
 }
 
+// R7: a rejected return (REFUND_REQUESTED -> DELIVERED) must not overwrite the first DELIVERED fact.
+func TestRejectedReturnDoesNotRewriteDelivered(t *testing.T) {
+	out := &memSink{}
+	c := &Consumers{Out: out}
+	ctx := context.Background()
+	at := now.Format(time.RFC3339Nano)
+	_ = c.HandleOrderStatus(ctx, msg(map[string]any{"order_id": 7, "status": "DELIVERED", "prev": "SHIPPED", "at": at}))
+	_ = c.HandleOrderStatus(ctx, msg(map[string]any{"order_id": 7, "status": "REFUND_REQUESTED", "prev": "DELIVERED", "at": at}))
+	_ = c.HandleOrderStatus(ctx, msg(map[string]any{"order_id": 7, "status": "DELIVERED", "prev": "REFUND_REQUESTED", "at": at}))
+	rows := out.rows["fact_order_status"]
+	if len(rows) != 2 || rows[0].(store.OrderStatusRow).Status != "DELIVERED" || rows[1].(store.OrderStatusRow).Status != "REFUND_REQUESTED" {
+		t.Fatalf("want DELIVERED + REFUND_REQUESTED only, got %+v", rows)
+	}
+}
+
 func TestConsumersMapEvents(t *testing.T) {
 	out := &memSink{}
 	c := &Consumers{Out: out}

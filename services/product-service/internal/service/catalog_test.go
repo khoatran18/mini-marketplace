@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"mini-marketplace/shared/events"
 	"product-service/internal/repository"
 	"product-service/pkg/dto"
-	"product-service/pkg/events"
 	"product-service/pkg/model"
 	"strings"
 	"testing"
@@ -445,6 +445,11 @@ func TestDomainEventsAreEmittedAndPublished(t *testing.T) {
 	if pending != 1 {
 		t.Errorf("backlog = %d, want 1", pending)
 	}
+	// the failed row waits for its backoff, then goes out
+	if n, _ := events.PublishBatch(ctx, s.ProductRepo.DB, pub, 100, time.Second); n != 0 {
+		t.Errorf("row retried before its backoff: %d", n)
+	}
+	s.ProductRepo.DB.Exec("UPDATE domain_events SET next_attempt_at = now() - interval '1 second' WHERE status = 'FAILED'")
 	if n, err := events.PublishBatch(ctx, s.ProductRepo.DB, pub, 100, time.Second); err != nil || n != 1 {
 		t.Errorf("retry: %d %v", n, err)
 	}
@@ -455,5 +460,13 @@ func TestSlugify(t *testing.T) {
 		if got := slugify(in); got != want {
 			t.Errorf("slugify(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestGetProductByIDNotFoundIsNotFound(t *testing.T) {
+	s := testService(t)
+	_, err := s.GetProductByID(context.Background(), &dto.GetProductByIDInput{ID: 999999999})
+	if status.Code(err) != codes.NotFound {
+		t.Fatalf("want NotFound, got %v", err)
 	}
 }

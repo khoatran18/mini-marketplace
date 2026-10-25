@@ -70,7 +70,11 @@ func TestRunEmptyDBAndIdempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.Create(&model.Account{Username: "u", Password: "p", Role: "buyer"}).Error; err == nil {
-		t.Fatal("expected unique violation on username")
+		t.Fatal("expected unique violation on (username, role)")
+	}
+	// R5: same username under another role is allowed.
+	if err := db.Create(&model.Account{Username: "u", Password: "p", Role: "seller"}).Error; err != nil {
+		t.Fatalf("same username other role should be allowed: %v", err)
 	}
 }
 

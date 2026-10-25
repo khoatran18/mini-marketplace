@@ -1,8 +1,6 @@
 package service
 
 import (
-	"auth-service/internal/config/messagequeue"
-	"auth-service/internal/config/messagequeue/kafkaimpl"
 	"auth-service/internal/repository"
 	"auth-service/internal/service/adapter"
 	"auth-service/pkg/dto"
@@ -13,6 +11,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log"
+	"mini-marketplace/shared/messagequeue"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"regexp"
 	"time"
 

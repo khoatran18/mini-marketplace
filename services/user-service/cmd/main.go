@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"mini-marketplace/shared/ops"
 	"net"
 	"os"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"user-service/internal/requestid"
 	"user-service/internal/server"
 	"user-service/internal/service"
-	"user-service/pkg/ops"
 	userpb "user-service/pkg/pb"
 
 	"github.com/lpernett/godotenv"
@@ -61,6 +61,10 @@ func main() {
 		}
 	}
 
+	if os.Getenv("SEED_DEMO_DATA") == "true" {
+		userService.SeedDemoSeller(context.Background()) // store for the demo seller1 (R9)
+	}
+
 	// Create go routine for publishing PwdVersion Kafka to API Gateway
 	ctx := context.Context(context.Background())
 	userService.ProducerCreSelKafkaEventWorker(ctx, 3*time.Second, 100, topic)
@@ -71,7 +75,7 @@ func main() {
 		Checks: []ops.Check{
 			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
 			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
-			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
 			ops.GRPCHealthCheck("auth-service", config.NewGRPCAddrConfig()["AuthClientAddr"], true),
 		},
 	})

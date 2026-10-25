@@ -79,7 +79,8 @@ const (
 	ReasonInitial = "initial" // stock set when the product was created
 	ReasonReserve = "reserve"
 	ReasonRelease = "release"
-	ReasonSale    = "sale" // goods left the warehouse (order shipped)
+	ReasonSale    = "sale"   // goods left the warehouse (order shipped)
+	ReasonReturn  = "return" // goods of a returned (REFUNDED) order went back on the shelf
 	ReasonRestock = "restock"
 	ReasonAdjust  = "adjust"
 	ReasonUpdate  = "update" // inventory edited through UpdateProduct

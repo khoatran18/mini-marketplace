@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"order-service/pkg/events"
+	"mini-marketplace/shared/events"
 	"order-service/pkg/model"
 	"strconv"
 	"time"

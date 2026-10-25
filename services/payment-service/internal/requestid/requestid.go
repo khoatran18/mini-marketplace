@@ -1,6 +1,5 @@
 // Package requestid mang mã yêu cầu (request-id) xuyên suốt HTTP -> gRPC giữa các service.
-// Header HTTP là X-Request-ID, khoá metadata gRPC là x-request-id. Bản sao giống hệt nhau nằm trong
-// mỗi service (không dùng module chung, xem ADR-8).
+// Header HTTP là X-Request-ID, khoá metadata gRPC là x-request-id. Mỗi service có bản riêng, khác nhau chút ít nên không đưa vào shared/ (ADR-33).
 package requestid
 
 import (

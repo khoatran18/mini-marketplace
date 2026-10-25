@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log"
+	"mini-marketplace/shared/events"
+	"mini-marketplace/shared/ops"
 	"net"
 	"net/http"
 	"os"
@@ -11,8 +13,6 @@ import (
 	"payment-service/internal/requestid"
 	"payment-service/internal/server"
 	"payment-service/internal/service"
-	"payment-service/pkg/events"
-	"payment-service/pkg/ops"
 	paymentpb "payment-service/pkg/pb"
 	"sync/atomic"
 	"time"
@@ -85,7 +85,7 @@ func main() {
 		Checks: []ops.Check{
 			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
 			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
-			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), true),
+			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
 			ops.FuncCheck("workers", true, func(ctx context.Context) error {
 				if time.Since(time.Unix(lastTick.Load(), 0)) > 30*workersInterval {
 					return errors.New("stalled")
@@ -108,6 +108,7 @@ func main() {
 		_, age, _ := events.Backlog(serviceConfig.PostgresDB)
 		return age
 	})
+	events.Register(adm.Registry(), "payment-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
 	adm.GaugeFunc("mm_worker_last_tick_timestamp_seconds", "Unix time of the last worker round.", map[string]string{"worker": "payment_workers"}, func() float64 { return float64(lastTick.Load()) })
 
 	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))

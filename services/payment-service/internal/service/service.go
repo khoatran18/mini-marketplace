@@ -13,11 +13,11 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"mini-marketplace/shared/events"
 	"net/http"
 	"os"
 	"payment-service/internal/migrate"
 	"payment-service/internal/requestid"
-	"payment-service/pkg/events"
 	"payment-service/pkg/model"
 	"strconv"
 	"strings"
@@ -156,6 +156,10 @@ type refundedEvent struct {
 	AmountMinor int64     `json:"amount_minor"`
 	Reason      string    `json:"reason"`
 	At          time.Time `json:"at"`
+	// PaymentStatus is the payment's status after this refund (PARTIAL_REFUNDED or REFUNDED). A refund without
+	// an order (OrderID 0, e.g. by an admin) lets order-service mark the checkout's orders refunded only when
+	// the whole payment is refunded.
+	PaymentStatus string `json:"payment_status"`
 }
 
 func pkey(id uint64) string { return strconv.FormatUint(id, 10) }
@@ -475,11 +479,19 @@ func (s *PaymentService) postWebhook(ctx context.Context, body []byte) int {
 	return resp.StatusCode
 }
 
-// ExpirePayments closes payments whose deadline passed without any buyer action.
+// ProcessingGrace is how long after its deadline a payment may stay PROCESSING (waiting for the provider's
+// notification, which is retried for ~12 minutes) before it is closed as EXPIRED (R6). Money that still arrives
+// later is accepted (see succeed) and order-service refunds what no order needs.
+const ProcessingGrace = time.Hour
+
+// ExpirePayments closes payments whose deadline passed without any buyer action, and payments stuck in
+// PROCESSING longer than ProcessingGrace after the deadline (provider never answered).
 func (s *PaymentService) ExpirePayments(ctx context.Context) (int64, error) {
 	var rows []model.Payment
+	now := s.Now()
 	res := s.DB.WithContext(ctx).Model(&rows).Clauses(clause.Returning{Columns: []clause.Column{{Name: "id"}, {Name: "method"}, {Name: "created_at"}}}).
-		Where("status = ? AND expires_at < ?", model.StatusRequiresAction, s.Now()).Update("status", model.StatusExpired)
+		Where("(status = ? AND expires_at < ?) OR (status = ? AND expires_at < ?)",
+			model.StatusRequiresAction, now, model.StatusProcessing, now.Add(-ProcessingGrace)).Update("status", model.StatusExpired)
 	if res.Error == nil {
 		for _, p := range rows {
 			s.Metrics.paymentCompleted(p.Method, "expired", 0, p.CreatedAt, s.Now())

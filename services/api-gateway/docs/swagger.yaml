@@ -1,1110 +1,4467 @@
-definitions:
-  dto.Buyer:
-    properties:
-      address:
-        type: string
-      date_of_birth:
-        type: string
-      gender:
-        type: string
-      name:
-        type: string
-      phone:
-        type: string
-      user_id:
-        type: integer
-    type: object
-  dto.CancelOrderByIDOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.ChangePasswordInput:
-    properties:
-      new_password:
-        type: string
-      old_password:
-        type: string
-      role:
-        type: string
-      username:
-        type: string
-    type: object
-  dto.ChangePasswordOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.CreateBuyerInput:
-    properties:
-      buyer:
-        $ref: '#/definitions/dto.Buyer'
-    type: object
-  dto.CreateBuyerOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.CreateOrderInput:
-    properties:
-      order:
-        $ref: '#/definitions/dto.Order'
-    type: object
-  dto.CreateOrderOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.CreateProductInput:
-    properties:
-      attributes:
-        additionalProperties: {}
-        type: object
-      inventory:
-        type: integer
-      name:
-        type: string
-      price:
-        type: number
-      seller_id:
-        type: integer
-    type: object
-  dto.CreateProductOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.CreateSellerInput:
-    properties:
-      seller:
-        $ref: '#/definitions/dto.Seller'
-      user_id:
-        type: integer
-    type: object
-  dto.CreateSellerOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.DelBuyByUseIDOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.DelSelByIDOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.ErrorResponse:
-    properties:
-      error:
-        example: invalid request
-        type: string
-    type: object
-  dto.GetBuyByUseIDOutput:
-    properties:
-      buyer:
-        $ref: '#/definitions/dto.Buyer'
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.GetOrderByIDOutput:
-    properties:
-      message:
-        type: string
-      order:
-        $ref: '#/definitions/dto.Order'
-      success:
-        type: boolean
-    type: object
-  dto.GetOrdersByBuyerIDStatusOutput:
-    properties:
-      message:
-        type: string
-      orders:
-        items:
-          $ref: '#/definitions/dto.Order'
-        type: array
-      success:
-        type: boolean
-    type: object
-  dto.GetProductByIDOutput:
-    properties:
-      message:
-        type: string
-      product:
-        $ref: '#/definitions/dto.Product'
-      success:
-        type: boolean
-    type: object
-  dto.GetProductsBySellerIDOutput:
-    properties:
-      message:
-        type: string
-      products:
-        items:
-          $ref: '#/definitions/dto.Product'
-        type: array
-      success:
-        type: boolean
-    type: object
-  dto.GetProductsOutput:
-    properties:
-      message:
-        type: string
-      products:
-        items:
-          $ref: '#/definitions/dto.Product'
-        type: array
-      success:
-        type: boolean
-    type: object
-  dto.GetSelByIDOutput:
-    properties:
-      message:
-        type: string
-      seller:
-        $ref: '#/definitions/dto.Seller'
-      success:
-        type: boolean
-    type: object
-  dto.LoginInput:
-    properties:
-      password:
-        example: password1
-        type: string
-      role:
-        example: admin
-        type: string
-      username:
-        example: user1
-        type: string
-    required:
-    - password
-    - role
-    - username
-    type: object
-  dto.LoginOutput:
-    properties:
-      access_token:
-        type: string
-      message:
-        type: string
-      refresh_token:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.Order:
-    properties:
-      buyer_id:
-        type: integer
-      id:
-        type: integer
-      order_items:
-        items:
-          $ref: '#/definitions/dto.OrderItem'
-        type: array
-      status:
-        type: string
-      total_price:
-        type: number
-    type: object
-  dto.OrderItem:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-      order_id:
-        type: integer
-      price:
-        type: number
-      product_id:
-        type: integer
-      quantity:
-        type: integer
-    type: object
-  dto.Product:
-    properties:
-      attributes:
-        additionalProperties: {}
-        type: object
-      id:
-        type: integer
-      inventory:
-        type: integer
-      name:
-        type: string
-      price:
-        type: number
-      seller_id:
-        type: integer
-    type: object
-  dto.RefreshTokenInput:
-    properties:
-      refresh_token:
-        type: string
-    type: object
-  dto.RefreshTokenOutput:
-    properties:
-      access_token:
-        type: string
-      message:
-        type: string
-      refresh_token:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.RegisterInput:
-    properties:
-      password:
-        type: string
-      role:
-        type: string
-      username:
-        type: string
-    required:
-    - password
-    - role
-    - username
-    type: object
-  dto.RegisterOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.RegisterSellerRolesInput:
-    properties:
-      password:
-        type: string
-      role:
-        type: string
-      seller_admin_id:
-        type: integer
-      username:
-        type: string
-    type: object
-  dto.RegisterSellerRolesOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.Seller:
-    properties:
-      address:
-        type: string
-      bank_account:
-        type: string
-      date_of_birth:
-        type: string
-      description:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      phone:
-        type: string
-      tax_code:
-        type: string
-    type: object
-  dto.UpdBuyByUseIDInput:
-    properties:
-      buyer:
-        $ref: '#/definitions/dto.Buyer'
-    type: object
-  dto.UpdBuyByUseIDOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.UpdSelByIDInput:
-    properties:
-      seller:
-        $ref: '#/definitions/dto.Seller'
-      user_id:
-        type: integer
-    type: object
-  dto.UpdSelByIDOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  dto.UpdateProductInput:
-    properties:
-      product:
-        $ref: '#/definitions/dto.Product'
-      user_id:
-        type: integer
-    type: object
-  dto.UpdateProductOutput:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-externalDocs:
-  description: OpenAPI
-  url: https://swagger.io/resources/open-api/
-host: localhost:8080
+swagger: '2.0'
 info:
-  contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
-  description: My API-Gateway server celler server.
+  description: 'REST API cua api-gateway (Mini Marketplace). Nguon su that ve route: internal/router/router.go; mo ta chi
+    tiet: docs/design/04_API_REFERENCE.md. Tien la VND (so thuc); id dinh danh luon lay tu JWT; thanh toan la MO PHONG.'
+  title: Mini Marketplace API Gateway
+  contact: {}
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  termsOfService: http://swagger.io/terms/
-  title: Swagger Example API
-  version: "1.0"
+  version: '1.0'
+host: localhost:8080
+basePath: /
 paths:
-  /auth/change-password:
-    post:
-      consumes:
-      - application/json
-      description: Change password
-      parameters:
-      - description: Old and new password (account taken from the token)
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/dto.ChangePasswordInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.ChangePasswordOutput'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: ChangePassword
-      tags:
-      - auth
-  /auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Get username, password and return token
-      parameters:
-      - description: Username and password to Login
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/dto.LoginInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.LoginOutput'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      summary: Login
-      tags:
-      - auth
-  /auth/refresh-token:
-    post:
-      consumes:
-      - application/json
-      description: Refresh token
-      parameters:
-      - description: Refresh Token to refresh
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/dto.RefreshTokenInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.RefreshTokenOutput'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      summary: RefreshToken
-      tags:
-      - auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Create account from username, password
-      parameters:
-      - description: Username and password to Register
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/dto.RegisterInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.RegisterOutput'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      summary: Register
-      tags:
-      - auth
-  /auth/register-seller-roles:
-    post:
-      consumes:
-      - application/json
-      description: Create seller role account from username, password
-      parameters:
-      - description: Username and password used to register seller role account
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/dto.RegisterSellerRolesInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.RegisterSellerRolesOutput'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      summary: RegisterSellerRoles
-      tags:
-      - auth
-  /orders:
+  /admin/analytics/data-health:
     get:
+      description: 'Quyen: admin.'
       consumes:
       - application/json
-      description: List the caller's orders by status
-      parameters:
-      - description: Status of order
-        in: query
-        name: status
-        required: true
-        type: string
       produces:
       - application/json
+      tags:
+      - admin
+      summary: Bao cao data-health (toan nen tang)
+      security: &id001
+      - BearerAuth: []
+      parameters:
+      - &id002
+        type: string
+        description: YYYY-MM-DD (Asia/Ho_Chi_Minh) hoac RFC 3339; mac dinh 30 ngay, toi da 400 ngay
+        name: from
+        in: query
+      - &id003
+        type: string
+        description: ''
+        name: to
+        in: query
+      - &id004
+        type: string
+        description: ''
+        name: granularity
+        in: query
+        enum:
+        - hour
+        - day
+        - week
+        - month
+      - &id005
+        type: string
+        description: ''
+        name: sort
+        in: query
+        enum:
+        - revenue
+        - units
+        - views
+        - conversion
+        - viewed_unsold
+      - &id006
+        type: integer
+        description: ''
+        name: limit
+        in: query
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.GetOrdersByBuyerIDStatusOutput'
-        "400":
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: GetOrdersByBuyerIDStatus
-      tags:
-      - order
-    post:
+  /admin/analytics/funnel:
+    get:
+      description: 'Quyen: admin.'
       consumes:
       - application/json
-      description: Create new order
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Bao cao funnel (toan nen tang)
+      security: *id001
       parameters:
-      - description: Order creation payload
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/analytics/low-stock:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Bao cao low-stock (toan nen tang)
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/analytics/payments:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Bao cao payments (toan nen tang)
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/analytics/search-terms:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Bao cao search-terms (toan nen tang)
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/analytics/summary:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Bao cao summary (toan nen tang)
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/analytics/timeseries:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Bao cao timeseries (toan nen tang)
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/analytics/top-products:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Bao cao top-products (toan nen tang)
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/analytics/traffic:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Bao cao traffic (toan nen tang)
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/categories:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Moi danh muc (ca khong active)
+      security: *id001
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CategoryList'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+    post:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Tao danh muc (toi da 3 cap)
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
         in: body
-        name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.CreateOrderInput'
-      produces:
-      - application/json
+          $ref: '#/definitions/dto.CategoryInput'
       responses:
-        "200":
-          description: OK
+        '201':
+          description: Created
           schema:
-            $ref: '#/definitions/dto.CreateOrderOutput'
-        "400":
+            $ref: '#/definitions/dto.Category'
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
+        '401':
+          description: Unauthorized
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: CreateOrder
-      tags:
-      - order
-  /orders/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Cancel one of the caller's orders
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.CancelOrderByIDOutput'
-        "400":
-          description: Bad Request
+        '403':
+          description: Forbidden
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "422":
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/categories/{id}:
+    put:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Thay danh muc
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CategoryInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Category'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/dev/payments/{id}/force:
+    post:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Ep trang thai payment (chi ENV=dev)
+      security: *id001
+      parameters:
+      - type: string
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ForcePaymentInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Payment'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/orders:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Moi don hang
+      security: *id001
+      parameters:
+      - &id010
+        type: string
+        description: ''
+        name: status
+        in: query
+        enum:
+        - PENDING
+        - AWAITING_PAYMENT
+        - CONFIRMED
+        - PAID
+        - SHIPPED
+        - DELIVERED
+        - REFUND_REQUESTED
+        - REFUNDED
+        - CANCELED
+        - EXPIRED
+        - FAILED
+      - &id007
+        type: integer
+        description: Trang (mac dinh 1)
+        name: page
+        in: query
+      - &id008
+        type: integer
+        description: So dong moi trang
+        name: page_size
+        in: query
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderList'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/orders/{id}:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Chi tiet don bat ky
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/orders/{id}/cancel:
+    post:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Huy don
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ReasonInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
           description: Unprocessable Entity
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: CancelOrderByID
-      tags:
-      - order
-    get:
+  /admin/orders/{id}/deliver:
+    post:
+      description: 'Quyen: admin.'
       consumes:
       - application/json
-      description: Get one of the caller's orders
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
       produces:
       - application/json
+      tags:
+      - admin
+      summary: Danh dau da giao
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.GetOrderByIDOutput'
-        "400":
-          description: Bad Request
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "404":
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: GetOrderByID
-      tags:
-      - order
-  /products:
-    get:
+  /admin/orders/{id}/return/approve:
+    post:
+      description: 'Quyen: admin.'
       consumes:
       - application/json
-      description: Get products random at home
-      parameters:
-      - description: Page number
-        in: query
-        name: page
-        required: true
-        type: integer
-      - description: Page size
-        in: query
-        name: page_size
-        required: true
-        type: integer
       produces:
       - application/json
+      tags:
+      - admin
+      summary: Chap nhan tra hang
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.GetProductsOutput'
-        "400":
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/orders/{id}/return/reject:
+    post:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Tu choi tra hang
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ReasonInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: GetProducts
-      tags:
-      - product
-    post:
+  /admin/payments:
+    get:
+      description: 'Quyen: admin.'
       consumes:
       - application/json
-      description: Create new product
-      parameters:
-      - description: Product DTO to create
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateProductInput'
       produces:
       - application/json
+      tags:
+      - admin
+      summary: Danh sach payment
+      security: *id001
+      parameters:
+      - type: string
+        description: ''
+        name: status
+        in: query
+      - type: string
+        description: ''
+        name: method
+        in: query
+      - *id007
+      - *id008
       responses:
-        "200":
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaymentList'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/payments/{id}:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Payment kem attempts, refunds
+      security: *id001
+      parameters:
+      - type: string
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Payment'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/payments/{id}/refund:
+    post:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Hoan tien (mo phong)
+      security: *id001
+      parameters:
+      - type: string
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RefundInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Payment'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/products/{id}/status:
+    patch:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - admin
+      summary: Doi trang thai san pham (gom banned)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.StatusInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MessageResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /admin/system/health:
+    get:
+      description: 'Quyen: admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - system
+      summary: Gom /ready cua moi service
+      security: *id001
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SystemHealth'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /auth/change-password:
+    post:
+      description: 'Token cu bi vo hieu. Quyen: moi user dang nhap.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - auth
+      summary: Doi mat khau
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangePasswordInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MessageResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /auth/login:
+    post:
+      description: 'Quyen: cong khai.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - auth
+      summary: Dang nhap
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LoginOutput'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /auth/refresh-token:
+    post:
+      description: 'Quyen: cong khai.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - auth
+      summary: Cap token moi tu refresh token
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RefreshTokenInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LoginOutput'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /auth/register:
+    post:
+      description: 'role: buyer hoac seller_admin. Quyen: cong khai.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - auth
+      summary: Dang ky tai khoan
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MessageResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /auth/register-seller-roles:
+    post:
+      description: 'Quyen: seller_admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - auth
+      summary: Tao tai khoan seller_employee trong store
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterSellerRolesInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MessageResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /cart:
+    get:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - cart
+      summary: Xem gio hang
+      security: *id001
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Cart'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+    delete:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - cart
+      summary: Xoa gio hang
+      security: *id001
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Cart'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /cart/items/{product_id}:
+    put:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - cart
+      summary: Dat so luong (0 = xoa)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: product_id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CartItemInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Cart'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+    delete:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - cart
+      summary: Xoa dong khoi gio
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: product_id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Cart'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /cart/merge:
+    post:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - cart
+      summary: Gop gio localStorage sau khi dang nhap
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CartMergeInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Cart'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /categories:
+    get:
+      description: 'Cache-Control: public, max-age=30. Quyen: cong khai.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - catalog
+      summary: Danh muc dang hoat dong (danh sach phang)
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CategoryList'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /checkout/preview:
+    post:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - checkout
+      summary: Xem truoc checkout (khong tao gi)
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CheckoutPreviewInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CheckoutPreview'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /checkouts/{id}:
+    get:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - checkout
+      summary: Chi tiet checkout (poll de lay payment)
+      security: *id001
+      parameters:
+      - type: string
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CheckoutResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /events:
+    post:
+      description: 'Best-effort: neu analytics-service down tra 202 {accepted:0,dropped:N}. Qua 64KB -> 413. Quyen: token
+        tuy chon (chi de gan user).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - tracking
+      summary: Nhan clickstream (<=50 event, <=64KB)
+      security: &id011
+      - {}
+      - BearerAuth: []
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.EventsInput'
+      responses:
+        '202':
+          description: Accepted
+          schema:
+            $ref: '#/definitions/dto.EventsResult'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /events/identify:
+    post:
+      description: 'Quyen: moi user dang nhap.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - tracking
+      summary: Noi anonymous_id voi tai khoan
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.IdentifyInput'
+      responses:
+        '202':
+          description: Accepted
+          schema:
+            $ref: '#/definitions/dto.EventsResult'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /health:
+    get:
+      description: 'Quyen: cong khai.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - system
+      summary: Liveness cua gateway
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            properties:
+              status: &id009
+                type: string
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /healthz:
+    get:
+      description: 'Quyen: cong khai.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - system
+      summary: Liveness cua gateway (alias)
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            properties:
+              status: *id009
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /orders:
+    post:
+      description: '201 khi tao moi, 200 khi replay. Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - orders
+      summary: Dat hang (tach theo store)
+      security: *id001
+      parameters:
+      - type: string
+        description: 1-64 ky tu [A-Za-z0-9_-]; goi lai tra ve checkout cu (200, replayed=true)
+        name: Idempotency-Key
+        in: header
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CheckoutInput'
+      responses:
+        '201':
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CheckoutResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+    get:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - orders
+      summary: Don cua toi
+      security: *id001
+      parameters:
+      - *id010
+      - *id007
+      - *id008
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderList'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /orders/summary:
+    get:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - orders
+      summary: Dem don cua toi theo trang thai
+      security: *id001
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderSummary'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /orders/{id}:
+    get:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - orders
+      summary: Chi tiet don cua toi
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+    delete:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - orders
+      summary: Huy don (alias cu cua POST /orders/{id}/cancel)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /orders/{id}/cancel:
+    post:
+      description: 'Chi khi AWAITING_PAYMENT/CONFIRMED/PAID; body tuy chon. Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - orders
+      summary: Huy don
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ReasonInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /orders/{id}/confirm-received:
+    post:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - orders
+      summary: Xac nhan da nhan (SHIPPED -> DELIVERED)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /orders/{id}/return:
+    post:
+      description: 'Trong RETURN_WINDOW_DAYS, mot lan. Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - orders
+      summary: Yeu cau tra hang (DELIVERED -> REFUND_REQUESTED)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ReasonInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /payments/methods:
+    get:
+      description: 'Quyen: cong khai.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - payments
+      summary: Phuong thuc thanh toan (mo phong)
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaymentMethodList'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /payments/{id}:
+    get:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - payments
+      summary: Chi tiet payment
+      security: *id001
+      parameters:
+      - type: string
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Payment'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /payments/{id}/cancel:
+    post:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - payments
+      summary: Huy payment (chi REQUIRES_ACTION)
+      security: *id001
+      parameters:
+      - type: string
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Payment'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /payments/{id}/confirm:
+    post:
+      description: 'So the chi chon kich ban test, khong luu. Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - payments
+      summary: Xac nhan thanh toan (MO PHONG)
+      security: *id001
+      parameters:
+      - type: string
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ConfirmPaymentInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Payment'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /products:
+    get:
+      description: 'Quyen: token tuy chon.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - catalog
+      summary: Danh sach san pham active
+      security: *id011
+      parameters:
+      - *id007
+      - *id008
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProductList'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+    post:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - catalog
+      summary: Tao san pham
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ProductInput'
+      responses:
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/dto.CreateProductOutput'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: CreateProduct
-      tags:
-      - product
-  /products/{id}:
+  /products/seller/{seller_id}:
     get:
+      description: 'Chu store thay moi trang thai, nguoi khac chi active. Quyen: token tuy chon.'
       consumes:
       - application/json
-      description: Get product by ID
-      parameters:
-      - description: Product ID
-        in: path
-        name: id
-        required: true
-        type: integer
       produces:
       - application/json
+      tags:
+      - catalog
+      summary: San pham theo store
+      security: *id011
+      parameters:
+      - type: integer
+        description: ''
+        name: seller_id
+        in: path
+        required: true
+      - *id007
+      - *id008
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.GetProductByIDOutput'
-        "400":
-          description: Bad Request
+            $ref: '#/definitions/dto.ProductList'
+        '401':
+          description: Unauthorized
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: GetProductByID
-      tags:
-      - product
-    put:
+  /products/{id}:
+    get:
+      description: 'San pham khong active chi chu/admin thay (khach: 404). Ton kho bi che voi nguoi khong quan ly. Quyen:
+        token tuy chon.'
       consumes:
       - application/json
-      description: Update product
+      produces:
+      - application/json
+      tags:
+      - catalog
+      summary: Chi tiet san pham
+      security: *id011
       parameters:
-      - description: Product DTO to update
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProductOutput'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+    put:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - catalog
+      summary: Cap nhat san pham
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
         in: body
-        name: request
         required: true
         schema:
           $ref: '#/definitions/dto.UpdateProductInput'
-      - description: Product ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.UpdateProductOutput'
-        "400":
+            $ref: '#/definitions/dto.MessageResponse'
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: UpdateProduct
-      tags:
-      - product
-  /products/seller/{seller_id}:
-    get:
+  /products/{id}/status:
+    patch:
+      description: 'Dat/go banned -> 403. Quyen: seller_admin hoac seller_employee (da co store).'
       consumes:
       - application/json
-      description: Get product by seller_id
-      parameters:
-      - description: Seller ID
-        in: path
-        name: seller_id
-        required: true
-        type: integer
       produces:
       - application/json
+      tags:
+      - catalog
+      summary: Doi trang thai san pham (draft/active/hidden)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.StatusInput'
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.GetProductsBySellerIDOutput'
-        "400":
+            $ref: '#/definitions/dto.MessageResponse'
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: GetProductsBySellerID
+  /products/{id}/stock:
+    get:
+      description: 'Quyen: cong khai.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
       tags:
-      - product
+      - catalog
+      summary: Muc ton kho (none|low|ok)
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StockLevel'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /search:
+    get:
+      description: 'Quyen: token tuy chon.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - catalog
+      summary: Tim san pham
+      security: *id011
+      parameters:
+      - &id012
+        type: string
+        description: Tu khoa (khong dau, khop tien to, <=200)
+        name: q
+        in: query
+      - &id013
+        type: integer
+        description: ''
+        name: category_id
+        in: query
+      - &id014
+        type: number
+        description: ''
+        name: price_min
+        in: query
+      - &id015
+        type: number
+        description: ''
+        name: price_max
+        in: query
+      - &id016
+        type: string
+        description: ''
+        name: brand
+        in: query
+      - &id017
+        type: integer
+        description: ''
+        name: seller_id
+        in: query
+      - &id018
+        type: boolean
+        description: ''
+        name: in_stock
+        in: query
+      - &id019
+        type: string
+        description: ''
+        name: sort
+        in: query
+        enum:
+        - relevance
+        - price_asc
+        - price_desc
+        - newest
+        - best_selling
+      - *id007
+      - *id008
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProductList'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/analytics/funnel:
+    get:
+      description: 'Pham vi store lay tu token. Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - analytics
+      summary: Bao cao funnel cua store
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/analytics/low-stock:
+    get:
+      description: 'Pham vi store lay tu token. Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - analytics
+      summary: Bao cao low-stock cua store
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/analytics/summary:
+    get:
+      description: 'Pham vi store lay tu token. Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - analytics
+      summary: Bao cao summary cua store
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/analytics/timeseries:
+    get:
+      description: 'Pham vi store lay tu token. Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - analytics
+      summary: Bao cao timeseries cua store
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/analytics/top-products:
+    get:
+      description: 'Pham vi store lay tu token. Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - analytics
+      summary: Bao cao top-products cua store
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AnalyticsResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/inventory/low-stock:
+    get:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller
+      summary: San pham sap het hang (Postgres)
+      security: *id001
+      parameters:
+      - type: integer
+        description: Mac dinh 5
+        name: threshold
+        in: query
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            properties:
+              products:
+                type: array
+                items:
+                  $ref: '#/definitions/dto.Product'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/orders:
+    get:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller-orders
+      summary: Hop thu don cua store
+      security: *id001
+      parameters:
+      - *id010
+      - *id007
+      - *id008
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderList'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/orders/summary:
+    get:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller-orders
+      summary: Dem don theo trang thai
+      security: *id001
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderSummary'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/orders/{id}:
+    get:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller-orders
+      summary: Chi tiet don cua store
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/orders/{id}/cancel:
+    post:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller-orders
+      summary: Huy don
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ReasonInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/orders/{id}/deliver:
+    post:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller-orders
+      summary: Da giao (SHIPPED -> DELIVERED)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/orders/{id}/return/approve:
+    post:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller-orders
+      summary: Chap nhan tra hang (REFUND_REQUESTED -> REFUNDED)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/orders/{id}/return/reject:
+    post:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller-orders
+      summary: Tu choi tra hang (REFUND_REQUESTED -> DELIVERED)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ReasonInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/orders/{id}/ship:
+    post:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller-orders
+      summary: Giao cho van chuyen (PAID|CONFIRMED -> SHIPPED)
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ShipInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Order'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/products:
+    get:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller
+      summary: San pham cua store (moi trang thai)
+      security: *id001
+      parameters:
+      - *id012
+      - *id013
+      - *id014
+      - *id015
+      - *id016
+      - *id017
+      - *id018
+      - *id019
+      - *id007
+      - *id008
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProductList'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/products/{id}/inventory/adjust:
+    post:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller
+      summary: Dieu chinh ton kho
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.InventoryAdjustInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.InventoryAdjustOutput'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /seller/products/{id}/inventory/ledger:
+    get:
+      description: 'Quyen: seller_admin hoac seller_employee (da co store).'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - seller
+      summary: So cai ton kho
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - *id007
+      - *id008
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LedgerList'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
   /users/buyers:
     post:
+      description: 'Quyen: buyer.'
       consumes:
       - application/json
-      description: Create new buyer
-      parameters:
-      - description: Buyer DTO to create
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateBuyerInput'
       produces:
       - application/json
+      tags:
+      - users
+      summary: Tao ho so buyer (cho chinh nguoi goi)
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BuyerInput'
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.CreateBuyerOutput'
-        "400":
+            $ref: '#/definitions/dto.BuyerOutput'
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: CreateBuyer
-      tags:
-      - user
   /users/buyers/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: delete buyer by user_id
-      parameters:
-      - description: Buyer ID to delete
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.DelBuyByUseIDOutput'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: DelBuyerByUserID
-      tags:
-      - user
     get:
+      description: 'Quyen: buyer.'
       consumes:
       - application/json
-      description: Get buyer by user_id
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
       produces:
       - application/json
+      tags:
+      - users
+      summary: Lay ho so buyer
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.GetBuyByUseIDOutput'
-        "400":
-          description: Bad Request
+            $ref: '#/definitions/dto.BuyerOutput'
+        '401':
+          description: Unauthorized
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: GetBuyerByUserID
-      tags:
-      - user
     put:
+      description: 'Quyen: buyer.'
       consumes:
       - application/json
-      description: Update buyer by user_id
+      produces:
+      - application/json
+      tags:
+      - users
+      summary: Cap nhat ho so buyer
+      security: *id001
       parameters:
-      - description: Buyer ID to update
-        in: path
+      - type: integer
+        description: ''
         name: id
+        in: path
         required: true
-        type: integer
-      - description: Buyer DTO to update
+      - description: Request body
+        name: input
         in: body
-        name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.UpdBuyByUseIDInput'
-      produces:
-      - application/json
+          $ref: '#/definitions/dto.BuyerInput'
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.UpdBuyByUseIDOutput'
-        "400":
+            $ref: '#/definitions/dto.BuyerOutput'
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: UpdateBuyerByUserID
+    delete:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
       tags:
-      - user
+      - users
+      summary: Xoa ho so buyer
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MessageResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /users/me/addresses:
+    get:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - users
+      summary: Danh sach dia chi giao hang
+      security: *id001
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AddressList'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+    post:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - users
+      summary: Them dia chi (toi da 10)
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddressInput'
+      responses:
+        '201':
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.AddressOutput'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+  /users/me/addresses/{id}:
+    put:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - users
+      summary: Thay dia chi
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddressInput'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AddressOutput'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+    delete:
+      description: 'Quyen: buyer.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      tags:
+      - users
+      summary: Xoa dia chi
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MessageResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
   /users/sellers:
     post:
+      description: 'Quyen: seller_admin.'
       consumes:
       - application/json
-      description: Create new seller
-      parameters:
-      - description: Seller DTO to create
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateSellerInput'
       produces:
       - application/json
+      tags:
+      - users
+      summary: Tao ho so seller/store
+      security: *id001
+      parameters:
+      - description: Request body
+        name: input
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SellerInput'
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.CreateSellerOutput'
-        "400":
+            $ref: '#/definitions/dto.SellerOutput'
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: CreateSeller
-      tags:
-      - user
   /users/sellers/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: delete buyer by seller_id
-      parameters:
-      - description: Seller ID to delete
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.DelSelByIDOutput'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: DelSellerByID
-      tags:
-      - user
     get:
+      description: 'Chu store thay day du, nguoi khac chi thay id,name,description. Quyen: moi user dang nhap.'
       consumes:
       - application/json
-      description: Get seller by ID
-      parameters:
-      - description: Seller ID
-        in: path
-        name: id
-        required: true
-        type: integer
       produces:
       - application/json
+      tags:
+      - users
+      summary: Lay ho so seller
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.GetSelByIDOutput'
-        "400":
-          description: Bad Request
+            $ref: '#/definitions/dto.SellerOutput'
+        '401':
+          description: Unauthorized
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: GetSellerByID
-      tags:
-      - user
     put:
+      description: 'Quyen: seller_admin.'
       consumes:
       - application/json
-      description: Update seller by ID
+      produces:
+      - application/json
+      tags:
+      - users
+      summary: Cap nhat ho so seller
+      security: *id001
       parameters:
-      - description: Seller ID to update
-        in: path
+      - type: integer
+        description: ''
         name: id
+        in: path
         required: true
-        type: integer
-      - description: Seller DTO to update
+      - description: Request body
+        name: input
         in: body
-        name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.UpdSelByIDInput'
-      produces:
-      - application/json
+          $ref: '#/definitions/dto.SellerInput'
       responses:
-        "200":
+        '200':
           description: OK
           schema:
-            $ref: '#/definitions/dto.UpdSelByIDOutput'
-        "400":
+            $ref: '#/definitions/dto.SellerOutput'
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-        "500":
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: UpdateSellerByID
+    delete:
+      description: 'Quyen: seller_admin.'
+      consumes:
+      - application/json
+      produces:
+      - application/json
       tags:
-      - user
+      - users
+      summary: Xoa ho so seller
+      security: *id001
+      parameters:
+      - type: integer
+        description: ''
+        name: id
+        in: path
+        required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MessageResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+definitions:
+  dto.Address:
+    type: object
+    properties:
+      id: &id021
+        type: integer
+      label: *id009
+      receiver_name: *id009
+      phone: *id009
+      line1: *id009
+      ward: *id009
+      district: *id009
+      city: *id009
+      is_default: &id020
+        type: boolean
+  dto.AddressInput:
+    type: object
+    properties:
+      label: *id009
+      receiver_name: *id009
+      phone: *id009
+      line1: *id009
+      ward: *id009
+      district: *id009
+      city: *id009
+      is_default: *id020
+    required:
+    - receiver_name
+    - phone
+    - line1
+    - city
+  dto.AddressList:
+    type: object
+    properties:
+      addresses:
+        type: array
+        items:
+          $ref: '#/definitions/dto.Address'
+  dto.AddressOutput:
+    type: object
+    properties:
+      message: *id009
+      success: *id020
+      address:
+        $ref: '#/definitions/dto.Address'
+  dto.AnalyticsResponse:
+    type: object
+    properties:
+      as_of: *id009
+      source: *id009
+      cached: *id020
+      timezone: *id009
+      data:
+        description: Cau truc tuy bao cao (xem docs/design/04_API_REFERENCE.md muc 9)
+  dto.Buyer:
+    type: object
+    properties:
+      id: *id021
+      name: *id009
+      gender: *id009
+      date_of_birth: *id009
+      phone: *id009
+      address: *id009
+  dto.BuyerInput:
+    type: object
+    properties:
+      buyer:
+        $ref: '#/definitions/dto.Buyer'
+    required:
+    - buyer
+  dto.BuyerOutput:
+    type: object
+    properties:
+      message: *id009
+      success: *id020
+      buyer:
+        $ref: '#/definitions/dto.Buyer'
+  dto.Cart:
+    type: object
+    properties:
+      lines:
+        type: array
+        items:
+          $ref: '#/definitions/dto.CartLine'
+      subtotal: &id022
+        type: number
+      item_count: *id021
+  dto.CartItemInput:
+    type: object
+    properties:
+      quantity:
+        type: integer
+        minimum: 0
+        maximum: 99
+    required:
+    - quantity
+  dto.CartLine:
+    type: object
+    properties:
+      product_id: *id021
+      quantity: *id021
+      name: *id009
+      image_url: *id009
+      store_id: *id021
+      unit_price: *id022
+      line_total: *id022
+      stock_level: *id009
+      available: *id020
+      issue: *id009
+  dto.CartMergeInput:
+    type: object
+    properties:
+      items:
+        type: array
+        items:
+          type: object
+          properties: &id023
+            product_id: *id021
+            quantity: *id021
+    required:
+    - items
+  dto.Category:
+    type: object
+    properties:
+      id: *id021
+      parent_id: *id021
+      name: *id009
+      slug: *id009
+      sort: *id021
+      active: *id020
+      product_count: *id021
+  dto.CategoryInput:
+    type: object
+    properties:
+      parent_id: *id021
+      name: *id009
+      slug: *id009
+      sort: *id021
+      active: *id020
+    required:
+    - name
+  dto.CategoryList:
+    type: object
+    properties:
+      categories:
+        type: array
+        items:
+          $ref: '#/definitions/dto.Category'
+  dto.ChangePasswordInput:
+    type: object
+    properties:
+      old_password: *id009
+      new_password:
+        type: string
+        minLength: 8
+    required:
+    - old_password
+    - new_password
+  dto.CheckoutGroup:
+    type: object
+    properties:
+      store_id: *id021
+      lines:
+        type: array
+        items:
+          $ref: '#/definitions/dto.CartLine'
+      subtotal: *id022
+      shipping_fee: *id022
+      total: *id022
+  dto.CheckoutInput:
+    type: object
+    properties:
+      from_cart: *id020
+      items:
+        type: array
+        items:
+          type: object
+          properties: *id023
+      address_id:
+        type: integer
+        description: 0 = dia chi mac dinh
+      payment_method:
+        type: string
+        enum:
+        - COD
+        - MOCK_CARD
+        - MOCK_WALLET
+        - MOCK_BANK_TRANSFER
+      note: *id009
+  dto.CheckoutPreview:
+    type: object
+    properties:
+      groups:
+        type: array
+        items:
+          $ref: '#/definitions/dto.CheckoutGroup'
+      subtotal: *id022
+      shipping_fee: *id022
+      grand_total: *id022
+      can_order: *id020
+  dto.CheckoutPreviewInput:
+    type: object
+    properties:
+      from_cart: *id020
+      items:
+        type: array
+        items:
+          type: object
+          properties: *id023
+  dto.CheckoutResponse:
+    type: object
+    properties:
+      checkout_id: *id009
+      orders:
+        type: array
+        items:
+          $ref: '#/definitions/dto.Order'
+      grand_total: *id022
+      payment_method: *id009
+      replayed: *id020
+      payment:
+        $ref: '#/definitions/dto.Payment'
+  dto.ConfirmPaymentInput:
+    type: object
+    properties:
+      card_number: *id009
+      card_exp:
+        type: string
+        example: 12/30
+      card_cvc: *id009
+      otp: *id009
+      approve: *id020
+  dto.CreateProductOutput:
+    type: object
+    properties:
+      message: *id009
+      success: *id020
+      id: *id021
+  dto.ErrorResponse:
+    type: object
+    properties:
+      error: *id009
+      request_id: *id009
+  dto.EventsInput:
+    type: object
+    properties:
+      events:
+        type: array
+        maxItems: 50
+        items:
+          $ref: '#/definitions/dto.TrackingEvent'
+    required:
+    - events
+  dto.EventsResult:
+    type: object
+    properties:
+      accepted: *id021
+      rejected: *id021
+      dropped: *id021
+      reasons:
+        type: array
+        items: *id009
+  dto.ForcePaymentInput:
+    type: object
+    properties:
+      status:
+        type: string
+        enum:
+        - SUCCEEDED
+        - FAILED
+        - EXPIRED
+    required:
+    - status
+  dto.IdentifyInput:
+    type: object
+    properties:
+      anonymous_id: *id009
+    required:
+    - anonymous_id
+  dto.InventoryAdjustInput:
+    type: object
+    properties:
+      delta: *id021
+      reason: *id009
+    required:
+    - delta
+    - reason
+  dto.InventoryAdjustOutput:
+    type: object
+    properties:
+      message: *id009
+      success: *id020
+      inventory: *id021
+  dto.LedgerEntry:
+    type: object
+    properties:
+      id: *id021
+      product_id: *id021
+      delta: *id021
+      reason:
+        type: string
+        enum:
+        - initial
+        - reserve
+        - release
+        - sale
+        - restock
+        - adjust
+        - update
+      ref_type: *id009
+      ref_id: *id009
+      balance_after: *id021
+      at: *id009
+  dto.LedgerList:
+    type: object
+    properties:
+      entries:
+        type: array
+        items:
+          $ref: '#/definitions/dto.LedgerEntry'
+  dto.LoginInput:
+    type: object
+    properties:
+      username: &id025
+        type: string
+        pattern: ^[a-zA-Z0-9_]{3,16}$
+      password: &id026
+        type: string
+        minLength: 8
+        maxLength: 16
+      role:
+        type: string
+        enum:
+        - buyer
+        - seller_admin
+        - seller_employee
+        - admin
+    required:
+    - username
+    - password
+    - role
+  dto.LoginOutput:
+    type: object
+    properties:
+      message: *id009
+      success: *id020
+      access_token: *id009
+      refresh_token: *id009
+  dto.MessageResponse:
+    type: object
+    properties:
+      message: *id009
+      success: *id020
+  dto.Order:
+    type: object
+    properties:
+      id: *id021
+      checkout_id: *id009
+      buyer_id: *id021
+      store_id: *id021
+      status:
+        type: string
+        enum:
+        - PENDING
+        - AWAITING_PAYMENT
+        - CONFIRMED
+        - PAID
+        - SHIPPED
+        - DELIVERED
+        - REFUND_REQUESTED
+        - REFUNDED
+        - CANCELED
+        - EXPIRED
+        - FAILED
+      payment_method: *id009
+      payment_status:
+        type: string
+        enum:
+        - UNPAID
+        - PAID
+        - REFUNDED
+      subtotal: *id022
+      shipping_fee: *id022
+      total_price: *id022
+      shipping_address:
+        $ref: '#/definitions/dto.ShippingAddress'
+      note: *id009
+      expires_at: *id009
+      created_at: *id009
+      updated_at: *id009
+      paid_at: *id009
+      shipped_at: *id009
+      delivered_at: *id009
+      canceled_at: *id009
+      cancel_reason: *id009
+      canceled_by: *id009
+      carrier: *id009
+      tracking_code: *id009
+      return_reason: *id009
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/dto.OrderItem'
+      history:
+        type: array
+        items:
+          $ref: '#/definitions/dto.OrderHistory'
+  dto.OrderHistory:
+    type: object
+    properties:
+      from_status: *id009
+      to_status: *id009
+      actor_type: *id009
+      actor_id: *id021
+      reason: *id009
+      at: *id009
+  dto.OrderItem:
+    type: object
+    properties:
+      id: *id021
+      order_id: *id021
+      product_id: *id021
+      name: *id009
+      sku: *id009
+      image_url: *id009
+      store_id: *id021
+      category_id: *id021
+      quantity: *id021
+      unit_price: *id022
+      line_total: *id022
+      status:
+        type: string
+        enum:
+        - ACTIVE
+        - CANCELED
+  dto.OrderList:
+    type: object
+    properties:
+      orders:
+        type: array
+        items:
+          $ref: '#/definitions/dto.Order'
+      total: *id021
+  dto.OrderSummary:
+    type: object
+    properties:
+      by_status:
+        type: object
+        additionalProperties: *id021
+  dto.Payment:
+    type: object
+    properties:
+      id: *id009
+      checkout_id: *id009
+      buyer_id: *id021
+      method: *id009
+      status:
+        type: string
+        enum:
+        - REQUIRES_ACTION
+        - PROCESSING
+        - SUCCEEDED
+        - FAILED
+        - CANCELED
+        - EXPIRED
+        - PARTIALLY_REFUNDED
+        - REFUNDED
+      amount_minor: *id021
+      amount: *id022
+      currency: *id009
+      provider: *id009
+      provider_ref: *id009
+      failure_code: *id009
+      card_last4: *id009
+      expires_at: *id009
+      paid_at: *id009
+      created_at: *id009
+      refunded_minor: *id021
+      refunded: *id022
+      next_action:
+        type: string
+        enum:
+        - enter_card
+        - otp
+        - approve_in_wallet
+        - transfer_and_confirm
+        - wait
+        - none
+      order_ids:
+        type: array
+        items: *id021
+      pay_url: *id009
+      simulated: *id020
+      attempts:
+        type: array
+        items: &id024
+          type: object
+      refunds:
+        type: array
+        items: *id024
+  dto.PaymentList:
+    type: object
+    properties:
+      payments:
+        type: array
+        items:
+          $ref: '#/definitions/dto.Payment'
+      total: *id021
+  dto.PaymentMethod:
+    type: object
+    properties:
+      code: *id009
+      label: *id009
+      online: *id020
+      simulated: *id020
+      test_cards:
+        type: array
+        items: *id024
+  dto.PaymentMethodList:
+    type: object
+    properties:
+      methods:
+        type: array
+        items:
+          $ref: '#/definitions/dto.PaymentMethod'
+  dto.Product:
+    type: object
+    properties:
+      id: *id021
+      name: *id009
+      price: *id022
+      seller_id: *id021
+      inventory: *id021
+      attributes: *id024
+      description: *id009
+      category_id: *id021
+      category_name: *id009
+      brand: *id009
+      tags:
+        type: array
+        items: *id009
+      image_urls:
+        type: array
+        items: *id009
+      status:
+        type: string
+        enum:
+        - draft
+        - active
+        - hidden
+        - banned
+      sku: *id009
+      low_stock_threshold: *id021
+      weight_g: *id021
+      reserved: *id021
+      sold: *id021
+      version: *id021
+      created_at: *id009
+      updated_at: *id009
+      stock_level:
+        type: string
+        enum:
+        - none
+        - low
+        - ok
+  dto.ProductInput:
+    type: object
+    properties:
+      name: *id009
+      price: *id022
+      inventory: *id021
+      attributes: *id024
+      description: *id009
+      category_id: *id021
+      brand: *id009
+      tags:
+        type: array
+        items: *id009
+      image_urls:
+        type: array
+        items: *id009
+      status:
+        type: string
+        enum:
+        - draft
+        - active
+        - hidden
+      sku: *id009
+      low_stock_threshold: *id021
+      weight_g: *id021
+    required:
+    - name
+    - price
+  dto.ProductList:
+    type: object
+    properties:
+      message: *id009
+      success: *id020
+      products:
+        type: array
+        items:
+          $ref: '#/definitions/dto.Product'
+      total: *id021
+  dto.ProductOutput:
+    type: object
+    properties:
+      message: *id009
+      success: *id020
+      product:
+        $ref: '#/definitions/dto.Product'
+  dto.ReasonInput:
+    type: object
+    properties:
+      reason: *id009
+  dto.RefreshTokenInput:
+    type: object
+    properties:
+      refresh_token: *id009
+    required:
+    - refresh_token
+  dto.RefundInput:
+    type: object
+    properties:
+      amount_minor: *id021
+      reason: *id009
+    required:
+    - amount_minor
+  dto.RegisterInput:
+    type: object
+    properties:
+      username: *id025
+      password: *id026
+      role:
+        type: string
+        enum:
+        - buyer
+        - seller_admin
+    required:
+    - username
+    - password
+    - role
+  dto.RegisterSellerRolesInput:
+    type: object
+    properties:
+      username: *id025
+      password: *id026
+    required:
+    - username
+    - password
+  dto.Seller:
+    type: object
+    properties:
+      id: *id021
+      name: *id009
+      bank_account: *id009
+      tax_code: *id009
+      description: *id009
+      date_of_birth: *id009
+      phone: *id009
+      address: *id009
+  dto.SellerInput:
+    type: object
+    properties:
+      seller:
+        $ref: '#/definitions/dto.Seller'
+    required:
+    - seller
+  dto.SellerOutput:
+    type: object
+    properties:
+      message: *id009
+      success: *id020
+      seller:
+        $ref: '#/definitions/dto.Seller'
+  dto.ShipInput:
+    type: object
+    properties:
+      carrier: *id009
+      tracking_code: *id009
+    required:
+    - carrier
+    - tracking_code
+  dto.ShippingAddress:
+    type: object
+    properties:
+      label: *id009
+      receiver_name: *id009
+      phone: *id009
+      line1: *id009
+      ward: *id009
+      district: *id009
+      city: *id009
+  dto.StatusInput:
+    type: object
+    properties:
+      status:
+        type: string
+        enum:
+        - draft
+        - active
+        - hidden
+        - banned
+    required:
+    - status
+  dto.StockLevel:
+    type: object
+    properties:
+      product_id: *id021
+      level:
+        type: string
+        enum:
+        - none
+        - low
+        - ok
+  dto.SystemHealth:
+    type: object
+    properties:
+      as_of: *id009
+      status:
+        type: string
+        enum:
+        - ready
+        - degraded
+        - not_ready
+        - unreachable
+      services:
+        type: array
+        items:
+          type: object
+          properties:
+            name: *id009
+            status: *id009
+            latency_ms: *id021
+            version: *id009
+            uptime_s: *id021
+            checks: *id024
+  dto.TrackingEvent:
+    type: object
+    properties:
+      event_id: *id009
+      event_type: *id009
+      ts_client: *id009
+      anonymous_id: *id009
+      session_id: *id009
+      surface: *id009
+      page:
+        type: object
+        properties:
+          path: *id009
+          referrer: *id009
+      item:
+        type: object
+        properties:
+          product_id: *id021
+          position: *id021
+      props: *id024
+      device:
+        type: object
+        properties:
+          type: *id009
+          os: *id009
+      consent:
+        type: object
+        properties:
+          analytics: *id020
+      app_version: *id009
+    required:
+    - event_id
+    - event_type
+  dto.UpdateProductInput:
+    type: object
+    properties:
+      product:
+        $ref: '#/definitions/dto.ProductInput'
+    required:
+    - product
 securityDefinitions:
   BearerAuth:
-    description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization:
-      Bearer {token}"'
-    in: header
-    name: Authorization
+    description: 'JWT access token. Example: "Authorization: Bearer {token}"'
     type: apiKey
-swagger: "2.0"
+    name: Authorization
+    in: header

@@ -53,3 +53,28 @@ func (r *UserRepository) DelSellerByID(ctx context.Context, id uint64) error {
 	}
 	return nil
 }
+
+// SeedDemoSeller creates the demo store with a FIXED id (the demo products of product-service carry that
+// seller_id) and queues the outbox event that tells auth-service to set the store id of userID. It does nothing
+// (created=false) when the store already exists or any other seller exists, so it is safe on every start (R9).
+func (r *UserRepository) SeedDemoSeller(ctx context.Context, seller *model.Seller, userID uint64) (created bool, err error) {
+	err = r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var n int64
+		if err := tx.Unscoped().Model(&model.Seller{}).Count(&n).Error; err != nil {
+			return err
+		}
+		if n > 0 {
+			return nil
+		}
+		if err := tx.Create(seller).Error; err != nil { // seller.ID is set by the caller
+			return err
+		}
+		// keep the serial sequence ahead of the explicit id so real sellers do not collide with it
+		if err := tx.Exec(`SELECT setval(pg_get_serial_sequence('sellers', 'id'), (SELECT max(id) FROM sellers))`).Error; err != nil {
+			return err
+		}
+		created = true
+		return r.CreateCreateSellerEvent(tx, seller.ID, userID)
+	})
+	return created, err
+}

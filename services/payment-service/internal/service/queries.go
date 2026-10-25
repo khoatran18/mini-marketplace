@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"payment-service/pkg/events"
+	"mini-marketplace/shared/events"
 	"payment-service/pkg/model"
 	"strings"
 
@@ -192,7 +192,7 @@ func (s *PaymentService) Refund(ctx context.Context, in RefundInput) (*model.Ref
 		refund = r
 		s.Metrics.refund("succeeded")
 		return events.Emit(tx, TopicRefunded, pkey(p.ID), refundedEvent{
-			V: 1, PaymentID: p.ID, RefundID: r.ID, CheckoutID: p.CheckoutID, OrderID: in.OrderID, AmountMinor: in.AmountMinor, Reason: in.Reason, At: s.Now().UTC(),
+			V: 1, PaymentID: p.ID, RefundID: r.ID, CheckoutID: p.CheckoutID, OrderID: in.OrderID, AmountMinor: in.AmountMinor, Reason: in.Reason, At: s.Now().UTC(), PaymentStatus: p.Status,
 		})
 	})
 	return refund, err

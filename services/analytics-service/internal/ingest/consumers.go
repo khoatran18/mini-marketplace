@@ -37,6 +37,7 @@ func (c *Consumers) HandleOrderStatus(_ context.Context, m *kafka.Message) error
 		BuyerID          uint64    `json:"buyer_id"`
 		StoreID          uint64    `json:"store_id"`
 		Status           string    `json:"status"`
+		Prev             string    `json:"prev"`
 		PaymentMethod    string    `json:"payment_method"`
 		PaymentStatus    string    `json:"payment_status"`
 		SubtotalMinor    int64     `json:"subtotal_minor"`
@@ -55,11 +56,16 @@ func (c *Consumers) HandleOrderStatus(_ context.Context, m *kafka.Message) error
 		return nil // malformed: skip (retrying cannot fix it)
 	}
 	at := store.Time(e.At)
-	c.Out.Add("fact_order_status", store.OrderStatusRow{
-		OrderID: e.OrderID, Status: e.Status, CheckoutID: e.CheckoutID, BuyerID: e.BuyerID, StoreID: e.StoreID,
-		PaymentMethod: e.PaymentMethod, PaymentStatus: e.PaymentStatus, SubtotalMinor: e.SubtotalMinor,
-		ShippingFeeMinor: e.ShippingFeeMinor, TotalMinor: e.TotalMinor, At: at,
-	})
+	// fact_order_status keeps ONE row per (order, status) and ReplacingMergeTree(at) keeps the newest. A rejected
+	// return moves REFUND_REQUESTED back to DELIVERED; writing that row would replace the first DELIVERED time and
+	// shift the date COD revenue is recognised (R7), so the re-entry is not recorded as a new status fact.
+	if !(e.Status == "DELIVERED" && e.Prev == "REFUND_REQUESTED") {
+		c.Out.Add("fact_order_status", store.OrderStatusRow{
+			OrderID: e.OrderID, Status: e.Status, CheckoutID: e.CheckoutID, BuyerID: e.BuyerID, StoreID: e.StoreID,
+			PaymentMethod: e.PaymentMethod, PaymentStatus: e.PaymentStatus, SubtotalMinor: e.SubtotalMinor,
+			ShippingFeeMinor: e.ShippingFeeMinor, TotalMinor: e.TotalMinor, At: at,
+		})
+	}
 	for _, it := range e.Items {
 		c.Out.Add("fact_order_items", store.OrderItemRow{
 			OrderID: e.OrderID, ItemID: it.ItemID, StoreID: e.StoreID, ProductID: it.ProductID, CategoryID: it.CategoryID,

@@ -1,8 +1,8 @@
 -- +goose Up
 -- Baseline = schema do GORM AutoMigrate cũ tạo ra (sellers, buyers, addresses, outbox).
 -- Dùng IF NOT EXISTS để chạy an toàn trên DB cũ đã có bảng.
--- Lưu ý: create_seller_events / create_seller_kafka_events là bảng thừa theo docs nhưng giữ lại
--- để không đổi hành vi so với bản AutoMigrate; sẽ bỏ bằng migration riêng sau.
+-- Lưu ý: create_seller_kafka_events là bảng thừa (bỏ ở 00002); giữ trong baseline
+-- cho DB cũ.
 
 CREATE TABLE IF NOT EXISTS sellers (
     id            BIGSERIAL PRIMARY KEY,

@@ -1,10 +1,10 @@
 package config
 
 import (
-	"api-gateway/internal/config/messagequeue/kafkaimpl"
 	"context"
 	"errors"
 	"fmt"
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"os"
 	"strconv"
 	"strings"

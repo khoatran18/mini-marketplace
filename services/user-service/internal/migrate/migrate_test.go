@@ -42,7 +42,7 @@ func tableCount(t *testing.T, db *sql.DB) int {
 	t.Helper()
 	var n int
 	err := db.QueryRow(`SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN
-		('sellers','buyers','addresses','create_seller_events','create_seller_kafka_events',$1)`, VersionTable).Scan(&n)
+		('sellers','buyers','addresses','create_seller_events',$1)`, VersionTable).Scan(&n)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,8 +57,8 @@ func TestRunEmptyDBAndIdempotent(t *testing.T) {
 			t.Fatalf("run #%d: %v", i+1, err)
 		}
 	}
-	if n := tableCount(t, db); n != 6 {
-		t.Errorf("tables = %d, want 6", n)
+	if n := tableCount(t, db); n != 5 {
+		t.Errorf("tables = %d, want 5", n)
 	}
 	if _, err := db.Exec(`INSERT INTO addresses (user_id, receiver_name, phone, line1, city) VALUES (1,'a','b','c','d')`); err != nil {
 		t.Errorf("insert address (serial default): %v", err)
@@ -85,7 +85,7 @@ INSERT INTO addresses (user_id, receiver_name, phone, line1, city) VALUES (7,'x'
 	if err := db.QueryRow(`SELECT count(*) FROM addresses WHERE user_id=7`).Scan(&n); err != nil || n != 1 {
 		t.Errorf("data lost: n=%d err=%v", n, err)
 	}
-	if c := tableCount(t, db); c != 6 {
-		t.Errorf("tables = %d, want 6", c)
+	if c := tableCount(t, db); c != 5 {
+		t.Errorf("tables = %d, want 5", c)
 	}
 }

@@ -9,14 +9,14 @@ require (
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/lpernett/godotenv v0.0.0-20230527005122-0de1d4c5ef5e
 	github.com/pressly/goose/v3 v3.26.0
-	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/redis/go-redis/v9 v9.12.1
 	github.com/segmentio/kafka-go v0.4.49
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.75.0
 	google.golang.org/protobuf v1.36.11
 	gorm.io/driver/postgres v1.6.0
-	gorm.io/gorm v1.30.2
+	gorm.io/gorm v1.30.5
 )
 
 require (
@@ -50,3 +50,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
 )
+
+require mini-marketplace/shared v0.0.0
+
+replace mini-marketplace/shared => ../../shared

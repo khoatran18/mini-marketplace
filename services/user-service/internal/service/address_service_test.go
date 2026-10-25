@@ -185,3 +185,31 @@ func TestAddressLimitAndValidation(t *testing.T) {
 		}
 	}
 }
+
+// R9: the demo store has the fixed id the demo products use, is created once, and the serial sequence moves past it.
+func TestSeedDemoSellerFixedIDOnce(t *testing.T) {
+	s := testService(t)
+	ctx := context.Background()
+	seller := func() *model.Seller {
+		return &model.Seller{ID: DemoStoreID, Name: "Demo Store", BankAccount: "1", TaxCode: "1", Description: "d", Phone: "1", Address: "a"}
+	}
+	for i, want := range []bool{true, false} {
+		created, err := s.UserRepo.SeedDemoSeller(ctx, seller(), 3)
+		if err != nil || created != want {
+			t.Fatalf("run %d: created=%v err=%v, want created=%v", i, created, err, want)
+		}
+	}
+	got, err := s.UserRepo.GetSellerByID(ctx, DemoStoreID)
+	if err != nil || got.Name != "Demo Store" {
+		t.Fatalf("demo store: %v %+v", err, got)
+	}
+	var events int64
+	s.UserRepo.DB.Table("create_seller_events").Where("seller_id = ? AND user_id = ?", DemoStoreID, 3).Count(&events)
+	if events != 1 {
+		t.Errorf("outbox events = %d, want 1 (auth-service sets the store id once)", events)
+	}
+	next := &model.Seller{Name: "Real", BankAccount: "1", TaxCode: "1", Description: "d", Phone: "1", Address: "a"}
+	if err := s.UserRepo.CreateSeller(ctx, next, 99); err != nil || next.ID <= DemoStoreID {
+		t.Errorf("a regular seller must not collide with the demo store: id=%d err=%v", next.ID, err)
+	}
+}

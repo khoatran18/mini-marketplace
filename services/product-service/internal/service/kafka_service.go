@@ -79,19 +79,23 @@ type orderStatusEvent struct {
 }
 
 // MarkShippedFromOrderEvent consumes order.status_changed; when an order is SHIPPED the reserved goods leave
-// the warehouse (reserved goes down, sold up). Exactly once per order; all other statuses are ignored here.
+// the warehouse (reserved goes down, sold up); when it is REFUNDED (return approved) they go back to available
+// stock (sold down). Each exactly once per order; all other statuses are ignored here.
 func (s *ProductService) MarkShippedFromOrderEvent(ctx context.Context, msg *kafka.Message) error {
 	var ev orderStatusEvent
 	if err := json.Unmarshal(msg.Value, &ev); err != nil {
 		s.ZapLogger.Error("failed to unmarshal order status event", zap.Error(err))
 		return nil
 	}
-	if ev.Status != "SHIPPED" {
+	if ev.Status != "SHIPPED" && ev.Status != "REFUNDED" {
 		return nil
 	}
 	items := make([]repository.ItemQuantity, 0, len(ev.Items))
 	for _, it := range ev.Items {
 		items = append(items, repository.ItemQuantity{ProductID: it.ProductID, Quantity: it.Quantity})
+	}
+	if ev.Status == "REFUNDED" { // an approved return: the goods come back to available stock
+		return s.ProductRepo.ReturnInventory(ctx, ev.OrderID, items)
 	}
 	return s.ProductRepo.MarkShipped(ctx, ev.OrderID, items)
 }

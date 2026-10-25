@@ -120,10 +120,16 @@ func (s *OrderService) HandlePaymentSucceeded(ctx context.Context, msg *kafka.Me
 
 // paymentRefundedEvent is the payload of payment.refunded.
 type paymentRefundedEvent struct {
-	OrderID uint64 `json:"order_id"`
+	OrderID       uint64 `json:"order_id"`
+	CheckoutID    string `json:"checkout_id"`
+	PaymentStatus string `json:"payment_status"`
 }
 
-// HandlePaymentRefunded records that the money of an order went back to the buyer.
+// HandlePaymentRefunded records that the money of an order went back to the buyer. A refund that belongs to a
+// single order marks that order. A refund without an order (an administrator's manual refund, or money returned
+// for orders that could not be paid) marks the checkout's paid orders only once the WHOLE payment is refunded:
+// a partial manual refund can not be attributed to one order, so their payment_status stays PAID (R6).
+// Idempotent: only orders still PAID are touched.
 func (s *OrderService) HandlePaymentRefunded(ctx context.Context, msg *kafka.Message) error {
 	var ev paymentRefundedEvent
 	if err := json.Unmarshal(msg.Value, &ev); err != nil {
@@ -131,6 +137,9 @@ func (s *OrderService) HandlePaymentRefunded(ctx context.Context, msg *kafka.Mes
 		return nil
 	}
 	if ev.OrderID == 0 {
+		if ev.CheckoutID != "" && ev.PaymentStatus == "REFUNDED" {
+			return s.OrderRepo.MarkCheckoutPaymentRefunded(ctx, ev.CheckoutID)
+		}
 		return nil
 	}
 	return s.OrderRepo.MarkPaymentRefunded(ctx, ev.OrderID)

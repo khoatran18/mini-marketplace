@@ -545,3 +545,31 @@ func TestConcurrentActionsOnOneOrderAreSerialised(t *testing.T) {
 		t.Errorf("no refunds expected, got %d", n)
 	}
 }
+
+// R6: an administrator's manual refund has no order id; the orders of the checkout follow only a FULL refund.
+func TestAdminRefundWithoutOrderMarksCheckoutOrders(t *testing.T) {
+	db := testDB(t)
+	s, _ := newTestService(repository.NewOrderRepository(db), product(1, 10, 100000, 50))
+	ctx := context.Background()
+	res := checkout(t, s, 5, model.MethodMockCard, "k", Line{1, 1})
+	reserveAll(t, s, res)
+	_ = s.HandlePaymentSucceeded(ctx, paymentSucceeded(res.Checkout.ID, 13000000))
+	o := res.Orders[0]
+
+	partial := fmt.Sprintf(`{"order_id":0,"checkout_id":%q,"payment_status":"PARTIALLY_REFUNDED"}`, res.Checkout.ID)
+	if err := s.HandlePaymentRefunded(ctx, msg(partial)); err != nil {
+		t.Fatal(err)
+	}
+	if got := reload(t, s, o.ID); got.PaymentStatus != model.PaymentPaid {
+		t.Fatalf("a partial manual refund can not be attributed to an order, got %s", got.PaymentStatus)
+	}
+	full := fmt.Sprintf(`{"order_id":0,"checkout_id":%q,"payment_status":"REFUNDED"}`, res.Checkout.ID)
+	for i := 0; i < 2; i++ { // redelivery is harmless
+		if err := s.HandlePaymentRefunded(ctx, msg(full)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := reload(t, s, o.ID); got.PaymentStatus != model.PaymentRefunded {
+		t.Errorf("payment status = %s, want REFUNDED", got.PaymentStatus)
+	}
+}

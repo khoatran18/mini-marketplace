@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"mini-marketplace/shared/events"
 	"order-service/internal/migrate"
-	"order-service/pkg/events"
 	"order-service/pkg/model"
 	"order-service/pkg/outbox"
 
