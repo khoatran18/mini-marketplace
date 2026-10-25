@@ -8,4 +8,5 @@
 | [04_API_REFERENCE.md](04_API_REFERENCE.md) | Toàn bộ REST gateway |
 | [05_SECURITY.md](05_SECURITY.md) | Xác thực, phân quyền, riêng tư, khoảng trống |
 | [06_PROTOBUF.md](06_PROTOBUF.md) | Sinh lại `.pb.go` offline |
+| [07_DATA_PIPELINE.md](07_DATA_PIPELINE.md) | Đường ống dữ liệu: datagen (D5), backfill / đối soát (D4), export (D3) |
 | [platform/](platform/README.md) | Thiết kế nền tảng + trạng thái triển khai (01–09) |

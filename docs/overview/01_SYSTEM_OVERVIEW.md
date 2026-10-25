@@ -76,7 +76,7 @@ Ghi chú:
 | Kafka | `apache/kafka:3.9.0`, KRaft, 1 broker (`broker1`) | 1 | Bus sự kiện; 3 partition / topic, retention 7 ngày |
 | ClickHouse | `clickhouse/clickhouse-server:24.8` | 1 (RAM 2 GB) | Kho phân tích (dẫn xuất): `events_raw`, bảng `fact_*`, `dim_products` |
 | Prometheus | `prom/prometheus:v2.55.1` (`marketplace-obs`) | 1 (768 MB) | Thu metric `:8081/metrics` của mọi service + exporter |
-| Grafana | `grafana/grafana:11.3.0` | 1 | 5 dashboard (chỉ xem, **không cảnh báo**) |
+| Grafana | `grafana/grafana:11.3.0` | 1 | 11 dashboard (chỉ xem, **không cảnh báo**) |
 | cAdvisor, node-exporter | – | **global** (mỗi node) | Metric container / host |
 | postgres / redis / kafka-exporter | – | 1 | Metric hạ tầng |
 

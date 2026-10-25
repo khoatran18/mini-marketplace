@@ -7,7 +7,7 @@ mindmap
   root((Tồn đọng))
     Chưa kiểm chứng
       Swarm Traefik Grafana chưa chạy thật
-      e2e viết cho API cũ
+      e2e mới viết, chưa chạy thật
       chưa thử nhiều replica
     Tính năng thiếu
       review wishlist
@@ -17,7 +17,7 @@ mindmap
     Độ tin cậy
       outbox dùng chung, dòng độc chặn hàng
       mất tracking khi analytics restart
-      không backfill ClickHouse
+      backfill ClickHouse mới là CLI
       Kafka 1 broker
     Bảo mật
       xoay secret trong lịch sử git
@@ -26,7 +26,7 @@ mindmap
       thẻ img canary trong README
     Quan sát
       thiếu tracing, metric nghiệp vụ
-      Grafana 5 trên 10 dashboard
+      Grafana 11 dashboard, chưa xem thật
     Công cụ
       Swagger cũ
       README frontend cũ
@@ -39,7 +39,7 @@ mindmap
 |---|---|---|---|
 | V1 | Docker Swarm, Traefik, ClickHouse server, Prometheus, Grafana **chưa từng chạy thật** trong môi trường phát triển; compose, nhãn Traefik, healthcheck, dashboard mới chỉ được kiểm cú pháp | P1 | Lần deploy đầu theo [../instruction/02_DEPLOYMENT.md](../instruction/02_DEPLOYMENT.md) §1 và xem `docker service logs` từng service |
 | V2 | SQL ClickHouse thử trên chDB 26.9; ClickHouse 24.8 thật chỉ chạy ở CI | P2 | Có thể lệch ở chi tiết hiếm |
-| V3 | E2E `scripts/e2e/*.mjs` viết cho API cũ → **sẽ hỏng**; chưa có e2e cho cart / checkout / payment / analytics, chưa chạy lại `resilience.sh` | P1 | [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5 |
+| V3 | 🟡 E2E đã viết lại (11 kịch bản cart / checkout / payment / analytics, `resilience.sh` A..I, `scripts/load`) nhưng **chưa chạy lần nào trên stack thật**; chạy lần đầu rồi sửa chỗ lệch contract | P1 | [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5 |
 | V4 | Chạy nhiều replica cho service ngoài gateway chưa được kiểm chứng (worker timers của order-service, worker payment…) | P2 | Outbox dùng `SKIP LOCKED` nên có cơ sở, nhưng chưa có test |
 | V5 | Frontend (nhánh UI) chưa được kiểm chứng end-to-end với backend thật | P2 | [../design/platform/07_UI_DESIGN.md](../design/platform/07_UI_DESIGN.md) |
 
@@ -52,7 +52,7 @@ mindmap
 | F3 | Quyền riêng tư: bảng `consents`, `PUT /users/me/consent`, `DELETE /users/me/data` (consent chỉ đi kèm từng event) | P2 |
 | F4 | An toàn tài khoản: khóa tạm khi sai mật khẩu nhiều lần, `audit_log`, xác thực email, đặt lại mật khẩu, logout (deny-list token), `GET /auth/me` | P2 |
 | F5 | Quản trị: `/admin/users`, `/admin/stores` (duyệt / khóa), `/admin/system/metrics` (proxy Prometheus whitelist), `/admin/system/outbox` + requeue qua API | P2 |
-| F6 | Analytics nâng cao: đối soát đêm Postgres ↔ ClickHouse (`data-health` hiện trả `reconciliation: "not_implemented"`), backfill, materialized view khi dữ liệu lớn, xuất CSV | P2 |
+| F6 | Analytics nâng cao: đối soát đêm Postgres ↔ ClickHouse: đã có CLI `backfill` / `reconcile` và `scripts/export` (xuất CSV / Parquet), chạy thật cục bộ; còn thiếu lịch đêm, nối `data-health` (vẫn trả `reconciliation: "not_implemented"`) và metric; materialized view khi dữ liệu lớn | P2 |
 | F7 | Thông báo (email / in-app) và cảnh báo (Alertmanager) — **cố ý chưa làm** (ADR-12) | P3 |
 | F8 | Thanh toán thật — hiện chỉ mô phỏng (ADR-16) | P3 |
 | F9 | `GET /config/features` (feature flag) — cần nếu bật / tắt tính năng AI | P2 nếu làm AI |
@@ -64,8 +64,8 @@ mindmap
 | R1 | Tracking đi qua gRPC: analytics-service down / restart thì **mất** event đang đệm; ClickHouse down quá `ANALYTICS_BUFFER_MAX_ROWS` (100.000) thì rớt dòng cũ nhất | P2 |
 | R2 | `domain_events` là một bảng chung của product / order / payment: backlog không tách theo service, **một dòng độc chặn đầu hàng** (lỗi đầu tiên dừng cả lô); chưa có dead-letter | P1 |
 | R3 | Consumer Kafka thử 5 lần rồi bỏ message; chưa có DLQ / schema registry; Kafka 1 broker, RF 1 | P2 |
-| R4 | ClickHouse không backfill từ Postgres; chỉ dựng lại được tối đa ~7 ngày từ Kafka | P2 |
-| R5 | `AutoMigrate` thay vì migration có version (Postgres); `accounts.username` UNIQUE toàn cục dù đăng nhập theo (username, role) | P2 |
+| R4 | 🟡 Đã có CLI `backfill` Postgres → ClickHouse cho bảng fact / dim (không dựng lại được `events_raw`; nhớ chỉ backfill vào khoảng trống để khỏi nhân đôi `fact_payment_events` / `fact_inventory`); Kafka vẫn chỉ giữ ~7 ngày | P2 |
+| R5 | ~~`AutoMigrate`~~ → đã chuyển sang goose có version (5 service, chưa chạy trên Swarm, ADR-26). Còn lại: `accounts.username` UNIQUE toàn cục dù đăng nhập theo (username, role) | P2 |
 | R6 | Hoàn tiền thủ công của admin không cập nhật `orders.payment_status`; đơn `REFUNDED` không tự nhập lại kho; hoàn tiền COD chỉ đổi nhãn; payment `PROCESSING` không tự hết hạn | P2 |
 | R7 | `fact_order_status` giữ dòng mới nhất cho mỗi (đơn, trạng thái): đơn bị từ chối trả hàng làm dịch ngày ghi nhận doanh thu COD | P2 |
 | R8 | `POST /orders` thường chưa kèm `payment` (tạo bất đồng bộ) → client phải poll `GET /checkouts/:id` | P3 |
@@ -81,22 +81,22 @@ mindmap
 | S3 | Token lưu `localStorage` (rủi ro XSS); nên chuyển cookie httpOnly | P2 |
 | S4 | gRPC và Postgres giữa các service đang plaintext (`sslmode=disable`) | P3 |
 | S5 | ClickHouse, Prometheus, cổng `:8081` không có xác thực (chỉ an toàn nhờ không publish cổng) | P2 |
-| S6 | gRPC chưa có deadline / retry / circuit breaker từ gateway và order-service | P2 |
+| S6 | gRPC: đã có deadline + retry lệnh đọc ở **gateway** (🟡 chưa chạy thật); còn thiếu retry lệnh ghi có `Idempotency-Key`, circuit breaker, và deadline / retry ở order-service | P2 |
 | S7 | `README.md` gốc có 2 thẻ `<img>` ẩn (kích thước 0×0, `display:none`) trỏ tới `canarytokens.com` — là ảnh theo dõi (canary token) chứ không phải tài liệu; nếu không chủ ý thì nên gỡ | P2 |
 
 ## 5. Quan sát (observability)
 
-- Thiếu request-id, distributed tracing, metric nghiệp vụ (`mm_orders_*`, `mm_payments_*`, `mm_inventory_*`, `mm_kafka_consumer_lag`, `mm_grpc_client_*`).
-- Grafana mới có **5 / 10** dashboard theo thiết kế; chưa có Payments, Business, ClickHouse server, panel outbox riêng.
-- `update_config: start-first` / `failure_action: rollback` và `scripts/wait-ready.sh` chưa có (deploy cập nhật có thể gián đoạn).
-- 3 exporter (postgres / redis / kafka) chưa có healthcheck container.
+- Đã có request-id (`X-Request-ID`, 🟡 chưa vào Kafka / outbox), deadline / retry đọc ở gateway, log tập trung Vector → Loki (🟡 chưa chạy trên Swarm). Còn thiếu: distributed tracing, circuit breaker, chuẩn hoá log JSON trong service. Metric nghiệp vụ (`mm_orders_*`, `mm_payments_*`, `mm_inventory_*`, `mm_rate_limited_total`, `mm_grpc_client_*`) đã thêm và test đơn vị, chưa chạy stack thật; lag Kafka dùng `kafka_consumergroup_lag` của kafka-exporter.
+- Grafana có **11** dashboard (ClickHouse server, Outbox & Workers, Payments, Business, Kafka consumer lag, Logs mới viết, chưa xem trên Grafana thật; PromQL chưa chạy trên Prometheus thật).
+- 🟡 `update_config: start-first` / `failure_action: rollback` và `scripts/wait-ready.sh` đã viết, chưa chạy thử trên Swarm thật.
+- postgres-exporter và kafka-exporter đã có healthcheck; redis-exporter không làm được (image scratch, không có shell/wget/curl), trạng thái xem qua `up{job="redis"}`.
 
 ## 6. Công cụ và tài liệu
 
 - Swagger (`services/api-gateway/docs`) **đã cũ**; REST đầy đủ ở [../design/04_API_REFERENCE.md](../design/04_API_REFERENCE.md). Cần `swag init` lại và chú thích handler mới.
 - `apps/frontend/README.md` đã cũ (nhắc `cd frontend`, `NEXT_PUBLIC_JWT_SECRET`, API cũ).
 - Chưa có module Go dùng chung cho protobuf + `kafkaimpl` + `ops` + `events` (hiện là bản sao giống hệt ở 7 service, ADR-8); chưa có `buf` registry.
-- `payment-service` / `analytics-service` thiếu `cmd/.env.example`; `ANALYTICS_FLUSH_*` có trong `services.yml` nhưng chưa có trong `.env.example`; `ANALYTICS_BUFFER_MAX_ROWS` chưa truyền qua `services.yml`.
+- ✅ Đã xử lý: `payment-service` / `analytics-service` đã có `cmd/.env.example`; `ANALYTICS_FLUSH_*` / `ANALYTICS_BUFFER_MAX_ROWS` đã có trong `services.yml` và `.env.example`; địa chỉ gRPC đọc từ `*_SERVICE_ADDR`.
 - Tài liệu trong `docs/` pha tiếng Việt / tiếng Anh (nhiều file kế thừa từ trước); chưa thống nhất.
 
 ## 7. Tồn đọng riêng cho việc gắn AI

@@ -1,6 +1,6 @@
 # 08 · Hạ tầng
 
-> **Trạng thái: 🟡 phần lớn ĐÃ TRIỂN KHAI nhưng CHƯA chạy thật** (Docker/Swarm/Traefik/ClickHouse server/Grafana chưa từng chạy trong sandbox; CI chỉ build image và chạy test). Chi tiết vận hành: [02_DEPLOYMENT.md](../../instruction/02_DEPLOYMENT.md), [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md). Secrets như cũ: giá trị thật ở `deploy/.env` (ignored), biến mới đã thêm vào `deploy/.env.example`.
+> **Trạng thái: 🟡 phần lớn ĐÃ TRIỂN KHAI nhưng CHƯA chạy thật** (Docker/Swarm/Traefik/ClickHouse server/Grafana chưa từng chạy trên Swarm trong sandbox; các phần mới như `update_config`, `wait-ready.sh`, e2e, resilience, load test, CI push GHCR mới được viết và kiểm cú pháp, chưa chạy thật). Chi tiết vận hành: [02_DEPLOYMENT.md](../../instruction/02_DEPLOYMENT.md), [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md). Secrets như cũ: giá trị thật ở `deploy/.env` (ignored), biến mới đã thêm vào `deploy/.env.example`.
 
 ## 1. Stack
 
@@ -57,13 +57,15 @@ Cổng admin :8081 của mọi service Go, Prometheus và ClickHouse không có 
 
 ### 1.3 Chi tiết file stack
 
+> Log: mọi service có `logging: json-file` (`max-size 10m`, `max-file 3`, anchor `x-logging`) ở cả ba file; service ghi JSON ra stdout, **Vector** (global) gửi tới **Loki**, xem ở Grafana (dashboard *Logs*). Chi tiết: [05_ANALYTICS_MONITORING.md](05_ANALYTICS_MONITORING.md) §2.3, ADR-28. 🟡 chạy thật Loki + Vector cục bộ, chưa trên Swarm.
+
 | File | Thiết kế | Thực tế |
 |---|---|---|
-| `deploy/infra.yml` | thêm `clickhouse`, `minio`; healthcheck mọi container | ✅ `clickhouse/clickhouse-server:24.8` (mật khẩu bắt buộc, `TZ=UTC`, limit 2 GB, volume `clickhouse-data`, healthcheck `/ping`); ❌ **không có MinIO**; postgres/redis/kafka có healthcheck; Kafka `apache/kafka:3.9.0` retention 168 h, `NUM_PARTITIONS=3` |
-| `deploy/observability.yml` | prometheus, grafana, cadvisor, node-exporter, 3 exporter | ✅ (`marketplace-obs`; không có exporter ClickHouse/MinIO) |
-| `deploy/services.yml` | thêm payment/analytics; HEALTHCHECK + `stop_grace_period 30s` + `update_config: start-first` + limits; Traefik healthcheck `/ready`; grafana sau basic-auth | ✅ payment-service, analytics-service, HEALTHCHECK, `stop_grace_period`, limits, Traefik healthcheck gateway `/ready` (port 8081), `--ping` + metrics; ❌ **`update_config`/`start-first`/rollback chưa có**; Grafana đăng nhập bằng tài khoản Grafana (không có thêm basic-auth Traefik) |
-| `deploy/prometheus/prometheus.yml`, `deploy/grafana/{provisioning,dashboards}` | cấu hình bằng file | ✅ (5 dashboard JSON, datasource Prometheus `uid: prometheus`) |
-| `scripts/deploy.sh` | infra → observability → services → `wait-ready.sh` | ✅ `all` = infra → observability → services; `deploy.sh infra\|observability\|services`; ❌ `wait-ready.sh` chưa có |
+| `deploy/infra.yml` | thêm `clickhouse`, `minio`; healthcheck mọi container | ✅ `clickhouse/clickhouse-server:24.8` (mật khẩu bắt buộc, `TZ=UTC`, limit 2 GB, volume `clickhouse-data`, healthcheck `/ping`, endpoint Prometheus built-in cổng 9363 qua `deploy/clickhouse/prometheus.xml` nạp bằng Swarm `configs` — 🟡 chạy thật ở Docker thường, chưa thử trong Swarm); ❌ **không có MinIO**; postgres/redis/kafka có healthcheck; Kafka `apache/kafka:3.9.0` retention 168 h, `NUM_PARTITIONS=3` |
+| `deploy/observability.yml` | prometheus, grafana, cadvisor, node-exporter, 3 exporter | ✅ (`marketplace-obs`); healthcheck cho postgres-exporter và kafka-exporter (`wget`), **redis-exporter không làm được** (image scratch, không có shell/wget/curl); ClickHouse giám sát qua endpoint built-in thay vì exporter riêng; không có MinIO. 🟡 Profile `lite` chưa có cho file này |
+| `deploy/services.yml` | thêm payment/analytics; HEALTHCHECK + `stop_grace_period 30s` + `update_config: start-first` + limits; Traefik healthcheck `/ready`; grafana sau basic-auth | ✅ payment-service, analytics-service, HEALTHCHECK, `stop_grace_period`, limits, Traefik healthcheck gateway `/ready` (port 8081), `--ping` + metrics; 🟡 `update_config` + `rollback_config` cho cả 9 service (`start-first` cho traefik/frontend/gateway/auth/user/product/order, `stop-first` cho payment/analytics; `failure_action: rollback`, `monitor 30s`) — đã viết, **chưa thử cập nhật/rollback trên Swarm thật**; 6 biến `*_SERVICE_ADDR` truyền qua `svc_env`; Grafana đăng nhập bằng tài khoản Grafana (không có thêm basic-auth Traefik) |
+| `deploy/prometheus/prometheus.yml`, `deploy/grafana/{provisioning,dashboards}` | cấu hình bằng file | ✅ (11 dashboard JSON, gồm ClickHouse server, Outbox & Workers, Payments, Business, Kafka consumer lag, Logs; datasource Prometheus `uid: prometheus`; scrape job `clickhouse` → `clickhouse:9363`) |
+| `scripts/deploy.sh` | infra → observability → services → `wait-ready.sh` | ✅ `all` = infra → observability → services; `deploy.sh infra\|observability\|services`; 🟡 `wait-ready.sh` đã viết (chờ `N/N` rồi probe `/ready` bằng container tạm; `--no-wait`/`SKIP_WAIT`), chưa chạy thật; chọn môi trường bằng `DEPLOY_ENV`/`ENV_FILE`, profile `lite` bằng `LITE=true` (`deploy/services.lite.yml`) |
 | `scripts/build-images.sh` | truyền build-arg phiên bản | ✅ 7 service Go + frontend, `SERVICE_VERSION/GIT_COMMIT/BUILD_TIME` |
 
 ## 2. Container & tài nguyên (limit thực tế trong compose)
@@ -77,6 +79,8 @@ Cổng admin :8081 của mọi service Go, Prometheus và ClickHouse không có 
 | api-gateway (×2) | build Go | 8080 | ✔ | 384 MB |
 | auth/user/product/order-service | build Go | 50051/50054/50053/50052 | ✔ | 256 MB mỗi cái |
 | prometheus | `prom/prometheus:v2.55.1` | 9090 | – | 768 MB |
+| loki | `grafana/loki:3.2.1` (single binary, filesystem, retention `LOKI_RETENTION`) | 3100 (không publish) | – | 512 MB |
+| vector | `timberio/vector:0.41.1-alpine` (global, mount `docker.sock:ro`) | 8686 healthcheck, 9598 metrics | – | 128 MB |
 | grafana | `grafana/grafana:11.3.0` | 3000 | – | 384 MB |
 | cadvisor / node-exporter | global | 8080 / 9100 | – | 256 MB / 128 MB |
 | postgres/redis/kafka-exporter | | 9187 / 9121 / 9308 | – | 64 MB mỗi cái |
@@ -93,7 +97,7 @@ Profile `lite` cho máy yếu: ❌ chưa có.
 | `LOGIN_MAX_FAILURES`, `LOGIN_LOCK_MINUTES` | auth | ❌ chưa làm |
 | `CLICKHOUSE_URL/USER/PASSWORD/DB` | analytics (+ infra) | ✅ (mật khẩu bắt buộc) |
 | `ANALYTICS_CACHE_TTL_SEC`, `EVENTS_RETENTION_MONTHS`, `ANALYTICS_FLUSH_INTERVAL_MS`, `ANALYTICS_FLUSH_ROWS`, `ANALYTICS_BUFFER_MAX_ROWS` | analytics | ✅ (cái cuối chưa qua `services.yml`) |
-| `ANALYTICS_SERVICE_ADDR`, `PAYMENT_SERVICE_ADDR` | gateway, order | ❌ **không có biến**: địa chỉ gRPC cứng trong `grpc_config.go` |
+| `AUTH_/ORDER_/PRODUCT_/USER_/ANALYTICS_/PAYMENT_SERVICE_ADDR` | gateway (đủ 6), order/auth/user/product (`AUTH_`, `PRODUCT_`) | ✅ đọc từ env, mặc định đúng giá trị cũ; có unit test, chưa deploy thử |
 | `PAYMENTS_MODE=mock`, `PAYMENT_WEBHOOK_SECRET`, `PAYMENT_WEBHOOK_URL`, `PAYMENT_CHAOS_RATE`, `MOCK_WEBHOOK_DELAY_MS`, `MOCK_TRANSFER_DELAY_MS`, `MOCK_TIMEOUT_DELAY_MS` | payment | ✅ |
 | `ORDER_PAYMENT_TTL_MIN` (15), `AUTO_DELIVER_DAYS` (7), `RETURN_WINDOW_DAYS` (7), `SHIPPING_FLAT_FEE` (30000), `FREE_SHIP_OVER` (500000) | order | ✅ |
 | `PROMETHEUS_URL` | gateway | ❌ (không có proxy metrics) |
@@ -109,7 +113,7 @@ Profile `lite` cho máy yếu: ❌ chưa có.
 - `TRUSTED_PROXIES` phải đúng (sai thì rate-limit và `ip_hash` sai).
 
 ## 5. Dữ liệu & sao lưu
-Volume: `postgres-data`, `redis-data`, `kafka-data`, `clickhouse-data`, `prometheus-data`, `grafana-data` (❌ `minio-data` chưa có). `pg_dump` DB `postgres`. ClickHouse là dữ liệu **dẫn xuất**: dựng lại được tối đa ~7 ngày từ Kafka; **script `backfill` từ service ❌ chưa làm**. Hướng dẫn sao lưu/khôi phục: [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md) §11.
+Volume: `postgres-data`, `redis-data`, `kafka-data`, `clickhouse-data`, `prometheus-data`, `grafana-data`, `loki-data`, `vector-data` (buffer đĩa 256 MB) (❌ `minio-data` chưa có). `pg_dump` DB `postgres`. ClickHouse là dữ liệu **dẫn xuất**: dựng lại được tối đa ~7 ngày từ Kafka; **script `backfill` từ service ❌ chưa làm**. Hướng dẫn sao lưu/khôi phục: [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md) §11.
 
 ## 6. CI/CD & kiểm thử
 
@@ -119,9 +123,9 @@ Volume: `postgres-data`, `redis-data`, `kafka-data`, `clickhouse-data`, `prometh
 | Test chung `healthtest` kiểm đủ 4 endpoint | ❌ (có `pkg/ops/ops_test.go` ở mỗi service) |
 | `proto drift` (generate lại + `git diff --exit-code`) | ❌ |
 | Frontend `tsc`, build | ✅ (test SDK tracking/ định dạng tiền: do nhánh UI) |
-| Job `docker` build 8 image | ✅ (chỉ build, không push) |
-| E2E mới (events → ClickHouse, đặt hàng + thanh toán theo từng thẻ, hết hạn → trả kho, cô lập shop, `/ready` 503 khi dừng Postgres, Prometheus targets…) | ❌ chưa viết; `scripts/e2e` hiện là bản cũ (xem [04_TESTING.md](../../instruction/04_TESTING.md) §5) |
-| `resilience.sh`: ClickHouse down, payment down, Redis down | ❌ chưa mở rộng |
+| Job `docker` build 8 image | ✅ build; 🟡 job `push-images` đẩy lên GHCR khi push `main`/tag `v*` và job `compose-validate` (đã viết, chưa chạy trên GitHub) |
+| E2E mới (events → ClickHouse, đặt hàng + thanh toán theo từng thẻ, hết hạn → trả kho, cô lập shop, `/ready` 503 khi dừng Postgres, Prometheus targets…) | 🟡 đã viết lại (11 kịch bản, `scripts/e2e/run.mjs`) nhưng **chưa chạy thật** trên stack (xem [04_TESTING.md](../../instruction/04_TESTING.md) §5); `scripts/load` cho load/soak cũng chưa chạy thật |
+| `resilience.sh`: ClickHouse down, payment down, Redis down | 🟡 mở rộng thành A..I (thêm ClickHouse, Kafka, payment, Redis, Postgres, order, rolling restart); chưa chạy thật |
 | Test SQL ClickHouse khi không có Docker | ✅ `scripts/dev/chdb_server.py` (ADR-20) |
 
 ## 7. Bảo mật hạ tầng

@@ -74,9 +74,17 @@ Chỉ xem, **không có cảnh báo/ thông báo** – người vận hành tự
 | **Services (RED)** | gateway theo `route`: req/s, 5xx %, p95, mã status, 429/`unmatched`; gRPC server theo `service`/`grpc_method` (biến `$service`): calls/s, lỗi non-OK theo `grpc_code`, p95, phương thức chậm nhất; CPU, RSS, goroutine; pool DB (in-use/open, thời gian chờ kết nối) | 5xx tăng ở một `route`; `grpc_code` = `Unavailable/Internal` tăng; "Time blocked waiting for a DB connection" > 0 kéo dài (hết pool) |
 | **Containers & hosts** | cAdvisor theo swarm service: CPU cores, RAM working set, **RAM % so với limit**, mạng, số lần restart 1 giờ; node-exporter: CPU %, RAM %, disk %, load, mạng, I/O | RAM % sát 100 (OOM-kill, restart tăng); disk `/` > 80 % |
 | **Kafka · Postgres · Redis · Traefik** | lag theo `consumergroup, topic` (kafka-exporter); msg/s; Postgres: connections vs max, tps, commit/rollback, cache hit; Redis: RAM, ops/s, clients; Traefik: req/s & 5xx theo service | lag tăng đều (consumer chết/chậm); cache hit thấp; connections gần `max_connections` |
+| **ClickHouse server** | (endpoint Prometheus built-in `clickhouse:9363`) up, uptime, bộ nhớ, truy vấn đang chạy, số bảng, số part tối đa mỗi partition; query/s và lỗi; rows insert/s; insert bị delayed/rejected; kết nối, merge, đĩa | `up` = 0; số part tối đa tăng mãi (merge không theo kịp); insert bị delayed/rejected > 0 |
+| **Outbox & Workers** | `mm_outbox_pending`, `mm_outbox_oldest_age_seconds` (product/order/payment), `mm_worker_last_tick_timestamp_seconds` (order timers, payment workers), `mm_ready` | outbox tuổi cũ nhất tăng đều (dòng độc chặn đầu hàng, xem mục 5); worker không tick quá ngưỡng readiness |
 | **Analytics pipeline** | `mm_ch_buffer_rows` (hàng chờ), `mm_ch_insert_lag_seconds` (tuổi hàng cũ nhất), batch lỗi 1 h, **hàng bị rớt 1 h**, rows inserted/s, tracking events/s (accepted/rejected), **lag của các group `analytics-service-*`**, p95 gRPC `Query` | buffer > 1000 vàng / > 20000 đỏ; lag insert > 60 s vàng / > 120 s đỏ; rớt hàng ≥ 1 đỏ |
 
-**Chưa có panel** cho outbox (`mm_outbox_pending`, `mm_outbox_oldest_age_seconds` – có sẵn trong Prometheus, xem bằng Explore/ `curl :8081/metrics`), payment (`mm_payments_*` chưa tồn tại), "Business", ClickHouse server. Lần deploy đầu: Prometheus → Status → Targets (job `mm-services`, `cadvisor`, `node-exporter`, `postgres`, `redis`, `kafka`, `traefik`) phải `UP`.
+Sáu dashboard *ClickHouse server*, *Outbox & Workers*, *Payments*, *Business*, *Kafka consumer lag*, *Logs* mới viết, chưa xem trên Grafana thật (tổng 11 dashboard). Metric nghiệp vụ: xem [05_ANALYTICS_MONITORING.md](../design/platform/05_ANALYTICS_MONITORING.md) §2.2; lag Kafka lấy từ `kafka_consumergroup_lag`. Redis-exporter không có healthcheck container (image scratch), xem `up{job="redis"}`. Prometheus cũng scrape job `clickhouse` (`clickhouse:9363`). Lần deploy đầu: Prometheus → Status → Targets (job `mm-services`, `cadvisor`, `node-exporter`, `postgres`, `redis`, `kafka`, `traefik`) phải `UP`.
+
+### Tra log theo `request_id` (dashboard *Logs*, Loki)
+1. Lấy `request_id` từ header `X-Request-ID` của response lỗi (hoặc field `request_id` trong body lỗi).
+2. Grafana → *Marketplace · Logs* → dán vào ô `request_id`, chọn `service` = tất cả, khoảng thời gian quanh lúc lỗi. Truy vấn tương đương: `{service=~".+"} | json | request_id="<id>"` (không dùng `request_id` làm nhãn).
+3. Đọc theo thứ tự thời gian qua gateway → các service để thấy service nào lỗi trước. Log không phải JSON vẫn có nhưng không lọc được theo `request_id`.
+4. Không thấy log nào: kiểm Vector (`docker service logs marketplace-obs_vector`), Loki `/ready`, `up{job="loki"}` / `up{job="vector"}` ở Prometheus. Số điện thoại / thẻ dạng có dấu cách không bị che (xem [../design/05_SECURITY.md](../design/05_SECURITY.md)).
 
 ## 3. Đơn kẹt `PENDING`
 
@@ -241,6 +249,8 @@ Cửa hàng không phụ thuộc ClickHouse; rủi ro duy nhất là mất số 
 ## 10. Khác
 - **401 ngay sau đổi mật khẩu**: bình thường với token cũ. Nếu token *mới* cũng lỗi: kiểm tra Redis `<userId>:pwd_version` và consumer `auth.change_password` của gateway.
 - **429**: bộ đếm trong Redis `rate_limit:<scope>:<ip>` (`global`, `auth`, `events`). Sau Traefik phải đặt `TRUSTED_PROXIES`, nếu không mọi client chung một IP.
+- **Migration Postgres lỗi lúc khởi động** (service restart liên tục, log `goose` / `migrate`): xem `docker service logs <service>`. Bảng version của service là `goose_db_version_<svc>` (`auth|user|product|order|payment`); `SELECT * FROM goose_db_version_order ORDER BY id;` cho biết file nào đã chạy. Khoá advisory được giữ bằng session nên tự nhả khi kết nối đóng; nếu một replica khác đang migrate, replica này chỉ chờ. Sửa bằng **file migration mới** (đánh số tiếp), không sửa file `00001` đã chạy. DB cũ do `AutoMigrate` tạo: baseline `IF NOT EXISTS` nên chạy được.
+- **503 và 504 ở gateway**: `Unavailable` (service đích down / không kết nối được) → 503; `DeadlineExceeded` (vượt `GRPC_TIMEOUT_READ_MS` 3 s đọc / `GRPC_TIMEOUT_WRITE_MS` 10 s ghi) → 504. Lệnh đọc gặp `Unavailable` được retry tới `GRPC_RETRY_MAX_ATTEMPTS` (3) lần, số lần retry đếm ở `mm_grpc_client_retries_total{service,method}`; lệnh ghi không retry. Nhiều 504 ở một `service` đích ⇒ service đó chậm (xem dashboard *Business* panel p95 gRPC client và dashboard *Services*).
 - **Xoay JWT secret**: đổi `JWT_SECRET` trong `deploy/.env`, deploy lại mọi stack; mọi người dùng phải đăng nhập lại.
 - **Đổi `PAYMENT_WEBHOOK_SECRET`**: các webhook đang chờ vẫn được ký bằng secret lúc gửi (ký lúc phát, không lưu chữ ký) nên an toàn.
 - **Tài khoản demo**: `SEED_DEMO_DATA=true` (`buyer1`, `seller1` / `password`; sản phẩm demo gán `seller_id=2`, tức store thứ hai tạo ra). Tắt ở production.
@@ -257,3 +267,43 @@ Cửa hàng không phụ thuộc ClickHouse; rủi ro duy nhất là mất số 
 | Prometheus/Grafana | dashboard nằm trong repo (`deploy/grafana`), không cần sao lưu volume; số liệu lịch sử Prometheus (`prometheus-data`) tuỳ chọn |
 
 Khôi phục Postgres từ bản cũ hơn Kafka/ClickHouse có thể tạo lệch (event đã phát cho ClickHouse nhưng đơn không còn): chấp nhận được với số liệu dẫn xuất; dọn bằng cách xoá dữ liệu ClickHouse và để consumer đọc lại.
+
+## 12. Backfill / đối soát / xuất dữ liệu
+
+Công cụ chạy tay (chưa có lịch). Thiết kế và giới hạn: [../design/07_DATA_PIPELINE.md](../design/07_DATA_PIPELINE.md). Cần truy cập Postgres (`POSTGRES_DSN`) và ClickHouse (`CLICKHOUSE_URL`, `CLICKHOUSE_DB`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`) từ trong overlay (chạy từ container tạm trong `marketplace-net` hoặc publish cổng tạm ở máy dev).
+
+**Khi nào dùng**
+- ClickHouse mất dữ liệu hoặc thiếu một khoảng (analytics-service down lâu, vượt bộ đệm, dựng lại ClickHouse) ⇒ `backfill`.
+- Nghi số liệu analytics lệch Postgres, hoặc sau khi backfill ⇒ `reconcile`.
+- Cần file huấn luyện / phân tích ngoài ⇒ `scripts/export/export.py`.
+
+**Chạy** (từ `services/analytics-service`):
+
+```bash
+go run ./cmd/backfill reconcile --from 2026-10-01 --to 2026-10-25          # chỉ so, không ghi
+go run ./cmd/backfill backfill  --from 2026-10-01 --to 2026-10-25          # --tables order_status,order_items,payments,refunds,products,inventory
+go run ./cmd/backfill reconcile --from 2026-10-01 --to 2026-10-25 --json   # đối soát lại sau khi backfill
+```
+
+Ngày theo `YYYY-MM-DD`, múi giờ `Asia/Ho_Chi_Minh`, gồm cả hai đầu.
+
+**Đọc kết quả `reconcile`**
+- Bảng `METRIC / POSTGRES / CLICKHOUSE / DIFF / STATUS`: tổng cho cả khoảng; bảng `DAY METRIC …` chỉ liệt kê ngày lệch. Các chỉ số: số dòng và tiền của `order_status`, `order_items`, `payments_succeeded`, `payments_failed`, `refunds`, `products`, `inventory`, `revenue` (định nghĩa ADR-22) và `net_revenue` (trừ hoàn tiền theo ngày hoàn).
+- Dòng cuối `MATCH: N checks, 0 over tolerance` hoặc báo lệch. `--tolerance` là tỉ lệ `|ch-pg| / max(|pg|,1)`; `0` = phải khớp tuyệt đối.
+- **Exit code:** `0` khớp · `1` lệch quá ngưỡng · `2` lỗi (kết nối, tham số, ClickHouse chưa có DB).
+- Lệch ở đúng một ngày và một bảng thường là thiếu event Kafka của ngày đó ⇒ `backfill` đúng khoảng đó rồi `reconcile` lại.
+
+**Cẩn thận khi backfill**
+- Chạy lại an toàn (idempotent) cho `order_status`, `order_items`, `refunds`, `products`.
+- Với `payments` (loại failed) và `inventory`, backfill chồng lên khoảng Kafka đã điền có thể **nhân đôi dòng** (khoá có `at`, lệch vài mili giây): chỉ backfill vào khoảng trống / ClickHouse rỗng, hoặc dùng `--tables` để loại hai bảng này.
+- `events_raw` (click, giỏ…) **không** dựng lại được từ Postgres.
+- Số tiền / `payment_status` trong `order_status` backfill là giá trị hiện tại; `fact_inventory.reserved` ghi 0.
+
+**Xuất file** (từ gốc repo, kết nối ClickHouse bằng env):
+
+```bash
+python3 scripts/export/export.py --from 2026-07-01 --to 2026-09-30 --profile otto --format csv \
+  --out out/otto --split-by-time train=0.8,valid=0.1,test=0.1
+```
+
+Mỗi lần xuất có `manifest.json` (phiên bản, khoảng, số dòng, sha256, cột). Chạy lại cùng tham số cho file giống hệt từng byte.

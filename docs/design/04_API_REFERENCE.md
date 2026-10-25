@@ -8,9 +8,10 @@
 |---|---|
 | Base URL | `https://api.<PUBLIC_HOST>` (dev: `http://localhost:8080`) |
 | Xác thực | `Authorization: Bearer <access_token>` (chỉ nhận `Type=="access"`) |
-| Lỗi | `{"error": "message"}` |
+| Lỗi | `{"error": "message", "request_id": "..."}` (`request_id` có khi gateway gắn được; luôn có header `X-Request-ID`) |
+| Request-id | gateway nhận header `X-Request-ID` (khớp `^[A-Za-z0-9._-]{8,64}$`, nếu không thì tạo UUID), đưa sang các service qua gRPC metadata `x-request-id`, và **luôn trả lại** trong response header; dùng để tra log (dashboard *Logs*) |
 | Content-Type | `application/json`; body tối đa `MAX_BODY_BYTES` (mặc định 1 MiB) → **413** |
-| CORS | `ALLOWED_ORIGINS`; header cho phép `Origin, Content-Type, Authorization, Idempotency-Key`; method `GET POST PUT PATCH DELETE OPTIONS` |
+| CORS | `ALLOWED_ORIGINS`; header cho phép `Origin, Content-Type, Authorization, Idempotency-Key, X-Request-ID` (và expose `X-Request-ID`); method `GET POST PUT PATCH DELETE OPTIONS` |
 | Rate limit (Redis, theo IP, fail-open) | toàn cục `RATE_LIMIT_PER_MINUTE` (300) · `/auth/*` `AUTH_RATE_LIMIT_PER_MINUTE` (20) · `/events*` `EVENTS_RATE_LIMIT_PER_MINUTE` (120) → **429** `{"error":"Too many requests"}` |
 | JSON từ gRPC | các route cart/checkout/orders/catalog/seller/payments trả **tên trường proto (snake_case)**, có cả giá trị 0/rỗng, số nguyên 64-bit là số JSON, thời gian là chuỗi RFC 3339 (UTC) hoặc `""` |
 | Tiền | **VND dạng số thực** (`price`, `unit_price`, `line_total`, `subtotal`, `shipping_fee`, `total_price`, `grand_total`, `amount`…). Chỉ payment có thêm đơn vị nhỏ `amount_minor`/`refunded_minor` (1/100 VND, số nguyên – ADR-7). Server tính bằng cent nguyên, không bao giờ tin giá client |
@@ -20,7 +21,7 @@
 Ký hiệu cột **Ai**: 🌐 công khai · 👁 token tuỳ chọn (có token nhưng sai/hết hạn → **401**, không coi là ẩn danh) · 🔑 mọi user đăng nhập · **B** buyer · **S** `seller_admin` hoặc `seller_employee` (phải đã có store, nếu không 403 `Create a store first`) · **SA** chỉ `seller_admin` · **A** `admin`.
 
 ### Ánh xạ lỗi (`handler/helpers.go`)
-`InvalidArgument`/lỗi protovalidate→400 · `Unauthenticated`→401 · `PermissionDenied`→403 · `NotFound`→404 · `AlreadyExists`/`Aborted`→409 · `FailedPrecondition`→**422** · `Unavailable`/`DeadlineExceeded`→503 · còn lại 500. Middleware: thiếu/sai token → 401, sai role → 403 (`Do not have permission to access`).
+`InvalidArgument`/lỗi protovalidate→400 · `Unauthenticated`→401 · `PermissionDenied`→403 · `NotFound`→404 · `AlreadyExists`/`Aborted`→409 · `FailedPrecondition`→**422** · `Unavailable`→503 · `DeadlineExceeded`→**504** (vượt `GRPC_TIMEOUT_READ_MS`=3000 / `GRPC_TIMEOUT_WRITE_MS`=10000 ms) · còn lại 500. Middleware: thiếu/sai token → 401, sai role → 403 (`Do not have permission to access`).
 
 ### Phân trang
 

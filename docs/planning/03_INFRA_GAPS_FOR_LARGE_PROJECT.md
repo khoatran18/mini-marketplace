@@ -56,9 +56,9 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | D1 | **Kho lưu đối tượng** (ảnh, hóa đơn, file dataset, model) | OCR, visual search, kiểm duyệt ảnh, lưu bộ dữ liệu / artifact mô hình đều cần | Không có MinIO / S3; ảnh sản phẩm chỉ là URL | MinIO thêm vào `infra.yml`, kiểm MIME / kích thước, presigned URL | M | 3, 11, 12 |
 | D2 | **Vector store** | tìm kiếm ngữ nghĩa, gợi ý content-based, RAG | Postgres là `postgres:16-alpine` thuần, không có pgvector | đổi image có pgvector hoặc thêm Qdrant; quy trình index khi nhận `product.changed` | S–M | 1, 2, 6, 10, 11 |
-| D3 | **Xuất dữ liệu huấn luyện có phiên bản** (snapshot theo ngày) | huấn luyện lặp lại được, chia train / valid / test theo thời gian | ClickHouse chỉ dựng lại ≤ 7 ngày từ Kafka; `events_raw` TTL 13 tháng; không có job xuất | job xuất Parquet / CSV theo ngày ra kho đối tượng, gắn phiên bản | M | 1, 8, 9, 13 |
-| D4 | **Backfill + đối soát Postgres ↔ ClickHouse** | số liệu làm nhãn / feature phải đúng | `data-health` trả `reconciliation: "not_implemented"`; chưa backfill | job đối soát đêm, script backfill | M | 1, 8, 9, 13 |
-| D5 | **Bộ sinh dữ liệu giả có seed** (người dùng, phiên, đơn, review) | dev pipeline khi chưa có traffic thật; test hồi quy | `scripts/dev/gen_traffic.py` chỉ sinh event client; seed demo chỉ ~100 sản phẩm, không có đơn / hành vi | viết `scripts/datagen` sinh cả đơn, thanh toán, hành vi, nhất quán với fact | M | tất cả (dev) |
+| D3 | **Xuất dữ liệu huấn luyện có phiên bản** (snapshot theo ngày) | huấn luyện lặp lại được, chia train / valid / test theo thời gian | ✅ một phần: `scripts/export` (CSV / Parquet, profile `otto` / `rees46` / `orders` / `raw`, `manifest.json`, chia theo thời gian) đã chạy thật cục bộ; còn thiếu scheduler (D6) và kho đối tượng (D1); ClickHouse chỉ dựng lại ≤ 7 ngày từ Kafka, `events_raw` TTL 13 tháng | gắn lịch + đẩy ra kho đối tượng ([../design/07_DATA_PIPELINE.md](../design/07_DATA_PIPELINE.md)) | S–M | 1, 8, 9, 13 |
+| D4 | **Backfill + đối soát Postgres ↔ ClickHouse** | số liệu làm nhãn / feature phải đúng | 🟡 CLI `backfill` / `reconcile` (analytics-service `cmd/backfill`) đã chạy thật cục bộ (MATCH, idempotent); còn thiếu: lịch đêm (D6), nối `data-health` (hiện vẫn `reconciliation: "not_implemented"`) và metric `mm_reconcile_diff_ratio`; `events_raw` không backfill được từ Postgres | nối `data-health` + lịch đêm | S–M | 1, 8, 9, 13 |
+| D5 | **Bộ sinh dữ liệu giả có seed** (người dùng, phiên, đơn, review) | dev pipeline khi chưa có traffic thật; test hồi quy | ✅ `scripts/datagen` (synthetic + RetailRocket, `--seed`, `--reset`) sinh tài khoản, catalog, đơn, thanh toán, hoàn tiền, tồn kho, `events_raw`; đã kiểm tất định và nghiệp vụ trên DB thật; chưa thử bộ RetailRocket thật (chỉ fixture) | thêm bộ nguồn khác khi cần | S | tất cả (dev) |
 | D6 | **Điều phối job nền / lịch** (huấn luyện, xuất dữ liệu, tính feature) | mọi mô hình batch cần chạy định kỳ | Không có scheduler; chỉ có worker nhúng trong từng service Go | cron trong Swarm hoặc Airflow / Dagster / Prefect; job có retry + log | M | 1, 7, 8, 9, 13 |
 | D7 | **Feature store / kho đặc trưng** (offline + online cùng định nghĩa) | tránh lệch giữa huấn luyện và phục vụ | Không có; Redis chỉ dùng rate limit và cache báo cáo | bảng `features_*` ở ClickHouse + khóa Redis; định nghĩa một chỗ (YAML) | L | 1, 8, 13 |
 | D8 | **Tài nguyên tính toán / GPU** | huấn luyện embedding, OCR, ASR… | service ứng dụng giới hạn 256–384 MB (ClickHouse 2 GB, Prometheus 768 MB), không có node GPU, không có kế hoạch tách tải | quyết định: thuê dịch vụ ngoài hay thêm node tính toán; tách khỏi node chạy shop | M | 3, 11, 1 (nặng) |
@@ -82,16 +82,16 @@ flowchart LR
 
 | # | Thiếu | Vì sao quan trọng khi tải tăng | Hiện trạng | Cỡ |
 |---|---|---|---|---|
-| R1 | **Chưa chạy thật + chưa có e2e hợp lệ** | không biết nền có đứng vững không | Swarm / Traefik / ClickHouse / Grafana chưa từng chạy thật; `scripts/e2e/*` viết cho API cũ (xem ghi chú dưới) | M |
-| R2 | **Kiểm thử tải** (load / soak) | biết giới hạn trước khi thêm tải AI | không có | S–M |
+| R1 | **Chưa chạy thật** (e2e mới đã viết, chưa chạy) | không biết nền có đứng vững không | Swarm / Traefik / ClickHouse / Grafana chưa từng chạy thật; `scripts/e2e` đã viết lại cho API hiện tại (11 kịch bản) cùng `resilience.sh` A..I và `scripts/load`, chưa chạy lần nào (xem §7) | S–M |
+| R2 | **Kiểm thử tải** (load / soak) | biết giới hạn trước khi thêm tải AI | 🟡 `scripts/load/load.mjs` đã viết (RPS cố định, p50/p95/p99), mới thử với mock HTTP, chưa chạy vào stack thật | S |
 | R3 | **Kafka 1 broker, RF 1, không DLQ, không schema registry** | mất broker là mất bus; message độc bị bỏ sau 5 lần thử | `infra.yml`: một node KRaft | M |
 | R4 | **Outbox dùng chung một bảng, dòng độc chặn đầu hàng** | event cho ML đứng im | ADR-23; chưa có dead-letter | M |
 | R5 | **Postgres / ClickHouse / Redis đơn node, backup thủ công** | mất dữ liệu nguồn sự thật | runbook chỉ có hướng dẫn `pg_dump` tay; chưa có lịch / kiểm thử khôi phục | M |
-| R6 | **Mỗi service Go 1 replica**, chưa kiểm chứng chạy nhiều replica | điểm nghẽn đơn; cập nhật gây gián đoạn | chỉ gateway 2 replica; chưa có `update_config: start-first` / rollback | M |
-| R7 | **Thiếu tracing / request-id / metric nghiệp vụ** | gỡ lỗi nhiều tầng khi thêm dịch vụ mới | chỉ có metric RED + hạ tầng; chưa có `mm_orders_*`, `mm_payments_*`, lag consumer | M |
+| R6 | **Mỗi service Go 1 replica**, chưa kiểm chứng chạy nhiều replica | điểm nghẽn đơn; cập nhật gây gián đoạn | chỉ gateway 2 replica; 🟡 `update_config: start-first` / rollback đã viết, chưa thử trên Swarm thật; chưa kiểm chứng nhiều replica | M |
+| R7 | **Thiếu tracing / request-id / metric nghiệp vụ** | gỡ lỗi nhiều tầng khi thêm dịch vụ mới | đã có metric RED + hạ tầng + metric nghiệp vụ (`mm_orders_*`, `mm_payments_*`, `mm_inventory_*`, `mm_grpc_client_*`; chưa chạy stack thật) và lag consumer qua kafka-exporter; đã có request-id xuyên service (🟡, chưa vào Kafka) và log tập trung Loki (🟡); chưa có tracing | M |
 | R8 | **Không có hệ thống cảnh báo** | sự cố không ai biết | cố ý (ADR-12), chỉ Grafana xem tay | S–M |
-| R9 | **gRPC chưa có deadline / retry / circuit breaker** | một service chậm kéo sập chuỗi | chưa làm | M |
-| R10 | **Migration Postgres chưa có phiên bản** (`AutoMigrate`) | thêm bảng cho AI / feature mà không kiểm soát | ClickHouse có migration có version, Postgres thì không | M |
+| R9 | **gRPC: deadline / retry / circuit breaker** | một service chậm kéo sập chuỗi | 🟡 gateway đã có deadline (3 s đọc / 10 s ghi) + retry lệnh đọc (`Unavailable`, 3 lần); chưa retry lệnh ghi, chưa circuit breaker | M |
+| R10 | **Migration Postgres có phiên bản** | thêm bảng cho AI / feature có kiểm soát | ✅ goose v3.26.0 cho 5 service (`services/<svc>/migrations`, chạy lúc khởi động, advisory lock); chưa chạy trên Swarm | M |
 
 ## 4. Điểm tích hợp để cắm dịch vụ mới
 
@@ -121,14 +121,14 @@ flowchart LR
 
 | # | Thiếu | Hiện trạng | Cỡ |
 |---|---|---|---|
-| C1 | CI chạy e2e / smoke trên stack thật | CI chỉ build + vet + test đơn vị (7 service Go + frontend), không deploy | M |
-| C2 | Registry image + môi trường staging | build cục bộ `scripts/build-images.sh`, không đẩy registry | M |
+| C1 | CI chạy e2e / smoke trên stack thật | CI build + vet + test đơn vị (7 service Go + frontend), kiểm `docker compose config` và shellcheck, không deploy | M |
+| C2 | Registry image + môi trường staging | 🟡 CI đẩy image lên GHCR khi push `main`/tag `v*` (`REGISTRY`/`IMAGE_TAG`, `push-images.sh`), chưa chạy trên GitHub; có mẫu `deploy/env/{dev,staging,prod}.env.example`, nhưng chưa có môi trường staging thật | S–M |
 | C3 | CI cho dịch vụ Python mới (lint, test, build image) | CI chỉ có ma trận Go + frontend | S |
-| C4 | Môi trường tách dev / staging / prod, cấu hình theo môi trường | một file `deploy/.env` | M |
+| C4 | Môi trường tách dev / staging / prod, cấu hình theo môi trường | 🟡 `DEPLOY_ENV` / `ENV_FILE` + `deploy/env/*.env.example` (file thật đặt `deploy/env/.env.<env>`); chưa dùng thử | S |
 
-## 7. Vì sao e2e hiện hỏng
+## 7. Trạng thái e2e
 
-`scripts/e2e/e2e.mjs` và `resilience.mjs` được viết cho API **trước** khi làm giỏ hàng / checkout theo store: chúng đặt hàng bằng `POST /orders {order:{order_items…}}` không có `Idempotency-Key` và địa chỉ, chờ trạng thái `SUCCESS` (nay đã bỏ, thay bằng `AWAITING_PAYMENT` / `CONFIRMED`), và hủy bằng `DELETE`. API hiện tại bắt buộc `Idempotency-Key` + địa chỉ nên các bước đó thất bại. Chưa có e2e cho giỏ hàng, thanh toán, analytics. Chi tiết: [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5.
+Bản e2e cũ (`e2e.mjs`, `resilience.mjs`) viết cho API **trước** khi có giỏ hàng / checkout theo store nên đã bị thay: bản mới (`scripts/e2e/run.mjs` + 11 kịch bản) phủ cart, checkout idempotent, thanh toán mô phỏng, vòng đời đơn, trả hàng / hoàn tiền, cô lập chéo shop và analytics; `resilience.sh` có các kịch bản A..I. **Tất cả chưa từng chạy trên stack thật** (không có Swarm trong môi trường soạn code), nên mã HTTP / trường JSON suy từ tài liệu và handler có thể lệch. Chi tiết: [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5.
 
 ## 8. Thứ tự đề xuất (chỉ hạ tầng)
 

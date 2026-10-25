@@ -7,14 +7,14 @@ Vòng đời đơn đầy đủ (`PAID → SHIPPED → DELIVERED`, `REFUNDED`, l
 
 ## Nợ kỹ thuật
 - Module dùng chung cho protobuf + `kafkaimpl` + `ops` + `events` (ADR-8; hiện là bản sao giống hệt ở 7 service); `buf` registry thay cho các điểm copy `buf.gen.yaml`.
-- Migration có version (goose/atlas) thay `AutoMigrate`; `accounts.username` UNIQUE toàn cục dù login theo (username, role); bảng thừa `create_seller_kafka_events` ở user-service.
+- ~~Migration có version~~ ✅ đã dùng goose (ADR-26). Còn lại: `accounts.username` UNIQUE toàn cục dù login theo (username, role); bảng thừa `create_seller_kafka_events` ở user-service (giữ trong baseline).
 - Tách outbox `domain_events` theo service (hiện một bảng vật lý chung – ADR-23) và có "dead letter" cho dòng độc thay vì chặn đầu hàng.
 - Tiền: `double` trên REST/gRPC (ADR-7); event đã dùng `*_minor`.
-- Observability còn thiếu: request-id, tracing, metric nghiệp vụ (`mm_orders_*`, `mm_payments_*`), metric lag consumer của chính service, panel Grafana cho outbox/payment/ClickHouse server.
+- Observability còn thiếu: tracing OpenTelemetry, request-id trong Kafka / outbox, log JSON thống nhất. Đã có (🟡): request-id, log tập trung Vector → Loki. Đã thêm (chưa chạy stack thật): metric nghiệp vụ `mm_orders_*`/`mm_payments_*`/`mm_inventory_*`/`mm_grpc_client_*`, dashboard Payments/Business/Kafka lag/Outbox/ClickHouse server; lag consumer dùng `kafka_consumergroup_lag` của kafka-exporter.
 - gRPC deadline/retry/circuit breaker từ gateway và order-service; TLS cho gRPC/Postgres; token trong cookie httpOnly.
 - Kafka: 3 broker, RF 3, DLQ thay vì "log và bỏ qua", schema registry; consumer `AddChaPwdVerToRedis`/`UpdateStoreIDFromKafka` nên bỏ JSON hỏng thay vì thử 5 lần.
 - Swagger (`services/api-gateway/docs`) **đã cũ** – chỉ mô tả auth/products/users/orders cũ; cần `swag init` lại và chú thích handler mới ([04_API_REFERENCE.md](../design/04_API_REFERENCE.md) là bản đầy đủ).
-- e2e `scripts/e2e/*.mjs` viết cho API cũ (xem [04_TESTING.md](../instruction/04_TESTING.md) §5); cần viết lại cho checkout/payment/cart và thêm e2e analytics.
+- e2e `scripts/e2e` đã viết lại cho checkout/payment/cart/analytics (xem [04_TESTING.md](../instruction/04_TESTING.md) §5) nhưng **chưa chạy thật** trên stack; cần chạy lần đầu và chỉnh chỗ lệch.
 - Sửa các phát hiện trong "Giới hạn đã biết" của [09_ROADMAP_STATUS.md](../design/platform/09_ROADMAP_STATUS.md).
 
 ## Tính năng nghiệp vụ chưa làm (ưu tiên giảm dần)
@@ -23,6 +23,6 @@ Vòng đời đơn đầy đủ (`PAID → SHIPPED → DELIVERED`, `REFUNDED`, l
 3. **Quyền riêng tư**: bảng `consents`, `PUT /users/me/consent`, `DELETE /users/me/data` (consent hiện chỉ đi kèm từng event).
 4. **An toàn tài khoản**: khoá tạm khi sai mật khẩu nhiều lần, `audit_log`, email xác thực, đặt lại mật khẩu, đăng xuất (deny-list token), `GET /auth/me`.
 5. **Quản trị**: `/admin/users`, `/admin/stores` (duyệt/khoá), `/admin/system/metrics` (proxy Prometheus whitelist), `/admin/system/outbox` + requeue qua API.
-6. **Analytics nâng cao**: đối soát đêm Postgres↔ClickHouse (`DataHealth`), backfill, materialized views khi dữ liệu lớn, so sánh theo danh mục/shop, xuất CSV.
+6. **Analytics nâng cao**: đối soát đêm Postgres↔ClickHouse (CLI `backfill`/`reconcile` đã có, còn lịch đêm và nối `DataHealth`), materialized views khi dữ liệu lớn, so sánh theo danh mục/shop, xuất CSV.
 7. **Thanh toán thật** (provider thật + webhook thật) nếu muốn – hiện chỉ mô phỏng (ADR-16).
 8. Thông báo (email/in-app qua Kafka), cảnh báo (Alertmanager) – cố ý chưa làm (ADR-12).

@@ -1,6 +1,6 @@
 # Mô hình dữ liệu
 
-Nguồn: `services/*/pkg/model`, `services/*/internal/repository/migrate.go`, `services/analytics-service/internal/store/schema.go`. Postgres dùng GORM `AutoMigrate` lúc khởi động (chưa có migration có version; roadmap). ClickHouse có migration có version (`schema_migrations`). Mọi service Go dùng **cùng một database Postgres** (`POSTGRES_DB`), bảng thuộc từng service, không join chéo service. Tên bảng là tên GORM mặc định (số nhiều snake_case).
+Nguồn: `services/*/pkg/model`, `services/*/internal/repository/migrate.go`, `services/analytics-service/internal/store/schema.go`. Postgres dùng migration **goose** có version (`services/<svc>/migrations/*.sql`, nhúng `go:embed`, chạy lúc khởi động, bảng `goose_db_version_<svc>`; model GORM chỉ để truy vấn, không còn `AutoMigrate`). ClickHouse có migration có version (`schema_migrations`). Mọi service Go dùng **cùng một database Postgres** (`POSTGRES_DB`), bảng thuộc từng service, không join chéo service. Tên bảng là tên GORM mặc định (số nhiều snake_case).
 
 ## 1. Postgres theo service
 ### 1.0 Ranh giới sở hữu và liên kết logic
@@ -207,7 +207,7 @@ erDiagram
   orders ||..o{ order_status_histories : "order_id"
 ```
 
-Một `checkout` sinh **một đơn cho mỗi store**; mỗi đơn có nhiều dòng hàng (khoá ngoại thật, `ON DELETE CASCADE`) và một timeline trạng thái. `cart_items` đứng riêng: giỏ hàng gắn với `user_id`, không thuộc đơn nào cho tới khi checkout.
+Một `checkout` sinh **một đơn cho mỗi store**; mỗi đơn có nhiều dòng hàng (khoá ngoại thật `fk_orders_order_items`, **không** có `ON DELETE CASCADE` trong migration baseline) và một timeline trạng thái. `cart_items` đứng riêng: giỏ hàng gắn với `user_id`, không thuộc đơn nào cho tới khi checkout.
 
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|

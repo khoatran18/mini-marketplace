@@ -49,7 +49,7 @@ Danh sách đầy đủ biến môi trường: [02_DEPLOYMENT.md](02_DEPLOYMENT.
 |---|---|---|---|
 | **Website** (buyer / seller / admin) | `https://marketplace.swarm.localhost` | tài khoản bên dưới | trình duyệt sẽ cảnh báo cert tự ký |
 | **REST API** (gateway) | `https://api.marketplace.swarm.localhost` | JWT | tài liệu route: [../design/04_API_REFERENCE.md](../design/04_API_REFERENCE.md); Swagger ở `services/api-gateway/docs` **đã cũ** |
-| **Grafana** (5 dashboard, chỉ xem) | `https://grafana.marketplace.swarm.localhost` | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` | thư mục *Marketplace*; cách đọc: [03_RUNBOOK.md](03_RUNBOOK.md) §2 |
+| **Grafana** (11 dashboard, gồm Logs, chỉ xem) | `https://grafana.marketplace.swarm.localhost` | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` | thư mục *Marketplace*; cách đọc: [03_RUNBOOK.md](03_RUNBOOK.md) §2 |
 | **Traefik dashboard** | `https://dashboard.marketplace.swarm.localhost` | basic auth (`TRAEFIK_DASHBOARD_USERS`) | xem router / service đang có |
 | Trạng thái service (admin) | `https://marketplace.swarm.localhost/admin/system` | admin | gom `/ready` của 7 service |
 | Prometheus, ClickHouse, Postgres, Redis, Kafka, cổng `:8081` | **không publish** | – | chỉ trong mạng overlay `marketplace-net`; vào bằng `docker exec` (xem dưới) |

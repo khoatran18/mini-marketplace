@@ -1,113 +1,114 @@
-# Security
+# Bảo mật
 
-## Authentication
-- bcrypt password hashes; password ≥ 8 chars on register/change.
-- HS256 JWT signed with `JWT_SECRET` (≥ 16 chars enforced at start in every service). Rotate by changing the secret everywhere (all sessions end).
-- Gateway accepts only `Type=="access"` tokens. Refresh tokens are only accepted by auth-service, which also compares `PwdVersion` with the DB.
-- Password change bumps `pwd_version`; the gateway caches the new version in Redis for `JWT_EXPIRE_TIME + 1 min` (= access token lifetime) so older access tokens are rejected immediately. A missing key is fine: tokens older than the TTL are expired anyway.
+## Xác thực
+- Mật khẩu băm bằng bcrypt; mật khẩu ≥ 8 ký tự khi đăng ký/đổi mật khẩu.
+- JWT HS256 ký bằng `JWT_SECRET` (≥ 16 ký tự, mọi service đều kiểm tra khi khởi động). Xoay khoá bằng cách đổi secret ở mọi nơi (toàn bộ phiên đăng nhập kết thúc).
+- Gateway chỉ chấp nhận token có `Type=="access"`. Refresh token chỉ auth-service chấp nhận, và auth-service còn so sánh `PwdVersion` với DB.
+- Đổi mật khẩu sẽ tăng `pwd_version`; gateway cache phiên bản mới trong Redis trong `JWT_EXPIRE_TIME + 1 min` (= thời hạn access token) nên các access token cũ bị từ chối ngay. Thiếu key cũng không sao: token cũ hơn TTL vốn đã hết hạn.
 
-### Request flow: token, route middleware, ownership
+### Luồng request: token, middleware theo route, quyền sở hữu
 
 ```mermaid
 flowchart TD
-  REQ["HTTP request"] --> GL["Global middleware: CORS, body limit, request log, rate limit"]
-  GL --> RT{"Route needs a token?"}
-  RT -->|"public, e.g. /search, /categories, /events"| OPT["OptionalAuth only adds identity if a valid token is sent"]
-  RT -->|"authenticated group"| AM["AuthMiddleware: Bearer token, HS256 signature and expiry, Type access"]
-  AM -->|"invalid"| E401["401"]
-  AM --> PV{"pwd_version in token matches Redis key userId:pwd_version?"}
-  PV -->|"no"| E401
-  PV -->|"yes"| RO["AuthorizationMiddleware: role allowed for this group?"]
-  RO -->|"no"| E403["403"]
-  RO -->|"yes"| OWN["Handler and owning service: ownership check with ids taken from the token"]
-  OWN -->|"foreign order, payment or address"| E404["404"]
-  OWN -->|"own data"| OK["gRPC call to the service"]
+  REQ["Request HTTP"] --> GL["Middleware toàn cục: CORS, giới hạn body, log request, rate limit"]
+  GL --> RT{"Route cần token?"}
+  RT -->|"công khai, ví dụ /search, /categories, /events"| OPT["OptionalAuth chỉ gắn danh tính nếu có token hợp lệ"]
+  RT -->|"nhóm cần đăng nhập"| AM["AuthMiddleware: Bearer token, chữ ký HS256 và hạn dùng, Type access"]
+  AM -->|"không hợp lệ"| E401["401"]
+  AM --> PV{"pwd_version trong token khớp key Redis userId:pwd_version?"}
+  PV -->|"không"| E401
+  PV -->|"có"| RO["AuthorizationMiddleware: role có được phép với nhóm này?"]
+  RO -->|"không"| E403["403"]
+  RO -->|"có"| OWN["Handler và service sở hữu: kiểm tra quyền sở hữu với id lấy từ token"]
+  OWN -->|"đơn hàng, thanh toán hoặc địa chỉ của người khác"| E404["404"]
+  OWN -->|"dữ liệu của chính mình"| OK["gọi gRPC tới service"]
   OPT --> OK
 ```
 
-Authentication and role checks are attached per route or group, so public routes stay public. Ownership is the last gate: the user id, role and store id come only from the token, never from the request body.
+Xác thực và kiểm tra role được gắn theo từng route hoặc nhóm, nên route công khai vẫn công khai. Quyền sở hữu là cổng cuối: user id, role và store id chỉ lấy từ token, không bao giờ lấy từ body request.
 
-## Administrator role
-`admin` is a fourth role that can **never** be self-registered: `Register` (gateway and auth-service) rejects it, and the protobuf `RegisterRequest` does not allow it. The only way to create one is `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` read by auth-service at start-up (idempotent; an existing admin's password is never overwritten; credentials must satisfy the login contract: 3–16 characters `[a-zA-Z0-9_]`, password ≥ 8). Only `Login` and `ChangePassword` accept `admin`. Admin routes live under `/admin/*` (`AuthMiddleware` + role `admin`). Change the bootstrap password after the first login and remove the variables from the environment afterwards.
+## Vai trò quản trị viên
+`admin` là role thứ tư và **không bao giờ** được tự đăng ký: `Register` (gateway và auth-service) từ chối, và `RegisterRequest` trong protobuf không cho phép. Cách duy nhất để tạo là `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` do auth-service đọc khi khởi động (idempotent; mật khẩu của admin đã tồn tại không bao giờ bị ghi đè; thông tin đăng nhập phải thoả hợp đồng login: 3–16 ký tự `[a-zA-Z0-9_]`, mật khẩu ≥ 8). Chỉ `Login` và `ChangePassword` chấp nhận `admin`. Các route admin nằm dưới `/admin/*` (`AuthMiddleware` + role `admin`). Hãy đổi mật khẩu bootstrap sau lần đăng nhập đầu và gỡ các biến này khỏi môi trường.
 
-## Authorization rules (enforced in the gateway handlers, covered by tests)
-- Identity (`userID`, username, role, and the seller's store via auth-service) comes from the token only; the route table is in `internal/router/router.go` and every row is covered by `router_test.go` ([04_TESTING.md](../instruction/04_TESTING.md)). Authentication is attached **per route/group**, never globally (ADR-19).
-- Orders, carts, addresses, payments: buyer role, scoped to own data; a foreign order/payment/address → 404. Sellers see and act only on orders of their own store (`store_id` from the token); a seller cannot `confirm_received`/`return`, a buyer cannot `ship`.
-- Buyer profile: id must equal own user id. Store (seller) management: caller's store must equal the path id. Product writes, status, stock adjustments and ledger: owner = caller's store. Only an admin can ban a product.
-- Public catalog: anonymous visitors only see `active` products; stock is capped at "20+" and `reserved`/thresholds are hidden unless you manage the product.
-- Prices, totals, shipping fees, statuses, buyer/store ids are never read from clients; checkout requires an `Idempotency-Key`.
-- Analytics: the report scope (platform vs one store) is derived from the token in the gateway **and** re-checked by analytics-service; query parameters can not widen it. Admin-only reports (`traffic`, `payments`, `search_terms`, `data_health`) are refused for a store scope.
+## Quy tắc phân quyền (thực thi trong handler của gateway, có test bao phủ)
+- Danh tính (`userID`, username, role và store của seller qua auth-service) chỉ lấy từ token; bảng route nằm ở `internal/router/router.go` và mỗi dòng đều được `router_test.go` bao phủ ([04_TESTING.md](../instruction/04_TESTING.md)). Xác thực được gắn **theo từng route/nhóm**, không bao giờ gắn toàn cục (ADR-19).
+- Đơn hàng, giỏ hàng, địa chỉ, thanh toán: role buyer, chỉ trong phạm vi dữ liệu của mình; đơn/thanh toán/địa chỉ của người khác → 404. Seller chỉ xem và thao tác trên đơn của cửa hàng mình (`store_id` từ token); seller không thể `confirm_received`/`return`, buyer không thể `ship`.
+- Hồ sơ buyer: id phải bằng user id của chính mình. Quản lý store (seller): store của người gọi phải bằng id trong path. Ghi sản phẩm, trạng thái, điều chỉnh tồn kho và ledger: chủ sở hữu = store của người gọi. Chỉ admin mới được ban sản phẩm.
+- Catalog công khai: khách ẩn danh chỉ thấy sản phẩm `active`; tồn kho hiển thị tối đa "20+" và `reserved`/ngưỡng bị ẩn trừ khi bạn quản lý sản phẩm đó.
+- Giá, tổng tiền, phí vận chuyển, trạng thái, buyer/store id không bao giờ đọc từ client; checkout yêu cầu `Idempotency-Key`.
+- Analytics: phạm vi báo cáo (toàn sàn hay một store) được suy ra từ token ở gateway **và** được analytics-service kiểm tra lại; tham số query không thể mở rộng phạm vi. Các báo cáo chỉ dành cho admin (`traffic`, `payments`, `search_terms`, `data_health`) bị từ chối với phạm vi store.
 
-## Payments (simulated) and tracking privacy
-- Payments are a SIMULATION: no real card network. Card numbers only choose the simulated outcome; **only the last 4 digits** are stored, never the full number/CVV, and the gateway never echoes a request body that may contain card data.
-- The simulated provider notifies `POST /internal/payments/webhook` on the internal admin port only (not routed by Traefik), signed `X-Signature: t=<unix>,v1=HMAC_SHA256(PAYMENT_WEBHOOK_SECRET, t + "." + body)`, 5-minute tolerance, idempotent per `provider_event_id`. `PAYMENT_WEBHOOK_SECRET` must be ≥ 16 characters or the service does not start. `POST /admin/dev/payments/:id/force` works only with `ENV=dev`.
-- `POST /events` is public and rate limited (`EVENTS_RATE_LIMIT_PER_MINUTE`); the browser cannot set `user_id`/`role`/`store_id`/IP (the gateway attaches them). IPs are never stored: only `HMAC(IP_HASH_SECRET, UTC date | ip)`, which changes daily. Without analytics consent only anonymous `page_view`/`error_client` are kept (identifiers dropped). E-mail addresses/phone numbers in free text (search queries) are masked, URLs lose query strings. Raw events expire after `EVENTS_RETENTION_MONTHS` (13). **Not implemented**: user data erasure (`DELETE /users/me/data`), a `consents` store.
+## Thanh toán (mô phỏng) và quyền riêng tư của tracking
+- Thanh toán chỉ là MÔ PHỎNG: không có mạng thẻ thật. Số thẻ chỉ dùng để chọn kết quả mô phỏng; **chỉ lưu 4 số cuối**, không bao giờ lưu đầy đủ số thẻ/CVV, và gateway không bao giờ phản hồi lại body request có thể chứa dữ liệu thẻ.
+- Provider mô phỏng gọi `POST /internal/payments/webhook` chỉ trên cổng admin nội bộ (Traefik không route), ký bằng `X-Signature: t=<unix>,v1=HMAC_SHA256(PAYMENT_WEBHOOK_SECRET, t + "." + body)`, sai lệch thời gian cho phép 5 phút, idempotent theo `provider_event_id`. `PAYMENT_WEBHOOK_SECRET` phải ≥ 16 ký tự nếu không service không khởi động. `POST /admin/dev/payments/:id/force` chỉ hoạt động với `ENV=dev`.
+- `POST /events` là công khai và có rate limit (`EVENTS_RATE_LIMIT_PER_MINUTE`); trình duyệt không thể đặt `user_id`/`role`/`store_id`/IP (gateway tự gắn). IP không bao giờ được lưu: chỉ lưu `HMAC(IP_HASH_SECRET, UTC date | ip)`, giá trị này đổi mỗi ngày. Khi không có đồng ý analytics, chỉ giữ `page_view`/`error_client` ẩn danh (bỏ các định danh). Email/số điện thoại trong văn bản tự do (truy vấn tìm kiếm) bị che, URL bị bỏ query string. Sự kiện thô hết hạn sau `EVENTS_RETENTION_MONTHS` (13). **Chưa triển khai**: xoá dữ liệu người dùng (`DELETE /users/me/data`), kho `consents`.
+- **Log và PII**: log của service đi qua Vector → Loki; Vector che PII **trước khi lưu** (email, số điện thoại VN dạng liền, `Bearer`/JWT, trường `password|authorization|token`, số thẻ 13–16 chữ số). Giới hạn đã biết: số điện thoại có dấu chấm / khoảng trắng và số thẻ có định dạng lạ không bị che — service vẫn không được ghi mật khẩu, token, số thẻ vào log. Loki không publish cổng (chỉ trong overlay); `request_id` không phải dữ liệu nhạy cảm.
 
-### Signed webhook flow
+### Luồng webhook có chữ ký
 
 ```mermaid
 sequenceDiagram
-  participant W as Simulated provider worker
+  participant W as Worker provider mô phỏng
   participant H as POST /internal/payments/webhook on port 8081
   participant D as Postgres
-  W->>W: Build body, sign with t and HMAC_SHA256 of t + "." + body
+  W->>W: Dựng body, ký bằng t và HMAC_SHA256 của t + "." + body
   W->>H: X-Signature t=unix,v1=hex
-  H->>H: Check HMAC with PAYMENT_WEBHOOK_SECRET and 5 minute tolerance
-  alt signature invalid or too old
+  H->>H: Kiểm tra HMAC với PAYMENT_WEBHOOK_SECRET và sai lệch 5 phút
+  alt chữ ký sai hoặc quá cũ
     H-->>W: 401
-  else valid
+  else hợp lệ
     H->>D: INSERT processed_events provider_event_id ON CONFLICT DO NOTHING
-    alt already processed
-      H-->>W: 200 duplicate
-    else first time
-      H->>D: Lock payment, update status, write payment.succeeded to outbox
-      H-->>W: 200 applied
+    alt đã xử lý
+      H-->>W: 200 trùng lặp
+    else lần đầu
+      H->>D: Khoá payment, cập nhật trạng thái, ghi payment.succeeded vào outbox
+      H-->>W: 200 đã áp dụng
     end
   end
 ```
 
-The endpoint lives on the internal admin port and is not routed by Traefik. Idempotency comes from `processed_events`, so retries from `webhook_deliveries` are harmless.
+Endpoint nằm trên cổng admin nội bộ và Traefik không route. Tính idempotent đến từ `processed_events`, nên việc retry từ `webhook_deliveries` là vô hại.
 
-## Trust boundaries
+## Ranh giới tin cậy
 
 ```mermaid
 flowchart LR
-  NET(("Internet")) -->|"443 TLS, 80 redirects"| TR["Traefik"]
-  subgraph PUB["Public through Traefik"]
+  NET(("Internet")) -->|"443 TLS, 80 chuyển hướng"| TR["Traefik"]
+  subgraph PUB["Công khai qua Traefik"]
     FE["frontend"]
     GW["api-gateway :8080, JWT, RBAC, rate limit"]
-    GF["Grafana, password login"]
-    TD["Traefik dashboard, basic auth"]
+    GF["Grafana, đăng nhập bằng mật khẩu"]
+    TD["Dashboard Traefik, basic auth"]
   end
   TR --> FE
   TR --> GW
   TR --> GF
   TR --> TD
-  subgraph INT["Overlay marketplace-net only, never published"]
-    SV["gRPC services :50051 to :50057"]
-    AD["admin port :8081: health, ready, metrics, payment webhook"]
+  subgraph INT["Chỉ trong overlay marketplace-net, không bao giờ publish"]
+    SV["Các service gRPC :50051 đến :50057"]
+    AD["cổng admin :8081: health, ready, metrics, webhook thanh toán"]
     DS[("Postgres, Redis, Kafka, ClickHouse, Prometheus")]
   end
   GW --> SV
   SV --> DS
 ```
 
-Only Traefik publishes ports (80 and 443). The gateway is the only application entry point and the only place that verifies tokens. Everything inside the overlay (gRPC, `:8081`, databases, Prometheus, ClickHouse) is plaintext and unauthenticated, so it must stay unpublished.
+Chỉ Traefik publish cổng (80 và 443). Gateway là điểm vào duy nhất của ứng dụng và là nơi duy nhất xác minh token. Mọi thứ bên trong overlay (gRPC, `:8081`, database, Prometheus, ClickHouse) đều là plaintext và không xác thực, nên tuyệt đối không được publish.
 
-## Abuse protection
-- Redis rate limiter (global `RATE_LIMIT_PER_MINUTE`, default 300; `/auth/*` `AUTH_RATE_LIMIT_PER_MINUTE`, default 20; `/events*` `EVENTS_RATE_LIMIT_PER_MINUTE`, default 120) per client IP, atomic Lua script, fails open if Redis is down.
-- `TRUSTED_PROXIES` (comma list, default none) controls whether `X-Forwarded-For` is honored; set it to the Traefik network CIDR in production or every client appears as the proxy IP.
-- CORS allow-list `ALLOWED_ORIGINS` (default `http://localhost:3000`).
+## Chống lạm dụng
+- Rate limiter bằng Redis (toàn cục `RATE_LIMIT_PER_MINUTE`, mặc định 300; `/auth/*` `AUTH_RATE_LIMIT_PER_MINUTE`, mặc định 20; `/events*` `EVENTS_RATE_LIMIT_PER_MINUTE`, mặc định 120) theo IP client, dùng script Lua atomic, fail open nếu Redis ngừng hoạt động.
+- `TRUSTED_PROXIES` (danh sách cách nhau dấu phẩy, mặc định rỗng) quyết định có tin `X-Forwarded-For` hay không; ở production hãy đặt thành CIDR của network Traefik, nếu không mọi client sẽ hiện ra với IP của proxy.
+- Danh sách cho phép CORS `ALLOWED_ORIGINS` (mặc định `http://localhost:3000`).
 
-## Secrets
-Nothing sensitive is committed. Use `.env.example` templates; real values live in `deploy/.env` (ignored) or Docker secrets. TLS certs are generated locally (`scripts/gen-dev-certs.sh`) and ignored. **Anything committed before this cleanup (old JWT secret, DB/Elastic passwords, Traefik htpasswd, TLS key) is still in git history – rotate all of it.**
+## Secret
+Không có gì nhạy cảm được commit. Dùng các template `.env.example`; giá trị thật nằm trong `deploy/.env` (bị ignore) hoặc Docker secrets. Chứng chỉ TLS được sinh cục bộ (`scripts/gen-dev-certs.sh`) và bị ignore. **Mọi thứ đã commit trước đợt dọn dẹp này (JWT secret cũ, mật khẩu DB/Elastic, htpasswd của Traefik, khoá TLS) vẫn còn trong lịch sử git – hãy xoay toàn bộ.**
 
-## Known gaps / follow-ups
-- **Credential format is capped by the protobuf contract**: usernames and passwords must match `^[a-zA-Z0-9_]{3,16}$` (`auth.proto`); the gateway/auth additionally require ≥ 8 password characters. A 16-character alphanumeric maximum is weak; relax it to e.g. 8–72 chars (bcrypt limit) by editing `services/auth-service/pkg/proto/auth.proto` and re-running `buf generate` (needs access to buf.build).
-- Tokens are stored in `localStorage` by the frontend (XSS exposure); prefer httpOnly cookies.
-- gRPC between services and Postgres connections are plaintext inside the overlay network (`sslmode=disable`).
-- No account lockout, `audit_log`, email verification, password reset or logout/deny-list (not implemented, see roadmap). `accounts.username` is unique globally, so the same username under two roles is a DB error.
-- ClickHouse, Prometheus and the admin port `:8081` have no authentication; they are reachable only inside the overlay network (never publish them). Grafana uses a password (`GRAFANA_ADMIN_PASSWORD`, no anonymous access).
-- A manual admin refund (`POST /admin/payments/:id/refund`) is not linked to an order, so `orders.payment_status` is not updated by it.
-- Request bodies are capped by `MAX_BODY_BYTES` (default 1 MiB, HTTP 413 when `Content-Length` is larger; undeclared/chunked bodies fail while reading).
-- Traefik dashboard is protected only by basic auth (`TRAEFIK_DASHBOARD_USERS`).
+## Khoảng trống đã biết / việc tiếp theo
+- **Định dạng credential bị giới hạn bởi hợp đồng protobuf**: username và mật khẩu phải khớp `^[a-zA-Z0-9_]{3,16}$` (`auth.proto`); gateway/auth còn yêu cầu mật khẩu ≥ 8 ký tự. Tối đa 16 ký tự chữ-số là yếu; nên nới thành ví dụ 8–72 ký tự (giới hạn của bcrypt) bằng cách sửa `services/auth-service/pkg/proto/auth.proto` và chạy lại `buf generate` (cần truy cập buf.build).
+- Frontend lưu token trong `localStorage` (nguy cơ XSS); nên dùng cookie httpOnly.
+- gRPC giữa các service và kết nối Postgres là plaintext bên trong overlay network (`sslmode=disable`).
+- Chưa có khoá tài khoản, `audit_log`, xác minh email, đặt lại mật khẩu hay logout/deny-list (chưa triển khai, xem roadmap). `accounts.username` là duy nhất toàn cục, nên cùng một username ở hai role sẽ gây lỗi DB.
+- ClickHouse, Prometheus và cổng admin `:8081` không có xác thực; chỉ truy cập được bên trong overlay network (không bao giờ publish). Grafana dùng mật khẩu (`GRAFANA_ADMIN_PASSWORD`, không cho truy cập ẩn danh).
+- Hoàn tiền thủ công của admin (`POST /admin/payments/:id/refund`) không gắn với đơn hàng, nên `orders.payment_status` không được cập nhật bởi thao tác này.
+- Body request bị giới hạn bởi `MAX_BODY_BYTES` (mặc định 1 MiB, trả HTTP 413 khi `Content-Length` lớn hơn; body không khai báo/chunked sẽ lỗi khi đọc).
+- Dashboard Traefik chỉ được bảo vệ bằng basic auth (`TRAEFIK_DASHBOARD_USERS`).

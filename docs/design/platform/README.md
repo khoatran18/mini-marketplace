@@ -11,10 +11,10 @@
 | 02 | [02_HEALTH_READY_METRICS.md](02_HEALTH_READY_METRICS.md) | **Chuẩn `/health` `/ready` `/metrics` `/version`**, ma trận readiness thực tế, metric đang có | ✅ (chưa chạy thật trên Swarm) |
 | 03 | [03_DATA_MODEL.md](03_DATA_MODEL.md) | Trường mới, tracking event, ClickHouse (đối chiếu thiết kế ↔ thực tế) | ✅ trừ các mục "chưa làm" |
 | 04 | [04_ORDERS_PAYMENTS.md](04_ORDERS_PAYMENTS.md) | Thanh toán **mô phỏng**, vòng đời đơn, tồn kho/reservation, thẻ test | ✅ |
-| 05 | [05_ANALYTICS_MONITORING.md](05_ANALYTICS_MONITORING.md) | Analytics (ClickHouse), Grafana (5 dashboard), cảnh báo = chưa làm | ✅ analytics · 🟡 Grafana · ❌ cảnh báo |
+| 05 | [05_ANALYTICS_MONITORING.md](05_ANALYTICS_MONITORING.md) | Analytics (ClickHouse), Grafana (11 dashboard), cảnh báo = chưa làm | ✅ analytics · 🟡 Grafana · ❌ cảnh báo |
 | 06 | [06_API_CONTRACTS.md](06_API_CONTRACTS.md) | Bản đồ thiết kế → REST/gRPC/Kafka thực tế (tham chiếu đầy đủ: [04_API_REFERENCE.md](../04_API_REFERENCE.md), [03_EVENTS_KAFKA.md](../03_EVENTS_KAFKA.md)) | ✅ |
 | 07 | [07_UI_DESIGN.md](07_UI_DESIGN.md) | Sitemap, wireframe, component, tracking SDK (không AI) | do nhánh UI |
-| 08 | [08_INFRA_PLAN.md](08_INFRA_PLAN.md) | Container, env var, healthcheck, tài nguyên, CI | 🟡 (MinIO, update_config, e2e ❌) |
+| 08 | [08_INFRA_PLAN.md](08_INFRA_PLAN.md) | Container, env var, healthcheck, tài nguyên, CI | 🟡 (MinIO ❌; update_config, wait-ready, e2e đã viết, chưa chạy thật) |
 | 09 | [09_ROADMAP_STATUS.md](09_ROADMAP_STATUS.md) | **Trạng thái triển khai**, giới hạn đã biết, ADR, rủi ro | – |
 
 ## Quyết định đã chốt (từ chủ dự án) – và đã làm

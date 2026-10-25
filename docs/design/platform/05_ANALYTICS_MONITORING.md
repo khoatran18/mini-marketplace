@@ -1,6 +1,6 @@
 # 05 · Analytics và giám sát hệ thống (Grafana)
 
-> **Trạng thái: ✅ analytics-service + ClickHouse ĐÃ TRIỂN KHAI; 🟡 Grafana 5/10 dashboard; ❌ cảnh báo (cố ý chưa làm).** Docker/Swarm/ClickHouse *server*/Grafana chưa từng chạy trong sandbox: SQL được xác thực trên chDB 26.9 + unit test, ClickHouse 24.8 thật chỉ chạy trong CI (xem [09_ROADMAP_STATUS.md](09_ROADMAP_STATUS.md) "Giới hạn đã biết").
+> **Trạng thái: ✅ analytics-service + ClickHouse ĐÃ TRIỂN KHAI; 🟡 Grafana 11 dashboard (đã viết, chưa xem trên Grafana thật); ❌ cảnh báo (cố ý chưa làm).** Docker/Swarm/ClickHouse *server*/Grafana chưa từng chạy trong sandbox: SQL được xác thực trên chDB 26.9 + unit test, ClickHouse 24.8 thật chỉ chạy trong CI (xem [09_ROADMAP_STATUS.md](09_ROADMAP_STATUS.md) "Giới hạn đã biết").
 
 ## 1. Analytics (analytics-service + ClickHouse)
 ### 1.1 Pipeline thực tế
@@ -93,7 +93,7 @@ flowchart LR
   EX["postgres, redis, kafka exporter"]
   TR["Traefik, entrypoint metrics 8082"]
   PR["Prometheus"]
-  GF["Grafana, 5 dashboard"]
+  GF["Grafana, 11 dashboard"]
   OPS["Người vận hành"]
   M1 --> PR
   CA --> PR
@@ -122,8 +122,39 @@ Prometheus kéo (scrape) chứ service không đẩy; với service Go dùng DNS
 | **Containers & hosts** (`mm-containers`) | cAdvisor: CPU, RAM, RAM % limit, mạng, restart 1 h; node-exporter: CPU %, RAM %, disk %, load, mạng, I/O |
 | **Kafka · Postgres · Redis · Traefik** (`mm-infra`) | lag theo group/topic, msg/s; connections, tps, cache hit; RAM/ops/clients Redis; req/s & 5xx Traefik |
 | **Analytics pipeline** (`mm-analytics`) | hàng chờ, tuổi hàng cũ nhất, batch lỗi, hàng rớt, rows/s, event/s, lag group `analytics-service-*`, p95 `Query` |
+- Sáu dashboard sau (*ClickHouse server*, *Outbox & Workers*, *Payments*, *Business*, *Kafka consumer lag*, *Logs*): `jq` hợp lệ, PromQL / LogQL chưa chạy thật trên Grafana.
 - Cấu hình và PromQL được kiểm cú pháp bằng thư viện Prometheus (`config.LoadFile` + `promql/parser`); **chưa chạy thử trên Swarm thật** – lần deploy đầu cần kiểm Targets và từng dashboard.
 - Chạy: `scripts/deploy.sh observability` (hoặc `all`). Cách đọc dashboard & xử lý sự cố: [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md).
+
+### 2.2 Metric nghiệp vụ (đã thêm, test đơn vị, chưa chạy stack thật)
+
+| Service | Metric |
+|---|---|
+| order-service | `mm_checkouts_total{result}` (success, idempotent_replay, failed), `mm_orders_created_total`, `mm_order_status_transitions_total{to_status}`, `mm_orders_payment_expired_total`, `mm_orders_auto_delivered_total`, `mm_order_cart_merges_total` |
+| payment-service | `mm_payments_created_total{method}`, `mm_payments_completed_total{method,result}` (succeeded, failed, expired, cancelled), `mm_payment_amount_minor_total{method}`, `mm_refunds_total{result}`, `mm_payment_webhooks_total{result}` (accepted, duplicate, late, invalid_signature, error), `mm_payment_processing_seconds` |
+| product-service | `mm_inventory_reservations_total{result}` (reserved, insufficient, released, committed), `mm_inventory_adjustments_total{reason}`, `mm_products_changed_total{op}` (chưa đếm `SetProductStatus`; `delete` luôn 0) |
+| api-gateway | `mm_rate_limited_total{group}`, `mm_grpc_client_requests_total{service,method,code}`, `mm_grpc_client_duration_seconds{service,method}` (nhãn `service` là service đích) |
+
+Lag consumer Kafka dùng `kafka_consumergroup_lag` của kafka-exporter, không có metric `mm_kafka_consumer_lag` tự phát. Vẫn thiếu: tracing, deadline/retry gRPC.
+
+Gateway còn có `mm_grpc_client_retries_total{service,method}` (số lần retry lệnh đọc, nhãn `service` là service đích). Giá trị nhãn `result` đã thống nhất với code: payment `succeeded|failed|expired|cancelled`, webhook `accepted|duplicate|late|invalid_signature|error`, refund `succeeded|failed|duplicate|ignored`, tồn kho `reserved|insufficient|released|committed`.
+
+### 2.3 Log tập trung (Vector → Loki → Grafana)
+
+```mermaid
+flowchart LR
+  SVC["Service Go: JSON ra stdout"] --> DK["Docker json-file, 10m x 3"]
+  DK --> VEC["Vector, global, đọc docker.sock chỉ đọc"]
+  VEC -->|"che PII, nhãn service/stack/level/env"| LOKI[("Loki, retention LOKI_RETENTION")]
+  LOKI --> GF["Grafana: dashboard Logs"]
+  PM["Prometheus"] -.->|"scrape"| LOKI
+  PM -.->|"scrape :9598"| VEC
+```
+
+- Dashboard **Marketplace · Logs** (`mm-logs`): biến `service`, `level`, ô `request_id`; panel tỉ lệ log lỗi theo service, số log theo level, log thô lọc `| json | request_id=~"..."`.
+- `request_id` **không** là nhãn Loki (tránh bùng nổ chỉ mục); chỉ có `service`, `stack`, `level`, `env`.
+- Vector che PII trước khi gửi (email, số điện thoại VN dạng liền, Bearer / JWT, trường `password|authorization|token`, số thẻ 13–16 chữ số). Không che số điện thoại có dấu chấm / khoảng trắng.
+- Chạy thật Loki 3.2.1 + Vector 0.41.1 cục bộ; chưa thử trong Swarm. Chuẩn hoá log JSON trong từng service (đang trộn `zap` và `log.Printf`) là việc tiếp theo.
 
 ## 3. Cảnh báo: CHƯA LÀM (cố ý)
 Quyết định (ADR-12): **không có cảnh báo.** Không `alert-service`, Alertmanager, bảng `alerts/notifications`, chuông, SSE, email. Chỉ có Grafana để người vận hành tự nhìn. Ngưỡng ở bảng dưới chỉ là gợi ý **tô màu** (một số đã có trên ô stat của dashboard); khi sau này muốn cảnh báo, thêm Alertmanager + rule trên đúng các metric này, không cần đổi code service.
@@ -136,12 +167,12 @@ Quyết định (ADR-12): **không có cảnh báo.** Không `alert-service`, Al
 | Services (RED) | RPS, 5xx %, p95 | 5xx >1 % / >2 %; p95 >0,5 s / >1 s | ✅ (màu trên Overview) |
 | Containers | CPU/RAM % limit, restart | RAM >80/90 % | ✅ (panel, chưa tô màu theo ngưỡng) |
 | Nodes | CPU, RAM, disk, load | disk >80/90 % | ✅ (gộp vào *Containers & hosts*) |
-| Kafka & Outbox | lag theo group/topic | lag >500/>1000 | 🟡 lag ✅; `mm_outbox_pending`/`oldest_age` **chưa có panel** (metric đã có) |
+| Kafka & Outbox | lag theo group/topic | lag >500/>1000 | 🟡 lag ✅ (cũng có dashboard *Kafka consumer lag* riêng, viết xong chưa xem thật); outbox ở *Outbox & Workers* (viết xong, chưa xem thật) |
 | Postgres / Redis | connections, cache hit, pool | connections >70/85 % | ✅ |
-| ClickHouse | insert lag, disk, merges | lag >60/>120 s | 🟡 insert lag ở *Analytics pipeline* (>60/>120 s); metric của ClickHouse server ❌ |
-| Payments | `mm_payments_total`, tỉ lệ thành công | thành công <90/<80 % | ❌ (metric chưa có; dùng báo cáo `payments` của analytics) |
-| Business | đơn/phút, `mm_orders_awaiting_payment` | – | ❌ (dùng báo cáo analytics) |
-| Gateway | rate-limited, events nhận/loại | – | 🟡 429 ở *Services*; `mm_events_*` ở *Analytics pipeline* |
+| ClickHouse | insert lag, disk, merges | lag >60/>120 s | 🟡 insert lag ở *Analytics pipeline* (>60/>120 s); metric server ở dashboard *ClickHouse server* (viết xong, chưa xem thật) |
+| Payments | `mm_payments_completed_total`, tỉ lệ thành công | thành công <90/<80 % | 🟡 dashboard *Payments* viết xong, chưa xem thật (ngưỡng chưa tô màu) |
+| Business | checkout, đơn tạo/hết hạn/tự giao, chuyển trạng thái, tồn kho | – | 🟡 dashboard *Business* viết xong, chưa xem thật |
+| Gateway | rate-limited, events nhận/loại, gRPC client | – | 🟡 `mm_rate_limited_total` và `mm_grpc_client_*` ở *Business*; 429 ở *Services*; `mm_events_*` ở *Analytics pipeline* |
 
 ### 3.2 "Cần chú ý" trong ứng dụng (không phải cảnh báo)
 Là **truy vấn thường**, người dùng mở trang mới thấy: seller – `low-stock` (tồn thấp/ sắp hết), sản phẩm nhiều lượt xem 0 đơn (`top-products?sort=viewed_unsold`); admin – trạng thái service (`/admin/system/health`) và `data-health` (độ trễ pipeline; **đối soát chưa có**). Đơn đã thanh toán chưa giao > 24 h: chưa có báo cáo riêng.

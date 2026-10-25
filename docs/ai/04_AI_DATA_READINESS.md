@@ -66,7 +66,7 @@ Nét liền: dữ liệu đã có, scope dùng được ngay. Nét đứt: phả
 | API theo vai trò | seller: summary, timeseries, top-products, funnel, low-stock; admin: + traffic, payments, search-terms, data-health; `/admin/system/health` | 4, 14 |
 | Giỏ hàng / đơn / thanh toán API | có phân quyền, idempotency | 5 |
 | Metric | Prometheus `mm_*`, cAdvisor, node-exporter, exporters | 14 |
-| Dữ liệu giả để dev | `SEED_DEMO_DATA` (~100 sản phẩm), `scripts/dev/gen_traffic.py` (chỉ event client) | dev pipeline |
+| Dữ liệu giả để dev | `SEED_DEMO_DATA` (~100 sản phẩm), `scripts/dev/gen_traffic.py` (chỉ event client), **`scripts/datagen`** (đơn, thanh toán, hoàn tiền, tồn kho, `events_raw`; synthetic + RetailRocket) và `scripts/export` (xuất snapshot) | dev pipeline |
 
 ## 2. Còn thiếu, theo mức chặn
 
@@ -81,7 +81,7 @@ Danh sách đầy đủ phần hạ tầng (không gồm tầng LLM): [../planni
 | **Upload ảnh** (MinIO chưa có; ảnh chỉ là URL ≤ 8/sản phẩm) | 3 (OCR), 11 (visual search), kiểm duyệt ảnh | MinIO + kiểm MIME / kích thước |
 | **Wishlist API** (event đã whitelist, chưa có API) | tín hiệu mạnh cho 1 | làm API |
 | **Feature flag** `GET /config/features` | bật / tắt từng tính năng AI, A/B | làm trước khi có `ai-service` |
-| **Đối soát Postgres ↔ ClickHouse + backfill** | tin cậy dữ liệu huấn luyện (1, 8, 9, 13) | `data-health` hiện trả `reconciliation: "not_implemented"` |
+| **Đối soát Postgres ↔ ClickHouse + backfill** | tin cậy dữ liệu huấn luyện (1, 8, 9, 13) | đã có CLI `backfill` / `reconcile` (analytics-service); còn thiếu lịch đêm, nối `data-health` (hiện vẫn `reconciliation: "not_implemented"`) |
 | **Lịch sử đủ dài / lớn** | 1, 8, 9, 13 (mô hình học từ dữ liệu) | dữ liệu demo là giả; dùng bộ công khai ([../dataset/README.md](../dataset/README.md)) để chọn phương pháp, dữ liệu thật để hiệu chỉnh |
 | **Kho văn bản luật / chính sách** (mô phỏng) + trang admin tải lên | 6 | tự soạn bộ mô phỏng gắn nhãn "MÔ PHỎNG – không phải luật thật" (xem bản nháp §6) |
 | **Hệ thống cảnh báo** (cố ý chưa có, ADR-12) | 14 (giải thích cảnh báo) | chỉ làm khi cần; có thể bắt đầu từ truy vấn metric chủ động |

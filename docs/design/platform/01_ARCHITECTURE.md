@@ -53,7 +53,7 @@ Phụ thuộc gRPC thực tế: gateway → cả 6 service; order → product (g
 1. **Đặt hàng + thanh toán** – xem 04 (reserve → `AWAITING_PAYMENT`/`CONFIRMED` → thanh toán mô phỏng → `PAID` → `SHIPPED` → `DELIVERED`; hết hạn nếu không trả). ✅
 2. **Tracking** – SDK → `POST /events` (gateway gắn `user_id/role/store_id` từ JWT, `ip_hash`) → **gRPC `IngestEvents`** → analytics-service (whitelist, consent, che PII) → bộ đệm → ClickHouse `events_raw`. Không có materialized view; báo cáo gom bảng với `FINAL`. ✅
 3. **Doanh thu** – `order.status_changed` + `payment.*` → `fact_order_status`/`fact_order_items`/`fact_payment_events`/`fact_refunds` → báo cáo seller/admin. Đối soát đêm với Postgres: ❌ chưa làm.
-4. **Metrics hệ thống** – Prometheus scrape `:8081/metrics`; xem bằng **Grafana** (5 dashboard); admin xem tóm tắt trong app qua `GET /admin/system/health` ✅ (`/admin/system/metrics` proxy ❌).
+4. **Metrics hệ thống** – Prometheus scrape `:8081/metrics`; xem bằng **Grafana** (11 dashboard); admin xem tóm tắt trong app qua `GET /admin/system/health` ✅ (`/admin/system/metrics` proxy ❌).
 5. **Cảnh báo: chưa làm (cố ý).** Chỉ Grafana; không alert-service, Alertmanager, thông báo.
 
 ## 4. Nguyên tắc (kế thừa + thực tế)
@@ -62,7 +62,7 @@ Phụ thuộc gRPC thực tế: gateway → cả 6 service; order → product (g
 - **Mỗi service/container Go có health/ready/metrics** theo chuẩn 02.
 - Tiền: `NUMERIC(18,2)` trong Postgres, cent nguyên khi tính (ADR-7). Thiết kế "API mới dùng `{amount, currency}` chuỗi" **không** áp dụng: REST/gRPC trả VND dạng số thực (+ `amount_minor` ở payment), event Kafka dùng `*_minor` (ADR-18).
 - ClickHouse là nơi *phân tích*, không phải nguồn sự thật tiền; dựng lại một phần từ Kafka (retention 7 ngày); backfill từ Postgres ❌.
-- Migration có version: ClickHouse ✅ (`schema_migrations`); Postgres vẫn `AutoMigrate` (goose ❌ chưa làm).
+- Migration có version: ClickHouse ✅ (`schema_migrations`); Postgres ✅ goose (`services/<svc>/migrations`, chạy lúc khởi động, ADR-26).
 
 ## 5. Ràng buộc từ hệ thống cũ (đã xử lý)
 - Gateway từng bắt JWT ở mọi route trừ auth/`/health` → đã thêm nhóm route công khai tường minh (và bài học: không dùng `router.Use` toàn cục – ADR-19).

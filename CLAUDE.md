@@ -29,6 +29,8 @@ go build ./... && go vet ./... && go test ./...
 export TEST_POSTGRES_DSN="host=localhost port=5432 user=postgres password=postgres sslmode=disable"
 export TEST_CLICKHOUSE_URL="http://127.0.0.1:8123"     # CI uses ClickHouse 24.8; without Docker: pip install chdb && python3 scripts/dev/chdb_server.py --port 8123
 scripts/protogen/gen.sh payment-service                # regenerate .pb.go offline (see docs/design/06_PROTOBUF.md)
+python3 scripts/datagen/datagen.py synthetic --seed 1 --start 2026-07-01 --end 2026-09-30 --psql "docker exec -i <pg> psql -U postgres -d postgres" --ch-url http://127.0.0.1:8123 --ch-db marketplace --ch-ensure-schema   # fake history (docs/design/07_DATA_PIPELINE.md)
+(cd services/analytics-service && go run ./cmd/backfill backfill --from 2026-07-01 --to 2026-09-30 && go run ./cmd/backfill reconcile --from 2026-07-01 --to 2026-09-30)   # PG -> ClickHouse facts + compare; export: python3 scripts/export/export.py --profile otto ...
 
 # local infra + all services (needs deploy/.env; see deploy/.env.example)
 cp deploy/.env.example deploy/.env && ./scripts/gen-dev-certs.sh && ./scripts/build-images.sh
@@ -47,5 +49,7 @@ cd apps/frontend && npm install && npm run dev
 - Auth middleware is attached **per route/group**, never with `router.Use` (a global one made public routes 401). New route ⇒ add it to the table in `api-gateway/internal/router/router_test.go`.
 - Money is `NUMERIC(18,2)` in Postgres, `float64` (VND) on the REST/gRPC wire, integer cents in arithmetic (`order-service/internal/service/money.go`); Kafka events carry integer `*_minor` (1/100 VND). Platform timezone is fixed `Asia/Ho_Chi_Minh`.
 - Payments are SIMULATED only (never store card data). Analytics revenue = subtotal of orders PAID (online) / DELIVERED (COD) minus refunds.
+- Postgres schema changes go through goose migrations in `services/<svc>/migrations/NNNNN_*.sql` (embedded, run at startup, version table `goose_db_version_<svc>`); never add `AutoMigrate`. Pin goose at v3.26.0 (v3.29 needs Go 1.26).
+- `X-Request-ID` (HTTP) / `x-request-id` (gRPC metadata) is set by the gateway and propagated by each service's `internal/requestid`; log it, never use it as a Loki label. Gateway gRPC calls have deadlines (`GRPC_TIMEOUT_*`) and retry only read methods.
 - Add tests with every behavior change (see `docs/instruction/04_TESTING.md`).
 - Demo data only with `SEED_DEMO_DATA=true` (never in production).

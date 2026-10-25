@@ -1,49 +1,49 @@
-# Architecture decision records
+# Nhật ký quyết định kiến trúc (ADR)
 
-## ADR-1 Replace Patroni stack with stock Postgres (2026-10)
-The repo vendored the whole Patroni project (+ etcd, haproxy, custom image) for HA. It was unmaintained here, not needed by the code, and dominated the repo. `deploy/infra.yml` now runs `postgres:16-alpine` with a volume and healthcheck. For HA use a managed Postgres or re-introduce Patroni as an external image, not vendored source.
+## ADR-1 Thay stack Patroni bằng Postgres thường (2026-10)
+Repo từng vendor nguyên dự án Patroni (+ etcd, haproxy, image tuỳ biến) cho HA. Phần này không được bảo trì ở đây, code không cần đến, và chiếm phần lớn repo. `deploy/infra.yml` nay chạy `postgres:16-alpine` với volume và healthcheck. Cần HA thì dùng Postgres managed hoặc đưa Patroni trở lại dưới dạng image bên ngoài, không vendor mã nguồn.
 
-## ADR-2 Secrets never in git
-`.env`, keys, certs and binaries are ignored; `.env.example` files document the settings; images contain no configuration; compose injects env at deploy time.
+## ADR-2 Secret không bao giờ nằm trong git
+`.env`, khoá, chứng chỉ và binary đều bị ignore; các file `.env.example` mô tả cấu hình; image không chứa cấu hình; compose truyền biến môi trường lúc deploy.
 
-## ADR-3 Authorization lives in the gateway, identity from the JWT
-Protobuf contracts could not change without regenerating code in five modules, and the gateway is the only public entry point. Handlers therefore derive buyer/seller/store from the token (and the auth service for the store) and ignore client-supplied identity. Services still validate business rules (owner of product, order transitions).
+## ADR-3 Phân quyền nằm ở gateway, danh tính lấy từ JWT
+Hợp đồng protobuf không thể đổi mà không sinh lại mã ở năm module, và gateway là điểm vào công khai duy nhất. Vì vậy các handler suy ra buyer/seller/store từ token (và từ auth service cho store) và bỏ qua danh tính do client gửi. Các service vẫn kiểm tra quy tắc nghiệp vụ (chủ sản phẩm, chuyển trạng thái đơn).
 
-## ADR-4 Price and state are server-side
-order-service re-prices every order from product-service and owns the status state machine. The removed `PUT /orders/:id` allowed arbitrary rewrites.
+## ADR-4 Giá và trạng thái do server quyết định
+order-service tính lại giá mọi đơn từ product-service và sở hữu state machine trạng thái. `PUT /orders/:id` đã bị gỡ vì cho phép ghi đè tuỳ ý.
 
-## ADR-5 Cancel only confirmed orders, release stock via outbox event
+## ADR-5 Chỉ huỷ đơn đã xác nhận, trả tồn kho qua event outbox
 > *Cập nhật:* trạng thái `SUCCESS` không còn; huỷ được phép ở `AWAITING_PAYMENT/CONFIRMED/PAID` (đã có kết quả giữ hàng) và vẫn không cho huỷ `PENDING`; xem ADR-21 và [02_DATA_MODEL.md](../design/02_DATA_MODEL.md). Cơ chế `restored` giữ nguyên.
 
-Canceling a `PENDING` order would race with the in-flight inventory reservation across two topics with no ordering. Allowing cancel only after the result arrived (`SUCCESS`) makes release safe, and `restored` makes it exactly-once.
+Huỷ đơn `PENDING` sẽ chạy đua với việc giữ hàng đang diễn ra trên hai topic không có thứ tự. Chỉ cho huỷ sau khi có kết quả (`SUCCESS`) thì việc trả hàng an toàn, và cờ `restored` đảm bảo trả đúng một lần.
 
-## ADR-6 At-least-once delivery with idempotent consumers
-Transactional outbox + `acks=all` + commit-after-handle + bounded retries. Every handler is a conditional/idempotent write; there is no distributed transaction.
+## ADR-6 Giao ít nhất một lần với consumer idempotent
+Transactional outbox + `acks=all` + commit sau khi xử lý + retry có giới hạn. Mọi handler đều là ghi có điều kiện/idempotent; không có distributed transaction.
 
-## ADR-7 NUMERIC money, integer-cent arithmetic
+## ADR-7 Tiền dạng NUMERIC, tính toán bằng số nguyên cent
 > *Cập nhật:* event Kafka đã dùng đơn vị nhỏ (ADR-18); REST/gRPC vẫn `double` VND.
 
-Changing the protobuf `double` fields to integer minor units needs regenerated code in five modules and a frontend change; for now precision is protected in storage and arithmetic, and the wire format stays `double`. Revisit with proto regeneration.
+Đổi các trường `double` của protobuf sang đơn vị nhỏ kiểu số nguyên cần sinh lại mã ở năm module và sửa frontend; hiện tại độ chính xác được bảo vệ ở khâu lưu trữ và tính toán, còn định dạng trên wire vẫn là `double`. Xem lại khi sinh lại proto.
 
-## ADR-8 One Go module per service (kept)
-A shared module for generated protobuf and `kafkaimpl` would remove the copies in each service but requires building Docker images from the repository root and a `go.work`/`replace` setup. Deferred; the copies are kept identical (`kafkaimpl` was normalized in all five).
+## ADR-8 Mỗi service một Go module (giữ nguyên)
+Một module dùng chung cho protobuf sinh ra và `kafkaimpl` sẽ loại bỏ các bản sao ở từng service nhưng đòi hỏi build image Docker từ thư mục gốc repo và cấu hình `go.work`/`replace`. Hoãn lại; các bản sao được giữ giống hệt nhau (`kafkaimpl` đã được chuẩn hoá ở cả năm service).
 
-## ADR-9 Operational endpoints on a separate admin port (P-2)
-Every Go service runs a second, internal-only HTTP server (`:8081`) with `/health`=`/healthz`, `/ready`=`/readyz`, `/metrics`, `/version`, next to its gRPC port, via one identical `pkg/ops` file per module (ADR-8 style). Liveness never touches dependencies; readiness distinguishes critical (503) and non-critical (degraded, 200) failures; on SIGTERM readiness flips to 503 for `DRAIN_SECONDS` before the server stops.
+## ADR-9 Endpoint vận hành trên cổng admin riêng (P-2)
+Mỗi service Go chạy thêm một HTTP server thứ hai chỉ dùng nội bộ (`:8081`) với `/health`=`/healthz`, `/ready`=`/readyz`, `/metrics`, `/version`, bên cạnh cổng gRPC, qua một file `pkg/ops` giống hệt nhau ở mỗi module (theo kiểu ADR-8). Liveness không bao giờ chạm vào dependency; readiness phân biệt lỗi critical (503) và non-critical (degraded, 200); khi nhận SIGTERM, readiness chuyển sang 503 trong `DRAIN_SECONDS` trước khi server dừng.
 
-## ADR-10 `admin` role, never self-registered (P-11)
-Needed for operations (`/admin/*`). Created only through `ADMIN_BOOTSTRAP_*`; `Register` keeps its role whitelist; only `Login`/`ChangePassword` protos accept `admin`.
+## ADR-10 Role `admin`, không bao giờ tự đăng ký (P-11)
+Cần cho vận hành (`/admin/*`). Chỉ được tạo qua `ADMIN_BOOTSTRAP_*`; `Register` giữ nguyên whitelist role; chỉ proto `Login`/`ChangePassword` chấp nhận `admin`.
 
-## ADR-11 Regenerating protobuf code without buf.build
-buf.build can be unreachable (proxy/offline). The generated Go code is reproduced byte-for-byte using a local `buf`, local `protoc-gen-go`/`protoc-gen-go-grpc` (same versions as in the file headers) and a `buf/validate/validate.proto` reconstructed from the compiled descriptor in the protovalidate Go module. See [06_PROTOBUF.md](../design/06_PROTOBUF.md).
+## ADR-11 Sinh lại mã protobuf khi không có buf.build
+buf.build có thể không truy cập được (proxy/offline). Mã Go sinh ra được tái tạo giống từng byte bằng `buf` cục bộ, `protoc-gen-go`/`protoc-gen-go-grpc` cục bộ (cùng phiên bản như trong header file) và `buf/validate/validate.proto` dựng lại từ descriptor đã biên dịch trong Go module protovalidate. Xem [06_PROTOBUF.md](../design/06_PROTOBUF.md).
 
-## ADR-12 Monitoring only, no alerting (P-8)
-> *Cập nhật:* hiện có 5 dashboard (thêm *Analytics pipeline*); vẫn không có cảnh báo.
+## ADR-12 Chỉ giám sát, không cảnh báo (P-8)
+> *Cập nhật:* hiện có 11 dashboard (thêm *Analytics pipeline*, *ClickHouse server*, *Outbox & Workers*, *Payments*, *Business*, *Kafka consumer lag*, *Logs*; 6 cái mới nhất chưa xem trên Grafana thật); vẫn không có cảnh báo.
 
-Prometheus + Grafana (dashboards provisioned from files). No Alertmanager, no alert-service, no notifications; thresholds only colour panels.
+Prometheus + Grafana (dashboard được provision từ file). Không có Alertmanager, không có alert-service, không có thông báo; các ngưỡng chỉ tô màu panel.
 
 ---
-Các ADR dưới đây (ADR-13 trở đi) ghi bằng tiếng Việt, là những quyết định đã được **triển khai** sau P1 (xem [09_ROADMAP_STATUS.md](../design/platform/09_ROADMAP_STATUS.md)). ADR-1…12 giữ nguyên.
+Các ADR từ ADR-13 trở đi là những quyết định đã được **triển khai** sau P1 (xem [09_ROADMAP_STATUS.md](../design/platform/09_ROADMAP_STATUS.md)).
 
 ## ADR-13 Tracking đi qua gRPC `IngestEvents`, không qua Kafka
 Thiết kế ban đầu: gateway → Kafka `tracking.events` → analytics. Thực tế: gateway gọi **gRPC `IngestEvents`** của analytics-service (≤ 50 event/lần, timeout 2 s) và analytics-service đệm trong RAM rồi ghi ClickHouse theo lô. Lý do: ít thành phần hơn (không topic/consumer/DLQ cho luồng best-effort), phản hồi `accepted/rejected` có lý do ngay cho client, validate/che PII/xử lý consent nằm ở một chỗ. Đánh đổi: nếu analytics-service down hoặc restart khi còn đệm thì event tracking **mất** (không có Kafka để phát lại); gateway luôn trả 202 (`dropped:N`) nên trang không bị ảnh hưởng. Event nghiệp vụ (đơn, thanh toán, sản phẩm, tồn kho) **vẫn** đi qua Kafka + outbox.
@@ -83,3 +83,15 @@ order-service không gọi gRPC payment-service; khi **mọi** đơn của một
 
 ## ADR-25 analytics và payment là phụ thuộc không-critical của gateway
 Gateway đánh `PaymentClient`/`AnalyticsClient` là non-critical trong `/ready`: payment-service down thì COD vẫn đặt được; ClickHouse/analytics-service down thì dashboard 503 và tracking vẫn 202, cửa hàng không dừng. (Ngược lại analytics-service coi ClickHouse là critical cho readiness của chính nó.)
+
+## ADR-26 Migration Postgres bằng goose, chạy lúc khởi động, có khoá advisory
+Thay `AutoMigrate` bằng `goose` v3 (Provider API) cho auth / user / product / order / payment: file SQL đánh số trong `services/<svc>/migrations`, nhúng bằng `go:embed`, bảng version riêng `goose_db_version_<svc>`, `lock.NewPostgresSessionLocker()` để chỉ một replica chạy migration. Baseline `00001` là schema hiện tại, `IF NOT EXISTS` nên DB cũ vẫn lên được; `domain_events` (bảng chung, ADR-23) có mặt ở ba baseline. Ghim goose v3.26.0 vì v3.29 đòi Go 1.26. *Hệ quả:* thay đổi schema chỉ qua file SQL mới; chạy lúc khởi động đủ cho quy mô hiện tại (job migration riêng trước deploy để dành khi có nhiều replica / tách quyền DDL). Không dùng một "migration service" riêng.
+
+## ADR-27 Request-id tự làm trước, OpenTelemetry để sau
+Một mã `X-Request-ID` (HTTP) ↔ `x-request-id` (gRPC metadata) do gateway tạo hoặc nhận, mỗi service có `internal/requestid` (interceptor + logger), đưa vào log và body lỗi. Rẻ, không cần collector / backend tracing; sau này dùng lại làm trace-id khi lên OpenTelemetry. *Chưa làm:* truyền qua Kafka / outbox (cần thêm cột).
+
+## ADR-28 Log: stdout → Vector → Loki, `request_id` không là nhãn
+Service ghi JSON ra stdout (không tự đẩy log, để backend log chết không ảnh hưởng service); Vector chạy global đọc `docker.sock`, che PII rồi gửi tới Loki (single binary, filesystem, retention cấu hình); Grafana là giao diện. Nhãn Loki chỉ `service`, `stack`, `level`, `env`; `request_id` nằm trong nội dung dòng để tránh bùng nổ chỉ mục. Chọn Loki thay vì ClickHouse để không trộn log vận hành vào kho analytics (2 GB). Docker `json-file` giới hạn 10m × 3 để không đầy đĩa node.
+
+## ADR-29 Đường ống dữ liệu: công cụ chạy một lần, ghi SQL trực tiếp, backfill chỉ cho bảng dẫn xuất
+Datagen (Python), backfill / reconcile (Go, trong analytics-service) và export (Python) là công cụ chạy một lần, chưa phải service lập lịch. Click / giỏ lịch sử chỉ có ở ClickHouse và gateway chỉ nhận `ts` trong ±24 giờ, nên datagen ghi thẳng `events_raw`; nghiệp vụ lịch sử ghi SQL trực tiếp vào Postgres (test dựng DB bằng chính migration goose để bắt lệch schema) rồi backfill sang ClickHouse (idempotent nhờ `ReplacingMergeTree`). Backfill không dựng lại được `events_raw` từ Postgres. Chi tiết: [../design/07_DATA_PIPELINE.md](../design/07_DATA_PIPELINE.md).
