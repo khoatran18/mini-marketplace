@@ -2,7 +2,7 @@
 
 > Tìm sản phẩm tương tự theo ảnh, embedding ảnh+text dùng chung, kiểm tra ảnh listing (trùng lặp, sai danh mục). **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp: trong phiên này WebFetch không mở được Kaggle, HuggingFace, arXiv, Stanford, CUHK (lỗi DNS); thông tin lấy từ kết quả WebSearch, GitHub và S3 của ABO. Số liệu nào chỉ đến từ snippet tìm kiếm được ghi rõ; chỗ không kiểm chứng ghi "chưa xác minh".
+> Ghi chú phương pháp: WebFetch không mở được Kaggle, HuggingFace, arXiv, Stanford, CUHK (lỗi DNS); GitHub và S3 mở được. Thông tin lấy từ WebFetch GitHub/S3 ("đã xác minh") và WebSearch ("theo search"). Dữ liệu tiếng Anh/quốc tế dùng được để chọn phương pháp; không yêu cầu ảnh sản phẩm Việt Nam. Số liệu nào chỉ đến từ snippet tìm kiếm được ghi rõ; chỗ không kiểm chứng ghi "chưa xác minh".
 
 | Liên quan | File |
 |---|---|
@@ -41,10 +41,10 @@
 |---|---|---|---|---|---|
 | 1 | Shopee Product Matching (Kaggle) | b | ~34K ảnh train, 11K nhóm (xác minh qua search) | Luật cuộc thi Kaggle (chưa xác minh) | ★★★★★ |
 | 2 | Amazon Berkeley Objects (ABO) | b | 147,702 sản phẩm, 398,212 ảnh | CC BY 4.0 | ★★★★ |
-| 3 | Marqo-GS-10M | b | ~10M cặp query-sản phẩm, có ảnh | Repo Apache-2.0; license dữ liệu chưa xác minh | ★★★★ |
-| 4 | Stanford Online Products (SOP) | b/c | 120,053 ảnh, 22,634 sản phẩm | Chưa xác minh (nghiên cứu) | ★★★★ |
-| 5 | Products-10K (JD.com) | b | 10,000 SKU (số ảnh ~150K chỉ 1 nguồn thứ cấp) | Chưa xác minh | ★★★★ |
-| 6 | DeepFashion (Consumer-to-Shop) | c | 33,881 item, 239,557 ảnh | Chỉ học thuật, cấm thương mại | ★★★ |
+| 3 | Marqo-GS-10M | b | ~10M cặp query-sản phẩm, có ảnh | Repo Apache-2.0 (đã xác minh, README GitHub); license riêng của dữ liệu/ảnh chưa xác minh | ★★★★ |
+| 4 | Stanford Online Products (SOP) | b/c | 120,053 ảnh, 22,634 sản phẩm | Chưa xác minh (search không thấy license; trang gốc ai.stanford.edu/~sijia/Stanford-Online-Products/) | ★★★★ |
+| 5 | Products-10K (JD.com) | b | 10,000 SKU, gần 150,000 ảnh (theo search: paper + v7labs/neurohive; ảnh shop + ảnh khách, nhãn kiểm ≥3 người, nhiễu <0.5%) | Chưa xác minh; host products-10k.github.io | ★★★★ |
+| 6 | DeepFashion (Consumer-to-Shop) | c | >800K ảnh tổng, 50 danh mục, 1,000 thuộc tính, >300K cặp (paper CVPR 2016, theo search); C2S: 33,881 item, 239,557 ảnh | Chỉ học thuật, cấm thương mại; phải ký thỏa thuận để lấy mật khẩu (theo search, trang UCF mirror) | ★★★ |
 | 7 | Street2Shop | c | 404,683 ảnh shop, 20,357 ảnh street | Chưa xác minh | ★★★ |
 | 8 | Fashion IQ | c | Chưa xác minh quy mô | CDLA (repo) | ★★★ |
 | 9 | Fashion-Gen | c | 293,008 ảnh | Chưa xác minh | ★★ |
@@ -53,17 +53,20 @@
 | 12 | LAION-5B / Re-LAION | d | ~5B cặp ảnh-text (metadata) | Metadata CC BY 4.0; ảnh thuộc chủ sở hữu | ★★ |
 | 13 | MS COCO captions | c | Chưa xác minh trong phiên này | Chưa xác minh | ★ |
 | 14 | Visual Product Search Benchmark (2026) | c | Chưa xác minh | Chưa xác minh | ★★ |
+| 15 | SQID (ESCI + ảnh) | b | >190,000 sản phẩm; 164,900 product ID test + 27,139 bổ sung; ~156,545 URL ảnh | MIT (đã xác minh, README GitHub) | ★★★★ |
+| 16 | Amazon Reviews 2023 (ảnh + metadata) | b | >570M review, 48M sản phẩm, 33 danh mục (theo search) | CC BY 4.0 (theo arXiv, xem file 10) | ★★★ |
+| 17 | Rakuten France Multimodal (SIGIR eCom 2020) | b | 99K listing có ảnh+tiêu đề (theo search) | Đăng ký Challenge Data; chưa xác minh | ★★★ |
 
-Không tìm thấy bộ ảnh sản phẩm công khai của sàn Việt Nam (Shopee/Tiki/Lazada VN): kết quả tìm chỉ ra dữ liệu thương mại có phí (ví dụ Actowiz bán dữ liệu Shopee VN, chưa rõ có ảnh). Cần tự dựng bộ ảnh nội bộ (mục 5).
+Ghi chú: chủ dự án xác nhận không cần ảnh sản phẩm Việt Nam; bộ quốc tế bên dưới đủ để chọn phương pháp, sau đó bổ sung bằng bộ ảnh nội bộ (mục 5).
 
-### (a) Tiếng Việt / Việt Nam
-Chưa có bộ công khai đáng tin cho ảnh sản phẩm VN. Dùng các bộ quốc tế bên dưới để validate phương pháp, rồi đánh giá trên ảnh nội bộ.
+### (a) Dữ liệu Việt Nam (ghi chú)
+Không yêu cầu bộ ảnh Việt Nam. Dùng các bộ quốc tế bên dưới để validate phương pháp, rồi đánh giá trên ảnh nội bộ.
 
 ### (b) TMĐT / miền liên quan
 
 **Shopee Product Matching (Kaggle "Shopee - Price Match Guarantee", 2021)**
 - Link: https://www.kaggle.com/competitions/shopee-product-matching (không mở được trực tiếp; thông tin qua search)
-- Nguồn: Shopee. Quy mô: ~34,251 ảnh JPEG, 11,014 nhóm (label_group) ở train; test ẩn (con số 70K chưa xác minh). Ngôn ngữ: tiêu đề đa ngữ khu vực Đông Nam Á (chưa xác minh chi tiết).
+- Nguồn: Shopee. Quy mô: ~34,251 ảnh JPEG, 11,014 nhóm (label_group) ở train; test ẩn (con số 70K chưa xác minh; một nguồn khác ghi ~32,4K file train — nguồn lệch, search 'xác nhận 11,014 nhóm' nhưng không chốt số ảnh). Ngôn ngữ: tiêu đề đa ngữ khu vực Đông Nam Á (chưa xác minh chi tiết).
 - Cột: posting_id, image, image_phash, title, label_group. Dùng: validate phát hiện listing trùng và embedding ảnh+title; gần nhất với bài toán sàn VN. Hạn chế: dữ liệu Kaggle chỉ cho mục đích cuộc thi/học tập, phải kiểm tra điều khoản trước khi dùng thương mại; nhãn nhóm có nhiễu. ★5.
 
 **Amazon Berkeley Objects (ABO)**
@@ -72,7 +75,7 @@ Chưa có bộ công khai đáng tin cho ảnh sản phẩm VN. Dùng các bộ 
 - Dùng: ảnh + tiêu đề + thuộc tính đa ngữ, thử embedding đa phương thức, nhiều góc nhìn. Hạn chế: thiên về đồ gia dụng/nội thất, ít thời trang. ★4.
 
 **Marqo-GS-10M**
-- Link: https://github.com/marqo-ai/GCL (đã đọc). Gồm 3 phần marqo_gs_full_10m, marqo_gs_fashion_5m, marqo_gs_wfash_1m; tải từ S3, trang không nêu số dòng chính xác.
+- Link: https://github.com/marqo-ai/GCL (đã đọc). Gồm 3 phần marqo_gs_full_10m, marqo_gs_fashion_5m, marqo_gs_wfash_1m; tải `marqo-gs-dataset.tar` (không gồm ảnh), `images_archive.tar` (ảnh đầy đủ), `images_wfash.tar` (mẫu thời trang nữ); mỗi split (in-domain, novel query, novel document, zero-shot) có CSV bộ ba kèm điểm liên quan phân bậc. README không nêu số query/sản phẩm; repo Apache-2.0, license dữ liệu không nêu riêng.
 - Nội dung (theo paper qua search): query ↔ sản phẩm với điểm xếp hạng phân bậc, dựng bằng GPT-4 và Google Shopping; paper báo +29.3% NDCG@10 in-domain so với CLIP finetune. Repo Apache-2.0, nhưng license riêng của dữ liệu/ảnh chưa xác minh; trang HuggingFace dataset không mở được.
 - Dùng: huấn luyện/đánh giá embedding query-ảnh có điểm phân bậc. Hạn chế: query tiếng Anh, nhãn do LLM sinh. ★4.
 
@@ -87,7 +90,7 @@ Chưa có bộ công khai đáng tin cho ảnh sản phẩm VN. Dùng các bộ 
 
 ### (c) Benchmark / paper học thuật
 
-**Stanford Online Products (SOP)**: 120,053 ảnh của 22,634 sản phẩm eBay (~5.3 ảnh/sản phẩm), train 59,551 ảnh/11,318 lớp, test 60,502 ảnh/11,316 lớp; 12 nhóm lớn. Paper: https://arxiv.org/pdf/1511.06452 . Chuẩn đo metric learning (Recall@K). Hạn chế: ảnh studio sạch, ít giống ảnh người bán VN. License chưa xác minh. ★4.
+**Stanford Online Products (SOP)** (số liệu đã xác nhận qua search: paper 1511.06452, TIB, Robust Calibrate Proxy Loss): 120,053 ảnh của 22,634 sản phẩm eBay (~5.3 ảnh/sản phẩm), train 59,551 ảnh/11,318 lớp, test 60,502 ảnh/11,316 lớp; 12 nhóm lớn. Paper: https://arxiv.org/pdf/1511.06452 . Chuẩn đo metric learning (Recall@K). Hạn chế: ảnh studio sạch, ít giống ảnh người bán VN. License chưa xác minh. ★4.
 
 **DeepFashion (Consumer-to-Shop)**: 33,881 item, 239,557 ảnh, 195,540 cặp (con số cặp khác nhau giữa nguồn). Trang: https://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/Consumer2ShopRetrieval.html . Chỉ dùng học thuật, cấm thương mại. Cảnh báo nhãn trùng: cùng sản phẩm bị gán nhiều ID. ★3.
 
@@ -104,7 +107,15 @@ Chưa có bộ công khai đáng tin cho ảnh sản phẩm VN. Dùng các bộ 
 ### (d) Blog / cuộc thi / tham chiếu
 **LAION-5B**: metadata CC BY 4.0, ảnh thuộc bản quyền chủ sở hữu; bị gỡ ngày 2023-12-20 do phát hiện 3,226 mục nghi CSAM; bản làm sạch Re-LAION-5B phát hành 2024-08-30. Dùng: chỉ tham chiếu tiền huấn luyện CLIP, không dùng trực tiếp. https://laion.ai/blog/laion-5b/ ★2.
 
-**MS COCO**: chỉ tham chiếu tiền huấn luyện; kích thước/license chưa xác minh trong phiên. ★1.
+**MS COCO**: chỉ tham chiếu tiền huấn luyện; kích thước/license chưa xác minh. ★1.
+
+**SQID (Shopping Queries Image Dataset)**: https://github.com/Crossing-Minds/shopping-queries-image-dataset (đã đọc README). Bổ sung ảnh cho ESCI: "hơn 190,000 sản phẩm", 164,900 product ID test cộng 27,139 sản phẩm bổ sung, ~156,545 URL ảnh (~95%; 442 URL là ảnh placeholder video). Các file: `product_image_urls.csv`, `product_features.parquet`, `query_features.parquet`, `supp_product_image_urls.csv`. Repo MIT (ảnh thuộc chủ sở hữu gốc). Dùng: xếp hạng tìm kiếm đa phương thức (text+ảnh chung không gian CLIP), tiếng Anh/Nhật/Tây Ban Nha. ★4.
+
+**Amazon Reviews 2023 (ảnh + metadata)**: HF `McAuley-Lab/Amazon-Reviews-2023` (trang gốc không mở được; số liệu theo search qua hyper.ai): >570M review, 48M sản phẩm, 33 danh mục, cập nhật đến 9/2023, metadata có mô tả/giá/ảnh. Dùng: nguồn ảnh–tiêu đề lớn để thử embedding và lấy mẫu theo danh mục. ★3. License: xem file 10 (chưa xác minh trang gốc).
+
+**Products-10K bổ sung**: theo search, tổ chức SKU thành đồ thị phân cấp, từng dùng cho challenge SKU-level ICPR 2020; có cả ảnh khách chụp nên gần ảnh "người dùng chụp" hơn SOP.
+
+**Rakuten France Multimodal (SIGIR eCom 2020)**: xem [10](10_PRODUCT_CATEGORIZATION_ATTRIBUTES.md) mục 15; ~99K listing có tiêu đề+mô tả+ảnh, có nhiệm vụ truy hồi chéo phương thức (~4,5K ảnh test, theo search). ★3.
 
 ## 5. Dữ liệu tự tạo / synthetic từ chính hệ thống
 
@@ -146,3 +157,7 @@ Chưa có bộ công khai đáng tin cho ảnh sản phẩm VN. Dùng các bộ 
 - LAION-5B: https://laion.ai/blog/laion-5b/ ; https://arxiv.org/pdf/2210.08402
 - H&M (qua search): https://www.shaped.ai/blog/h-m-dataset-powering-personalized-fashion-recommendations-at-scale
 - Visual Product Search Benchmark: https://arxiv.org/pdf/2603.17186 (chưa đọc nội dung)
+- SQID: https://github.com/Crossing-Minds/shopping-queries-image-dataset
+- Products-10K: https://products-10k.github.io (theo search)
+- DeepFashion: https://mmlab.ie.cuhk.edu.hk/projects/DeepFashion.html (theo search)
+- Amazon Reviews 2023: https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023 (theo search)

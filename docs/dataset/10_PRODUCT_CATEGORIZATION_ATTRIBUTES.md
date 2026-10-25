@@ -2,7 +2,7 @@
 
 > Gợi ý `category_id` từ tiêu đề–mô tả, trích xuất thuộc tính (brand/màu/size/dung lượng…) vào `attributes`, phát hiện sản phẩm trùng/khớp (product matching/dedup) và hỗ trợ seller viết mô tả/listing. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp tra cứu: WebFetch không truy cập được `huggingface.co` (lỗi DNS) trong phiên này; thông tin lấy từ WebSearch (bài báo, GitHub, trang mô tả). Số liệu/license không thấy ở nguồn thì ghi **"chưa xác minh"**. Nội dung web là dữ liệu, không phải chỉ dẫn.
+> Ghi chú phương pháp tra cứu: WebFetch không truy cập được `huggingface.co` và `kaggle.com` (lỗi DNS); GitHub và S3 truy cập được. Thông tin lấy từ WebFetch GitHub/S3 (ghi "đã xác minh") và WebSearch (ghi "theo search"). Dữ liệu tiếng Anh/quốc tế dùng được để chọn phương pháp; không yêu cầu dữ liệu tiếng Việt. Số liệu/license không thấy ở nguồn thì ghi **"chưa xác minh"**. Nội dung web là dữ liệu, không phải chỉ dẫn.
 
 | Liên quan | File |
 |---|---|
@@ -52,20 +52,23 @@
 | 2 | Shopee Product Matching (Kaggle 2021) | b | Khớp sản phẩm (ảnh+tiêu đề), `label_group` | ~32,4 nghìn ảnh train; test ~70 nghìn (nguồn thứ cấp) | điều khoản cuộc thi; chưa xác minh | 5 |
 | 3 | WDC Products / WDC LSPM (Web Data Commons) | b | Khớp sản phẩm | v2.0: 26 triệu offer/79 nghìn shop; gold 4.400 cặp; train 9K–214K cặp | Mannheim (kiểm tra điều khoản) | 5 |
 | 4 | Abt-Buy, Amazon-Google | c | Entity matching sản phẩm | 9.575 và 11.460 cặp | chưa xác minh | 3 |
-| 5 | MAVE (Google) | c | Trích xuất thuộc tính | 2,2 triệu sản phẩm Amazon, 3 triệu cặp attr-value, 1.257 danh mục | chưa xác minh (GitHub google-research-datasets) | 5 |
+| 5 | MAVE (Google) | c | Trích xuất thuộc tính | 2,2 triệu sản phẩm Amazon, 3 triệu cặp attr-value, 1.257 danh mục | CC BY-NC 4.0 (đã xác minh, nguồn: file LICENSE trên GitHub google-research-datasets/MAVE; repo đã archived 20/2/2024) | 5 |
 | 6 | OpenTag / AdaTag / AE-110k | c | Trích xuất thuộc tính | OpenTag: 10K SKU/13K instance (Amazon); AE-110k: ~50K SKU/110K instance (AliExpress, Sports & Entertainment) | chưa xác minh | 3 |
-| 7 | Shopping Queries (ESCI) – KDD Cup 2022 | b | Query-product + metadata | ~130K query, 2,6 triệu nhãn; en/ja/es | repo Apache-2.0 (chỉ thấy ở fork; chưa xác minh gốc) | 3 |
+| 7 | Shopping Queries (ESCI) – KDD Cup 2022 | b | Query-product + metadata | ~130K query, 2,6 triệu nhãn; en/ja/es | Apache-2.0 (đã xác minh, nguồn: README GitHub amazon-science/esci-data) | 3 |
 | 8 | Amazon Reviews 2023 – metadata | b | Danh mục, tiêu đề, mô tả, bullet | 48 triệu item, 33 danh mục | CC BY 4.0 (arXiv) | 4 |
-| 9 | Amazon Berkeley Objects (ABO) | b | Metadata đa ngữ + ảnh | 147.702 listing, 398.212 ảnh, ≤18 thuộc tính | CC BY-NC 4.0 (listing AWS) | 3 |
+| 9 | Amazon Berkeley Objects (ABO) | b | Metadata đa ngữ + ảnh | 147.702 listing, 398.212 ảnh, ≤18 thuộc tính | CC BY 4.0 (đã xác minh, nguồn: trang S3 của ABO; bản ghi trước ghi nhầm CC BY-NC) | 3 |
 | 10 | Mercari Price Suggestion | b | Danh mục phân cấp + tiêu đề + mô tả | ~1,48 triệu dòng | điều khoản cuộc thi; chưa xác minh | 2 |
 | 11 | Flipkart (reviews/ sản phẩm scrape) | b | Danh mục/review | ~194K–205K dòng review (bản Zenodo/Kaggle) | chưa xác minh; dữ liệu scrape | 1 |
 | 12 | TaoDescribe, JDPDG, FPDG (Stick to Facts) | c | Sinh mô tả sản phẩm | TaoDescribe ~2,13 triệu mẫu; JDPDG >300.000 sản phẩm | chưa xác minh | 3 |
 | 13 | Shopee Code League 2020 (Kaggle) | a/d | Cuộc thi nhiều bài | chưa xác minh bài product detection/title | điều khoản Shopee | 2 |
 | 14 | VMLU (benchmark LLM tiếng Việt) | a/c | Đánh giá chung LLM tiếng Việt | Vi-MQA 10.880 câu | chưa xác minh | 1 |
+| 15 | Rakuten France Multimodal (SIGIR eCom 2020) | b | Phân loại đa phương thức (tiêu đề+mô tả+ảnh) | 99 nghìn listing (~85 nghìn train) | đăng ký Challenge Data; chưa xác minh | 4 |
+| 16 | SQID (ESCI + ảnh) | b | Query-product + ảnh | >190.000 sản phẩm, ~156,5 nghìn URL ảnh | MIT (đã xác minh, README GitHub) | 3 |
+| 17 | Amazon-M2 (KDD Cup 2023) | b | Session đa ngữ + metadata | 6 locale, 6 ngôn ngữ; số session chưa xác minh | chưa xác minh | 2 |
 
-### (a) Tiếng Việt / Việt Nam
+### (a) Dữ liệu Việt Nam (ghi chú)
 
-Trong phiên này **không tìm thấy bộ dữ liệu phân loại danh mục / trích xuất thuộc tính / khớp sản phẩm / sinh mô tả tiếng Việt công khai** (kết quả chỉ có scraper thương mại trên Apify cho Tiki, bài thống kê thị trường Statista/LMC). Các dataset UIT về review (ViSFD, ViOCD, ViSpamReviews) có văn bản sản phẩm tiếng Việt nhưng nhãn không phải danh mục/thuộc tính — xem [07_REVIEW_SENTIMENT_SPAM.md](07_REVIEW_SENTIMENT_SPAM.md). Gợi ý: (i) crawl danh mục/thuộc tính các sàn là việc **pháp lý nhạy cảm** (điều khoản trang, cạnh tranh, bản quyền ảnh/mô tả) — chưa xác minh được trong phiên; (ii) tự gán nhãn bộ nhỏ từ catalog của chính ta (mục 5) và dịch/điều chỉnh các bộ nước ngoài.
+Chủ dự án xác nhận không cần bộ dữ liệu tiếng Việt: dùng các bộ tiếng Anh/đa ngữ ở (b), (c) để chọn phương pháp (phân loại phân cấp, trích xuất thuộc tính, matching), rồi tinh chỉnh bằng dữ liệu của chính hệ thống (mục 5). Các dataset UIT về review (ViSFD, ViOCD, ViSpamReviews) có văn bản sản phẩm tiếng Việt nhưng nhãn không phải danh mục/thuộc tính — xem [07_REVIEW_SENTIMENT_SPAM.md](07_REVIEW_SENTIMENT_SPAM.md). Lưu ý: crawl danh mục/thuộc tính các sàn có rủi ro pháp lý (điều khoản trang, bản quyền ảnh/mô tả) — chưa xác minh.
 
 **13. Shopee Code League 2020.** [Repo giải 12 phần sentiment](https://github.com/ilos-vigil/scl-2020-sentiment-analysis) cho biết dữ liệu thuộc điều khoản Shopee trên Kaggle. Tìm kiếm không xác nhận có dataset "product detection / title translation" công khai nào. ★2. (Tránh nhầm với Shopee Product Matching 2021, mục 2.)
 
@@ -92,21 +95,29 @@ Trong phiên này **không tìm thấy bộ dữ liệu phân loại danh mục 
 
 **4. Abt-Buy, Amazon-Google** (entity matching chuẩn Magellan/DeepMatcher). Abt-Buy: 9.575 cặp, ~10,7% match; Amazon-Google: 11.460 cặp, ~10,2% match (chủ yếu phần mềm). F1 tham chiếu: Magellan 43,6/49,1; DeepMatcher 62,8/69,3; Ditto 75,58 trên Amazon-Google (số lệch theo thiết lập, có cảnh báo rò rỉ chọn mô hình). Tải: [Mannheim](https://data.dws.informatik.uni-mannheim.de/benchmarkmatchingtasks/), [Zenodo 8164151](https://zenodo.org/records/8164151). ★3. Hạn chế: nhỏ, cũ, tiếng Anh.
 
-**7. Shopping Queries Dataset (ESCI)** — chi tiết ở [02_PRODUCT_SEARCH_SEMANTIC.md](02_PRODUCT_SEARCH_SEMANTIC.md): ~130K query, 2,6 triệu nhãn E/S/C/I, en/ja/es, kèm metadata sản phẩm (tiêu đề, brand, màu, bullet) — [arXiv 2206.06588](https://arxiv.org/abs/2206.06588v1), [SQID có ảnh arXiv 2405.15190](https://arxiv.org/pdf/2405.15190). Ở scope này: dùng trường `product_title, brand, color, bullet_point` làm input/đích cho trích xuất thuộc tính và cho sinh mô tả (một nghiên cứu dùng ESCI làm benchmark mô tả tiếng Anh). ★3. License: Apache-2.0 chỉ thấy ở fork; kiểm tra repo gốc `amazon-science/esci-data`.
+**7. Shopping Queries Dataset (ESCI)** — chi tiết ở [02_PRODUCT_SEARCH_SEMANTIC.md](02_PRODUCT_SEARCH_SEMANTIC.md): 130.652 query, ~2,6 triệu nhãn E/S/C/I (2.621.738 trong văn bản README, 2.621.288 trong bảng — README tự lệch; bản rút gọn Task 1: 48.300 query/1.118.011 nhãn), en/ja/es, kèm metadata sản phẩm (tiêu đề, brand, màu, bullet) — [arXiv 2206.06588](https://arxiv.org/abs/2206.06588v1), [SQID có ảnh arXiv 2405.15190](https://arxiv.org/pdf/2405.15190). Ở scope này: dùng trường `product_title, brand, color, bullet_point` làm input/đích cho trích xuất thuộc tính và cho sinh mô tả (một nghiên cứu dùng ESCI làm benchmark mô tả tiếng Anh). ★3. License: Apache-2.0 (đã xác minh, nguồn: README `amazon-science/esci-data`). 3 tác vụ: xếp hạng query-product, phân loại 4 lớp E/S/C/I, nhận diện substitute.
 
 **8. Amazon Reviews 2023 – metadata.** [arXiv 2403.03952](https://arxiv.org/html/2403.03952v1): 48 triệu item/33 danh mục với mô tả, giá, ảnh, danh mục phân cấp (`categories`), `details` (dạng dict thuộc tính), `bought_together`. Dùng: nguồn lớn nhất để huấn luyện/kiểm tra phân loại danh mục phân cấp và trích xuất thuộc tính yếu (từ `details`); ★4. Hạn chế: tiếng Anh, thiên về sản phẩm Mỹ; thuộc tính do seller nhập nên thiếu/sai.
 
-**9. Amazon Berkeley Objects (ABO).** [arXiv 2110.06199](https://ar5iv.arxiv.org/html/2110.06199), [Amazon Science](https://www.amazon.science/blog/amazon-berkeley-release-dataset-of-product-images-and-metadata), [AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-ygocdgcstr7v2). 147.702 listing, 398.212 ảnh catalog, ≤ 18 thuộc tính (đa ngữ: tiêu đề, brand, model, năm, loại sản phẩm, kích thước, chất liệu); có mô hình 3D cho 7.953 sản phẩm. License CC BY-NC 4.0 (theo listing AWS; phi thương mại). Dùng: ghép ảnh–thuộc tính (liên kết 11), thử trợ lý mô tả từ ảnh+metadata. ★3.
+**9. Amazon Berkeley Objects (ABO).** [arXiv 2110.06199](https://ar5iv.arxiv.org/html/2110.06199), [Amazon Science](https://www.amazon.science/blog/amazon-berkeley-release-dataset-of-product-images-and-metadata), [AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-ygocdgcstr7v2). 147.702 listing, 398.212 ảnh catalog, ≤ 18 thuộc tính (đa ngữ: tiêu đề, brand, model, năm, loại sản phẩm, kích thước, chất liệu); có mô hình 3D cho 7.953 sản phẩm. License **CC BY 4.0** (đã xác minh, nguồn: trang index S3 `amazon-berkeley-objects`; yêu cầu ghi công Amazon.com và trích dẫn paper CVPR 2022). Tải về: `abo-listings.tar` 83 MB (metadata), `abo-images-small.tar` 3 GB (ảnh ≤256px), `abo-images-original.tar` 110 GB; cũng có 8.200+ sản phẩm ảnh 360° (586.584 ảnh) và 7.900+ mô hình 3D. Dùng: ghép ảnh–thuộc tính (liên kết 11), thử trợ lý mô tả từ ảnh+metadata. ★3.
 
 **10. Mercari Price Suggestion.** ~1,48 triệu dòng, cột: tên, tình trạng, category phân cấp (dạng `A/B/C`), brand, mô tả, giá (giá trong text bị thay bằng `[rm]`) ([torch_frame](https://pytorch-frame.readthedocs.io/en/stable/_modules/torch_frame/datasets/mercari.html)). Dùng: thử phân loại phân cấp từ tên+mô tả; ★2. Hạn chế: hàng cũ C2C, tiếng Anh.
 
 **11. Flipkart.** Kết quả chỉ thấy tập review (khoảng 194.000–205.000 dòng, 104 loại sản phẩm; [Zenodo](https://zenodo.org/records/17612521)) và scraper; không xác nhận dataset sản phẩm kèm cây danh mục. ★1; dữ liệu scrape có rủi ro điều khoản.
 
+**15. Rakuten France Multimodal Product Classification (SIGIR eCom 2020).** Theo search ([overview ACL portal](https://www.aclweb.org/portal/content/2020-sigir-ecom-data-challenge-multi-modal-product-data-classification-and-retrieval), [challengedata.ens.fr/challenges/35](https://challengedata.ens.fr/challenges/35)): 99 nghìn listing của Rakuten France, ~85 nghìn train có mã product type, ~9,5 nghìn test phân loại, ~4,5 nghìn test truy hồi chéo; mỗi sản phẩm có tiêu đề, mô tả tuỳ chọn và ảnh; chủ yếu tiếng Pháp (sau đó có bản Anh và Nhật); metric macro-F1; 27 nhãn (theo một bài review, nguồn thứ cấp); mất cân bằng và nhiễu. License/truy cập: đăng ký trên Challenge Data (chưa xác minh điều khoản). ★4 cho phân loại đa phương thức.
+
+**16. Shopping Queries Image Dataset (SQID).** [GitHub Crossing-Minds/shopping-queries-image-dataset](https://github.com/Crossing-Minds/shopping-queries-image-dataset): bổ sung ảnh cho ESCI; "hơn 190.000 sản phẩm", 164.900 product ID test + 27.139 sản phẩm bổ sung, ~156.545 URL ảnh (khoảng 95%); các file `product_image_urls.csv`, `product_features.parquet`, `query_features.parquet`, `supp_product_image_urls.csv`; license **MIT** (đã xác minh, nguồn: README; ảnh vẫn thuộc chủ sở hữu gốc). ★3.
+
+**17. Amazon-M2 (KDD Cup 2023).** [NeurIPS 2023 D&B](https://papers.nips.cc/paper_files/paper/2023/hash/193df57a2366d032fb18dcac0698d09a-Abstract-Datasets_and_Benchmarks.html): session mua sắm từ 6 locale, ngôn ngữ en/de/ja/fr/it/es, kèm metadata sản phẩm (tiêu đề…); 3 tác vụ gồm sinh tiêu đề sản phẩm kế tiếp. Số session/sản phẩm và license: chưa xác minh (search không trả số). ★2 (chủ yếu cho gợi ý, tham chiếu cho metadata đa ngữ).
+
+**8b. Amazon Reviews 2023 (số liệu bổ sung).** Theo search (hyper.ai và các bản sao HF; trang gốc không mở được): >570 triệu review, 48 triệu sản phẩm, 33 danh mục (+ "Unknown"), cập nhật đến 9/2023, metadata gồm mô tả/giá/ảnh; có `all_categories.txt` và ánh xạ `asin2category`; HF `McAuley-Lab/Amazon-Reviews-2023`. Số tổng 571 triệu review chưa xác minh độc lập.
+
 ### (c) Benchmark / bài báo học thuật
 
 **5. MAVE**
 - Link: [arXiv 2112.08663](https://arxiv.org/abs/2112.08663v1), [Google Research](https://research.google/pubs/pub50791), GitHub `google-research-datasets/MAVE`. WSDM 2022.
-- 2,2 triệu sản phẩm Amazon (trang sản phẩm, không phải review), 3 triệu chú thích attribute-value, 1.257 danh mục; biểu diễn đa nguồn (tiêu đề, mô tả, bullet, thông số…); có tập test zero-shot cho thuộc tính chưa thấy; tác giả nói lớn gấp 8 lần bộ trước. License: chưa xác minh.
+- 2,2 triệu sản phẩm Amazon (trang sản phẩm, không phải review), 3 triệu chú thích attribute-value, 1.257 danh mục (đã xác minh, nguồn: README GitHub: positives 2.226.509 sản phẩm/2.987.151 cặp, 705 thuộc tính; negatives 1.248.009 sản phẩm/1.780.428 cặp). Repo chỉ chứa nhãn (`labels/mave_positives_labels.jsonl`, `mave_negatives_labels.jsonl`, cần Git LFS); để có văn bản đầy đủ phải xin Amazon Review Data 2018 (`All_Amazon_Meta.json`) rồi chạy `clean_amazon_product_metadata_main.sh` (Apache Beam, vài giờ). License CC BY-NC 4.0 (xem bảng); biểu diễn đa nguồn (tiêu đề, mô tả, bullet, thông số…); có tập test zero-shot cho thuộc tính chưa thấy; tác giả nói lớn gấp 8 lần bộ trước. 
 - Ánh xạ: sản phẩm ↔ `products`; attribute-value ↔ khoá/giá trị trong `attributes JSONB`; nguồn văn bản ↔ `name`, `description`.
 - ★5. Hạn chế: tiếng Anh; nhãn nhiễu (tự động từ markup + xác minh); khác phân bố tiếng Việt.
 
@@ -142,7 +153,7 @@ Trong phiên này **không tìm thấy bộ dữ liệu phân loại danh mục 
 
 ## 7. Rủi ro, license, thiên lệch, lưu ý pháp lý/PII
 
-- **License:** ABO (CC BY-NC), Olist-type NC; Rakuten cần đăng ký; Shopee/ Mercari là dữ liệu cuộc thi (điều khoản riêng); MAVE/WDC/ESCI: chưa xác minh trong phiên — kiểm tra trước khi dùng thương mại và trước khi phát hành mô hình huấn luyện từ chúng.
+- **License:** ABO (CC BY 4.0, đã xác minh), MAVE (CC BY-NC 4.0, đã xác minh), ESCI (Apache-2.0, đã xác minh), Olist-type NC; Rakuten cần đăng ký; Shopee/ Mercari là dữ liệu cuộc thi (điều khoản riêng); WDC: chưa xác minh trong phiên — kiểm tra trước khi dùng thương mại và trước khi phát hành mô hình huấn luyện từ chúng.
 - **Bản quyền nội dung:** mô tả/ảnh sản phẩm của bên thứ ba (Tiki/Shopee…) là tài sản của seller/sàn; crawl có rủi ro pháp lý (điều khoản, cạnh tranh không lành mạnh).
 - **Thiên lệch:** dữ liệu tiếng Anh/Mỹ-Trung; taxonomy khác Việt Nam; hàng "local brand", thời trang, thực phẩm Việt ít xuất hiện; trích xuất size/màu kiểu Việt ("M", "xanh rêu", "freesize") cần lexicon riêng.
 - **Rủi ro LLM:** hallucination thông số (công suất, hạn dùng, công dụng y tế) -> **rủi ro quảng cáo sai sự thật**; bắt buộc fidelity check và cấm sinh claims y tế/hiệu quả (liên kết 12, 06).

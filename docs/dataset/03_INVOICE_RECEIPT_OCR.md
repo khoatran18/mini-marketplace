@@ -2,7 +2,7 @@
 
 > Đọc ảnh/PDF hoá đơn, biên lai (tên cửa hàng, ngày, tổng tiền, dòng hàng) thành dữ liệu có cấu trúc để seller nhập hàng/đối soát và để admin kiểm tra chứng từ. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp: phiên này hết hạn mức WebSearch và không mở được Kaggle/HuggingFace/arXiv; các repo GitHub được đọc trực tiếp (CORD, SROIE, DocILE, Kleister-NDA, VinText, VietOCR, Donut, LayoutLMv3, PaddleOCR, MMOCR/WildReceipt). Bộ nào không đọc được trang ghi **"chưa xác minh"**. Không tìm được trang gốc của MC-OCR 2021, FUNSD, RVL-CDIP, hoá đơn điện tử VN công khai.
+> Ghi chú phương pháp: không mở được Kaggle/HuggingFace/arXiv/Zenodo qua công cụ fetch; các repo GitHub được đọc trực tiếp (CORD, SROIE, DocILE, Kleister-NDA, VinText, VietOCR, Donut, LayoutLMv3, PaddleOCR, MMOCR/WildReceipt), phần bổ sung (MC-OCR, FATURA, WildReceipt, XFUND, ReceiptSense, DocILE) lấy từ kết quả WebSearch lượt 2. Bộ nào không đọc được trang ghi **"chưa xác minh"**. Phạm vi: tiếng Anh/đa ngôn ngữ dùng được để chọn phương pháp KIE; dữ liệu tiếng Việt: MC-OCR 2021 (nếu truy cập được), hoặc tự tạo/tổng hợp (mục 5).
 
 | Liên quan | File |
 |---|---|
@@ -42,23 +42,27 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn) | Ngôn ngữ | License | ★ |
 |---|---|---|---|---|---|---|
-| 1 | MC-OCR 2021 (RIVF) | (a)/(d) | chưa xác minh | Việt | chưa xác minh | 5 (nếu truy cập được) |
+| 1 | MC-OCR 2021 (RIVF) | (a)/(d) | 2.436 ảnh biên lai Việt chụp bằng điện thoại (đã xác minh, search) | Việt | chưa xác minh | 5 (nếu truy cập được) |
 | 2 | UIT-MLReceipts | (a) | chưa xác minh | Việt (tên dự án gợi ý) | chưa xác minh | 4 |
 | 3 | VinText | (a)/(d) | 2.000 ảnh, ~56.000 instance | Việt | chỉ nghiên cứu/giáo dục, cấm phân phối lại | 3 (cảnh chữ, không phải hoá đơn) |
 | 4 | VietOCR (mô hình + dữ liệu mẫu) | (a) | ~10 triệu ảnh dòng chữ (huấn luyện); mẫu 1 triệu ảnh tổng hợp | Việt | Apache-2.0 (code) | 3 |
 | 5 | SROIE (ICDAR 2019) | (c) | 1.000 biên lai (600 trainval + 400 test) | Anh/số (Malaysia) | dữ liệu: chưa xác minh; code MIT | 4 |
 | 6 | CORD | (c) | 1.000 biên lai (800/100/100) dù mô tả ghi >11.000 | Indonesia | CC BY 4.0 | 5 |
-| 7 | WildReceipt (MMOCR) | (c) | chưa xác minh số ảnh | Anh (chưa xác minh) | chưa xác minh | 3 |
-| 8 | DocILE | (c)/(d) | chưa xác minh số tài liệu (xem bài arXiv 2302.05658) | Anh | cần token đăng ký; code MIT | 4 |
+| 7 | WildReceipt (MMOCR) | (c) | 1.740 ảnh, 68.975 bbox, 25 lớp (đã xác minh, search) | Anh (chưa xác minh) | chưa xác minh | 3 |
+| 8 | DocILE | (c)/(d) | 6.680 annotated, 932K unlabeled, 100K synthetic (đã xác minh, search) | Anh | cần token đăng ký; code MIT | 4 |
 | 9 | Kleister (NDA, Charity) | (c) | NDA: 540 tài liệu (254/83/203) | Anh | chưa nêu | 1 |
 | 10 | FUNSD | (c) | chưa xác minh | Anh | chưa xác minh | 2 |
 | 11 | RVL-CDIP | (c) | 400.000 ảnh, 16 lớp (mô tả repo thứ cấp) | Anh | chưa xác minh | 2 (phân loại loại chứng từ) |
 | 12 | SynthDoG (Donut) | (c) | 4 bộ × 0,5M (en/zh/ja/ko) | không có Việt sẵn | chưa nêu | 3 (công cụ sinh) |
 | 13 | Train Ticket (Donut) | (c) | chưa xác minh | Trung | chưa nêu | 1 |
+| 14 | FATURA | (c) | 10.000 hoá đơn, 50 layout (200 ảnh/layout), 24 lớp (đã xác minh, search) | Anh | chưa xác minh (Zenodo, ~690,7 MB) | 4 |
+| 15 | XFUND | (c) | form 7 ngôn ngữ (zh, ja, es, fr, it, de, pt); số mẫu chưa xác minh | đa ngôn ngữ | CC BY-NC-SA 4.0 (theo bản mirror HF, search) | 2 |
+| 16 | ReceiptSense (CORU) | (c) | 20.000 biên lai annotate, 30.000 ảnh OCR, 10.000 item-level (search) | Ả Rập/Anh | chưa xác minh | 3 |
+| 17 | Viet-Receipt-VQA (5CD-AI, HF) | (a) | dẫn xuất từ MC-OCR: bản thấy trong search ghi 2.034 biên lai (bản trước 1.589) | Việt | chưa xác minh | 3 |
 
 ### (a) Tiếng Việt / Việt Nam
 
-**MC-OCR 2021 — Mobile-Captured Image Document Recognition for Vietnamese Receipts (RIVF 2021)** — ghi nhận qua tên dự án `WyzanDev/VietReceiptAI` (GitHub) có dùng MC-OCR; không đọc được trang cuộc thi/paper. Nhiệm vụ nhận biết: đánh giá chất lượng ảnh, trích trường (SELLER, ADDRESS, TIMESTAMP, TOTAL_COST là 4 trường dự án trên dùng). Quy mô, license, nơi tải hiện nay, việc có còn công khai hay phải đăng ký: **chưa xác minh**. Ánh xạ: 4 trường -> `seller_name, address, date, total`. Dùng làm bộ chính nếu truy cập được vì đúng miền (biên lai chụp bằng điện thoại ở Việt Nam). ★5 (tiềm năng). Hạn chế: không xác minh được tính sẵn có.
+**MC-OCR 2021 — Mobile-Captured Image Document Recognition for Vietnamese Receipts (RIVF 2021)** — ghi nhận qua tên dự án `WyzanDev/VietReceiptAI` (GitHub) có dùng MC-OCR; không đọc được trang cuộc thi/paper. Nhiệm vụ nhận biết: đánh giá chất lượng ảnh, trích trường (SELLER, ADDRESS, TIMESTAMP, TOTAL_COST là 4 trường dự án trên dùng). Đã xác minh (nguồn: WebSearch — preprint MCOCR của tác giả Xuan-Son Vu, DOI 10.1109/RIVF51545.2021.9642077): **2.436 ảnh** biên lai Việt chụp bằng điện thoại, 50 người thu thập, 2 pha gán nhãn (IQA chất lượng ảnh + KIE), 4 trường SELLER / SELLER ADDRESS / TIMESTAMP / TOTAL COST; thi trên CodaLab 05/12/2020–23/01/2021 (105 người tham gia, ~1.285 lượt nộp). License, nơi tải hiện nay, việc có còn công khai hay phải đăng ký: **chưa xác minh**. Bộ dẫn xuất: HF `5CD-AI/Viet-Receipt-VQA` (VQA trên MC-OCR; số mẫu các bản khác nhau: 1.589 → 2.034; không phải bộ gốc). Ánh xạ: 4 trường -> `seller_name, address, date, total`. Dùng làm bộ chính nếu truy cập được vì đúng miền (biên lai chụp bằng điện thoại ở Việt Nam). ★5 (tiềm năng). Hạn chế: không xác minh được tính sẵn có.
 
 **UIT-MLReceipts** — chỉ biết tên qua `WyzanDev/VietReceiptAI` ("cleaned UIT-MLReceipts, MC-OCR, and SROIE"). Nguồn gốc (thường là nhóm UIT), kích thước, license: **chưa xác minh**. ★4 (tiềm năng). Hạn chế: README repo không nêu chi tiết; repo chỉ mới tạo 2026-09 (0 sao), không dùng làm nguồn dữ liệu chính thức.
 
@@ -66,11 +70,11 @@
 
 **VietOCR** — https://github.com/pbcquoc/vietocr (đã đọc). Thư viện Transformer OCR (`vgg_transformer` precision 0,8800, `vgg_seq2seq` 0,8701 trên tập test nội bộ 10M ảnh dòng chữ); huấn luyện trên ~10M ảnh gồm tổng hợp, viết tay, tài liệu quét; Apache-2.0. Mẫu dữ liệu 1M ảnh tổng hợp (Google Drive). Dùng làm recogniser cho từng dòng sau khi detect bằng PaddleOCR/DBNet. ★3. Hạn chế: số liệu tự báo cáo, không phải benchmark hoá đơn.
 
-> **Hoá đơn điện tử Việt Nam công khai:** không tìm thấy bộ dữ liệu hoá đơn điện tử (XML/PDF theo Nghị định 123/2020/NĐ-CP) công khai trong phiên này (tìm kiếm GitHub trả về 0 kết quả). Đừng dùng hoá đơn thật của người khác; xem mục 5 để tự dựng từ mẫu.
+> **Hoá đơn điện tử Việt Nam:** dữ liệu tiếng Việt: MC-OCR 2021 (biên lai) hoặc tự tạo từ mẫu (mục 5); chưa xác minh bộ hoá đơn điện tử (XML/PDF theo Nghị định 123/2020/NĐ-CP) công khai. Đừng dùng hoá đơn thật của người khác.
 
 ### (b) TMĐT công khai
 
-> Không có bộ "hoá đơn TMĐT" công khai nào được xác minh trong phiên này.
+> Ghi chú: chưa xác minh được bộ "hoá đơn TMĐT" công khai riêng; dùng các bộ hoá đơn/biên lai ở mục (c) và dữ liệu tổng hợp (mục 5).
 
 ### (c) Benchmark / paper học thuật
 
@@ -78,21 +82,27 @@
 
 **SROIE (ICDAR 2019)** — https://github.com/zzzDavid/ICDAR-2019-SROIE (đã đọc). 1.000 biên lai quét (600 trainval, 400 test), 3 tác vụ: text localisation, OCR, KIE (company, address, date, total). Phần lớn chữ số và chữ Anh. License: code MIT (repo), **dữ liệu chưa nêu**; bản gốc có lỗi nhãn, repo có `scripts/check_data.py`. Ánh xạ trực tiếp `seller_name, address, date, total`. ★4. Hạn chế: biên lai Malaysia, không có dòng hàng.
 
-**WildReceipt (MMOCR)** — hướng dẫn https://github.com/open-mmlab/mmocr (docs `data_prepare/kie.md`; đã đọc): tải `wildreceipt.tar` (gồm `class_list.txt`, `train.txt`, `test.txt`, `openset_*`). Số ảnh, số lớp, license: **chưa xác minh**. ★3.
+**WildReceipt (MMOCR)** — hướng dẫn https://github.com/open-mmlab/mmocr (docs `data_prepare/kie.md`; đã đọc): tải `wildreceipt.tar` (gồm `class_list.txt`, `train.txt`, `test.txt`, `openset_*`). Đã xác minh (nguồn: WebSearch, paper SDMG-R arXiv 2103.14470 và tài liệu MMOCR): 1.740 ảnh biên lai, 68.975 bbox, 25 lớp (12 key + 12 value + 1 others); MMOCR báo Macro F1 ~0,89 cho `sdmgr_unet16`. License: **chưa xác minh**. ★3.
 
-**DocILE** — https://github.com/rossumai/docile (đã đọc); paper arXiv 2302.05658; https://docile.rossum.ai . Hai track KILE (key info localisation & extraction) và LIR (line item recognition) trên hoá đơn/tài liệu kinh doanh, có tập annotated-trainval, test, unlabeled, synthetic. Truy cập qua **token đăng ký**; repo MIT, license dữ liệu riêng chưa nêu. Số tài liệu: **chưa xác minh** (README không nêu). Hữu ích nhất cho **line items** của hoá đơn doanh nghiệp. ★4. Hạn chế: tiếng Anh, bố cục phương Tây.
+**DocILE** — https://github.com/rossumai/docile (đã đọc); paper arXiv 2302.05658; https://docile.rossum.ai . Hai track KILE (key info localisation & extraction) và LIR (line item recognition) trên hoá đơn/tài liệu kinh doanh, có tập annotated-trainval, test, unlabeled, synthetic. Truy cập qua **token đăng ký**; repo MIT, license dữ liệu riêng chưa nêu. Số tài liệu (nguồn: WebSearch, paper arXiv 2302.05658): 6.680 tài liệu doanh nghiệp thật có nhãn, ~932K chưa nhãn, 100K tổng hợp có nhãn đầy đủ. Hữu ích nhất cho **line items** của hoá đơn doanh nghiệp. ★4. Hạn chế: tiếng Anh, bố cục phương Tây.
 
 **Kleister NDA / Charity** — https://github.com/applicaai/kleister-nda (đã đọc): 540 NDA (254/83/203) từ SEC EDGAR, thuộc tính effective_date, jurisdiction, party, term; tiếng Anh; license không nêu. Tài liệu dài kiểu hợp đồng, ít liên quan hoá đơn. ★1.
 
-**FUNSD** — dùng trong LayoutLMv3 (README https://github.com/microsoft/unilm/tree/master/layoutlmv3: F1 base 0,9059, large 0,9215). Số mẫu, license của FUNSD: **chưa xác minh** (không đọc được trang gốc). Form quét tiếng Anh. ★2.
+**FUNSD** — dùng trong LayoutLMv3 (README https://github.com/microsoft/unilm/tree/master/layoutlmv3: F1 base 0,9059, large 0,9215). Số mẫu, license của FUNSD: **chưa xác minh** (trang guillaumejaume.github.io không mở được). Form quét tiếng Anh. ★2.
 
 **RVL-CDIP** — 400.000 ảnh tài liệu, 16 lớp (có "invoice") theo mô tả repo thứ cấp; Donut dùng làm benchmark phân loại (95,3). License: **chưa xác minh**; ~100 GB nén chưa tải theo mô tả thứ cấp. Dùng để tiền huấn luyện bộ phân loại loại chứng từ. ★2.
 
 **SynthDoG / Train Ticket (Donut)** — https://github.com/clovaai/donut : công cụ sinh dữ liệu tổng hợp (4 bộ 0,5M en/zh/ja/ko); Donut đạt 91,3 trên CORD, 98,7 Train Ticket. Không có tiếng Việt sẵn; có thể sinh bằng font/văn bản Việt. ★3 (SynthDoG), ★1 (Train Ticket).
 
+**FATURA** — arXiv 2311.11856 ; Zenodo https://zenodo.org/records/10371464 (v2, 13/12/2023, "Dataset Open", một archive ~690,7 MB). Đã xác minh (nguồn: WebSearch): 10.000 hoá đơn, 50 layout (mỗi layout 200 ảnh), 24 lớp đối tượng (bbox + text), annotation ở 3 định dạng (gốc, COCO, tương thích HF Transformers); lớp mất cân bằng. License: **chưa xác minh** (không thấy trong kết quả search). Một nguồn lưu ý nhiều bộ hoá đơn công khai là dữ liệu sinh tổng hợp nên đa dạng nhà cung cấp có thể thiếu. Hữu ích để thử KIE/layout trên hoá đơn doanh nghiệp. ★4.
+
+**XFUND** — ACL 2022 Findings (LayoutXLM). Đã xác minh (nguồn: WebSearch): form có nhãn người ở 7 ngôn ngữ (zh, ja, es, fr, it, de, pt), 2 tác vụ semantic entity recognition và relation extraction; bản mirror HF `FrancophonIA/XFUND` ghi CC BY-NC-SA 4.0 (phi thương mại). Không có tiếng Việt; dùng để thử KIE đa ngôn ngữ. ★2.
+
+**ReceiptSense (trước đây CORU)** — arXiv 2406.04493. Đã xác minh (nguồn: WebSearch): biên lai Ả Rập–Anh (Ả Rập ~53,6%, Anh ~26,2%, lẫn ~20,3% theo một aggregator), 20.000 biên lai annotate, 30.000 ảnh có OCR annotation, 10.000 annotation mức dòng hàng, cộng tập Receipt QA (1.265 ảnh, 40 cặp QA/ảnh); có bản HF `Timokerr/CORU`. License: **chưa xác minh**. Có dòng hàng nên dùng thử line items. ★3.
+
 ### (d) Blog / cuộc thi / công ty
 
-- **MC-OCR 2021** (RIVF) và **VinText** (VinAI) ở mục (a). Không tìm thấy bộ hoá đơn từ Shopee/Tiki/Lazada/Zalo/FPT trong phiên này.
+- **MC-OCR 2021** (RIVF) và **VinText** (VinAI) ở mục (a). Ghi chú: chưa xác minh bộ hoá đơn công khai từ Shopee/Tiki/Lazada/Zalo/FPT; **FATURA** (Zenodo), **DocILE** (Rossum) ở mục (c) là bộ hoá đơn từ công bố học thuật/công ty.
 
 ### Mô hình tham chiếu (chỉ gợi ý, không phải dữ liệu)
 
@@ -122,7 +132,7 @@
 
 ## 7. Rủi ro, license, thiên lệch, lưu ý pháp lý/PII
 
-- **License:** VinText cấm phân phối lại và chỉ nghiên cứu; LayoutLMv3 mã/mô hình theo CC BY-NC-SA 4.0 -> không phù hợp triển khai thương mại nếu không có giấy phép riêng; SROIE/MC-OCR/UIT-MLReceipts/FUNSD/RVL-CDIP/WildReceipt chưa xác minh license; chỉ CORD (CC BY 4.0) và code Donut/PaddleOCR/VietOCR (MIT/Apache) được xác minh rõ.
+- **License:** VinText cấm phân phối lại và chỉ nghiên cứu; LayoutLMv3 mã/mô hình theo CC BY-NC-SA 4.0 -> không phù hợp triển khai thương mại nếu không có giấy phép riêng; SROIE/MC-OCR/UIT-MLReceipts/FUNSD/RVL-CDIP/WildReceipt/FATURA/ReceiptSense chưa xác minh license; XFUND CC BY-NC-SA 4.0 (theo mirror); chỉ CORD (CC BY 4.0) và code Donut/PaddleOCR/VietOCR (MIT/Apache) được xác minh rõ.
 - **PII/pháp lý:** hoá đơn chứa tên, địa chỉ, số điện thoại, MST, số tài khoản. Cần cơ sở pháp lý và thông báo theo Nghị định 13/2023/NĐ-CP (bảo vệ dữ liệu cá nhân; xác nhận với chuyên gia pháp lý), mã hoá tệp lưu trữ, giới hạn thời hạn lưu, không gửi ảnh cho API bên ngoài khi chưa có thoả thuận xử lý dữ liệu. Hệ thống chưa có `DELETE /users/me/data` (roadmap) -> cần xử lý quyền xoá trước khi thu thập.
 - **Thiên lệch:** dữ liệu công khai là biên lai Indonesia/Malaysia/Mỹ; hoá đơn Việt Nam khác (dấu tiếng Việt, định dạng số, hoá đơn VAT, bản in nhiệt mờ).
 - **Gian lận:** OCR không xác thực tính thật của chứng từ; không dùng làm căn cứ duy nhất để duyệt tiền. Tránh để mô hình sinh ảnh/hoá đơn giả có thể bị lạm dụng.

@@ -2,7 +2,7 @@
 
 > Seller/admin hỏi bằng tiếng Việt ("doanh thu tuần này của shop?", "sản phẩm nào sắp hết hàng?", "traffic từ đâu?") và nhận số liệu có kiểm chứng qua text-to-SQL / semantic layer / tool calling trên ClickHouse. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp: hết hạn mức WebSearch giữa phiên và không mở được Kaggle/UCI/ClickHouse docs; các repo GitHub (Spider, Spider 2.0, BIRD, BIRD-Interact, LiveSQLBench, ViText2SQL, WikiSQL, Dr.Spider) được đọc trực tiếp. Olist và Online Retail **không** xác minh được trang trong phiên này nên chỉ nhắc ở mục 8 (không đưa vào bảng).
+> Ghi chú phương pháp: các repo GitHub (Spider, Spider 2.0, BIRD, BIRD-Interact, LiveSQLBench, ViText2SQL, WikiSQL, Dr.Spider) được đọc trực tiếp; phần bổ sung (Olist, UCI Online Retail, số liệu Spider/SParC/CoSQL/WikiSQL, Gretel, KaggleDBQA) lấy từ kết quả WebSearch (Kaggle/HF/arXiv không mở được qua fetch). Phạm vi: dữ liệu tiếng Anh/quốc tế dùng được để chọn kiến trúc text-to-SQL; dữ liệu tiếng Việt: ViText2SQL hoặc tự tạo (mục 5).
 
 | Liên quan | File |
 |---|---|
@@ -52,26 +52,35 @@
 |---|---|---|---|---|---|---|
 | 1 | ViText2SQL (VinAI) | (a) | ~10K cặp câu hỏi–SQL | Việt | chỉ nghiên cứu/giáo dục, cấm phân phối lại | 5 |
 | 2 | BIRD | (c) | 12.751 cặp, 95 DB, 37 domain, 33,4 GB | Anh | CC BY-SA 4.0 | 4 |
-| 3 | Spider 1.0 | (c) | số lượng chưa xác minh (README không nêu) | Anh | repo Apache-2.0 | 4 |
+| 3 | Spider 1.0 | (c) | 10.181 câu hỏi, 5.693 SQL khác nhau, 200 DB, 138 domain (đã xác minh, search paper) | Anh | repo Apache-2.0 | 4 |
 | 4 | Spider 2.0 (Lite/Snow/DBT) | (c) | 547 + 547 + 68 | Anh | MIT | 3 |
 | 5 | LiveSQLBench | (c) | Base-Lite 270 task/18 DB; Base-Full v1 600/22; Large-v1 480/18 | Anh | MIT (sidebar) / CC BY-SA 4.0 (badge) — kiểm tra LICENSE | 4 |
 | 6 | BIRD-Interact | (c) | Full 600 task/22 DB (PostgreSQL); Lite 270 | Anh | code MIT, dữ liệu CC BY-SA 4.0 | 3 |
 | 7 | Dr.Spider | (c) | 17 bộ nhiễu từ Spider dev | Anh | Apache-2.0 + CC-BY-4.0 | 3 |
-| 8 | WikiSQL | (c) | số lượng chưa xác minh | Anh | BSD-3-Clause | 2 |
+| 8 | WikiSQL | (c) | 80.654 cặp, 24.241 bảng Wikipedia (đã xác minh, search) | Anh | BSD-3-Clause | 2 |
+| 9 | SParC / CoSQL | (c) | SParC 4.298 chuỗi câu hỏi; CoSQL ~3K hội thoại, 30K+ lượt, 10K+ SQL (search) | Anh | chưa xác minh | 3 |
+| 10 | KaggleDBQA | (c) | 272 câu hỏi trả lời được (trong 400 thu thập) trên DB thật từ Kaggle (search) | Anh | chưa xác minh | 3 |
+| 11 | Gretel synthetic_text_to_sql | (c)/(d) | 105.851 bản ghi, ~100 vertical (search) | Anh | Apache-2.0 (đã xác minh, search) | 3 |
+| 12 | Olist Brazilian E-Commerce (Kaggle) | (b) | ~100K đơn 2016–2018 (search) | Bồ Đào Nha/Anh | chưa xác minh | 3 |
+| 13 | UCI Online Retail / Online Retail II | (b) | 541.909 dòng (2010-12→2011-12) / 1.067.371 dòng (2009–2011) | Anh | CC BY 4.0 (đã xác minh, search UCI) | 3 |
 
 ### (a) Tiếng Việt / Việt Nam
 
-**ViText2SQL (VinAI, EMNLP 2020 Findings)** — https://github.com/VinAIResearch/ViText2SQL (đã đọc). ~10K cặp câu hỏi–SQL tiếng Việt (bản dịch/điều chỉnh từ Spider, theo mô tả bài báo — chi tiết tokenization syllable/word: **chưa xác minh**). Điều khoản: chỉ nghiên cứu/giáo dục, cấm phân phối lại bản gốc/đã sửa, phải trích dẫn, "AS IS". Định dạng file: chưa xác minh (thư mục `data`). Ánh xạ: dùng để kiểm tra khả năng hiểu câu hỏi tiếng Việt → SQL (schema linking trên từ ghép tiếng Việt). ★5 (duy nhất tiếng Việt). Hạn chế: schema Spider (không phải TMĐT), license hạn chế, cần tự xác minh chất lượng dịch.
+**ViText2SQL (VinAI, EMNLP 2020 Findings)** — https://github.com/VinAIResearch/ViText2SQL (đã đọc). ~10K cặp câu hỏi–SQL tiếng Việt (bản dịch/điều chỉnh từ Spider, theo mô tả bài báo — chi tiết tokenization syllable/word: **chưa xác minh**). Điều khoản: chỉ nghiên cứu/giáo dục, cấm phân phối lại bản gốc/đã sửa, phải trích dẫn, "AS IS". Số lượng ~10K cặp (README); chia train/dev/test và định dạng file: chưa xác minh (README không liệt kê nội dung thư mục `data`; embedding Word2Vec syllable/word tải riêng). Ánh xạ: dùng để kiểm tra khả năng hiểu câu hỏi tiếng Việt → SQL (schema linking trên từ ghép tiếng Việt). ★5 (duy nhất tiếng Việt). Hạn chế: schema Spider (không phải TMĐT), license hạn chế, cần tự xác minh chất lượng dịch.
 
 ### (b) TMĐT công khai
 
-> Trong phiên này không xác minh được trang của Olist (Kaggle) và Online Retail (UCI), nên không đưa vào bảng. Đề xuất tự đối chiếu: hai bộ này thường được dùng để dựng bảng đơn hàng/chi tiết đơn/sản phẩm cho câu hỏi doanh thu, nhưng thông tin kích thước/license ở đây **chưa xác minh**. Với hệ thống này, cách tốt hơn là sinh dữ liệu demo trên chính schema (mục 5).
+**Olist Brazilian E-Commerce Public Dataset (Kaggle)** — đã xác minh (nguồn: WebSearch, các repo GitHub mirror; không mở được Kaggle): thông tin ~100K đơn hàng 2016–2018 tại nhiều marketplace Brazil, gồm trạng thái đơn, giá, thanh toán, vận chuyển, vị trí khách, thuộc tính sản phẩm, review; file geolocation riêng và Marketing Funnel Dataset đi kèm; dữ liệu đã ẩn danh (tên đối tác trong review thay bằng tên nhà Game of Thrones). Số bảng và license: **chưa xác minh**. Dùng để dựng DB đơn hàng/sản phẩm/thanh toán rồi tự viết cặp câu hỏi doanh thu → SQL (dịch tiếng Việt nếu cần). ★3.
+
+**UCI Online Retail / Online Retail II** — https://archive.ics.uci.edu/dataset/502/online+retail+ii . Đã xác minh (nguồn: WebSearch, trang UCI): Online Retail II 1.067.371 dòng, giao dịch nhà bán lẻ online UK 2009–2011; Online Retail gốc 541.909 dòng, 6 feature, 01/12/2010–09/12/2011; cả hai **CC BY 4.0**. Một bảng giao dịch phẳng, dùng để tự dựng bộ câu hỏi doanh thu/top sản phẩm. ★3.
+
+**Gretel synthetic_text_to_sql** — HF `gretelai/synthetic_text_to_sql`. Đã xác minh (nguồn: WebSearch/bài báo của Gretel và HPCwire/Analytics Vidhya): >105.851 bản ghi, ~100 vertical, mỗi bản ghi có giải thích bằng tiếng Anh, **Apache-2.0**; có metadata độ phức tạp SQL. Dùng để fine-tune/few-shot nền SQL, không phải TMĐT/ClickHouse. ★3.
 
 ### (c) Benchmark / paper học thuật
 
 **BIRD** — https://github.com/AlibabaResearch/DAMO-ConvAI/tree/main/bird (đã đọc). 12.751 cặp text-to-SQL, 95 DB, 37 domain chuyên môn, 33,4 GB; **CC BY-SA 4.0**. Metric EX và VES (timeout 3 s/truy vấn, lặp 5 lần). Có "external knowledge" (gợi ý nghiệp vụ) -> tương ứng glossary/semantic layer của ta. ★4. Hạn chế: SQLite, tiếng Anh, DB nhỏ hơn thực tế ClickHouse.
 
-**Spider 1.0** — https://github.com/taoyds/spider (đã đọc). Annotated by 11 college students; metric chính thức Test Suite Accuracy (từ 2020-11-15), còn Component/Exact Matching; repo Apache-2.0 (license dữ liệu không nêu riêng). Số câu hỏi/DB: **chưa xác minh** (README không nêu). Nền tảng đối sánh. ★4. Hạn chế: schema đơn giản, ít phép tính thời gian/tiền.
+**Spider 1.0** — https://github.com/taoyds/spider (đã đọc). Annotated by 11 college students; metric chính thức Test Suite Accuracy (từ 2020-11-15), còn Component/Exact Matching; repo Apache-2.0 (license dữ liệu không nêu riêng). Số liệu (nguồn: WebSearch, paper EMNLP 2018): 10.181 câu hỏi, 5.693 SQL phức tạp khác nhau, 200 DB nhiều bảng, 138 domain; chia chuẩn 8.659 train (146 DB) / 1.034 dev (20 DB) / 2.147 test (34 DB), không trùng DB giữa các tập. Dataset license riêng: **chưa xác minh** (một bài viết của Gretel ghi Spider là CC BY-SA 4.0 — nguồn thứ cấp). Nền tảng đối sánh. ★4. Hạn chế: schema đơn giản, ít phép tính thời gian/tiền.
 
 **Spider 2.0** — https://github.com/xlang-ai/Spider2 (đã đọc). Spider 2.0-Snow 547 task (Snowflake), Lite 547 (BigQuery 214, Snowflake 198, SQLite 135), DBT 68 (DuckDB), MIT. Cần tài khoản BigQuery/Snowflake; README ghi (thông báo 2026-08-12) tài khoản Snowflake đánh giá đang bị đình chỉ; gold SQL chỉ phát hành một phần và không khuyến nghị fine-tune bằng nó. Gần quy trình doanh nghiệp (schema lớn, nhiều dialect). ★3. Hạn chế: khó chạy, chi phí cloud.
 
@@ -81,13 +90,15 @@
 
 **Dr.Spider** — https://github.com/awslabs/diagnostic-robustness-text-to-sql (đã đọc). 17 bộ nhiễu từ Spider dev: DB_ (3), NLQ_ (9), SQL_ (5); Apache-2.0 + CC-BY-4.0. Dùng đo độ bền với diễn đạt khác/đổi tên cột. ★3.
 
-**WikiSQL** — https://github.com/salesforce/WikiSQL (đã đọc). Câu hỏi đơn bảng (sel/agg/conds), tệp `data.tar.bz2`, SQLite; BSD-3-Clause; kích thước: chưa xác minh. Quá đơn giản cho bài toán ta. ★2.
+**WikiSQL** — https://github.com/salesforce/WikiSQL (đã đọc). Câu hỏi đơn bảng (sel/agg/conds), tệp `data.tar.bz2`, SQLite; BSD-3-Clause; 80.654 cặp hỏi–SQL trên 24.241 bảng Wikipedia (nguồn: WebSearch, paper Seq2SQL arXiv 1709.00103). Quá đơn giản cho bài toán ta. ★2.
 
-**CoSQL / SParC** (hội thoại text-to-SQL): trang GitHub `yale-nlp/cosql` trả 404; chỉ biết tên qua README Spider (metric áp dụng cho "Spider, SParC, CoSQL"). Số liệu **chưa xác minh**.
+**CoSQL / SParC** (hội thoại text-to-SQL): trang GitHub `yale-nlp/cosql` trả 404 khi thử. Đã xác minh (nguồn: WebSearch): SParC 4.298 chuỗi câu hỏi mạch lạc; CoSQL ~3K hội thoại, 30K+ lượt, 10K+ SQL gán nhãn (thu theo kiểu Wizard-of-Oz); cả hai dựng trên cùng 200 DB của Spider, không trùng DB giữa các tập. License: **chưa xác minh**. Hữu ích cho hỏi đáp nhiều lượt ("còn tuần trước thì sao?"). ★3.
+
+**KaggleDBQA** — arXiv 2106.11455 (ACL-IJCNLP 2021), tải ở aka.ms/KaggleDBQA (theo footnote paper). Đã xác minh (nguồn: WebSearch): 400 câu hỏi thu thập, ~1/3 ngoài phạm vi parser SOTA → 272 câu trả lời được; DB thật từ Kaggle, tên cột viết tắt khó hiểu, có kèm tài liệu DB (thêm >13,2% accuracy). Số DB và license: **chưa xác minh**. Gần thực tế hơn Spider (cột khó hiểu, tương tự `*_minor`). ★3.
 
 ### (d) Blog / cuộc thi / công ty
 
-- Không thu thập được blog/báo cáo công ty (Shopee, Tiki, Lazada, Zalo, VinAI ngoài ViText2SQL) về analytics QA trong phiên này.
+- Ghi chú: Gretel (synthetic_text_to_sql) ở mục (c) là bộ do công ty công bố. Chưa xác minh blog/báo cáo công ty (Shopee, Tiki, Lazada, Zalo) về analytics QA; dữ liệu tiếng Việt: ViText2SQL hoặc tự tạo.
 
 ## 5. Dữ liệu tự tạo / synthetic từ chính hệ thống
 
@@ -138,4 +149,4 @@
 
 Tài liệu nội bộ: `docs/design/02_DATA_MODEL.md` (§3 ClickHouse), `analytics-service/internal/store/queries.go` (`ordersCTE`).
 
-Chưa xác minh (không mở được trang trong phiên): Olist Brazilian E-Commerce (Kaggle), Online Retail (UCI), số liệu của Spider 1.0 và WikiSQL, CoSQL/SParC (`yale-nlp/cosql` → 404), tokenization của ViText2SQL.
+Đã xác minh qua WebSearch (không mở trang gốc): Olist, UCI Online Retail (trang archive.ics.uci.edu/dataset/502), số liệu Spider/SParC/CoSQL/WikiSQL/KaggleDBQA/Gretel. Chưa xác minh: license Olist, SParC/CoSQL, KaggleDBQA; số bảng Olist; split và tokenization của ViText2SQL.

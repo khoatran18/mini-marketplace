@@ -2,7 +2,7 @@
 
 > Benchmark và cách dựng bộ eval riêng cho 3 persona `shopper` / `seller` / `admin`: function calling, multi-turn, tin cậy (pass^k), từ chối đúng/vượt quyền, LLM-as-judge. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp: trong phiên này WebFetch đọc được GitHub (README các repo bên dưới), nhưng không mở được HuggingFace/arXiv/Kaggle; ngân sách WebSearch hết giữa chừng nên **GAIA chưa tra được (chưa xác minh, không đưa vào bảng)** và API-Bank chỉ xác nhận có thư mục trong repo DAMO-ConvAI. Số liệu lấy từ README; chỗ nào không có ghi "chưa xác minh".
+> Ghi chú phương pháp: phiên 1 đọc README GitHub bằng WebFetch; phiên bổ sung (cùng ngày) dùng WebSearch + WebFetch để xác minh GAIA, API-Bank, ToolSandbox, MCP-Bench và thêm các bộ mới (ShoppingBench, Shopping MMLU, AppWorld, Toolathlon, MCP-Universe, MCP-Atlas, ASB, AgentHarm, ToolEmu). HuggingFace/arXiv không mở được bằng WebFetch (DNS) nên các số liệu mới ghi "nguồn: kết quả search" kèm URL; mục nào không thấy trong kết quả vẫn ghi "chưa xác minh".
 
 | Liên quan | File |
 |---|---|
@@ -56,19 +56,29 @@ Eval cần trả lời: (1) chọn đúng tool và tham số? (2) đúng nhiều
 | 4 | WebArena | c | 812 task, có site Shopping + Shopping Admin | Apache-2.0 | ★★★ |
 | 5 | MCPMark | c | 127 task (suite chuẩn), 5 dịch vụ MCP | Apache-2.0 | ★★★★ |
 | 6 | MCP-Bench (Accenture) | c | 28 MCP server | Apache-2.0 | ★★★ |
-| 7 | ToolSandbox (Apple) | c | Số kịch bản chưa xác minh | Chưa xác minh | ★★★★ |
+| 7 | ToolSandbox (Apple) | c | 6 nhóm kịch bản (đơn/đa tool, đơn/đa lượt, phụ thuộc trạng thái, canonicalization, thiếu thông tin); tổng số kịch bản chưa xác minh (README không nêu) | Repo có LICENSE nhưng nội dung chưa đọc (chưa xác minh) | ★★★★ |
 | 8 | ACEBench | c | 4,538 API, 8 domain/68 sub-domain, song ngữ zh/en | MIT | ★★★ |
 | 9 | NESTFUL (IBM) | c | 1,861 ví dụ gọi API lồng nhau | Apache-2.0 | ★★★ |
 | 10 | ToolBench / ToolLLM | c | 3,451 tool, 16,464 API, 126,486 instance | Apache-2.0 (dữ liệu: chỉ nghiên cứu) | ★★ |
 | 11 | AgentBench | c | 8 môi trường (OS, DB, KG, DCG, LTP, ALFWorld, WebShop, Mind2Web) | Apache-2.0 | ★★ |
-| 12 | API-Bank | c | Có thư mục `api-bank` trong DAMO-ConvAI; quy mô chưa xác minh | Chưa xác minh | ★★ |
+| 12 | API-Bank | c | Đánh giá: 73 API tool, 314 hội thoại, 753 lời gọi API; train: 1,888 hội thoại/2,138 API (đã xác minh, nguồn: arXiv 2304.08244 qua search) | Chưa xác minh (nằm trong repo DAMO-ConvAI) | ★★★ |
 | 13 | AgentDojo, InjecAgent (an toàn) | c | xem [12](12_CONTENT_MODERATION_AGENT_SAFETY.md) | MIT | ★★★★★ (an toàn) |
 | 14 | Framework: promptfoo, DeepEval, Ragas, Inspect AI, LangSmith | công cụ | — | MIT / Apache-2.0 / MIT | công cụ |
+| 15 | GAIA | c | 466 câu hỏi (300 câu giữ đáp án cho leaderboard); người 92% vs GPT-4+plugins 15% (paper) | Chưa xác minh (xem thẻ HF gaia-benchmark/GAIA; có thể gated) | ★★ |
+| 16 | ShoppingBench (Alibaba) | b/c | Môi trường mô phỏng >2.5M sản phẩm thật; 17 agent được đánh giá | Chưa xác minh | ★★★★ |
+| 17 | Shopping MMLU (Amazon) | b/c | 57 tác vụ, 20,799 câu hỏi; không phải môi trường agent | Chưa xác minh (dữ liệu công khai trên GitHub) | ★★★ |
+| 18 | AppWorld (AI2) | c | 9 app, 457 API, 750 task (nguồn thứ cấp) | Chưa xác minh | ★★★★ |
+| 19 | Toolathlon (Tool Decathlon) | c | 108 task, 32 ứng dụng, 604 tool; Claude-4.5-Sonnet 38.6% | Chưa xác minh | ★★★ |
+| 20 | MCP-Universe (Salesforce) | c | 6 domain, 11 MCP server, 231 task (v1) | Chưa xác minh | ★★★ |
+| 21 | MCP-Atlas (Scale AI) | c | 36 MCP server, 220 tool, 1,000 task (500 công khai) | Chưa xác minh | ★★★ |
+| 22 | ASB - Agent Security Bench | c (an toàn) | 10 kịch bản (có e-commerce), >400 tool, 27 kiểu tấn công/phòng thủ | Mâu thuẫn giữa nguồn (README không nêu; một port ghi MIT): chưa xác minh | ★★★★ |
+| 23 | AgentHarm (UK AISI) | c (an toàn) | <1K mẫu; có tập harmful/benign | Thẻ HF ghi license "other" | ★★★ |
+| 24 | ToolEmu | c (an toàn) | 36 toolkit, 144 test case (theo bảng của một survey) | Chưa xác minh | ★★★ |
 
-Không tìm thấy bộ function-calling hay agent tiếng Việt công khai trong phiên này (chưa xác minh là không tồn tại). GAIA: chưa tra được.
+Ghi chú: các bộ trong bảng đều là tiếng Anh (hoặc song ngữ Anh-Trung với ACEBench); chủ dự án xác nhận không cần bộ tiếng Việt. Kiểm tra tiếng Việt dùng bộ eval nội bộ (mục 5). Số liệu của dòng 15-24 và API-Bank lấy từ kết quả WebSearch (URL ở mục 4(c) và mục 8).
 
 ### (a) Tiếng Việt / Việt Nam
-Không có bộ agent/tool-use tiếng Việt xác minh được. Hệ quả: các bộ tiếng Anh dùng để kiểm phương pháp/chọn mô hình; mọi kết luận về tiếng Việt phải dựa trên bộ eval nội bộ (mục 5). τ²-bench có chế độ đa ngôn ngữ (English, Spanish, Portuguese, Hindi, Chinese, Korean) nhưng không có tiếng Việt — nhưng cho thấy cách dịch/ghép ngôn ngữ vào bộ task.
+Ghi chú trung tính: dự án dùng các bộ tiếng Anh để kiểm phương pháp/chọn mô hình; kết luận về tiếng Việt dựa trên bộ eval nội bộ (mục 5). τ²-bench có chế độ đa ngôn ngữ (English, Spanish, Portuguese, Hindi, Chinese, Korean) nhưng không có tiếng Việt — nhưng cho thấy cách dịch/ghép ngôn ngữ vào bộ task.
 
 ### (b) TMĐT / miền liên quan
 
@@ -84,9 +94,9 @@ Không có bộ agent/tool-use tiếng Việt xác minh được. Hệ quả: c�
 
 **MCPMark** — https://github.com/eval-sys/mcpmark : stress-test dùng MCP trong sandbox cô lập, xác minh tự động; 127 task (suite chuẩn) + suite dễ 10 task/dịch vụ; dịch vụ Notion, GitHub, Filesystem, Postgres, Playwright; Apache-2.0. Postgres gần với backend dự án. ★4.
 
-**MCP-Bench** — https://github.com/Accenture/mcp-bench : đánh giá phát hiện/chọn/dùng tool qua MCP trên 28 MCP server; có task một, hai, ba server (số task/tool chưa xác minh); Apache-2.0. ★3.
+**MCP-Bench** — https://github.com/Accenture/mcp-bench : đánh giá phát hiện/chọn/dùng tool qua MCP trên 28 MCP server; có file task một, hai, ba server (README không nêu tổng số task/tool: chưa xác minh); Apache-2.0 (đã xác minh, nguồn: README qua WebFetch). ★3.
 
-**ToolSandbox** — https://github.com/apple/ToolSandbox : thực thi tool có trạng thái, phụ thuộc ngầm giữa tool, user simulator tích hợp, chấm theo milestone; số kịch bản và license chưa xác minh (file LICENSE có trong repo). Rất hợp ý tưởng "trạng thái cuối + milestone". ★4.
+**ToolSandbox** — https://github.com/apple/ToolSandbox : thực thi tool có trạng thái, phụ thuộc ngầm giữa tool, user simulator tích hợp, chấm theo milestone (milestone tạo thành DAG, điểm tương đồng lấy trung bình nhân); 6 nhóm kịch bản: single/multiple tool call, single/multiple user turn, state dependency, canonicalization, insufficient information; user simulator dùng mô hình OpenAI; công cụ chạy trực tiếp trên máy chủ, không sandbox (README nêu). Tổng số kịch bản và license không có trong README (chưa xác minh; có file LICENSE trong repo). Nguồn: README qua WebFetch. Rất hợp ý tưởng "trạng thái cuối + milestone". ★4.
 
 **ACEBench** — https://github.com/ACEBench/ACEBench : Normal / Special (chỉ dẫn mơ hồ/thiếu, tool không khả thi) / Agent (nhiều lượt); 8 domain, 68 sub-domain, 4,538 API; song ngữ Trung-Anh; chấm không dùng LLM-judge hay API thật; MIT. Nhóm "Special" liên quan từ chối đúng. ★3.
 
@@ -96,11 +106,29 @@ Không có bộ agent/tool-use tiếng Việt xác minh được. Hệ quả: c�
 
 **AgentBench** — https://github.com/THUDM/AgentBench (ICLR 2024): 8 môi trường gốc (OS, DB, KG, Digital Card Game, Lateral Thinking Puzzles + ALFWorld, WebShop, Mind2Web), bản FC mới; Apache-2.0. Môi trường DB liên quan SQL. ★2.
 
-**API-Bank** — nằm trong https://github.com/AlibabaResearch/DAMO-ConvAI (thư mục `api-bank`); chỉ xác nhận sự tồn tại, chưa mở nội dung: quy mô/license chưa xác minh. ★2.
+**API-Bank** — https://arxiv.org/pdf/2304.08244 (EMNLP 2023); mã/dữ liệu trong https://github.com/AlibabaResearch/DAMO-ConvAI (thư mục `api-bank`). Hệ thống đánh giá chạy được với 73 API tool; 314 hội thoại dùng tool có 753 lời gọi API (đo lập kế hoạch, truy hồi, gọi API); tập huấn luyện 1,888 hội thoại từ 2,138 API, dùng huấn luyện Lynx (đã xác minh, nguồn: kết quả search về paper). License chưa xác minh. ★3.
+
+**GAIA** — https://arxiv.org/abs/2311.12983 (ICLR 2024; Meta AI, Hugging Face, AutoGPT): 466 câu hỏi cần suy luận, đa phương thức, duyệt web, dùng tool; công bố câu hỏi, giữ đáp án của 300 câu cho leaderboard tại https://huggingface.co/gaia-benchmark ; người trả lời đúng 92% so với 15% của GPT-4 có plugin (nguồn: kết quả search). License chưa xác minh (không mở được thẻ HF). Là benchmark trợ lý đa dụng, ít liên quan nghiệp vụ TMĐT. ★2.
+
+**ShoppingBench** — https://arxiv.org/pdf/2508.04266 (AAAI): benchmark agent mua sắm nhắm mục tiêu phức tạp (áp voucher, quản lý ngân sách, tìm nhiều sản phẩm của một người bán), môi trường mô phỏng với hơn 2.5 triệu sản phẩm thật, đánh giá 17 agent và một Qwen3-4B tinh chỉnh (nguồn: kết quả search). Gần persona shopper hơn WebShop. License chưa xác minh. ★4.
+
+**Shopping MMLU** — https://arxiv.org/html/2410.20745v2 (Amazon, NeurIPS 2024; KDD Cup 2024): 57 tác vụ, 20,799 câu hỏi, 4 nhóm kỹ năng (hiểu khái niệm mua sắm, suy luận tri thức, hành vi người dùng, đa ngôn ngữ). Đánh giá kiến thức LLM trong miền mua sắm, không phải agent gọi tool. License chưa xác minh. ★3.
+
+**AppWorld** (AI2) — nguồn thứ cấp (alphaxiv/wizwand qua search): 9 ứng dụng (Amazon, Venmo, Spotify, Gmail, SimpleNote, Splitwise, FileSystem, Phone, Todoist), 457 API, 750 task từ 250 kịch bản, chia Test-N và Test-C. License chưa xác minh. Mô phỏng đa app có trạng thái, hợp ý tưởng chấm bằng trạng thái cuối. ★4.
+
+**Toolathlon / Tool Decathlon** — https://arxiv.org/abs/2510.25726 (ICLR 2026): 32 ứng dụng, 604 tool (phần lớn qua MCP server), 108 task, trung bình khoảng 20 lượt gọi tool, mỗi task có script kiểm tra riêng; bản paper ghi Claude-4.5-Sonnet 38.6%, mô hình mở tốt nhất 20.1% (nguồn: kết quả search). License chưa xác minh. ★3.
+
+**MCP-Universe** (Salesforce) — https://arxiv.org/pdf/2508.14704 (NeurIPS 2025): 6 domain, 11 MCP server, 231 task (v1); GPT-5 44.16%, Grok-4 33.33% theo bản gốc. **MCP-Atlas** (Scale AI) — https://labs.scale.com/papers/mcpatlas : 36 MCP server thật, 220 tool, 1,000 task đa bước (3-6 lần gọi tool), một nửa công khai, nửa giữ kín (nguồn: kết quả search). License hai bộ này chưa xác minh. ★3.
+
+**Bộ an toàn/prompt-injection bổ sung** (chi tiết kỹ thuật ở [12](12_CONTENT_MODERATION_AGENT_SAFETY.md)):
+- **AgentDojo** — https://arxiv.org/html/2406.13352v3 : 97 task thực tế, 629 test case bảo mật (nguồn: paper qua search). **InjecAgent** — https://github.com/uiuc-kang-lab/InjecAgent : 1,054 test case, 17 tool người dùng, 62 tool kẻ tấn công, dựng từ 330 tool của 36 toolkit (README qua search).
+- **ASB (Agent Security Bench)** — https://arxiv.org/pdf/2410.02644 ; https://github.com/agiresearch/ASB (ICLR 2025): 10 kịch bản (gồm e-commerce, tài chính, xe tự lái), 10 agent, >400 tool, 27 kiểu tấn công/phòng thủ, 7 metric (bản v1 ghi 23 kiểu/8 metric; trích bản mới). License: nguồn mâu thuẫn, chưa xác minh. ★4.
+- **AgentHarm** — https://huggingface.co/datasets/ai-safety-institute/AgentHarm : <1K mẫu, có tập harmful và benign, validation + test_public; license ghi "other" trên thẻ. **ToolEmu**: 36 toolkit, 144 test case (theo bảng của một survey), license chưa xác minh.
+- **WildGuardMix** (AI2) — https://huggingface.co/datasets/allenai/wildguardmix : 92K mẫu (WildGuardTrain 86,759 + WildGuardTest 5K người gán nhãn), ODC-BY, gated (chấp nhận Responsible Use Guidelines); là bộ kiểm duyệt/jailbreak/từ chối, không phải bộ agent tool.
 
 **An toàn agent**: AgentDojo, InjecAgent, BIPIA, R-Judge — chi tiết ở [12](12_CONTENT_MODERATION_AGENT_SAFETY.md); AgentDojo (MIT) là khuôn tốt nhất để thêm suite marketplace.
 
-**GAIA**: chưa tra được trong phiên (HF không mở được, hết ngân sách search); không đưa vào bảng.
+**Ghi chú BFCL (bổ sung)**: một trang EvalScope liệt kê 5,106 mẫu cho BFCL-v4 theo các subset (có thể chưa đủ toàn bộ); một wiki thứ cấp ghi dữ liệu/mã đánh giá/kết quả Apache-2.0; cần đối chiếu repo chính thức (nguồn: kết quả search).
 
 ### (d) Framework eval (mô tả ngắn, đã đọc README GitHub)
 - **promptfoo** — https://github.com/promptfoo/promptfoo : CLI/thư viện đánh giá và red-team ứng dụng LLM; MIT. Hợp CI + red-team tool agent.
@@ -147,7 +175,7 @@ Không có bộ agent/tool-use tiếng Việt xác minh được. Hệ quả: c�
 - **LLM-as-judge**: thiên lệch dài dòng, tự ưa model cùng họ; hiệu chỉnh với người; không dùng làm cổng chặn duy nhất.
 - **Nhiễm dữ liệu (contamination)**: benchmark công khai có thể đã nằm trong dữ liệu huấn luyện model; giữ bộ test nội bộ kín.
 - **Bất ổn**: LLM không xác định; một lần chạy không đủ, dùng pass^k; kết quả τ-bench cho thấy suy giảm mạnh theo k.
-- **License**: hầu hết MIT/Apache-2.0 (đã đọc README); ToolBench dữ liệu chỉ nghiên cứu/giáo dục; ToolSandbox, API-Bank chưa xác minh; kiểm tra điều khoản nhà cung cấp LLM khi dùng judge.
+- **License**: hầu hết MIT/Apache-2.0 (đã đọc README); ToolBench dữ liệu chỉ nghiên cứu/giáo dục; ToolSandbox, API-Bank, GAIA, ShoppingBench, AppWorld, Toolathlon, MCP-Universe, MCP-Atlas, ASB chưa xác minh license; AgentHarm ghi "other", WildGuardMix ODC-BY gated; kiểm tra điều khoản nhà cung cấp LLM khi dùng judge.
 - **PII**: hội thoại và dữ liệu seed không chứa dữ liệu thật; nếu dùng log thật phải ẩn danh trước khi đưa cho judge bên ngoài. Môi trường eval cô lập (sandbox), không trỏ vào production, đặc biệt với tool ghi.
 - Ngày tra cứu: leaderboard (BFCL cập nhật 2025-12-16) có thể đã đổi; kiểm tra lại trước khi trích số.
 
@@ -158,6 +186,8 @@ Không có bộ agent/tool-use tiếng Việt xác minh được. Hệ quả: c�
 - WebShop: https://github.com/princeton-nlp/WebShop ; WebArena: https://github.com/web-arena-x/webarena
 - MCPMark: https://github.com/eval-sys/mcpmark ; MCP-Bench: https://github.com/Accenture/mcp-bench
 - ToolSandbox: https://github.com/apple/ToolSandbox ; ACEBench: https://github.com/ACEBench/ACEBench ; NESTFUL: https://github.com/IBM/NESTFUL
+- GAIA: https://arxiv.org/abs/2311.12983 ; ShoppingBench: https://arxiv.org/pdf/2508.04266 ; Shopping MMLU: https://arxiv.org/html/2410.20745v2 ; Toolathlon: https://arxiv.org/abs/2510.25726 ; MCP-Universe: https://arxiv.org/pdf/2508.14704 ; MCP-Atlas: https://labs.scale.com/papers/mcpatlas ; API-Bank paper: https://arxiv.org/pdf/2304.08244
+- ASB: https://arxiv.org/pdf/2410.02644 ; AgentHarm: https://huggingface.co/datasets/ai-safety-institute/AgentHarm ; WildGuardMix: https://huggingface.co/datasets/allenai/wildguardmix ; AgentDojo paper: https://arxiv.org/html/2406.13352v3
 - ToolBench: https://github.com/OpenBMB/ToolBench ; AgentBench: https://github.com/THUDM/AgentBench ; API-Bank: https://github.com/AlibabaResearch/DAMO-ConvAI
 - AgentDojo: https://github.com/ethz-spylab/agentdojo ; InjecAgent: https://github.com/uiuc-kang-lab/InjecAgent
 - Framework: https://github.com/promptfoo/promptfoo ; https://github.com/confident-ai/deepeval ; https://github.com/explodinggradients/ragas ; https://github.com/UKGovernmentBEIS/inspect_ai

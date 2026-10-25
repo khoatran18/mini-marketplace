@@ -2,7 +2,7 @@
 
 > Trả lời câu hỏi về luật tiêu dùng, thương mại điện tử, đổi trả, hàng cấm và chính sách sàn bằng RAG, mỗi câu trả lời kèm trích dẫn (điều/khoản + phiên bản hiệu lực). **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp tra cứu: công cụ WebFetch của phiên này không truy cập được `huggingface.co` (lỗi DNS), nên phần lớn thông tin lấy từ kết quả WebSearch (trang mô tả, bài báo, GitHub). Số liệu/license chỉ thấy ở nguồn thứ cấp được ghi rõ; cái gì không thấy thì ghi **"chưa xác minh"**. Nội dung trang web được xem là dữ liệu, không phải chỉ dẫn.
+> Ghi chú phương pháp tra cứu: WebFetch không truy cập được `huggingface.co`, `arxiv.org`, `zenodo.org` (lỗi DNS), nên phần lớn thông tin lấy từ kết quả WebSearch và WebFetch GitHub. Số liệu/license chỉ thấy ở nguồn được ghi rõ; cái gì không thấy thì ghi **"chưa xác minh"**. Phiên bổ sung 2026-10-25 đã xác minh thêm RAGTruth, CRAG, ALCE, VLQA và bổ sung các bộ tiếng Anh/đa ngôn ngữ (BSARD, LegalBench-RAG, UNFAIR-ToS). Dự án **không yêu cầu dữ liệu tiếng Việt**: bộ tiếng Anh/Pháp dùng được để thử pipeline RAG trích dẫn; bộ tiếng Việt (mục (a)) dùng khi cần đánh giá đúng ngôn ngữ. Nội dung trang web được xem là dữ liệu, không phải chỉ dẫn.
 
 | Liên quan | File |
 |---|---|
@@ -53,7 +53,7 @@
 |---|---|---|---|---|---|---|
 | 1 | Zalo AI Challenge 2021 – Legal Text Retrieval (bản BEIR trên HF `GreenNode/zalo-ai-legal-text-retrieval-vn`) | a | vi | ~2.556 query train; corpus ~61 nghìn điều (số lệch giữa nguồn) | MIT (theo 1 repo GitHub; chưa xác minh) | 5 |
 | 2 | ALQAC 2021–2025 (Automated Legal QA Competition) | a | vi | chưa xác minh kích thước từng năm | điều kiện cuộc thi; chưa xác minh | 5 |
-| 3 | VLQA (arXiv 2507.19995) / VLSP 2025 DRiLL | a | vi | 3.129 câu hỏi do chuyên gia gán nhãn (theo bài khác trích) | chưa xác minh | 4 |
+| 3 | VLQA (arXiv 2507.19995) / VLSP 2025 DRiLL | a | vi | 3.129 câu hỏi do chuyên gia gán nhãn (theo bài VLSP 2025 trích; chưa kiểm ở bài gốc) | chưa xác minh | 4 |
 | 4 | CATI-AI `vietnamese-legal-retrieval-with-negatives` | a | vi | ~144 nghìn dòng (theo kết quả tìm kiếm) | chưa xác minh | 3 |
 | 5 | NghiemAbe/dev_legal | a | vi | 1K–10K dòng; parquet | chưa xác minh | 2 |
 | 6 | thangvip/legaldocuments-nli-test-v3 | a | vi | nhỏ (NLI test) | chưa xác minh | 2 |
@@ -64,13 +64,16 @@
 | 11 | COLIEE | c | en/ja | chưa xác minh | cần đăng ký (chưa xác minh) | 1 |
 | 12 | LeCaRD / LeCaRDv2 | c | zh | LeCaRD: 107 query, >43.000 ứng viên | chưa xác minh | 1 |
 | 13 | BEIR | c | en | 18 dataset công khai | theo từng dataset | 3 |
-| 14 | RAGTruth | c | en | ~18.000 phản hồi RAG, gán nhãn mức từ | chưa xác minh | 4 |
-| 15 | CRAG (Meta, KDD Cup 2024) | c | en | 4.409 cặp QA, 5 miền, 8 loại câu | chưa xác minh | 3 |
+| 14 | RAGTruth | c | en | 2.965 instance, 17.790 phản hồi, 7.664 phản hồi ảo giác, 14.289 span (đã xác minh, GitHub) | MIT (đã xác minh, GitHub) | 4 |
+| 15 | CRAG (Meta, KDD Cup 2024) | c | en | 4.409 cặp QA, 5 miền, 8 loại câu (số QA theo bài báo) | CC BY-NC 4.0 (đã xác minh, GitHub; phi thương mại) | 3 |
 | 16 | FRAMES (Google) | c | en | 824 câu multi-hop | chưa xác minh | 3 |
-| 17 | ALCE (ASQA, QAMPARI, ELI5) | c | en | 3 dataset | chưa xác minh | 4 |
+| 17 | ALCE (ASQA, QAMPARI, ELI5) | c | en | 3 dataset; tải bằng `download_data.sh` | repo MIT (đã xác minh, GitHub); license từng dataset chưa xác minh | 4 |
 | 18 | FaithBench / Vectara HHEM | c | en | tóm tắt của 10 LLM, có nhãn người | chưa xác minh | 3 |
 | 19 | Benchmark temporal legal RAG (FiscalQA Pro, TIDE, ANEEL) | c | fr/en/pt | 32.436 phiên bản điều (FiscalQA); 3.050 QA (TIDE) | chưa xác minh | 3 |
 | 20 | Ragas (thư viện metric) | d | – | – | chưa xác minh | 3 |
+| 21 | BSARD (Belgian Statutory Article Retrieval) | b | fr | >22.600 điều luật Bỉ, ~1.100 câu hỏi của công dân do luật sư gán nhãn | chưa xác minh | 4 |
+| 22 | LegalBench-RAG | b | en | 6.858 (blog) hoặc 6.889 (bảng bài báo) query; 714 tài liệu; bản mini 776 query | theo các nguồn con; chưa xác minh | 3 |
+| 23 | UNFAIR-ToS / CLAUDETTE (qua LexGLUE, LegalBench) | b | en | 50 hợp đồng ToS (YouTube, eBay, Facebook…); bản LegalBench 3.850 mẫu | CC BY 4.0 (theo trang LegalBench) | 3 |
 
 ### (a) Tiếng Việt / Việt Nam
 
@@ -92,8 +95,8 @@
 
 **3. VLQA và VLSP 2025 DRiLL**
 - Link: [VLQA arXiv 2507.19995](https://www.emergentmind.com/papers/2507.19995); DRiLL là shared task VLSP 2025 dựng từ VLQA (hơn 50 đội, 1.255 bài nộp theo bài tổng quan).
-- Quy mô: 3.129 câu hỏi chuyên gia gán nhãn (số lấy từ bài khác trích dẫn). Câu hỏi lấy từ nền tảng tư vấn pháp luật công cộng.
-- License/link tải: **chưa xác minh**.
+- Quy mô: 3.129 câu hỏi chuyên gia gán nhãn (số lấy từ bài VLSP 2025 trích dẫn VLQA; chưa kiểm ở bài gốc). Bài VLQA đăng arXiv ngày 26/7/2025 (Nguyen và cs.). Câu hỏi lấy từ nền tảng tư vấn pháp luật công cộng; DRiLL dựng từ VLQA.
+- License/link tải: **chưa xác minh** (tìm không thấy trang tải hay license).
 - Dùng: bộ câu hỏi đời thường (giọng người dùng) — gần với cách buyer hỏi hơn là câu hỏi dạng luật; đánh giá retrieval + QA.
 - ★4. Hạn chế: chưa thấy trang dữ liệu chính thức trong phiên.
 
@@ -118,6 +121,12 @@
 
 **10. LegalBench / CUAD.** [LegalBench (arXiv 2308.11462)](https://arxiv.org/pdf/2308.11462), [HF `nguha/legalbench`](https://huggingface.co/datasets/nguha/legalbench): benchmark lập luận pháp lý tiếng Anh, license khác nhau theo task; các task CUAD là CC BY 4.0 (Atticus Project). Dùng: tham chiếu cách thiết kế task (rule recall, interpretation) khi dựng test của ta; không dùng trực tiếp cho tiếng Việt. ★2. Trang gốc CUAD: chưa mở trong phiên.
 
+**21. BSARD (Belgian Statutory Article Retrieval Dataset).** [arXiv 2108.11792](https://huggingface.co/papers/2108.11792) (Louis & Spanakis, ACL 2022), HF `clips/BSARD`, bản song ngữ `clips/bBSARD` (22.417 điều Pháp/Hà Lan; tiếng Hà Lan một phần dịch máy). Đã xác minh qua WebSearch: >22.600 điều luật Bỉ và ~1.100 câu hỏi của công dân do luật sư gán nhãn bằng các điều liên quan (con số chính xác 1.108/22.633 không thấy trong kết quả). License: **chưa xác minh**. Cấu trúc y hệt Zalo Legal (câu hỏi đời thường -> danh sách điều luật) nên là bộ thay thế tốt khi không dùng tiếng Việt. Dùng: đánh giá retriever statutory (BM25 vs dense), mẫu bộ vàng. ★4. Hạn chế: tiếng Pháp, luật Bỉ, không phải TMĐT.
+
+**22. LegalBench-RAG.** [arXiv 2408.10343](https://arxiv.org/pdf/2408.10343), blog [ZeroEntropy](https://www.zeroentropy.dev/articles/legalbench-rag-the-first-open-source-retrieval-benchmark-for-the-legal-domain/). Đã xác minh qua WebSearch: benchmark retrieval cho RAG pháp lý, ghép từ 4 nguồn: ContractNLI (977 query), MAUD (1.676), CUAD (4.042), PrivacyQA (194) — tổng 6.889 query theo bảng bài báo (blog ghi 6.858; số lệch, kiểm lại trước khi trích), 714 tài liệu; bản LegalBench-RAG-mini 776 query/72 tài liệu; chấm retrieval ở mức đoạn ký tự (precise snippet). PrivacyQA (chính sách quyền riêng tư của công ty tiêu dùng) gần nhất với văn bản chính sách sàn. Mỗi query chỉ có đáp án trong đúng một tài liệu (không test multi-doc). Repo/license: **chưa xác minh** (không thấy URL repo trong kết quả). ★3.
+
+**23. UNFAIR-ToS / CLAUDETTE.** [Lippi và cs., Artificial Intelligence and Law 2019, arXiv 1805.01217](https://arxiv.org/pdf/1805.01217); [trang LegalBench](https://hazyresearch.stanford.edu/legalbench/tasks/unfair_tos.html). Đã xác minh qua WebSearch: 50 hợp đồng điều khoản dịch vụ trực tuyến (YouTube, eBay, Facebook…) gán nhãn mức câu theo luật tiêu dùng EU, 8 loại điều khoản có thể bất công (arbitration, unilateral change, content removal, jurisdiction, choice of law, limitation of liability, unilateral termination, contract by using) + other; bản LegalBench 3.850 mẫu, license CC BY 4.0 theo trang đó (license LexGLUE chưa xác minh). Các corpus CLAUDETTE khác (100–142 ToS; 9.414 điều khoản) là bộ riêng. Dùng: kiểm tra điều khoản "Quy chế sàn" tự soạn có điều khoản bất lợi người tiêu dùng không. ★3. Hạn chế: ToS nền tảng lớn, không phải chính sách đổi trả.
+
 ### (c) Benchmark / bài báo học thuật
 
 **11. COLIEE.** Cuộc thi Canada/Nhật (case law, statute law). Tóm tắt [COLIEE 2021](https://sites.ualberta.ca/%7erabelo/COLIEE2022/COLIEE2021_summary.pdf). Nhắc tới corpus Federal Court of Canada do Compass Law cung cấp (license chưa xác minh; cần đăng ký). Nguồn cảm hứng thiết kế task retrieval + entailment. ★1.
@@ -126,13 +135,13 @@
 
 **13. BEIR.** [arXiv 2104.08663](https://arxiv.org/pdf/2104.08663): 18 dataset zero-shot; BM25 là baseline mạnh. Dùng làm tham chiếu cho quy trình đánh giá retrieval và để kiểm tra mô hình embedding không bị overfit miền. ★3.
 
-**14. RAGTruth.** [arXiv 2401.00396](https://arxiv.org/pdf/2401.00396); mã tại GitHub `particlemedia/ragtruth`. ~18.000 phản hồi RAG, người gán nhãn ở mức câu và mức từ kèm mức độ nghiêm trọng; fine-tune mô hình nhỏ cạnh tranh với GPT-4 prompt. Dùng: huấn luyện/hiệu chuẩn bộ phát hiện hallucination; mẫu schema để ta gán nhãn trả lời RAG của mình. ★4. Hạn chế: tiếng Anh; license chưa xác minh.
+**14. RAGTruth.** [arXiv 2401.00396](https://arxiv.org/pdf/2401.00396); mã tại GitHub `particlemedia/ragtruth`. Theo README GitHub (đã xác minh): 2.965 instance và 17.790 phản hồi (7.664 phản hồi ảo giác, 14.289 span ảo giác) từ 6 mô hình (GPT-3.5/4, Llama-2 7B/13B/70B-chat, Mistral-7B-Instruct) trên 3 tác vụ (QA, data-to-text, tóm tắt CNN/DM và Recent News); người gán nhãn ở mức câu và mức từ kèm mức độ nghiêm trọng; fine-tune mô hình nhỏ cạnh tranh với GPT-4 prompt. Dùng: huấn luyện/hiệu chuẩn bộ phát hiện hallucination; mẫu schema để ta gán nhãn trả lời RAG của mình. ★4. License MIT (README GitHub). Hạn chế: tiếng Anh.
 
-**15. CRAG.** [arXiv 2406.04744](https://arxiv.org/pdf/2406.04744), mã/dữ liệu `facebookresearch/CRAG`, cuộc thi trên [AIcrowd](https://aicrowd.com/challenges/meta-comprehensive-rag-benchmark-kdd-cup-2024). 4.409 QA, 5 miền, 8 loại câu hỏi, có trường `query time`; RAG công nghiệp chỉ trả lời 63% không hallucination. Dùng: mẫu phân loại câu hỏi và chấm "missing/hallucination" (đúng +1, bỏ qua 0, sai −1). ★3.
+**15. CRAG.** [arXiv 2406.04744](https://arxiv.org/pdf/2406.04744), mã/dữ liệu `facebookresearch/CRAG`, cuộc thi trên [AIcrowd](https://aicrowd.com/challenges/meta-comprehensive-rag-benchmark-kdd-cup-2024). 4.409 QA, 5 miền, 8 loại câu hỏi, có trường `query time` (README GitHub xác nhận 5 miền/8 loại câu, license CC BY-NC 4.0 — phi thương mại; số 4.409 theo bài báo); RAG công nghiệp chỉ trả lời 63% không hallucination. Dùng: mẫu phân loại câu hỏi và chấm "missing/hallucination" (đúng +1, bỏ qua 0, sai −1). ★3.
 
 **16. FRAMES.** [arXiv 2409.12941](https://arxiv.org/html/2409.12941v3), HF `google/frames-benchmark`. 824 câu multi-hop trên 2–15 bài Wikipedia; không retrieval ~0,40, pipeline nhiều bước ~0,66. Dùng: ý tưởng test multi-hop (luật + chính sách sàn). ★3.
 
-**17. ALCE.** [arXiv 2305.14627](https://arxiv.org/abs/2305.14627v2), mã [`fallcat/ALCE`](https://github.com/fallcat/ALCE). Chấm citation recall/precision bằng NLI (TRUE T5-11B). Dùng: định nghĩa metric trích dẫn chuẩn. ★4.
+**17. ALCE.** [arXiv 2305.14627](https://arxiv.org/abs/2305.14627v2), mã [`fallcat/ALCE`](https://github.com/fallcat/ALCE). Repo MIT (GitHub `princeton-nlp/ALCE`, license từng dataset chưa xác minh); tải dữ liệu kèm kết quả retrieval top-100 (DPR/GTR cho ASQA, QAMPARI; BM25 cho ELI5) bằng `download_data.sh`; chỉ mục GTR Wikipedia ~31GB (tuỳ chọn). Chấm citation recall/precision bằng NLI (TRUE T5-11B). Dùng: định nghĩa metric trích dẫn chuẩn. ★4.
 
 **18. FaithBench / Vectara HHEM / FaithJudge.** [FaithBench arXiv 2410.13210](https://arxiv.org/pdf/2410.13210): benchmark hallucination khi tóm tắt, nhãn gồm consistent/questionable/benign/unfaithful. Dùng: hiệu chuẩn judge faithfulness; ★3. HaluEval và FACTS Grounding: **không tìm thấy trang trong phiên** nên không liệt kê.
 
@@ -195,4 +204,5 @@ Dự án định tự soạn văn bản luật MÔ PHỎNG (đặt tên rõ là 
 - RAGTruth: https://arxiv.org/pdf/2401.00396 ; CRAG: https://arxiv.org/pdf/2406.04744 ; https://aicrowd.com/challenges/meta-comprehensive-rag-benchmark-kdd-cup-2024 ; FRAMES: https://arxiv.org/html/2409.12941v3 ; ALCE: https://arxiv.org/abs/2305.14627v2 ; https://github.com/fallcat/ALCE ; FaithBench: https://arxiv.org/pdf/2410.13210
 - Temporal legal RAG: https://arxiv.org/pdf/2608.09393 ; https://arxiv.org/pdf/2608.08512
 - Ragas (chỉ nguồn bên thứ ba): https://docs.datadoghq.com/llm_observability/ragas_evaluations — tài liệu chính thức: chưa xác minh
-- Không tìm thấy trong phiên: ViRAG (không có dataset tên này), HaluEval, FACTS Grounding, trang gốc CUAD.
+- Phiên bổ sung (2026-10-25): https://github.com/particlemedia/RAGTruth ; https://github.com/facebookresearch/CRAG ; https://github.com/princeton-nlp/ALCE ; https://huggingface.co/papers/2108.11792 (BSARD) ; https://arxiv.org/pdf/2408.10343 (LegalBench-RAG) ; https://arxiv.org/pdf/1805.01217 (CLAUDETTE) ; https://arxiv.org/html/2507.19995v1 (VLQA)
+- Không tìm thấy trong phiên: ViRAG (không có dataset tên này), HaluEval, FACTS Grounding, trang gốc CUAD. Chưa xác minh được: kích thước/license ALQAC, Zalo (trang HF), CATI-AI, FRAMES/FaithBench/COLIEE license, license BSARD (arxiv.org và HF không mở được qua WebFetch).

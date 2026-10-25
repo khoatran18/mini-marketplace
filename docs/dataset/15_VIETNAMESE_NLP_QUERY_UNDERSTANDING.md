@@ -2,7 +2,7 @@
 
 > Tìm KHÔNG DẤU (khôi phục dấu), sửa lỗi chính tả, tách từ, NER (tên sản phẩm, thương hiệu, size), intent, autocomplete/suggest, embedding tiếng Việt. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp: WebFetch không mở được HuggingFace/arXiv/GitHub-pages (DNS); thông tin lấy từ WebSearch. Quan trọng: tìm không thấy bộ công khai nào cho NER sản phẩm tiếng Việt, query log hay autocomplete tiếng Việt; phần này phải tự tạo (mục 5). Chỗ không kiểm chứng ghi "chưa xác minh".
+> Ghi chú phương pháp: WebFetch không mở được HuggingFace/arXiv (DNS); thông tin lấy từ WebSearch (nguồn ghi là "kết quả search") và vài trang GitHub. Chủ dự án xác nhận không bắt buộc dùng dữ liệu tiếng Việt: mục 4(d) thêm các bộ tiếng Anh/đa ngôn ngữ (ESCI, AmazonQAC, MASSIVE, MTEB/MMTEB, Webis-QSpell-17, ORCAS, WANDS...) để chọn phương pháp. Các bộ tiếng Việt công khai hiện biết tập trung ở tách từ, chính tả, intent miền khác; phần query log, NER sản phẩm và autocomplete của sàn sẽ dựa trên dữ liệu hệ thống (mục 5). Chỗ không kiểm chứng ghi "chưa xác minh".
 
 | Liên quan | File |
 |---|---|
@@ -54,11 +54,20 @@
 | 9 | UIT-ViQuAD 1.0/2.0 | a | 23K+ cặp QA / 174 bài wiki; 2.0 có câu không trả lời | Ký thoả thuận corpus | ★★ |
 | 10 | UIT-ViSFD | a | 11,122 comment điện thoại | Xem GitHub; thương mại cần liên hệ | ★★ |
 | 11 | Vietnamese similar-question | a | 7,911 cặp câu hỏi | Chưa có link tải | ★ |
-| 12 | VN-MTEB | a/c | 41 bộ, 6 loại tác vụ | HF; license chưa xác minh | ★★★★★ |
-| 13 | mMARCO (có Vietnamese?) | c | 13 ngôn ngữ (số liệu Vietnamese chưa xác minh) | Chưa xác minh | ★★★ |
+| 12 | VN-MTEB | a/c | 41 bộ, 6 loại tác vụ, dịch từ MTEB bằng LLM (đã xác minh, nguồn: kết quả search về arXiv 2507.21500) | HF (GreenNode, mteb); license chưa xác minh | ★★★★★ |
+| 13 | mMARCO | c | 8 ngôn ngữ (bản đầu) / 13 (paper v5) / README ghi 14 gồm tiếng Anh; có tiếng Việt hay không: chưa xác minh | Chưa xác minh | ★★★ |
 | 14 | OSCAR / CC100 (tiếng Việt) | b | CC100-vi 138 GB (qua ViT5); OSCAR ~98.9 GB | Web crawl | ★★ |
 | 15 | ModelScope viet-ecommerce-title/query | b | Mô hình NER TMĐT VN (F1 77.8; brand F1 78.91) | Chưa xác minh; chỉ mô hình, không phải dữ liệu | ★★ |
-| 16 | Mô hình tham chiếu: PhoBERT, BGE-M3, ViSoBERT | c | — | PhoBERT (VinAI); BGE-M3 MIT (theo aggregator) | tham chiếu |
+| 16 | Mô hình tham chiếu: PhoBERT, BGE-M3, ViSoBERT | c | — | PhoBERT (VinAI); BGE-M3 MIT (theo 2 aggregator: llmgateway.io, thegtmdirectory.com; chưa đối chiếu thẻ HF) | tham chiếu |
+| 17 | Amazon Shopping Queries (ESCI) | b (EN/JA/ES) | ~130K truy vấn, 2.6M nhãn (query, product); mỗi truy vấn tối đa 40 ứng viên; nhãn E/S/C/I | Apache-2.0 theo một mirror GitHub; chưa đối chiếu repo amazon-science/esci-data | ★★★★★ |
+| 18 | AmazonQAC | b (EN) | 395M mẫu train + 20K test; chuỗi prefix gõ, session, timestamp | HF `amazon/AmazonQAC`; license chưa xác minh | ★★★★★ (autocomplete) |
+| 19 | MASSIVE (Amazon) | c (đa ngữ, có vi-VN) | >1M câu, 51 locale (1.1: 52, thêm Catalan), 18 domain, 60 intent, 55 slot | Chưa xác minh (repo có LICENSE.txt) | ★★★★ |
+| 20 | MTEB / MMTEB | c | MMTEB: >500 tác vụ, 10 nhóm tác vụ, hàng trăm ngôn ngữ (250+ hoặc 1000+ tuỳ nguồn) | Theo từng tác vụ | ★★★★★ |
+| 21 | Webis-QSpell-17 | b (EN) | 54,772 truy vấn web, 9,171 có biến thể sửa chính tả | Chưa xác minh (Zenodo) | ★★★★ |
+| 22 | ORCAS | b (EN) | 18,823,602 bản ghi click, 10M truy vấn, 1.4M tài liệu TREC DL | Chỉ nghiên cứu phi thương mại | ★★★ |
+| 23 | Wayfair WANDS | b (EN) | 42,994 sản phẩm, 480 truy vấn, 233,448 nhãn (Exact/Partial/Irrelevant) | Chưa xác minh | ★★★★ |
+| 24 | AOL query log | b (EN) | ~20M truy vấn, ~650K user (2006) | Đã bị thu hồi vì riêng tư; README gốc: chỉ nghiên cứu phi thương mại | ★ (cân nhắc đạo đức) |
+| 25 | BANKING77 | c (EN) | 13,083 câu, 77 intent | CC BY 4.0 (theo TFDS qua search) | ★★ (mẫu intent) |
 
 ### (a) Tiếng Việt / Việt Nam
 
@@ -78,7 +87,7 @@
 
 **Câu hỏi tương tự** — https://vjol.info.vn/halong/en/article/view/76720 : 7,911 cặp câu hỏi; không có link tải. ★1.
 
-**Không tìm thấy (đã tìm)**: bộ NER sản phẩm/thương hiệu/size tiếng Việt công khai (blog Cốc Cốc 2022 nói thiếu: https://careers.coccoc.com/blogs/attribution-extraction-of-e-commerce-product-listing-part-1 ), query log hay dữ liệu autocomplete tiếng Việt, ViMedAQA và Zalo legal retrieval (không xác minh được trong phiên).
+**Ghi chú**: trong các nguồn đã tra chưa thấy bộ NER sản phẩm/thương hiệu/size, query log hay autocomplete tiếng Việt công bố công khai (blog Cốc Cốc 2022 về trích xuất thuộc tính listing: https://careers.coccoc.com/blogs/attribution-extraction-of-e-commerce-product-listing-part-1 ). Với các tác vụ này dự án dùng dữ liệu của chính hệ thống (mục 5) và các bộ tiếng Anh ở mục 4(d) để chọn phương pháp. ViMedAQA và Zalo legal retrieval chưa xác minh được.
 
 ### (b) TMĐT / miền liên quan
 - **ModelScope `viet-ecommerce-title` / `viet-ecommerce-query`** (DAMO Academy, XLM-R): gắn thẻ product, style, consumer group, brand, pattern; F1 tổng 77.8, brand 78.91 (title), 71.95 (query), theo mirror cyzone.cn (https://cyzone.cn/agi/data/model/581); kiểm tra trên ModelScope. Dùng làm baseline hoặc để gán nhãn mềm. ★2.
@@ -87,11 +96,35 @@
 
 ### (c) Benchmark / paper học thuật
 - **VN-MTEB** — https://arxiv.org/pdf/2507.21500 (Findings EACL 2026, GreenNode AI + VNU-HCMC): dịch bằng LLM các mẫu MTEB sang tiếng Việt, 41 bộ, 6 loại tác vụ; kết quả: mô hình lớn dùng RoPE tốt hơn. Dùng chọn mô hình embedding. Phù hợp ★5 (với nhu cầu embedding), lưu ý bản dịch máy.
-- **mMARCO** — https://arxiv.org/abs/2108.13897 (v5: 13 ngôn ngữ; bản đầu 8 ngôn ngữ). Chưa xác nhận có tách tiếng Việt từ repo unicamp-dl; có dữ liệu hard negatives `vietnamese_bge-reranker-v2-m3` (hotchpotch/mmarco-hard-negatives-reranker-score, quan hệ chưa xác minh). Dịch máy, miền web, không phải sản phẩm. ★3.
+- **mMARCO** — https://arxiv.org/abs/2108.13897 (v5: 13 ngôn ngữ; bản đầu 8 ngôn ngữ; README https://github.com/unicamp-dl/mMARCO ghi 14 ngôn ngữ gồm bản tiếng Anh gốc, tải bằng `load_dataset('unicamp-dl/mmarco', 'english')`; danh sách ngôn ngữ cụ thể không thấy trong kết quả search nên chưa xác nhận có tiếng Việt, hãy xem thẻ HF); có dữ liệu hard negatives `vietnamese_bge-reranker-v2-m3` (hotchpotch/mmarco-hard-negatives-reranker-score, quan hệ chưa xác minh). Dịch máy, miền web, không phải sản phẩm. ★3.
 - **Mô hình tham chiếu (không phải dữ liệu)**: PhoBERT (https://cs.paperswithcode.com/paper/phobert-pre-trained-language-models-for ; kích thước corpus chưa xác minh), BGE-M3 (đa ngữ, 8192 token, MIT theo aggregator; kiểm tra thẻ chính thức), ViSoBERT (tiếng Việt mạng xã hội, nghiên cứu).
 
-### (d) Blog / cuộc thi / công ty
-- Blog Cốc Cốc về trích xuất thuộc tính listing bằng từ điển (liên kết ở trên): nhắc thiếu dữ liệu NER sản phẩm; hướng dictionary-based là gợi ý thực tế.
+### (d) Bộ dữ liệu tiếng Anh / đa ngôn ngữ (bổ sung, dùng để chọn phương pháp)
+
+Số liệu dưới đây lấy từ kết quả WebSearch (không mở được trang gốc); license nào không thấy ghi là chưa xác minh.
+
+**Tìm kiếm sản phẩm và truy vấn mua sắm**
+- **Amazon Shopping Queries Dataset (ESCI)** — https://arxiv.org/abs/2206.06588 ; repo amazon-science/esci-data (KDD Cup 2022): ~130K truy vấn duy nhất, 2.6M nhãn thủ công, tối đa 40 ứng viên/truy vấn, nhãn Exact/Substitute/Complement/Irrelevant; truy vấn tiếng Anh, Nhật, Tây Ban Nha; cuộc thi chạy 15/3-20/7/2022, >1,600 người từ 65 nước (blog Amazon Science). License: một mirror ghi Apache-2.0, chưa đối chiếu repo chính thức, chưa rõ có áp cho cả dữ liệu. Dùng: huấn luyện/đánh giá xếp hạng truy vấn-sản phẩm, phân loại ESCI, truy vấn lỗi chính tả thực. Có thêm bản có ảnh SQID (https://arxiv.org/pdf/2405.15190). ★5.
+- **AmazonQAC** — https://arxiv.org/html/2411.04129v1 (EMNLP 2024 industry): 395M mẫu train từ log tìm kiếm Amazon, test 20K (giai đoạn sau để mô phỏng triển khai); mỗi mẫu có truy vấn cuối, chuỗi prefix đã gõ, session ID, timestamp. Baseline: prefix tree Success@10 ~25.3%, trần lý thuyết 69.8%, LLM tinh chỉnh có ngữ cảnh tốt nhất. Dữ liệu Parquet trên HF `amazon/AmazonQAC`. Đây là bộ autocomplete thực tế công khai gần nhất. ★5.
+- **Wayfair WANDS** — https://github.com/wayfair/wands (ECIR 2022): 42,994 sản phẩm, 480 truy vấn, 233,448 nhãn liên quan 3 mức; kèm tên, mô tả, phân cấp danh mục. License chưa xác minh. ★4.
+- **Dataset of Natural Language Queries for E-Commerce** — https://arxiv.org/pdf/2302.06355 : truy vấn ngôn ngữ tự nhiên chú thích mức "key fact"/yêu cầu sản phẩm; schema nhãn chưa xác minh. ★3.
+- **NER truy vấn TMĐT tiếng Anh**: không thấy bộ công khai có nhãn brand rõ ràng trong kết quả search. Có bài Home Depot (https://arxiv.org/pdf/2012.07553, brand/product type; dữ liệu không thấy công bố), AE-Pub (AliExpress, giám sát xa) và Ecommerce5PT (33 thuộc tính, 5 loại sản phẩm Amazon) trích trong https://arxiv.org/pdf/2205.05904 ; mô hình ModelScope NER truy vấn tiếng Anh F1 ~75.7 (chỉ mô hình). Hướng thực tế: gán nhãn yếu từ catalog (mục 5).
+- **ORCAS** — https://microsoft.github.io/msmarco/ORCAS.html : 18,823,602 bản ghi click cho 1.4M tài liệu TREC DL, 10M truy vấn; chỉ dùng nghiên cứu phi thương mại. Web search, không phải sản phẩm; dùng học đồng nghĩa/click. ★3.
+- **AOL query log** (2006): ~20M truy vấn (21,011,340 truy vấn mới theo README), 657,426 user ID; đã bị thu hồi do cho phép nhận diện cá nhân, README gốc chỉ cho nghiên cứu phi thương mại; bản làm sạch AOLIA tồn tại. Nên tránh vì riêng tư/đạo đức, dùng ORCAS thay thế. ★1.
+
+**Sửa chính tả truy vấn (tiếng Anh)**
+- **Webis-QSpell-17** — https://zenodo.org/record/3570912 ; paper SIGIR 2017 (Hagen et al., DOI 10.1145/3077136.3080749): 54,772 truy vấn web, 9,171 có biến thể sửa; v2 có chú thích loại lỗi; zip 2.3 MB; tiếng Anh; ~16% truy vấn có lỗi theo một paper NAACL 2025; companion Webis-QSeC-10 có phân đoạn truy vấn. Dùng làm khuôn tập kiểm thử sửa chính tả truy vấn (lớn hơn Microsoft Speller Challenge ~6,000 truy vấn). ★4.
+
+**Intent / slot đa ngôn ngữ**
+- **MASSIVE** — https://arxiv.org/pdf/2204.08582 ; https://github.com/alexa/massive : >1M câu song song, 51 ngôn ngữ (bản 1.1 thêm Catalan = 52), 18 domain, 60 intent, 55 slot; dịch chuyên nghiệp từ SLURP. Locale **vi-VN có trong danh sách 51 locale** (nguồn: loader/thẻ HF qua search). License chưa xác minh. Dùng làm bộ intent/slot đa ngữ có tiếng Việt, phong cách trợ lý ảo (không phải mua sắm). ★4.
+- **BANKING77** (13,083 câu, 77 intent, CC BY 4.0 theo TFDS) và **CLINC150** (kích thước, license chưa xác minh trong phiên): mẫu phân loại intent tiếng Anh một miền. ★2.
+
+**Embedding đa ngôn ngữ**
+- **MTEB / MMTEB** — https://arxiv.org/pdf/2502.13595 (ICLR 2025): >500 tác vụ chất lượng, 10 nhóm tác vụ; số ngôn ngữ ghi 250+ (paper) hoặc 1,000+ (poster ICLR) tuỳ nguồn; license theo từng tác vụ (metadata tác vụ trong tài liệu mteb). Dùng chọn mô hình embedding đa ngữ cho truy vấn↔sản phẩm; VN-MTEB là phần tiếng Việt. ★5.
+- **BGE-M3**: 100+ ngôn ngữ, 8,192 token, nền XLM-RoBERTa mở rộng, MIT theo hai trang aggregator; nDCG@10 MIRACL 70.0 (tất cả chế độ, theo trang DeepInfra); chưa đối chiếu thẻ HF chính thức.
+
+### (e) Blog / cuộc thi / công ty
+- Blog Cốc Cốc về trích xuất thuộc tính listing bằng từ điển (liên kết ở trên): nhắc dữ liệu NER sản phẩm hạn chế; hướng dictionary-based là gợi ý thực tế.
 - Zalo AI Challenge: không xác minh được trang dữ liệu; bỏ qua.
 
 ## 5. Dữ liệu tự tạo / synthetic từ chính hệ thống
@@ -114,7 +147,8 @@
 
 ## 7. Rủi ro, license, thiên lệch, lưu ý pháp lý/PII
 
-- **Thiếu dữ liệu thật miền sản phẩm**: bộ công khai là tin tức/wiki/COVID/hàng không, lệch miền so với truy vấn mua sắm (viết tắt, teencode, không dấu).
+- **Lệch miền**: các bộ tiếng Việt công khai là tin tức/wiki/COVID/hàng không, lệch so với truy vấn mua sắm (viết tắt, teencode, không dấu); bộ tiếng Anh (ESCI, AmazonQAC) gần miền hơn nhưng khác ngôn ngữ. Kết luận cuối cùng cần gold set nội bộ.
+- **Dữ liệu truy vấn thật**: AOL đã bị thu hồi vì riêng tư; ORCAS/MS MARCO chỉ phi thương mại.
 - **Nhập nhằng không dấu**: khôi phục dấu sai làm hỏng kết quả; nên giữ cả truy vấn gốc và truy vấn khôi phục, tìm trên cả hai.
 - **Bản dịch máy** (VN-MTEB, mMARCO) có lỗi dịch; không thay thế đánh giá nội bộ.
 - **License**: UIT (ViQuAD, ViCTSD...) cần ký thoả thuận; CC BY-NC-SA của corpus dấu hạn chế thương mại; OSCAR/CC100 là web crawl (bản quyền nội dung gốc, nội dung nhạy cảm); ViSFD thương mại cần liên hệ.
@@ -129,7 +163,8 @@
 - VSEC: https://arxiv.org/pdf/2111.00640 ; Viwiki-Spelling: https://arxiv.org/pdf/2105.13578 ; https://arxiv.org/pdf/2405.02573 ; https://huggingface.co/nrl-ai/vn-spell-correction-base
 - Khôi phục dấu: https://arxiv.org/pdf/1709.07104 ; https://huggingface.co/datasets/olaverse/diacbench ; https://b2find.eudat.eu/dataset/6fd801dc-09c6-57b8-b56a-d8db0c299cab ; https://github.com/arahusky/diacritics_restoration
 - UIT datasets: https://nlp.uit.edu.vn/datasets ; ViQuAD 2.0: https://arxiv.org/html/2203.11400v3 ; ViSFD: https://arxiv.org/pdf/2105.15079
-- VN-MTEB: https://arxiv.org/pdf/2507.21500
+- VN-MTEB: https://arxiv.org/pdf/2507.21500 ; MMTEB: https://arxiv.org/pdf/2502.13595
+- ESCI: https://arxiv.org/abs/2206.06588 ; AmazonQAC: https://arxiv.org/html/2411.04129v1 ; WANDS: https://github.com/wayfair/wands ; MASSIVE: https://arxiv.org/pdf/2204.08582 ; ORCAS: https://microsoft.github.io/msmarco/ORCAS.html ; Webis-QSpell-17: https://zenodo.org/record/3570912 ; NL e-commerce queries: https://arxiv.org/pdf/2302.06355
 - mMARCO: https://arxiv.org/abs/2108.13897
 - OSCAR: https://huggingface.co/datasets/oscar-corpus/OSCAR-2201 ; ViT5/CC100: https://arxiv.org/pdf/2205.06457
 - Cốc Cốc: https://careers.coccoc.com/blogs/attribution-extraction-of-e-commerce-product-listing-part-1

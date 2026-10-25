@@ -2,7 +2,7 @@
 
 > Kiểm duyệt listing/bình luận (hàng cấm, quảng cáo sai sự thật, ngôn từ độc hại tiếng Việt, NSFW, hàng giả) và an toàn agent LLM (prompt injection, rò rỉ dữ liệu, vượt quyền). **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp: WebFetch không mở được Kaggle/HuggingFace/arXiv (DNS); thông tin lấy từ WebSearch và GitHub. Nhiều số liệu chỉ từ snippet tìm kiếm; ghi "chưa xác minh" khi không kiểm chứng. Nội dung nhiều bộ chứa ngôn từ thù ghét/tấn công thật.
+> Ghi chú phương pháp: WebFetch không mở được Kaggle/HuggingFace/arXiv (DNS); GitHub mở được. Thông tin lấy từ WebFetch GitHub ("đã xác minh") và WebSearch ("theo search"). Dữ liệu tiếng Anh/quốc tế dùng được để chọn phương pháp; không yêu cầu dữ liệu tiếng Việt. Nhiều số liệu chỉ từ snippet tìm kiếm; ghi "chưa xác minh" khi không kiểm chứng. Nội dung nhiều bộ chứa ngôn từ thù ghét/tấn công thật.
 
 | Liên quan | File |
 |---|---|
@@ -49,7 +49,7 @@
 | 4 | ViTHSD (hate theo đối tượng) | a | 10K comment | Chưa xác minh | ★★★ |
 | 5 | ViSpamReviews (+v2) | a | 19,868 review | Công khai theo arXiv; license chưa xác minh | ★★★★ |
 | 6 | Jigsaw Toxic Comment | b/c | 159,571 comment train | CC0 (theo TFDS) | ★★ (tiếng Anh) |
-| 7 | Jigsaw Unintended Bias | c | ~2M comment | Chưa xác minh | ★★ |
+| 7 | Jigsaw Unintended Bias (Civil Comments) | c | ~1,8M comment gốc (một paper dùng 1.999.516) | CC0 (đã xác minh theo search, nguồn: TFDS catalog civil_comments) | ★★★ |
 | 8 | nsfw_data_scraper / NudeNet | b | >220K ảnh (nhiễu) | Scraper; NudeNet GPL | ★★ |
 | 9 | Roboflow counterfeit sets | b | 110 ảnh (set nhỏ) | CC BY 4.0 (một set) | ★ |
 | 10 | AgentDojo | c | 97 task, 629 test an ninh | MIT | ★★★★★ |
@@ -58,12 +58,18 @@
 | 13 | HackAPrompt dataset | d | 600K+ prompt | HF; chưa curate, có nội dung xúc phạm | ★★★ |
 | 14 | Lakera Gandalf (ignore_instructions, RCT) | d | ~1K / ~339K dòng (theo phiên bản) | HF; chưa xác minh license | ★★★ |
 | 15 | deepset/prompt-injections | d | <1K dòng | Apache-2.0 (theo search) | ★★★ |
-| 16 | Lakera PINT | d | 3,007-4,314 input (tuỳ bản) | Repo benchmark; chưa xác minh license | ★★★ |
+| 16 | Lakera PINT | d | 4.314 input (3.016 Anh + 1.298 ngoài Anh); phần độc quyền không công khai | Repo MIT, đã archived (đã xác minh, README GitHub); dataset trộn công khai + độc quyền | ★★★ |
 | 17 | JailbreakBench JBB-Behaviors | c | 100 hành vi + 100 lành tính | MIT | ★★ |
-| 18 | R-Judge | c | 162 bản ghi (bản đầu) | Chưa xác minh | ★★★ |
-| 19 | ToolEmu, Agent-SafetyBench | c | Chỉ thấy tên trong survey | Chưa xác minh | ★★ |
+| 18 | R-Judge | c | 162 bản ghi (bản đầu); 569 bản ghi đa lượt, 5 nhóm ứng dụng, 27 kịch bản, 10 loại rủi ro (README GitHub) | README/sidebar không ghi license (chưa xác minh) | ★★★ |
+| 19 | ToolEmu | c | 144 test case, 36 toolkit, 311 tool | Apache-2.0 (đã xác minh, README GitHub ryoungj/ToolEmu) | ★★★ |
+| 20 | Agent-SafetyBench | c | số case không nêu ở README; dữ liệu trong `data/` và HF `thu-coai/Agent-SafetyBench` | MIT (đã xác minh, GitHub thu-coai/Agent-SafetyBench) | ★★★ |
+| 21 | Agent Security Bench (ASB) | c | 10 kịch bản (có e-commerce), 10 agent, >400 tool; DPI/IPI/memory poisoning/backdoor; số case thay đổi theo bản (gần 90.000 ở bản đầu) | code `agiresearch/ASB` (theo search); license chưa xác minh | ★★★★ |
+| 22 | NVIDIA Aegis 2.0 / Nemotron Content Safety v2 | b | 33.416 mẫu (30.007 train/1.445 val/1.964 test), taxonomy 12 nhóm + 9 nhóm con | CC BY 4.0 (theo catalog bên thứ ba; chưa xác minh trên thẻ HF) | ★★★ |
+| 23 | ToxiGen | b/c | 274K câu độc hại/lành tính, 13 nhóm thiểu số (GPT-3 sinh) | license chưa xác minh | ★★★ |
+| 24 | WildGuardMix | b | train ~87K (một paper) hoặc 37.176 (paper khác); test 1.725/1.709 — số lệch theo bản lọc | ODC-BY, gated (đồng ý AI2 Responsible Use) (theo search, thẻ HF) | ★★★ |
+| 25 | BeaverTails | c | 26.643 hàng train; test 33,4K cặp prompt-response (số từ paper, lệch) | chưa rõ; bản evaluation PKU-Alignment ghi cc-by-nc-4.0 (theo search) | ★★ |
 
-### (a) Tiếng Việt / Việt Nam
+### (a) Tiếng Việt / Việt Nam (tham khảo, không bắt buộc)
 
 **UIT-ViHSD** — https://huggingface.co/datasets/sonlam1102/vihsd , https://github.com/sonlam1102/vihsd ; paper https://arxiv.org/pdf/2103.11528 (Luu, Nguyen, Nguyen 2021).
 - ~33,400 comment mạng xã hội, nhãn CLEAN/OFFENSIVE/HATE; mất cân bằng nặng (CLEAN 82.71%), đồng thuận người gắn nhãn thấp (Cohen's kappa 0.52 theo benchmark khác).
@@ -82,7 +88,7 @@
 
 **ViSoBERT** (mô hình, chỉ tham chiếu): PLM tiếng Việt mạng xã hội, đánh giá trên hate speech, spam review, hate span. "Chỉ nghiên cứu" theo search. Link paper trên arXiv chưa xác minh.
 
-**Hàng cấm/quảng cáo sai sự thật (VN)**: không tìm thấy bộ công khai. Tự dựng.
+**Hàng cấm/quảng cáo sai sự thật**: chưa có benchmark công khai cho riêng mảng này (tiếng Anh hay Việt); dùng bộ tiếng Anh ở (b2) để chọn phương pháp, rồi tự dựng gold set (mục 5).
 
 ### (b) TMĐT / miền liên quan
 - **nsfw_data_scraper** (nhiều fork, ví dụ https://github.com/Mak0760/nsfw_data_scraper): >220K ảnh, 5 nhóm (porn, hentai, sexy, neutral, drawings); chính repo cảnh báo nhiễu, không nên dùng cho production; Synced nêu nhãn sai. **NudeNet** (https://pypi.org/project/nudenet/): classifier + detector; tác giả ghi GPL, thương mại cần xin phép. ★2.
@@ -96,14 +102,24 @@
 - **BIPIA** — https://github.com/microsoft/BIPIA ; arXiv 2312.14197 (KDD 2025). 5 task (Web QA, Email QA, Table QA, Summarization, Code QA); Web QA và Summarization không phân phối lại (phải tải từ nguồn). Repo archived, ghi chỉ dùng nghiên cứu. ★4.
 - **JailbreakBench JBB-Behaviors** — https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors ; MIT; 100 hành vi lạm dụng + 100 lành tính. Dùng để kiểm từ chối quá mức, không sát miền TMĐT. ★2.
 - **R-Judge** — https://arxiv.org/html/2401.10019v2 : 162 bản ghi tương tác agent, 27 kịch bản (bản sau 569 bản ghi); GPT-4 F1 72.52% vs người 89.07%. Dùng đánh giá LLM-judge phát hiện rủi ro. License chưa xác minh. ★3.
-- **ToolEmu, Agent-SafetyBench**: chỉ thấy tên trong survey (kết quả search), chưa xác minh chi tiết/dữ liệu. ★2.
+- **ToolEmu** — https://github.com/ryoungj/ToolEmu : 144 test case, 36 toolkit, 311 tool, Apache-2.0 (đã xác minh). Giả lập tool bằng LLM để phát hiện hành vi rủi ro của agent mà không chạy tool thật; hợp để kiểm tool catalog `shopper/seller/admin` trong sandbox. ★3.
+- **Agent-SafetyBench** — https://github.com/thu-coai/Agent-SafetyBench : MIT (đã xác minh); dữ liệu trong `data/` và HF `thu-coai/Agent-SafetyBench`; README nói "bao phủ nhiều loại rủi ro và failure mode" nhưng không liệt kê (số case chưa xác minh). ★3.
+- **Agent Security Bench (ASB)** — https://arxiv.org/html/2410.02644v2 , code https://github.com/agiresearch/ASB (ICLR 2025, theo search): 10 kịch bản (có e-commerce, tài chính, xe tự lái…), 10 agent, >400 tool; tấn công Direct/Indirect Prompt Injection, Memory Poisoning, Plan-of-Thought backdoor, tấn công trộn; ASR trung bình cao nhất 84,30%; số lượng attack/defense/metric khác nhau giữa bản arXiv đầu (nhiều test case ~90.000) và bản ICLR. Có kịch bản e-commerce nên khớp domain. ★4.
+
+### (b2) Bổ sung tiếng Anh/quốc tế cho moderation văn bản
+
+- **NVIDIA Aegis 2.0 (nay đổi tên Nemotron Content Safety Dataset V2)** — HF `nvidia/Aegis-AI-Content-Safety-Dataset-2.0` (theo search; thẻ HF chưa mở được). 33.416 mẫu hội thoại, chia 30.007 train/1.445 val/1.964 test (catalog hyper.ai); taxonomy 12 nhóm nguy hại + 9 nhóm con; NVIDIA mô tả giấy phép thân thiện thương mại, catalog ghi CC BY 4.0 — kiểm lại trên thẻ HF. Cảnh báo: không trộn số v1 (13 nhóm, >26.000 chú thích). ★3.
+- **ToxiGen** — arXiv 2203.09509 (ACL 2022): 274K câu độc hại/lành tính nhắm 13 nhóm thiểu số, sinh bằng GPT-3 với prompt theo demo và giải mã có classifier; 94,5% câu độc hại được người gắn nhãn là hate speech (theo search). Phù hợp kiểm hate ngầm (implicit). License: chưa xác minh. ★3.
+- **Civil Comments / Jigsaw Unintended Bias** — CC0 theo TFDS (đã xác minh qua search); lưu ý TFDS cảnh báo đặc trưng parent-comment có thể gây rò rỉ vì phép chia không tính ngữ cảnh. ★3 để đo thiên lệch theo nhóm danh tính.
+- **WildGuardMix** (allenai) — ODC-BY, gated; có prompt vanilla và adversarial, gắn nhãn prompt/response harmful; số mẫu khác nhau giữa các paper (đừng trích một con số không kiểm). ★3.
+- **BeaverTails** (PKU-Alignment) — hàng chục nghìn cặp QA gắn nhãn an toàn; license không thống nhất giữa các bản (cc-by-nc-4.0 ở bản evaluation). ★2.
 
 ### (d) Blog / cuộc thi / công ty
 - **HackAPrompt** — https://huggingface.co/datasets/hackaprompt/hackaprompt-dataset ; paper https://preview.aclanthology.org/setup/2023.emnlp-main.302 : 600K+ prompt đối kháng trên 3 LLM; thẻ dữ liệu nói chưa curate, có thể xúc phạm. Một bản Pliny bị gated. ★3.
 - **Lakera Gandalf** — https://huggingface.co/collections/Lakera/gandalf ; `gandalf_ignore_instructions` (~1K dòng, thẻ cảnh báo một số mẫu không phải injection thật); "Gandalf the Red" https://arxiv.org/pdf/2501.07927 (279K prompt tấn công, 59K guess; bản HF ~339K dòng). ★3.
 - **deepset/prompt-injections** — https://huggingface.co/datasets/deepset/prompt-injections : <1K dòng, Apache-2.0 (một snapshot). Nhãn nhị phân; phù hợp smoke test. ★3.
 - **Lakera PINT** — https://github.com/lakeraai/pint-benchmark ; blog https://www.lakera.ai/blog/lakera-pint-benchmark : danh mục prompt_injection, jailbreak, hard_negatives, chat, documents; điểm công bố cho Lakera Guard 95.22%, AWS Bedrock Guardrails 89.24%, Google Model Armor 70.07% (năm 2025, của công ty). Dùng cách xây benchmark (có hard negatives). ★3.
-- **PromptBench** (Microsoft): không tra được trong phiên này; chưa xác minh — bỏ khỏi bảng.
+- **PromptBench** (Microsoft): chưa tra được; không đưa vào bảng.
 
 ## 5. Dữ liệu tự tạo / synthetic từ chính hệ thống
 
@@ -145,6 +161,7 @@
 - HackAPrompt: https://huggingface.co/datasets/hackaprompt/hackaprompt-dataset
 - Gandalf: https://huggingface.co/collections/Lakera/gandalf ; https://arxiv.org/pdf/2501.07927
 - deepset: https://huggingface.co/datasets/deepset/prompt-injections
+- ToolEmu: https://github.com/ryoungj/ToolEmu ; Agent-SafetyBench: https://github.com/thu-coai/Agent-SafetyBench ; ASB: https://arxiv.org/html/2410.02644v2 ; ToxiGen: https://arxiv.org/pdf/2203.09509 ; Civil Comments: https://www.tensorflow.org/datasets/catalog/civil_comments
 - PINT: https://github.com/lakeraai/pint-benchmark ; https://www.lakera.ai/blog/lakera-pint-benchmark
 - JailbreakBench: https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors ; https://www.arxiv.org/pdf/2404.01318
 - R-Judge: https://arxiv.org/html/2401.10019v2
