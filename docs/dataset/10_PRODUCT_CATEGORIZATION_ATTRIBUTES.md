@@ -48,23 +48,23 @@
 
 | # | Tên | Nhóm | Tác vụ | Quy mô (theo nguồn đã thấy) | License / truy cập | ★ |
 |---|---|---|---|---|---|---|
-| 1 | Rakuten Data Challenge (SIGIR eCom 2018) | b | Phân loại taxonomy theo tiêu đề | ~1 triệu tiêu đề (0,8 tr train/0,2 tr test), ~3.400 nhãn | cần đăng ký/điều khoản; chưa xác minh | 4 |
-| 2 | Shopee Product Matching (Kaggle 2021) | b | Khớp sản phẩm (ảnh+tiêu đề), `label_group` | ~32,4 nghìn ảnh train; test ~70 nghìn (nguồn thứ cấp) | điều khoản cuộc thi; chưa xác minh | 5 |
-| 3 | WDC Products / WDC LSPM (Web Data Commons) | b | Khớp sản phẩm | v2.0: 26 triệu offer/79 nghìn shop; gold 4.400 cặp; train 9K–214K cặp | Mannheim (kiểm tra điều khoản) | 5 |
-| 4 | Abt-Buy, Amazon-Google | c | Entity matching sản phẩm | 9.575 và 11.460 cặp | chưa xác minh | 3 |
-| 5 | MAVE (Google) | c | Trích xuất thuộc tính | 2,2 triệu sản phẩm Amazon, 3 triệu cặp attr-value, 1.257 danh mục | CC BY-NC 4.0 (đã xác minh, nguồn: file LICENSE trên GitHub google-research-datasets/MAVE; repo đã archived 20/2/2024) | 5 |
-| 6 | OpenTag / AdaTag / AE-110k | c | Trích xuất thuộc tính | OpenTag: 10K SKU/13K instance (Amazon); AE-110k: ~50K SKU/110K instance (AliExpress, Sports & Entertainment) | chưa xác minh | 3 |
-| 7 | Shopping Queries (ESCI) – KDD Cup 2022 | b | Query-product + metadata | ~130K query, 2,6 triệu nhãn; en/ja/es | Apache-2.0 (đã xác minh, nguồn: README GitHub amazon-science/esci-data) | 3 |
-| 8 | Amazon Reviews 2023 – metadata | b | Danh mục, tiêu đề, mô tả, bullet | 48 triệu item, 33 danh mục | CC BY 4.0 (arXiv) | 4 |
-| 9 | Amazon Berkeley Objects (ABO) | b | Metadata đa ngữ + ảnh | 147.702 listing, 398.212 ảnh, ≤18 thuộc tính | CC BY 4.0 (đã xác minh, nguồn: trang S3 của ABO; bản ghi trước ghi nhầm CC BY-NC) | 3 |
-| 10 | Mercari Price Suggestion | b | Danh mục phân cấp + tiêu đề + mô tả | ~1,48 triệu dòng | điều khoản cuộc thi; chưa xác minh | 2 |
-| 11 | Flipkart (reviews/ sản phẩm scrape) | b | Danh mục/review | ~194K–205K dòng review (bản Zenodo/Kaggle) | chưa xác minh; dữ liệu scrape | 1 |
-| 12 | TaoDescribe, JDPDG, FPDG (Stick to Facts) | c | Sinh mô tả sản phẩm | TaoDescribe ~2,13 triệu mẫu; JDPDG >300.000 sản phẩm | chưa xác minh | 3 |
-| 13 | Shopee Code League 2020 (Kaggle) | a/d | Cuộc thi nhiều bài | chưa xác minh bài product detection/title | điều khoản Shopee | 2 |
-| 14 | VMLU (benchmark LLM tiếng Việt) | a/c | Đánh giá chung LLM tiếng Việt | Vi-MQA 10.880 câu | chưa xác minh | 1 |
-| 15 | Rakuten France Multimodal (SIGIR eCom 2020) | b | Phân loại đa phương thức (tiêu đề+mô tả+ảnh) | 99 nghìn listing (~85 nghìn train) | đăng ký Challenge Data; chưa xác minh | 4 |
-| 16 | SQID (ESCI + ảnh) | b | Query-product + ảnh | >190.000 sản phẩm, ~156,5 nghìn URL ảnh | MIT (đã xác minh, README GitHub) | 3 |
-| 17 | Amazon-M2 (KDD Cup 2023) | b | Session đa ngữ + metadata | 6 locale, 6 ngôn ngữ; số session chưa xác minh | chưa xác minh | 2 |
+| 1 | [Rakuten Data Challenge (SIGIR eCom 2018)](https://ceur-ws.org/Vol-2319/ecom18DC_paper_13.pdf) | b | Phân loại taxonomy theo tiêu đề | ~1 triệu tiêu đề (0,8 tr train/0,2 tr test), ~3.400 nhãn | cần đăng ký/điều khoản; chưa xác minh | 4 |
+| 2 | [Shopee Product Matching (Kaggle 2021)](https://www.kaggle.com/competitions/shopee-product-matching) | b | Khớp sản phẩm (ảnh+tiêu đề), `label_group` | ~32,4 nghìn ảnh train; test ~70 nghìn (nguồn thứ cấp) | điều khoản cuộc thi; chưa xác minh | 5 |
+| 3 | [WDC Products / WDC LSPM (Web Data Commons)](https://madata.bib.uni-mannheim.de/351/) | b | Khớp sản phẩm | v2.0: 26 triệu offer/79 nghìn shop; gold 4.400 cặp; train 9K–214K cặp | Mannheim (kiểm tra điều khoản) | 5 |
+| 4 | [Abt-Buy, Amazon-Google](https://data.dws.informatik.uni-mannheim.de/benchmarkmatchingtasks/) | c | Entity matching sản phẩm | 9.575 và 11.460 cặp | chưa xác minh | 3 |
+| 5 | [MAVE (Google)](https://github.com/google-research-datasets/MAVE) | c | Trích xuất thuộc tính | 2,2 triệu sản phẩm Amazon, 3 triệu cặp attr-value, 1.257 danh mục | CC BY-NC 4.0 (đã xác minh, nguồn: file LICENSE trên GitHub google-research-datasets/MAVE; repo đã archived 20/2/2024) | 5 |
+| 6 | [OpenTag / AdaTag / AE-110k](https://ar5iv.labs.arxiv.org/html/1806.01264) | c | Trích xuất thuộc tính | OpenTag: 10K SKU/13K instance (Amazon); AE-110k: ~50K SKU/110K instance (AliExpress, Sports & Entertainment) | chưa xác minh | 3 |
+| 7 | [Shopping Queries (ESCI) – KDD Cup 2022](https://arxiv.org/abs/2206.06588v1) | b | Query-product + metadata | ~130K query, 2,6 triệu nhãn; en/ja/es | Apache-2.0 (đã xác minh, nguồn: README GitHub amazon-science/esci-data) | 3 |
+| 8 | [Amazon Reviews 2023 – metadata](https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023) | b | Danh mục, tiêu đề, mô tả, bullet | 48 triệu item, 33 danh mục | CC BY 4.0 (arXiv) | 4 |
+| 9 | [Amazon Berkeley Objects (ABO)](https://amazon-berkeley-objects.s3.amazonaws.com/index.html) | b | Metadata đa ngữ + ảnh | 147.702 listing, 398.212 ảnh, ≤18 thuộc tính | CC BY 4.0 (đã xác minh, nguồn: trang S3 của ABO; bản ghi trước ghi nhầm CC BY-NC) | 3 |
+| 10 | [Mercari Price Suggestion](https://pytorch-frame.readthedocs.io/en/stable/_modules/torch_frame/datasets/mercari.html) | b | Danh mục phân cấp + tiêu đề + mô tả | ~1,48 triệu dòng | điều khoản cuộc thi; chưa xác minh | 2 |
+| 11 | [Flipkart (reviews/ sản phẩm scrape)](https://zenodo.org/records/17612521) | b | Danh mục/review | ~194K–205K dòng review (bản Zenodo/Kaggle) | chưa xác minh; dữ liệu scrape | 1 |
+| 12 | [TaoDescribe, JDPDG, FPDG (Stick to Facts)](https://arxiv.org/pdf/1903.12457) | c | Sinh mô tả sản phẩm | TaoDescribe ~2,13 triệu mẫu; JDPDG >300.000 sản phẩm | chưa xác minh | 3 |
+| 13 | [Shopee Code League 2020 (Kaggle)](https://github.com/ilos-vigil/scl-2020-sentiment-analysis) | a/d | Cuộc thi nhiều bài | chưa xác minh bài product detection/title | điều khoản Shopee | 2 |
+| 14 | [VMLU (benchmark LLM tiếng Việt)](https://aclanthology.org/2025.acl-long.563) | a/c | Đánh giá chung LLM tiếng Việt | Vi-MQA 10.880 câu | chưa xác minh | 1 |
+| 15 | [Rakuten France Multimodal (SIGIR eCom 2020)](https://challengedata.ens.fr/challenges/35) | b | Phân loại đa phương thức (tiêu đề+mô tả+ảnh) | 99 nghìn listing (~85 nghìn train) | đăng ký Challenge Data; chưa xác minh | 4 |
+| 16 | [SQID (ESCI + ảnh)](https://github.com/Crossing-Minds/shopping-queries-image-dataset) | b | Query-product + ảnh | >190.000 sản phẩm, ~156,5 nghìn URL ảnh | MIT (đã xác minh, README GitHub) | 3 |
+| 17 | [Amazon-M2 (KDD Cup 2023)](https://papers.nips.cc/paper_files/paper/2023/hash/193df57a2366d032fb18dcac0698d09a-Abstract-Datasets_and_Benchmarks.html) | b | Session đa ngữ + metadata | 6 locale, 6 ngôn ngữ; số session chưa xác minh | chưa xác minh | 2 |
 
 ### (a) Dữ liệu Việt Nam (ghi chú)
 

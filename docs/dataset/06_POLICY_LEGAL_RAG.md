@@ -51,29 +51,29 @@
 
 | # | Tên | Nhóm | Ngôn ngữ | Quy mô (theo nguồn đã thấy) | License | ★ |
 |---|---|---|---|---|---|---|
-| 1 | Zalo AI Challenge 2021 – Legal Text Retrieval (bản BEIR trên HF `GreenNode/zalo-ai-legal-text-retrieval-vn`) | a | vi | ~2.556 query train; corpus ~61 nghìn điều (số lệch giữa nguồn) | MIT (theo 1 repo GitHub; chưa xác minh) | 5 |
-| 2 | ALQAC 2021–2025 (Automated Legal QA Competition) | a | vi | chưa xác minh kích thước từng năm | điều kiện cuộc thi; chưa xác minh | 5 |
-| 3 | VLQA (arXiv 2507.19995) / VLSP 2025 DRiLL | a | vi | 3.129 câu hỏi do chuyên gia gán nhãn (theo bài VLSP 2025 trích; chưa kiểm ở bài gốc) | chưa xác minh | 4 |
-| 4 | CATI-AI `vietnamese-legal-retrieval-with-negatives` | a | vi | ~144 nghìn dòng (theo kết quả tìm kiếm) | chưa xác minh | 3 |
-| 5 | NghiemAbe/dev_legal | a | vi | 1K–10K dòng; parquet | chưa xác minh | 2 |
-| 6 | thangvip/legaldocuments-nli-test-v3 | a | vi | nhỏ (NLI test) | chưa xác minh | 2 |
-| 7 | AITeamVN/EvalRAGData | a | vi | 300 mẫu, người viết | Apache-2.0 (theo kết quả) | 3 |
-| 8 | ViRE (Vietnamese IR multi-domain, có EduCoQA, CSConDa) | a | vi | chưa xác minh | chưa xác minh | 3 |
-| 9 | Văn bản luật VN thật (Luật BVQLNTD 2023, NĐ 52/2013, NĐ 85/2021…) | a | vi | tự thu thập | **bản quyền/điều khoản của nguồn: chưa xác minh** | 5 |
-| 10 | LegalBench (+ CUAD tasks) | b | en | nhiều task; CUAD task CC BY 4.0 | theo từng task | 2 |
-| 11 | COLIEE | c | en/ja | chưa xác minh | cần đăng ký (chưa xác minh) | 1 |
-| 12 | LeCaRD / LeCaRDv2 | c | zh | LeCaRD: 107 query, >43.000 ứng viên | chưa xác minh | 1 |
-| 13 | BEIR | c | en | 18 dataset công khai | theo từng dataset | 3 |
-| 14 | RAGTruth | c | en | 2.965 instance, 17.790 phản hồi, 7.664 phản hồi ảo giác, 14.289 span (đã xác minh, GitHub) | MIT (đã xác minh, GitHub) | 4 |
-| 15 | CRAG (Meta, KDD Cup 2024) | c | en | 4.409 cặp QA, 5 miền, 8 loại câu (số QA theo bài báo) | CC BY-NC 4.0 (đã xác minh, GitHub; phi thương mại) | 3 |
-| 16 | FRAMES (Google) | c | en | 824 câu multi-hop | chưa xác minh | 3 |
-| 17 | ALCE (ASQA, QAMPARI, ELI5) | c | en | 3 dataset; tải bằng `download_data.sh` | repo MIT (đã xác minh, GitHub); license từng dataset chưa xác minh | 4 |
-| 18 | FaithBench / Vectara HHEM | c | en | tóm tắt của 10 LLM, có nhãn người | chưa xác minh | 3 |
-| 19 | Benchmark temporal legal RAG (FiscalQA Pro, TIDE, ANEEL) | c | fr/en/pt | 32.436 phiên bản điều (FiscalQA); 3.050 QA (TIDE) | chưa xác minh | 3 |
-| 20 | Ragas (thư viện metric) | d | – | – | chưa xác minh | 3 |
-| 21 | BSARD (Belgian Statutory Article Retrieval) | b | fr | >22.600 điều luật Bỉ, ~1.100 câu hỏi của công dân do luật sư gán nhãn | chưa xác minh | 4 |
-| 22 | LegalBench-RAG | b | en | 6.858 (blog) hoặc 6.889 (bảng bài báo) query; 714 tài liệu; bản mini 776 query | theo các nguồn con; chưa xác minh | 3 |
-| 23 | UNFAIR-ToS / CLAUDETTE (qua LexGLUE, LegalBench) | b | en | 50 hợp đồng ToS (YouTube, eBay, Facebook…); bản LegalBench 3.850 mẫu | CC BY 4.0 (theo trang LegalBench) | 3 |
+| 1 | [Zalo AI Challenge 2021 – Legal Text Retrieval (bản BEIR trên HF `GreenNode/zalo-ai-legal-text-retrieval-vn`)](https://huggingface.co/datasets/GreenNode/zalo-ai-legal-text-retrieval-vn) | a | vi | ~2.556 query train; corpus ~61 nghìn điều (số lệch giữa nguồn) | MIT (theo 1 repo GitHub; chưa xác minh) | 5 |
+| 2 | [ALQAC 2021–2025 (Automated Legal QA Competition)](https://sites.google.com/view/ALQAC-2025) | a | vi | chưa xác minh kích thước từng năm | điều kiện cuộc thi; chưa xác minh | 5 |
+| 3 | [VLQA (arXiv 2507.19995) / VLSP 2025 DRiLL](https://arxiv.org/html/2507.19995v1) | a | vi | 3.129 câu hỏi do chuyên gia gán nhãn (theo bài VLSP 2025 trích; chưa kiểm ở bài gốc) | chưa xác minh | 4 |
+| 4 | [CATI-AI `vietnamese-legal-retrieval-with-negatives`](https://huggingface.co/datasets/CATI-AI/vietnamese-legal-retrieval-with-negatives) | a | vi | ~144 nghìn dòng (theo kết quả tìm kiếm) | chưa xác minh | 3 |
+| 5 | [NghiemAbe/dev_legal](https://huggingface.co/datasets/NghiemAbe/dev_legal) | a | vi | 1K–10K dòng; parquet | chưa xác minh | 2 |
+| 6 | [thangvip/legaldocuments-nli-test-v3](https://huggingface.co/datasets/thangvip/legaldocuments-nli-test-v3) | a | vi | nhỏ (NLI test) | chưa xác minh | 2 |
+| 7 | [AITeamVN/EvalRAGData](https://huggingface.co/datasets/AITeamVN/EvalRAGData) | a | vi | 300 mẫu, người viết | Apache-2.0 (theo kết quả) | 3 |
+| 8 | [ViRE (Vietnamese IR multi-domain, có EduCoQA, CSConDa)](https://github.com/longstnguyen/ViRE) | a | vi | chưa xác minh | chưa xác minh | 3 |
+| 9 | [Văn bản luật VN thật (Luật BVQLNTD 2023, NĐ 52/2013, NĐ 85/2021…)](https://english.luatvietnam.vn/decree-no-52-2013-nd-cp-dated-may-16-2013-of-the-government-on-e-commerce-78550-doc1.html) | a | vi | tự thu thập | **bản quyền/điều khoản của nguồn: chưa xác minh** | 5 |
+| 10 | [LegalBench (+ CUAD tasks)](https://huggingface.co/datasets/nguha/legalbench) | b | en | nhiều task; CUAD task CC BY 4.0 | theo từng task | 2 |
+| 11 | [COLIEE](https://sites.ualberta.ca/%7erabelo/COLIEE2022/COLIEE2021_summary.pdf) | c | en/ja | chưa xác minh | cần đăng ký (chưa xác minh) | 1 |
+| 12 | [LeCaRD / LeCaRDv2](https://arxiv.org/pdf/2310.17609) | c | zh | LeCaRD: 107 query, >43.000 ứng viên | chưa xác minh | 1 |
+| 13 | [BEIR](https://arxiv.org/pdf/2104.08663) | c | en | 18 dataset công khai | theo từng dataset | 3 |
+| 14 | [RAGTruth](https://github.com/particlemedia/RAGTruth) | c | en | 2.965 instance, 17.790 phản hồi, 7.664 phản hồi ảo giác, 14.289 span (đã xác minh, GitHub) | MIT (đã xác minh, GitHub) | 4 |
+| 15 | [CRAG (Meta, KDD Cup 2024)](https://github.com/facebookresearch/CRAG) | c | en | 4.409 cặp QA, 5 miền, 8 loại câu (số QA theo bài báo) | CC BY-NC 4.0 (đã xác minh, GitHub; phi thương mại) | 3 |
+| 16 | [FRAMES (Google)](https://huggingface.co/datasets/google/frames-benchmark) | c | en | 824 câu multi-hop | chưa xác minh | 3 |
+| 17 | [ALCE (ASQA, QAMPARI, ELI5)](https://github.com/princeton-nlp/ALCE) | c | en | 3 dataset; tải bằng `download_data.sh` | repo MIT (đã xác minh, GitHub); license từng dataset chưa xác minh | 4 |
+| 18 | [FaithBench / Vectara HHEM](https://arxiv.org/pdf/2410.13210) | c | en | tóm tắt của 10 LLM, có nhãn người | chưa xác minh | 3 |
+| 19 | [Benchmark temporal legal RAG (FiscalQA Pro, TIDE, ANEEL)](https://arxiv.org/pdf/2608.09393) | c | fr/en/pt | 32.436 phiên bản điều (FiscalQA); 3.050 QA (TIDE) | chưa xác minh | 3 |
+| 20 | [Ragas (thư viện metric)](https://github.com/explodinggradients/ragas) | d | – | – | chưa xác minh | 3 |
+| 21 | [BSARD (Belgian Statutory Article Retrieval)](https://huggingface.co/datasets/clips/BSARD) | b | fr | >22.600 điều luật Bỉ, ~1.100 câu hỏi của công dân do luật sư gán nhãn | chưa xác minh | 4 |
+| 22 | [LegalBench-RAG](https://arxiv.org/pdf/2408.10343) | b | en | 6.858 (blog) hoặc 6.889 (bảng bài báo) query; 714 tài liệu; bản mini 776 query | theo các nguồn con; chưa xác minh | 3 |
+| 23 | [UNFAIR-ToS / CLAUDETTE (qua LexGLUE, LegalBench)](https://hazyresearch.stanford.edu/legalbench/tasks/unfair_tos.html) | b | en | 50 hợp đồng ToS (YouTube, eBay, Facebook…); bản LegalBench 3.850 mẫu | CC BY 4.0 (theo trang LegalBench) | 3 |
 
 ### (a) Tiếng Việt / Việt Nam
 

@@ -40,25 +40,25 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn đã tra) | License / truy cập | Phù hợp |
 |---|---|---|---|---|---|
-| 1 | RCAEval (RE1/RE2/RE3) | c | 735 ca lỗi, 3 hệ thống (Online Boutique, Sock Shop, Train Ticket) | MIT (code+dữ liệu của tác giả); HF ~3.4 GB parquet | ★★★★★ |
-| 2 | TSB-AD (kế nhiệm TSB-UAD) | c | 1070 chuỗi, 40 bộ | Mã nguồn mở TheDatumOrg/TSB-AD | ★★★★★ |
-| 3 | NAB | c | 58 chuỗi (README: ">50") | MIT (theo diễn đàn/ecosyste.ms) | ★★★★ |
-| 4 | SMD (OmniAnomaly) | c | 28 máy (3 nhóm), 5 tuần, chia đôi train/test; số metric 38 chưa xác nhận trong kết quả search (Merlion ghi 33) | Repo NetManAIOps; license chưa xác minh | ★★★★★ |
-| 5 | SMAP / MSL (NASA) | c | 55x25 / 27x55 (số liệu hay bị đảo) | Nguồn NASA; qua repo OmniAnomaly | ★★ |
-| 6 | OpenRCA | c | 335 lỗi, 68 GB telemetry, 3 hệ thống | Repo MIT; dữ liệu Google Drive | ★★★★ |
-| 7 | AIOps Challenge 2020 (NetManAIOps) | d | Giai đoạn 1; giai đoạn 2 không có | Chỉ phi thương mại | ★★★ |
-| 8 | AIOps Challenge (CCF/Tsinghua/CCB, 2022) | d | Hệ thống e-commerce mô phỏng, 40 instance, 6 node | Chưa xác minh | ★★★★ |
-| 9 | Loghub | b | 19+ bộ log (HDFS, BGL, Thunderbird...) | Nghiên cứu/học thuật ("other") | ★★★★ |
-| 10 | Yahoo S5 | c | A1 65 chuỗi thật; A2-A4 100 chuỗi tổng hợp | Webscope (cần yêu cầu) | ★★ |
-| 11 | Exathlon | c | Spark streaming, 10 ứng dụng, 6 loại bất thường, ~93 file trace (nguồn thứ cấp) | CC BY-NC-SA 4.0 (đã xác minh, nguồn: README repo qua search) | ★★★ |
-| 12 | LEMMA-RCA | c | 2 miền (IT, OT), 4 tập con: Product Review và Cloud Computing (microservices), SWaT, WADI | Chưa xác minh | ★★★ |
-| 13 | TrainTicketTrace (SANER 2026) | c | Train Ticket sạch + 9 bản có lỗi | Chưa xác minh | ★★★ |
-| 14 | Alibaba cluster-trace-microservices | d | 2021: 20M trace/12h; 2022: ~13B trace/13 ngày | Cần làm khảo sát; chất lượng có vấn đề | ★★ |
-| 15 | Azure Public Dataset | d | VM, Functions, LLM inference traces | Chưa rõ (CC-BY-4.0 theo 1 index; chưa xác minh) | ★★ |
-| 16 | Google Cluster Data 2019 | d | 8 cell Borg, 2.4 TiB | CC-BY, qua BigQuery | ★ |
-| 17 | AIOpsLab (Microsoft, MLSys 2025) | c (agent) | Khung triển khai microservice (DeathStarBench), chèn lỗi (ChaosMesh), xuất telemetry; ~48 problem (nguồn thứ cấp) | Chưa xác minh | ★★★★ |
-| 18 | ITBench (IBM) | c (agent) | 2 tầng: dataset tĩnh và môi trường live; số kịch bản SRE chưa xác minh | Chưa xác minh | ★★★ |
-| 19 | SKAB (Skoltech) | c | v0.9: 34 dataset có bất thường tập thể (testbed vật lý, đang dừng thu thập) | Chưa xác minh | ★★ |
+| 1 | [RCAEval (RE1/RE2/RE3)](https://github.com/phamquiluan/RCAEval) | c | 735 ca lỗi, 3 hệ thống (Online Boutique, Sock Shop, Train Ticket) | MIT (code+dữ liệu của tác giả); HF ~3.4 GB parquet | ★★★★★ |
+| 2 | [TSB-AD (kế nhiệm TSB-UAD)](https://github.com/TheDatumOrg/TSB-AD) | c | 1070 chuỗi, 40 bộ | Mã nguồn mở TheDatumOrg/TSB-AD | ★★★★★ |
+| 3 | [NAB](https://github.com/numenta/NAB) | c | 58 chuỗi (README: ">50") | MIT (theo diễn đàn/ecosyste.ms) | ★★★★ |
+| 4 | [SMD (OmniAnomaly)](https://github.com/NetManAIOps/OmniAnomaly) | c | 28 máy (3 nhóm), 5 tuần, chia đôi train/test; số metric 38 chưa xác nhận trong kết quả search (Merlion ghi 33) | Repo NetManAIOps; license chưa xác minh | ★★★★★ |
+| 5 | [SMAP / MSL (NASA)](https://github.com/NetManAIOps/OmniAnomaly) | c | 55x25 / 27x55 (số liệu hay bị đảo) | Nguồn NASA; qua repo OmniAnomaly | ★★ |
+| 6 | [OpenRCA](https://github.com/microsoft/OpenRCA) | c | 335 lỗi, 68 GB telemetry, 3 hệ thống | Repo MIT; dữ liệu Google Drive | ★★★★ |
+| 7 | [AIOps Challenge 2020 (NetManAIOps)](https://github.com/NetManAIOps/AIOps-Challenge-2020-Data) | d | Giai đoạn 1; giai đoạn 2 không có | Chỉ phi thương mại | ★★★ |
+| 8 | [AIOps Challenge (CCF/Tsinghua/CCB, 2022)](https://arxiv.org/pdf/2406.19711) | d | Hệ thống e-commerce mô phỏng, 40 instance, 6 node | Chưa xác minh | ★★★★ |
+| 9 | [Loghub](https://github.com/logpai/loghub) | b | 19+ bộ log (HDFS, BGL, Thunderbird...) | Nghiên cứu/học thuật ("other") | ★★★★ |
+| 10 | [Yahoo S5](https://webscope.sandbox.yahoo.com/catalog.php?datatype=s&did=70) | c | A1 65 chuỗi thật; A2-A4 100 chuỗi tổng hợp | Webscope (cần yêu cầu) | ★★ |
+| 11 | [Exathlon](https://github.com/exathlonbenchmark/exathlon) | c | Spark streaming, 10 ứng dụng, 6 loại bất thường, ~93 file trace (nguồn thứ cấp) | CC BY-NC-SA 4.0 (đã xác minh, nguồn: README repo qua search) | ★★★ |
+| 12 | [LEMMA-RCA](https://arxiv.org/abs/2406.05375) | c | 2 miền (IT, OT), 4 tập con: Product Review và Cloud Computing (microservices), SWaT, WADI | Chưa xác minh | ★★★ |
+| 13 | [TrainTicketTrace (SANER 2026)](https://conf.researchr.org/details/saner-2026/saner-2026-workshops-tutorials-track/43/TrainTicketTrace-A-Multi-Fault-Distributed-Dataset-for-Microservice-Fault-Detection-) | c | Train Ticket sạch + 9 bản có lỗi | Chưa xác minh | ★★★ |
+| 14 | [Alibaba cluster-trace-microservices](https://github.com/alibaba/clusterdata) | d | 2021: 20M trace/12h; 2022: ~13B trace/13 ngày | Cần làm khảo sát; chất lượng có vấn đề | ★★ |
+| 15 | [Azure Public Dataset](https://github.com/Azure/AzurePublicDataset) | d | VM, Functions, LLM inference traces | Chưa rõ (CC-BY-4.0 theo 1 index; chưa xác minh) | ★★ |
+| 16 | [Google Cluster Data 2019](https://github.com/google/cluster-data) | d | 8 cell Borg, 2.4 TiB | CC-BY, qua BigQuery | ★ |
+| 17 | [AIOpsLab (Microsoft, MLSys 2025)](https://www.microsoft.com/en-us/research/publication/aiopslab-a-holistic-framework-for-evaluating-ai-agents-for-enabling-autonomous-cloud) | c (agent) | Khung triển khai microservice (DeathStarBench), chèn lỗi (ChaosMesh), xuất telemetry; ~48 problem (nguồn thứ cấp) | Chưa xác minh | ★★★★ |
+| 18 | [ITBench (IBM)](https://researchweb.draco.res.ibm.com/publications/developing-ai-agents-for-it-automation-tasks-with-itbench) | c (agent) | 2 tầng: dataset tĩnh và môi trường live; số kịch bản SRE chưa xác minh | Chưa xác minh | ★★★ |
+| 19 | [SKAB (Skoltech)](https://github.com/waico/skab) | c | v0.9: 34 dataset có bất thường tập thể (testbed vật lý, đang dừng thu thập) | Chưa xác minh | ★★ |
 
 ### (a) Tiếng Việt / Việt Nam
 Không có. Tín hiệu hạ tầng không phụ thuộc ngôn ngữ; chỉ phần diễn giải/trả lời dùng tiếng Việt (prompt và đánh giá nội bộ).

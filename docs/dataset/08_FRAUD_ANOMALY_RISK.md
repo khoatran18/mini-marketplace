@@ -51,24 +51,24 @@
 
 | # | Tên | Nhóm | Loại | Quy mô (theo nguồn đã thấy) | License / truy cập | ★ |
 |---|---|---|---|---|---|---|
-| 1 | IEEE-CIS Fraud Detection (Vesta) | b | giao dịch TMĐT thẻ, có bảng identity | 590.540 giao dịch, 20.663 gian lận (3,5%); bản FDB: 561.013 train / 28.527 test | điều khoản cuộc thi Kaggle (FDB: phải tham gia cuộc thi để tải) | 4 |
-| 2 | Kaggle Credit Card Fraud (ULB) | b | thẻ, PCA | 284.807 giao dịch, 492 gian lận (0,172%) | DbCL 1.0 (theo README FDB; mirror OpenML ghi "Public") | 3 |
-| 3 | PaySim (Kaggle) | b | tiền di động mô phỏng | ~6,3 triệu giao dịch, 11 cột, 744 bước giờ (30 ngày); thu nhỏ 1/4 log gốc | chưa xác minh | 3 |
-| 4 | Sparkov credit card fraud (Kaggle mirror) | b | giao dịch thẻ sinh mô phỏng | 1.852.394 giao dịch/999 khách (một bản); bản FDB: 1.296.675 train, fraud 5,7% | CC0 1.0 (theo README FDB) | 3 |
-| 5 | Bank Account Fraud (BAF, Feedzai, NeurIPS 2022) | c | mở tài khoản, có thời gian, bias | ~1 triệu dòng bản base; 6 biến thể (Base, I–V); số cột/tỉ lệ gian lận chưa xác minh | CC BY-NC-ND 4.0 (theo một bài báo dùng dữ liệu; repo có file LICENSE chưa đọc) | 4 |
-| 6 | Fraud Dataset Benchmark (FDB, arXiv 2208.14417) | c | tập hợp 9 dataset | 9 bộ (IEEE-CIS, ccfraud, fraudecom, Sparkov, Twitter bots, malicious URLs, fake job, vehicle loan, IP blocklist) | repo MIT-0; license từng bộ xem mục 6 | 4 |
-| 7 | TalkingData AdTracking | b | click fraud quảng cáo di động | ~184,9 triệu dòng train; ~18,8 triệu test | điều khoản cuộc thi | 4 |
-| 8 | Web robot detection (AUTh, Zenodo 3477932) | c | log máy chủ + phiên có nhãn | ~4,09 triệu request, ~27.000 IP, 1 tháng; 3,2 GB | chưa xác minh | 4 |
-| 9 | TwiBot-22 | c | bot mạng xã hội, đồ thị | số liệu chi tiết chưa xác minh (4 loại thực thể, 14 quan hệ) | CC BY-NC-ND 4.0; chỉ cấp khi xin qua email (nghiên cứu) | 3 |
-| 10 | Elliptic (Bitcoin) / Elliptic2 | c | đồ thị giao dịch, AML | 204K nút, 234K cạnh; Elliptic2: 122K đồ thị con | MIT chỉ theo bản sao HF; chưa xác minh | 2 |
-| 11 | PromoGuardian / PPA (Meituan) | c | lạm dụng khuyến mãi | 2 tuần giao dịch Meituan (theo bài báo) | chưa xác minh có tải công khai | 3 |
-| 12 | Olist | b | đơn TMĐT thật ẩn danh | ~100K đơn 2016–2018 | CC BY-NC-SA 4.0 (chưa xác minh) | 2 |
-| 13 | "Fraud ecommerce" (Kaggle, Fraud_Data.csv + IP-to-country) | b | giao dịch e-commerce có `device_id`, `ip_address`, `signup_time`/`purchase_time`, `source`, `browser` | 151.112 giao dịch, 14.151 gian lận (~9,3%); bản FDB: 120.889 train, 10,6% | không ghi trong FDB; chưa xác minh | 3 |
-| 14 | Santander Customer Transaction | b | **không phải gian lận** | 200 cột số ẩn danh | – | 1 |
-| 16 | IBM AMLworld (Kaggle, HI/LI × Small/Medium/Large) | b | giao dịch tổng hợp rửa tiền, đồ thị | 6 bộ; HI-Small 515.088 nút/5.078.345 cạnh; LI-Large 2.070.980 nút/176.066.557 cạnh (~1/1.750 rửa tiền); lớn nhất 180 triệu giao dịch | chưa xác minh | 3 |
-| 17 | Credit Card Fraud Detection Dataset 2023 (Kaggle) | b | thẻ, V1–V28 ẩn danh | 568.630 giao dịch, 30 cột | chưa xác minh | 2 |
-| 18 | Các bộ Kaggle trong FDB: Twitter Bots, Malicious URLs, Fake Job Posting, Vehicle Loan Default, IP Blocklist | b | bot/URL độc/tin tuyển dụng giả/vỡ nợ/IP xấu | bot: 29.950 train (33,1%); URL: 586.072 (34,2%); fake job: 14.304 (4,7%); loan: 186.523 (21,6%); IP: 172.000 (7%) | CC0 1.0 (bot, URL, fake job); loan, IP: không rõ | 2 |
-| 15 | Báo cáo invalid traffic (Pixalate), EvilHunter | d | tham chiếu ngành | – | báo cáo của vendor | 1 |
+| 1 | [IEEE-CIS Fraud Detection (Vesta)](https://ieee-dataport.org/documents/ieee-cis-fraud-detection) | b | giao dịch TMĐT thẻ, có bảng identity | 590.540 giao dịch, 20.663 gian lận (3,5%); bản FDB: 561.013 train / 28.527 test | điều khoản cuộc thi Kaggle (FDB: phải tham gia cuộc thi để tải) | 4 |
+| 2 | [Kaggle Credit Card Fraud (ULB)](https://baselight.app/u/kaggle/dataset/mlg_ulb_creditcardfraud) | b | thẻ, PCA | 284.807 giao dịch, 492 gian lận (0,172%) | DbCL 1.0 (theo README FDB; mirror OpenML ghi "Public") | 3 |
+| 3 | [PaySim (Kaggle)](https://www.kaggle.com/datasets/ealaxi/paysim1) | b | tiền di động mô phỏng | ~6,3 triệu giao dịch, 11 cột, 744 bước giờ (30 ngày); thu nhỏ 1/4 log gốc | chưa xác minh | 3 |
+| 4 | [Sparkov credit card fraud (Kaggle mirror)](https://baselight.app/u/kaggle/dataset/kartik2112_fraud_detection) | b | giao dịch thẻ sinh mô phỏng | 1.852.394 giao dịch/999 khách (một bản); bản FDB: 1.296.675 train, fraud 5,7% | CC0 1.0 (theo README FDB) | 3 |
+| 5 | [Bank Account Fraud (BAF, Feedzai, NeurIPS 2022)](https://github.com/feedzai/bank-account-fraud) | c | mở tài khoản, có thời gian, bias | ~1 triệu dòng bản base; 6 biến thể (Base, I–V); số cột/tỉ lệ gian lận chưa xác minh | CC BY-NC-ND 4.0 (theo một bài báo dùng dữ liệu; repo có file LICENSE chưa đọc) | 4 |
+| 6 | [Fraud Dataset Benchmark (FDB, arXiv 2208.14417)](https://github.com/amazon-science/fraud-dataset-benchmark) | c | tập hợp 9 dataset | 9 bộ (IEEE-CIS, ccfraud, fraudecom, Sparkov, Twitter bots, malicious URLs, fake job, vehicle loan, IP blocklist) | repo MIT-0; license từng bộ xem mục 6 | 4 |
+| 7 | [TalkingData AdTracking](https://github.com/stys/kaggle-talkingdata-adtracking-fraud-detection) | b | click fraud quảng cáo di động | ~184,9 triệu dòng train; ~18,8 triệu test | điều khoản cuộc thi | 4 |
+| 8 | [Web robot detection (AUTh, Zenodo 3477932)](https://zenodo.org/records/3477932) | c | log máy chủ + phiên có nhãn | ~4,09 triệu request, ~27.000 IP, 1 tháng; 3,2 GB | chưa xác minh | 4 |
+| 9 | [TwiBot-22](https://twibot22.github.io) | c | bot mạng xã hội, đồ thị | số liệu chi tiết chưa xác minh (4 loại thực thể, 14 quan hệ) | CC BY-NC-ND 4.0; chỉ cấp khi xin qua email (nghiên cứu) | 3 |
+| 10 | [Elliptic (Bitcoin) / Elliptic2](https://arxiv.org/abs/1908.02591v1) | c | đồ thị giao dịch, AML | 204K nút, 234K cạnh; Elliptic2: 122K đồ thị con | MIT chỉ theo bản sao HF; chưa xác minh | 2 |
+| 11 | [PromoGuardian / PPA (Meituan)](https://arxiv.org/pdf/2510.12652) | c | lạm dụng khuyến mãi | 2 tuần giao dịch Meituan (theo bài báo) | chưa xác minh có tải công khai | 3 |
+| 12 | [Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) | b | đơn TMĐT thật ẩn danh | ~100K đơn 2016–2018 | CC BY-NC-SA 4.0 (chưa xác minh) | 2 |
+| 13 | "Fraud ecommerce" (Kaggle, Fraud_Data.csv + IP-to-country) (chưa có link) | b | giao dịch e-commerce có `device_id`, `ip_address`, `signup_time`/`purchase_time`, `source`, `browser` | 151.112 giao dịch, 14.151 gian lận (~9,3%); bản FDB: 120.889 train, 10,6% | không ghi trong FDB; chưa xác minh | 3 |
+| 14 | Santander Customer Transaction (chưa có link) | b | **không phải gian lận** | 200 cột số ẩn danh | – | 1 |
+| 16 | [IBM AMLworld (Kaggle, HI/LI × Small/Medium/Large)](https://arxiv.org/pdf/2306.16424) | b | giao dịch tổng hợp rửa tiền, đồ thị | 6 bộ; HI-Small 515.088 nút/5.078.345 cạnh; LI-Large 2.070.980 nút/176.066.557 cạnh (~1/1.750 rửa tiền); lớn nhất 180 triệu giao dịch | chưa xác minh | 3 |
+| 17 | Credit Card Fraud Detection Dataset 2023 (Kaggle) (chưa có link) | b | thẻ, V1–V28 ẩn danh | 568.630 giao dịch, 30 cột | chưa xác minh | 2 |
+| 18 | [Các bộ Kaggle trong FDB: Twitter Bots, Malicious URLs, Fake Job Posting, Vehicle Loan Default, IP Blocklist](https://github.com/amazon-science/fraud-dataset-benchmark) | b | bot/URL độc/tin tuyển dụng giả/vỡ nợ/IP xấu | bot: 29.950 train (33,1%); URL: 586.072 (34,2%); fake job: 14.304 (4,7%); loan: 186.523 (21,6%); IP: 172.000 (7%) | CC0 1.0 (bot, URL, fake job); loan, IP: không rõ | 2 |
+| 15 | [Báo cáo invalid traffic (Pixalate)](https://www.pixalate.com/mobile-web-click-fraud-benchmarks-report), [EvilHunter](https://nsec.sjtu.edu.cn/publications/2021/ACMCCS_2021_ssb.pdf) | d | tham chiếu ngành | – | báo cáo của vendor | 1 |
 
 ### (a) Tiếng Việt / Việt Nam
 

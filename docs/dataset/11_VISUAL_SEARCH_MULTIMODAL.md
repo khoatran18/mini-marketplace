@@ -39,23 +39,23 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn đã tra) | License | Phù hợp |
 |---|---|---|---|---|---|
-| 1 | Shopee Product Matching (Kaggle) | b | ~34K ảnh train, 11K nhóm (xác minh qua search) | Luật cuộc thi Kaggle (chưa xác minh) | ★★★★★ |
-| 2 | Amazon Berkeley Objects (ABO) | b | 147,702 sản phẩm, 398,212 ảnh | CC BY 4.0 | ★★★★ |
-| 3 | Marqo-GS-10M | b | ~10M cặp query-sản phẩm, có ảnh | Repo Apache-2.0 (đã xác minh, README GitHub); license riêng của dữ liệu/ảnh chưa xác minh | ★★★★ |
-| 4 | Stanford Online Products (SOP) | b/c | 120,053 ảnh, 22,634 sản phẩm | Chưa xác minh (search không thấy license; trang gốc ai.stanford.edu/~sijia/Stanford-Online-Products/) | ★★★★ |
-| 5 | Products-10K (JD.com) | b | 10,000 SKU, gần 150,000 ảnh (theo search: paper + v7labs/neurohive; ảnh shop + ảnh khách, nhãn kiểm ≥3 người, nhiễu <0.5%) | Chưa xác minh; host products-10k.github.io | ★★★★ |
-| 6 | DeepFashion (Consumer-to-Shop) | c | >800K ảnh tổng, 50 danh mục, 1,000 thuộc tính, >300K cặp (paper CVPR 2016, theo search); C2S: 33,881 item, 239,557 ảnh | Chỉ học thuật, cấm thương mại; phải ký thỏa thuận để lấy mật khẩu (theo search, trang UCF mirror) | ★★★ |
-| 7 | Street2Shop | c | 404,683 ảnh shop, 20,357 ảnh street | Chưa xác minh | ★★★ |
-| 8 | Fashion IQ | c | Chưa xác minh quy mô | CDLA (repo) | ★★★ |
-| 9 | Fashion-Gen | c | 293,008 ảnh | Chưa xác minh | ★★ |
-| 10 | H&M Personalized Fashion (ảnh) | b | 105,542 sản phẩm có ảnh | Luật cuộc thi Kaggle | ★★★ |
-| 11 | LRVS-Fashion | c | Chưa xác minh quy mô | CC BY-NC 4.0 | ★★ |
-| 12 | LAION-5B / Re-LAION | d | ~5B cặp ảnh-text (metadata) | Metadata CC BY 4.0; ảnh thuộc chủ sở hữu | ★★ |
-| 13 | MS COCO captions | c | Chưa xác minh trong phiên này | Chưa xác minh | ★ |
-| 14 | Visual Product Search Benchmark (2026) | c | Chưa xác minh | Chưa xác minh | ★★ |
-| 15 | SQID (ESCI + ảnh) | b | >190,000 sản phẩm; 164,900 product ID test + 27,139 bổ sung; ~156,545 URL ảnh | MIT (đã xác minh, README GitHub) | ★★★★ |
-| 16 | Amazon Reviews 2023 (ảnh + metadata) | b | >570M review, 48M sản phẩm, 33 danh mục (theo search) | CC BY 4.0 (theo arXiv, xem file 10) | ★★★ |
-| 17 | Rakuten France Multimodal (SIGIR eCom 2020) | b | 99K listing có ảnh+tiêu đề (theo search) | Đăng ký Challenge Data; chưa xác minh | ★★★ |
+| 1 | [Shopee Product Matching (Kaggle)](https://www.kaggle.com/competitions/shopee-product-matching) | b | ~34K ảnh train, 11K nhóm (xác minh qua search) | Luật cuộc thi Kaggle (chưa xác minh) | ★★★★★ |
+| 2 | [Amazon Berkeley Objects (ABO)](https://amazon-berkeley-objects.s3.amazonaws.com/index.html) | b | 147,702 sản phẩm, 398,212 ảnh | CC BY 4.0 | ★★★★ |
+| 3 | [Marqo-GS-10M](https://github.com/marqo-ai/GCL) | b | ~10M cặp query-sản phẩm, có ảnh | Repo Apache-2.0 (đã xác minh, README GitHub); license riêng của dữ liệu/ảnh chưa xác minh | ★★★★ |
+| 4 | [Stanford Online Products (SOP)](https://arxiv.org/pdf/1511.06452) | b/c | 120,053 ảnh, 22,634 sản phẩm | Chưa xác minh (search không thấy license; trang gốc ai.stanford.edu/~sijia/Stanford-Online-Products/) | ★★★★ |
+| 5 | [Products-10K (JD.com)](https://products-10k.github.io/) | b | 10,000 SKU, gần 150,000 ảnh (theo search: paper + v7labs/neurohive; ảnh shop + ảnh khách, nhãn kiểm ≥3 người, nhiễu <0.5%) | Chưa xác minh; host products-10k.github.io | ★★★★ |
+| 6 | [DeepFashion (Consumer-to-Shop)](https://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/Consumer2ShopRetrieval.html) | c | >800K ảnh tổng, 50 danh mục, 1,000 thuộc tính, >300K cặp (paper CVPR 2016, theo search); C2S: 33,881 item, 239,557 ảnh | Chỉ học thuật, cấm thương mại; phải ký thỏa thuận để lấy mật khẩu (theo search, trang UCF mirror) | ★★★ |
+| 7 | [Street2Shop](https://openaccess.thecvf.com/content_iccv_2015/papers/Kiapour_Where_to_Buy_ICCV_2015_paper.pdf) | c | 404,683 ảnh shop, 20,357 ảnh street | Chưa xác minh | ★★★ |
+| 8 | [Fashion IQ](https://github.com/XiaoxiaoGuo/fashion-iq) | c | Chưa xác minh quy mô | CDLA (repo) | ★★★ |
+| 9 | [Fashion-Gen](https://arxiv.org/pdf/1806.08317) | c | 293,008 ảnh | Chưa xác minh | ★★ |
+| 10 | [H&M Personalized Fashion (ảnh)](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations) | b | 105,542 sản phẩm có ảnh | Luật cuộc thi Kaggle | ★★★ |
+| 11 | [LRVS-Fashion](https://arxiv.org/pdf/2306.02928) | c | Chưa xác minh quy mô | CC BY-NC 4.0 | ★★ |
+| 12 | [LAION-5B / Re-LAION](https://laion.ai/blog/laion-5b/) | d | ~5B cặp ảnh-text (metadata) | Metadata CC BY 4.0; ảnh thuộc chủ sở hữu | ★★ |
+| 13 | [MS COCO captions](https://arxiv.org/pdf/1405.0312) | c | Chưa xác minh trong phiên này | Chưa xác minh | ★ |
+| 14 | [Visual Product Search Benchmark (2026)](https://arxiv.org/pdf/2603.17186) | c | Chưa xác minh | Chưa xác minh | ★★ |
+| 15 | [SQID (ESCI + ảnh)](https://github.com/Crossing-Minds/shopping-queries-image-dataset) | b | >190,000 sản phẩm; 164,900 product ID test + 27,139 bổ sung; ~156,545 URL ảnh | MIT (đã xác minh, README GitHub) | ★★★★ |
+| 16 | [Amazon Reviews 2023 (ảnh + metadata)](https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023) | b | >570M review, 48M sản phẩm, 33 danh mục (theo search) | CC BY 4.0 (theo arXiv, xem file 10) | ★★★ |
+| 17 | [Rakuten France Multimodal (SIGIR eCom 2020)](https://challengedata.ens.fr/challenges/35) | b | 99K listing có ảnh+tiêu đề (theo search) | Đăng ký Challenge Data; chưa xác minh | ★★★ |
 
 Ghi chú: chủ dự án xác nhận không cần ảnh sản phẩm Việt Nam; bộ quốc tế bên dưới đủ để chọn phương pháp, sau đó bổ sung bằng bộ ảnh nội bộ (mục 5).
 

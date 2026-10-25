@@ -49,29 +49,29 @@
 
 | # | Tên | Nhóm | Tác vụ | Quy mô (theo nguồn đã thấy) | License / truy cập | ★ |
 |---|---|---|---|---|---|---|
-| 1 | UIT-ViSFD (smartphone feedback) | a | ABSA 10 aspect × 3 polarity | 11.122 comment | tự do cho nghiên cứu (license rõ: chưa xác minh) | 5 |
-| 2 | UIT-ViSD4SA | a | Span detection ABSA | 11.122 comment, 35.396 span | tự do cho nghiên cứu (GitHub) | 5 |
-| 3 | ViSpamReviews (+ v2) | a | Spam nhị phân + loại spam | 19.868 review (bản v1 theo snippet; chưa xác minh) | có bản CSV trên HF `visolex/ViSpamReviews` (10K–100K dòng); license chưa xác minh | 5 |
-| 4 | UIT-ViOCD | a | Phát hiện khiếu nại | 5.485 review, 4 danh mục | nghiên cứu; có trên HF `tarudesu/ViOCD` | 5 |
-| 5 | UIT-VSFC | a | Sentiment + topic (phản hồi sinh viên) | >16.000 câu | phải ký thỏa thuận với nhóm UIT NLP | 3 |
-| 6 | VLSP 2016 (sentiment) / VLSP 2018 (ABSA khách sạn, nhà hàng) | a | Sentiment, ABSA | chưa xác minh | qua trang tài nguyên VLSP (đăng ký) | 3 |
-| 7 | UIT-VSMEC | a | Cảm xúc 6 lớp (MXH) | 6.927 câu | trang corpus UIT (thỏa thuận) | 2 |
-| 8 | ViHSD / ViHOS / UIT-ViCTSD | a | Hate/offensive, toxic (bình luận MXH) | ViHSD ~33K; ViHOS 11K comment/26K span; ViCTSD 10.000 | ViHSD: HF + yêu cầu email tác giả | 2 |
-| 9 | Review Tiki/Shopee/Sendo/Hasaki (bài 2024) | a | ABSA | 10.021 review | chưa công bố trong kết quả | 1 |
-| 10 | Shopee Code League 2020 – Sentiment Analysis | a | Sentiment (review Shopee, đa nước) | tăng ~10,2x khi thêm dữ liệu ngoài (chưa xác minh số gốc) | thuộc điều khoản Shopee trên Kaggle | 2 |
-| 11 | Amazon Reviews 2023 (McAuley Lab) | b | Rating, review, metadata | >570 triệu review, 48 triệu item, 33 danh mục | CC BY 4.0 (theo bản arXiv); xem điều khoản | 4 |
-| 12 | Yelp (YelpChi, YelpNYC, YelpZip; Rayana & Akoglu) | b | Review spam có nhãn filter | YelpChi 67.395 review (13,23% giả); NYC ~359K; Zip ~608K | gửi email tác giả (ODDS) | 4 |
-| 13 | Olist Brazilian E-Commerce | b | Review + đơn + giao hàng | ~100K đơn 2016–2018 | CC BY-NC-SA 4.0 (chưa xác minh) | 3 |
-| 14 | Dữ liệu review LLM-sinh (MAiDE-up, Ghostwriters, Salminen GPT-2, FraudSquad) | c | Phát hiện review máy sinh | MAiDE-up 10K thật + 10K giả, 10 ngôn ngữ; Salminen ~40.433 (20.238 CG / 20.216 OR) | từng bộ; chưa xác minh | 4 |
-| 15 | SemEval-2016 Task 5 (ABSA) | c | ABSA đa ngôn ngữ | nhà hàng 6 ngôn ngữ, laptop en | trang task; license chưa xác minh | 3 |
-| 16 | Opinosis / SPACE / FewSum (Yelp, Amazon) | c | Tóm tắt review | Opinosis 51 chủ đề; SPACE 50 khách sạn có tóm tắt | từng bộ; chưa xác minh | 3 |
-| 17 | Yelp Open Dataset | b | Review, business, rating | 6.990.280 review, 150.346 business, 11 vùng đô thị, 200.100 ảnh; tar 4,35 GB (8,65 GB giải nén) | mục đích giáo dục/nghiên cứu; điều khoản hiện hành chưa xác minh | 4 |
-| 18 | Multilingual Amazon Reviews Corpus (MARC) | b | Rating 1–5 đa ngôn ngữ | 6 ngôn ngữ × (200K train + 5K dev + 5K test), 2015–2019, cân bằng 20% mỗi sao | chỉ học thuật theo điều khoản Amazon (AWS Open Data) | 4 |
-| 19 | Amazon Polarity (Zhang et al., bản HF) | b | Sentiment nhị phân | 3,6 triệu train + 0,4 triệu test; review đến 3/2013; bỏ sao 3 | Apache-2.0 (nhãn của gói HF; nguồn gốc có thể có điều khoản khác) | 3 |
-| 20 | Ott et al. – Deceptive Opinion Spam (OpSpam) | c | Review giả viết thuê | 400 thật + 400 giả (hotel Chicago) bản gốc 2011; mở rộng đến 1.280 giả (hotel + nhà hàng) | chưa xác minh | 3 |
-| 21 | Salminen et al. – Fake reviews (GPT-2) | c | Review máy sinh vs thật | ~40.433 review, 10 danh mục Amazon | chưa xác minh | 4 |
-| 22 | Women's E-Commerce Clothing Reviews (Kaggle) | b | Rating, recommend, text | 23.486 dòng, 10 cột; tên retailer đã thay | CC0 (theo mirror Kaggle-metadata/OpenML) | 3 |
-| 23 | Amazon Fine Food Reviews (Kaggle) | b | Rating + text | 568.454 review (đến 10/2012) | các mirror ghi non-commercial; chưa xác minh trên Kaggle | 2 |
+| 1 | [UIT-ViSFD (smartphone feedback)](https://huggingface.co/datasets/visolex/ViSFD) | a | ABSA 10 aspect × 3 polarity | 11.122 comment | tự do cho nghiên cứu (license rõ: chưa xác minh) | 5 |
+| 2 | [UIT-ViSD4SA](https://github.com/kimkim00/UIT-ViSD4SA) | a | Span detection ABSA | 11.122 comment, 35.396 span | tự do cho nghiên cứu (GitHub) | 5 |
+| 3 | [ViSpamReviews (+ v2)](https://huggingface.co/datasets/visolex/ViSpamReviews) | a | Spam nhị phân + loại spam | 19.868 review (bản v1 theo snippet; chưa xác minh) | có bản CSV trên HF `visolex/ViSpamReviews` (10K–100K dòng); license chưa xác minh | 5 |
+| 4 | [UIT-ViOCD](https://huggingface.co/datasets/tarudesu/ViOCD) | a | Phát hiện khiếu nại | 5.485 review, 4 danh mục | nghiên cứu; có trên HF `tarudesu/ViOCD` | 5 |
+| 5 | [UIT-VSFC](https://github.com/kietnv/uit-vsfc) | a | Sentiment + topic (phản hồi sinh viên) | >16.000 câu | phải ký thỏa thuận với nhóm UIT NLP | 3 |
+| 6 | [VLSP 2016 (sentiment) / VLSP 2018 (ABSA khách sạn, nhà hàng)](https://vjst.vast.vn/jcc/article/view/13160) | a | Sentiment, ABSA | chưa xác minh | qua trang tài nguyên VLSP (đăng ký) | 3 |
+| 7 | [UIT-VSMEC](https://ar5iv.labs.arxiv.org/html/1911.09339) | a | Cảm xúc 6 lớp (MXH) | 6.927 câu | trang corpus UIT (thỏa thuận) | 2 |
+| 8 | [ViHSD / ViHOS / UIT-ViCTSD](https://github.com/sonlam1102/vihsd) | a | Hate/offensive, toxic (bình luận MXH) | ViHSD ~33K; ViHOS 11K comment/26K span; ViCTSD 10.000 | ViHSD: HF + yêu cầu email tác giả | 2 |
+| 9 | [Review Tiki/Shopee/Sendo/Hasaki (bài 2024)](https://doaj.org/article/625f8f28cd8e4f1888076fc69bc97418) | a | ABSA | 10.021 review | chưa công bố trong kết quả | 1 |
+| 10 | [Shopee Code League 2020 – Sentiment Analysis](https://github.com/ilos-vigil/scl-2020-sentiment-analysis) | a | Sentiment (review Shopee, đa nước) | tăng ~10,2x khi thêm dữ liệu ngoài (chưa xác minh số gốc) | thuộc điều khoản Shopee trên Kaggle | 2 |
+| 11 | [Amazon Reviews 2023 (McAuley Lab)](https://amazon-reviews-2023.github.io/) | b | Rating, review, metadata | >570 triệu review, 48 triệu item, 33 danh mục | CC BY 4.0 (theo bản arXiv); xem điều khoản | 4 |
+| 12 | [Yelp (YelpChi, YelpNYC, YelpZip; Rayana & Akoglu)](https://odds.cs.stonybrook.edu/?p=562) | b | Review spam có nhãn filter | YelpChi 67.395 review (13,23% giả); NYC ~359K; Zip ~608K | gửi email tác giả (ODDS) | 4 |
+| 13 | [Olist Brazilian E-Commerce](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) | b | Review + đơn + giao hàng | ~100K đơn 2016–2018 | CC BY-NC-SA 4.0 (chưa xác minh) | 3 |
+| 14 | [Dữ liệu review LLM-sinh (MAiDE-up, Ghostwriters, Salminen GPT-2, FraudSquad)](https://arxiv.org/pdf/2404.12938v1) | c | Phát hiện review máy sinh | MAiDE-up 10K thật + 10K giả, 10 ngôn ngữ; Salminen ~40.433 (20.238 CG / 20.216 OR) | từng bộ; chưa xác minh | 4 |
+| 15 | [SemEval-2016 Task 5 (ABSA)](https://alt.qcri.org/semeval2016/task5/) | c | ABSA đa ngôn ngữ | nhà hàng 6 ngôn ngữ, laptop en | trang task; license chưa xác minh | 3 |
+| 16 | [Opinosis / SPACE / FewSum (Yelp, Amazon)](https://kavita-ganesan.com/?p=59) | c | Tóm tắt review | Opinosis 51 chủ đề; SPACE 50 khách sạn có tóm tắt | từng bộ; chưa xác minh | 3 |
+| 17 | [Yelp Open Dataset](https://www.yelp.com/dataset) | b | Review, business, rating | 6.990.280 review, 150.346 business, 11 vùng đô thị, 200.100 ảnh; tar 4,35 GB (8,65 GB giải nén) | mục đích giáo dục/nghiên cứu; điều khoản hiện hành chưa xác minh | 4 |
+| 18 | [Multilingual Amazon Reviews Corpus (MARC)](https://docs.opendata.aws/amazon-reviews-ml/readme.html) | b | Rating 1–5 đa ngôn ngữ | 6 ngôn ngữ × (200K train + 5K dev + 5K test), 2015–2019, cân bằng 20% mỗi sao | chỉ học thuật theo điều khoản Amazon (AWS Open Data) | 4 |
+| 19 | [Amazon Polarity (Zhang et al., bản HF)](https://www.tensorflow.org/datasets/community_catalog/huggingface/amazon_polarity) | b | Sentiment nhị phân | 3,6 triệu train + 0,4 triệu test; review đến 3/2013; bỏ sao 3 | Apache-2.0 (nhãn của gói HF; nguồn gốc có thể có điều khoản khác) | 3 |
+| 20 | [Ott et al. – Deceptive Opinion Spam (OpSpam)](https://ar5iv.arxiv.org/html/1107.4557) | c | Review giả viết thuê | 400 thật + 400 giả (hotel Chicago) bản gốc 2011; mở rộng đến 1.280 giả (hotel + nhà hàng) | chưa xác minh | 3 |
+| 21 | [Salminen et al. – Fake reviews (GPT-2)](https://github.com/joolsa/FakeReviews) | c | Review máy sinh vs thật | ~40.433 review, 10 danh mục Amazon | chưa xác minh | 4 |
+| 22 | [Women's E-Commerce Clothing Reviews (Kaggle)](https://baselight.app/u/kaggle/dataset/nicapotato_womens_ecommerce_clothing_reviews) | b | Rating, recommend, text | 23.486 dòng, 10 cột; tên retailer đã thay | CC0 (theo mirror Kaggle-metadata/OpenML) | 3 |
+| 23 | [Amazon Fine Food Reviews (Kaggle)](https://snap.stanford.edu/data/web-FineFoods.html) | b | Rating + text | 568.454 review (đến 10/2012) | các mirror ghi non-commercial; chưa xác minh trên Kaggle | 2 |
 
 ### (a) Tiếng Việt / Việt Nam
 

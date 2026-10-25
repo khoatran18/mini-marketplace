@@ -42,23 +42,23 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn) | Ngôn ngữ | License | ★ |
 |---|---|---|---|---|---|---|
-| 1 | MC-OCR 2021 (RIVF) | (a)/(d) | 2.436 ảnh biên lai Việt chụp bằng điện thoại (đã xác minh, search) | Việt | chưa xác minh | 5 (nếu truy cập được) |
-| 2 | UIT-MLReceipts | (a) | chưa xác minh | Việt (tên dự án gợi ý) | chưa xác minh | 4 |
-| 3 | VinText | (a)/(d) | 2.000 ảnh, ~56.000 instance | Việt | chỉ nghiên cứu/giáo dục, cấm phân phối lại | 3 (cảnh chữ, không phải hoá đơn) |
-| 4 | VietOCR (mô hình + dữ liệu mẫu) | (a) | ~10 triệu ảnh dòng chữ (huấn luyện); mẫu 1 triệu ảnh tổng hợp | Việt | Apache-2.0 (code) | 3 |
-| 5 | SROIE (ICDAR 2019) | (c) | 1.000 biên lai (600 trainval + 400 test) | Anh/số (Malaysia) | dữ liệu: chưa xác minh; code MIT | 4 |
-| 6 | CORD | (c) | 1.000 biên lai (800/100/100) dù mô tả ghi >11.000 | Indonesia | CC BY 4.0 | 5 |
-| 7 | WildReceipt (MMOCR) | (c) | 1.740 ảnh, 68.975 bbox, 25 lớp (đã xác minh, search) | Anh (chưa xác minh) | chưa xác minh | 3 |
-| 8 | DocILE | (c)/(d) | 6.680 annotated, 932K unlabeled, 100K synthetic (đã xác minh, search) | Anh | cần token đăng ký; code MIT | 4 |
-| 9 | Kleister (NDA, Charity) | (c) | NDA: 540 tài liệu (254/83/203) | Anh | chưa nêu | 1 |
-| 10 | FUNSD | (c) | chưa xác minh | Anh | chưa xác minh | 2 |
-| 11 | RVL-CDIP | (c) | 400.000 ảnh, 16 lớp (mô tả repo thứ cấp) | Anh | chưa xác minh | 2 (phân loại loại chứng từ) |
-| 12 | SynthDoG (Donut) | (c) | 4 bộ × 0,5M (en/zh/ja/ko) | không có Việt sẵn | chưa nêu | 3 (công cụ sinh) |
-| 13 | Train Ticket (Donut) | (c) | chưa xác minh | Trung | chưa nêu | 1 |
-| 14 | FATURA | (c) | 10.000 hoá đơn, 50 layout (200 ảnh/layout), 24 lớp (đã xác minh, search) | Anh | chưa xác minh (Zenodo, ~690,7 MB) | 4 |
-| 15 | XFUND | (c) | form 7 ngôn ngữ (zh, ja, es, fr, it, de, pt); số mẫu chưa xác minh | đa ngôn ngữ | CC BY-NC-SA 4.0 (theo bản mirror HF, search) | 2 |
-| 16 | ReceiptSense (CORU) | (c) | 20.000 biên lai annotate, 30.000 ảnh OCR, 10.000 item-level (search) | Ả Rập/Anh | chưa xác minh | 3 |
-| 17 | Viet-Receipt-VQA (5CD-AI, HF) | (a) | dẫn xuất từ MC-OCR: bản thấy trong search ghi 2.034 biên lai (bản trước 1.589) | Việt | chưa xác minh | 3 |
+| 1 | [MC-OCR 2021 (RIVF)](https://competitions.codalab.org/competitions/27798) | (a)/(d) | 2.436 ảnh biên lai Việt chụp bằng điện thoại (đã xác minh, search) | Việt | chưa xác minh | 5 (nếu truy cập được) |
+| 2 | [UIT-MLReceipts](https://service.tib.eu/ldmservice/dataset/activity/uit-mlreceipts--a-multilingual-benchmark-for-detecting-and-recognizing-key-information-in-receipts) | (a) | chưa xác minh | Việt (tên dự án gợi ý) | chưa xác minh | 4 |
+| 3 | [VinText](https://github.com/VinAIResearch/dict-guided) | (a)/(d) | 2.000 ảnh, ~56.000 instance | Việt | chỉ nghiên cứu/giáo dục, cấm phân phối lại | 3 (cảnh chữ, không phải hoá đơn) |
+| 4 | [VietOCR (mô hình + dữ liệu mẫu)](https://github.com/pbcquoc/vietocr) | (a) | ~10 triệu ảnh dòng chữ (huấn luyện); mẫu 1 triệu ảnh tổng hợp | Việt | Apache-2.0 (code) | 3 |
+| 5 | [SROIE (ICDAR 2019)](https://github.com/zzzDavid/ICDAR-2019-SROIE) | (c) | 1.000 biên lai (600 trainval + 400 test) | Anh/số (Malaysia) | dữ liệu: chưa xác minh; code MIT | 4 |
+| 6 | [CORD](https://github.com/clovaai/cord) | (c) | 1.000 biên lai (800/100/100) dù mô tả ghi >11.000 | Indonesia | CC BY 4.0 | 5 |
+| 7 | [WildReceipt (MMOCR)](https://github.com/open-mmlab/mmocr/blob/main/docs/en/user_guides/data_prepare/kie.md) | (c) | 1.740 ảnh, 68.975 bbox, 25 lớp (đã xác minh, search) | Anh (chưa xác minh) | chưa xác minh | 3 |
+| 8 | [DocILE](https://github.com/rossumai/docile) | (c)/(d) | 6.680 annotated, 932K unlabeled, 100K synthetic (đã xác minh, search) | Anh | cần token đăng ký; code MIT | 4 |
+| 9 | [Kleister (NDA, Charity)](https://github.com/applicaai/kleister-nda) | (c) | NDA: 540 tài liệu (254/83/203) | Anh | chưa nêu | 1 |
+| 10 | [FUNSD](https://arxiv.org/pdf/1905.13538) | (c) | chưa xác minh | Anh | chưa xác minh | 2 |
+| 11 | [RVL-CDIP](https://huggingface.co/datasets/aharley/rvl_cdip) | (c) | 400.000 ảnh, 16 lớp (mô tả repo thứ cấp) | Anh | chưa xác minh | 2 (phân loại loại chứng từ) |
+| 12 | [SynthDoG (Donut)](https://github.com/clovaai/donut) | (c) | 4 bộ × 0,5M (en/zh/ja/ko) | không có Việt sẵn | chưa nêu | 3 (công cụ sinh) |
+| 13 | [Train Ticket (Donut)](https://github.com/clovaai/donut) | (c) | chưa xác minh | Trung | chưa nêu | 1 |
+| 14 | [FATURA](https://zenodo.org/records/10371464) | (c) | 10.000 hoá đơn, 50 layout (200 ảnh/layout), 24 lớp (đã xác minh, search) | Anh | chưa xác minh (Zenodo, ~690,7 MB) | 4 |
+| 15 | [XFUND](https://huggingface.co/datasets/FrancophonIA/XFUND) | (c) | form 7 ngôn ngữ (zh, ja, es, fr, it, de, pt); số mẫu chưa xác minh | đa ngôn ngữ | CC BY-NC-SA 4.0 (theo bản mirror HF, search) | 2 |
+| 16 | [ReceiptSense (CORU)](https://arxiv.org/pdf/2406.04493) | (c) | 20.000 biên lai annotate, 30.000 ảnh OCR, 10.000 item-level (search) | Ả Rập/Anh | chưa xác minh | 3 |
+| 17 | [Viet-Receipt-VQA (5CD-AI, HF)](https://huggingface.co/datasets/5CD-AI/Viet-Receipt-VQA) | (a) | dẫn xuất từ MC-OCR: bản thấy trong search ghi 2.034 biên lai (bản trước 1.589) | Việt | chưa xác minh | 3 |
 
 ### (a) Tiếng Việt / Việt Nam
 

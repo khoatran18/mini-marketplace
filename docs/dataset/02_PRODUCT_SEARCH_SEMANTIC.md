@@ -43,25 +43,25 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn) | Ngôn ngữ | License | ★ |
 |---|---|---|---|---|---|---|
-| 1 | VN-MTEB (GreenNode + ĐH Quốc tế) | (a)/(c) | 41 dataset, 6 loại task | Việt | chưa xác minh | 4 |
-| 2 | ViRE (multi-domain Vietnamese IR) | (a)/(c) | 10 dataset + 2 bonus, tối đa 1.000 cặp/dataset | Việt | code MIT; dữ liệu theo từng bộ (EduCoQA, CSConDa CC BY-NC 4.0) | 4 |
-| 3 | Vietnamese IR benchmark (PACLIC 2024) | (a)/(c) | chưa xác minh | Việt | chưa xác minh | 3 |
-| 4 | mMARCO (có tiếng Việt: chưa xác minh) | (a)/(c) | MS MARCO 8,8M passage, dịch máy | 14 ngôn ngữ (Việt chưa xác minh) | Apache-2.0 (repo); gốc MS MARCO phi thương mại | 3 |
-| 5 | TVPL / Zalo Legal retrieval (Việt) | (a)/(d) | TVPL: 165.334 query train, 10.000 test, 224.006 passage (theo paper) | Việt | chưa xác minh | 2 |
-| 6 | Mô hình/dữ liệu Việt: product-e5-small-vietnamese, hllj/synthetic-text-embedding | (a) | chưa xác minh | Việt | chưa xác minh | 3 |
-| 7 | Amazon ESCI Shopping Queries | (b) | 130.652 query, ~2,6M judgement (bản đầy đủ); 48.300 query/1.118.011 judgement (bản rút gọn) | Anh, Tây Ban Nha, Nhật | Apache-2.0 | 5 |
-| 8 | WANDS (Wayfair) | (b) | 480 query, 42.994 sản phẩm, 233.448 judgement | Anh | MIT | 5 |
-| 9 | Home Depot Product Search Relevance (Kaggle) | (b) | train 74.067 cặp, test ~166.693, 124.428 sản phẩm (đã xác minh, search) | Anh | điều khoản cuộc thi (chưa xác minh) | 3 |
-| 10 | Amazon-M2 (KDD Cup 2023) | (b)/(d) | hàng triệu session, 6 locale | Anh, Đức, Nhật, Pháp, Ý, Tây Ban Nha | Apache-2.0 (theo paper) | 2 |
-| 11 | Amazon Reviews 2023 (metadata) | (b) | chưa xác minh | Anh | chưa xác minh | 2 |
-| 12 | JDsearch (JD.com) | (b) | ~173.831 user, 12,87M sản phẩm, ~26,7M tương tác, 171.728 query test | Trung (văn bản bị ẩn danh) | CC BY-NC-SA 4.0 (đã xác minh, GitHub) | 3 |
-| 13 | Baidu-ULTR | (b)/(c) | 1,2 tỷ session; 7.008 query có nhãn chuyên gia (theo paper) | Trung | chưa xác minh; README: hiện không tải công khai được do hạn chế pháp lý với Baidu, phải xin link riêng | 3 |
-| 14 | Shopee Price Match (Kaggle 2021) | (d) | ~34K ảnh/tiêu đề, 11.014 nhóm | Chủ yếu Indonesia/Anh (chưa xác minh) | điều khoản cuộc thi (chưa xác minh) | 3 |
-| 15 | Marqo e-commerce evals (HF) | (b)/(d) | amazon-products-eval 1M–10M; google-shopping-general-eval 100K–1M | Anh | chưa xác minh | 2 |
-| 16 | MS MARCO / BEIR | (c) | 8,8M passage; 532.761 cặp train; BEIR 17–18 dataset | Anh | phi thương mại, nghiên cứu | 2 |
-| 18 | Shopping Queries Image Dataset (SQID) | (b) | >190.000 sản phẩm (164.900 từ ESCI test US + 27.139 bổ sung); URL ảnh 156.545 sản phẩm; CLIP embedding | Anh | MIT (đã xác minh, GitHub); dữ liệu gốc ESCI Apache-2.0 | 4 |
-| 19 | TREC Product Search Track (2023–2025) | (c) | topics + qrels + corpus (số liệu chưa xác minh) | Anh | chưa xác minh | 3 |
-| 17 | KuaiSearch (arXiv 2026) | (c) | chưa xác minh | Trung (chưa xác minh) | chưa xác minh | 2 |
+| 1 | [VN-MTEB (GreenNode + ĐH Quốc tế)](https://arxiv.org/pdf/2507.21500) | (a)/(c) | 41 dataset, 6 loại task | Việt | chưa xác minh | 4 |
+| 2 | [ViRE (multi-domain Vietnamese IR)](https://github.com/longstnguyen/ViRE) | (a)/(c) | 10 dataset + 2 bonus, tối đa 1.000 cặp/dataset | Việt | code MIT; dữ liệu theo từng bộ (EduCoQA, CSConDa CC BY-NC 4.0) | 4 |
+| 3 | [Vietnamese IR benchmark (PACLIC 2024)](https://aclanthology.org/2024.paclic-1.5) | (a)/(c) | chưa xác minh | Việt | chưa xác minh | 3 |
+| 4 | [mMARCO (có tiếng Việt: chưa xác minh)](https://github.com/unicamp-dl/mMARCO) | (a)/(c) | MS MARCO 8,8M passage, dịch máy | 14 ngôn ngữ (Việt chưa xác minh) | Apache-2.0 (repo); gốc MS MARCO phi thương mại | 3 |
+| 5 | [TVPL / Zalo Legal retrieval (Việt)](https://huggingface.co/datasets/GreenNode/TVPL-Retrieval) | (a)/(d) | TVPL: 165.334 query train, 10.000 test, 224.006 passage (theo paper) | Việt | chưa xác minh | 2 |
+| 6 | [Mô hình/dữ liệu Việt: product-e5-small-vietnamese, hllj/synthetic-text-embedding](https://huggingface.co/trantuan1701/product-e5-small-vietnamese) | (a) | chưa xác minh | Việt | chưa xác minh | 3 |
+| 7 | [Amazon ESCI Shopping Queries](https://github.com/amazon-science/esci-data) | (b) | 130.652 query, ~2,6M judgement (bản đầy đủ); 48.300 query/1.118.011 judgement (bản rút gọn) | Anh, Tây Ban Nha, Nhật | Apache-2.0 | 5 |
+| 8 | [WANDS (Wayfair)](https://github.com/wayfair/WANDS) | (b) | 480 query, 42.994 sản phẩm, 233.448 judgement | Anh | MIT | 5 |
+| 9 | [Home Depot Product Search Relevance (Kaggle)](https://nycdatascience.com/blog/student-works/improving-home-depot-search-relevance) | (b) | train 74.067 cặp, test ~166.693, 124.428 sản phẩm (đã xác minh, search) | Anh | điều khoản cuộc thi (chưa xác minh) | 3 |
+| 10 | [Amazon-M2 (KDD Cup 2023)](https://arxiv.org/pdf/2307.09688) | (b)/(d) | hàng triệu session, 6 locale | Anh, Đức, Nhật, Pháp, Ý, Tây Ban Nha | Apache-2.0 (theo paper) | 2 |
+| 11 | [Amazon Reviews 2023 (metadata)](https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023) | (b) | chưa xác minh | Anh | chưa xác minh | 2 |
+| 12 | [JDsearch (JD.com)](https://github.com/rucliujn/jdsearch) | (b) | ~173.831 user, 12,87M sản phẩm, ~26,7M tương tác, 171.728 query test | Trung (văn bản bị ẩn danh) | CC BY-NC-SA 4.0 (đã xác minh, GitHub) | 3 |
+| 13 | [Baidu-ULTR](https://arxiv.org/pdf/2207.03051v2) | (b)/(c) | 1,2 tỷ session; 7.008 query có nhãn chuyên gia (theo paper) | Trung | chưa xác minh; README: hiện không tải công khai được do hạn chế pháp lý với Baidu, phải xin link riêng | 3 |
+| 14 | [Shopee Price Match (Kaggle 2021)](https://github.com/jingxuanyang/Shopee-Product-Matching) | (d) | ~34K ảnh/tiêu đề, 11.014 nhóm | Chủ yếu Indonesia/Anh (chưa xác minh) | điều khoản cuộc thi (chưa xác minh) | 3 |
+| 15 | [Marqo e-commerce evals (HF)](https://huggingface.co/datasets/Marqo/amazon-products-eval) | (b)/(d) | amazon-products-eval 1M–10M; google-shopping-general-eval 100K–1M | Anh | chưa xác minh | 2 |
+| 16 | [MS MARCO / BEIR](https://microsoft.github.io/msmarco/) | (c) | 8,8M passage; 532.761 cặp train; BEIR 17–18 dataset | Anh | phi thương mại, nghiên cứu | 2 |
+| 18 | [Shopping Queries Image Dataset (SQID)](https://github.com/Crossing-Minds/shopping-queries-image-dataset) | (b) | >190.000 sản phẩm (164.900 từ ESCI test US + 27.139 bổ sung); URL ảnh 156.545 sản phẩm; CLIP embedding | Anh | MIT (đã xác minh, GitHub); dữ liệu gốc ESCI Apache-2.0 | 4 |
+| 19 | [TREC Product Search Track (2023–2025)](https://trec.nist.gov/data/product.html) | (c) | topics + qrels + corpus (số liệu chưa xác minh) | Anh | chưa xác minh | 3 |
+| 17 | [KuaiSearch (arXiv 2026)](https://arxiv.org/pdf/2602.11518v1) | (c) | chưa xác minh | Trung (chưa xác minh) | chưa xác minh | 2 |
 
 ### (a) Tiếng Việt / Việt Nam
 

@@ -50,23 +50,23 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo README đã đọc) | Ngôn ngữ | License | ★ |
 |---|---|---|---|---|---|---|
-| 1 | τ-bench / τ²-bench (retail, airline, telecom) | (c) | τ²: 50 task/domain × 6 ngôn ngữ (text-v1); voice-v1 EN: 114 retail | Anh, Tây Ban Nha, Bồ Đào Nha, Hindi, Trung, Hàn (đã xác minh, README tau2-bench) | MIT | 5 |
-| 2 | τ²-bench-Verified (Amazon AGI) | (c) | bản sửa dữ liệu của τ²; số task retail chưa xác minh | Anh | MIT | 4 |
-| 3 | ABCD (ASAPP) | (c) | >10K hội thoại người–người, 55 ý định | Anh | MIT | 5 |
-| 4 | WebShop | (c) | 1,18 triệu sản phẩm, 12.087 chỉ dẫn | Anh | MIT | 4 |
-| 5 | ShoppingBench (AAAI 2026) | (c) | 3.310 chỉ dẫn; sandbox >2,5 triệu sản phẩm; 4 bộ test | Anh (chưa xác minh rõ) | Apache-2.0 | 4 |
-| 6 | Shopping MMLU | (c) | 57 task, 20.799 câu hỏi (arXiv v1) | chủ yếu Anh; 1 trong 4 nhóm kỹ năng là đa ngôn ngữ (danh sách ngôn ngữ chưa xác minh) | Apache-2.0 | 3 |
-| 7 | EcomGPT / EcomInstruct | (c) | 2,5 triệu instruction; 12 tập đánh giá × 500 | Anh, Trung | chưa nêu | 3 |
-| 8 | MultiWOZ | (c) | ~10,4K hội thoại (3.406 đơn miền + 7.032 đa miền) | Anh | code MIT; dữ liệu chưa nêu | 2 |
-| 9 | Taskmaster (TM-1..TM-4) | (c)/(d) | >55.000 hội thoại | Anh | chưa nêu | 2 |
-| 10 | CSConDa (trong ViRE) | (a) | tối đa 1.000 cặp question–context (mẫu ViRE) | Việt | CC BY-NC 4.0 | 3 |
-| 11 | Bitext Customer Support LLM Chatbot Training Dataset | (b) | 26.872 cặp hỏi–đáp, 27 intent, 10 nhóm (~1.000/intent) | Anh | CDLA-Sharing-1.0 | 4 |
-| 12 | MultiDoGO (Amazon) | (c) | >81K hội thoại, 6 miền (>54K có nhãn intent/slot); trang Amazon ghi >65K, 7 miền | Anh | CDLA-Permissive-1.0 (theo bản HF mirror) | 3 |
-| 13 | Customer Support on Twitter (Kaggle) | (b) | ~2,81 triệu tweet (1,54 triệu của khách, 1,27 triệu của kênh hỗ trợ), thu thập 2017 | Anh | chưa xác minh | 3 |
-| 14 | Amazon-C4 (McAuley Lab, BLaIR) | (b) | test 21.223 query; item pool ~1,06 triệu sản phẩm | Anh | chưa xác minh | 3 |
-| 15 | ECInstruct / eCeLLM (Ohio State) | (c) | 116.528 mẫu, 10 tác vụ TMĐT, 4 nhóm | Anh | chưa xác minh (thẻ model eCeLLM-S: CC BY 4.0) | 3 |
-| 16 | SEATauBench (SEACrowd) | (c) | bản địa hoá τ²-bench; số task chưa xác minh | Việt, Indonesia, Thái, Filipino, Trung | chưa xác minh | 3 |
-| 17 | Amazon Reviews 2023 (cho FAQ/review-QA) | (b) | >570 triệu review, 48 triệu sản phẩm, 33 danh mục | Anh | xem file 07 | 3 |
+| 1 | [τ-bench / τ²-bench (retail, airline, telecom)](https://github.com/sierra-research/tau2-bench) | (c) | τ²: 50 task/domain × 6 ngôn ngữ (text-v1); voice-v1 EN: 114 retail | Anh, Tây Ban Nha, Bồ Đào Nha, Hindi, Trung, Hàn (đã xác minh, README tau2-bench) | MIT | 5 |
+| 2 | [τ²-bench-Verified (Amazon AGI)](https://github.com/amazon-agi/tau2-bench-verified) | (c) | bản sửa dữ liệu của τ²; số task retail chưa xác minh | Anh | MIT | 4 |
+| 3 | [ABCD (ASAPP)](https://github.com/asappresearch/abcd) | (c) | >10K hội thoại người–người, 55 ý định | Anh | MIT | 5 |
+| 4 | [WebShop](https://github.com/princeton-nlp/WebShop) | (c) | 1,18 triệu sản phẩm, 12.087 chỉ dẫn | Anh | MIT | 4 |
+| 5 | [ShoppingBench (AAAI 2026)](https://github.com/yjwjy/ShoppingBench) | (c) | 3.310 chỉ dẫn; sandbox >2,5 triệu sản phẩm; 4 bộ test | Anh (chưa xác minh rõ) | Apache-2.0 | 4 |
+| 6 | [Shopping MMLU](https://github.com/KL4805/ShoppingMMLU) | (c) | 57 task, 20.799 câu hỏi (arXiv v1) | chủ yếu Anh; 1 trong 4 nhóm kỹ năng là đa ngôn ngữ (danh sách ngôn ngữ chưa xác minh) | Apache-2.0 | 3 |
+| 7 | [EcomGPT / EcomInstruct](https://github.com/Alibaba-NLP/EcomGPT) | (c) | 2,5 triệu instruction; 12 tập đánh giá × 500 | Anh, Trung | chưa nêu | 3 |
+| 8 | [MultiWOZ](https://github.com/budzianowski/multiwoz) | (c) | ~10,4K hội thoại (3.406 đơn miền + 7.032 đa miền) | Anh | code MIT; dữ liệu chưa nêu | 2 |
+| 9 | [Taskmaster (TM-1..TM-4)](https://github.com/google-research-datasets/Taskmaster) | (c)/(d) | >55.000 hội thoại | Anh | chưa nêu | 2 |
+| 10 | [CSConDa (trong ViRE)](https://github.com/longstnguyen/ViRE) | (a) | tối đa 1.000 cặp question–context (mẫu ViRE) | Việt | CC BY-NC 4.0 | 3 |
+| 11 | [Bitext Customer Support LLM Chatbot Training Dataset](https://huggingface.co/datasets/bitext/Bitext-customer-support-llm-chatbot-training-dataset) | (b) | 26.872 cặp hỏi–đáp, 27 intent, 10 nhóm (~1.000/intent) | Anh | CDLA-Sharing-1.0 | 4 |
+| 12 | [MultiDoGO (Amazon)](https://huggingface.co/datasets/jpcorb20/multidogo) | (c) | >81K hội thoại, 6 miền (>54K có nhãn intent/slot); trang Amazon ghi >65K, 7 miền | Anh | CDLA-Permissive-1.0 (theo bản HF mirror) | 3 |
+| 13 | Customer Support on Twitter (Kaggle) (chưa có link) | (b) | ~2,81 triệu tweet (1,54 triệu của khách, 1,27 triệu của kênh hỗ trợ), thu thập 2017 | Anh | chưa xác minh | 3 |
+| 14 | [Amazon-C4 (McAuley Lab, BLaIR)](https://huggingface.co/datasets/McAuley-Lab/Amazon-C4) | (b) | test 21.223 query; item pool ~1,06 triệu sản phẩm | Anh | chưa xác minh | 3 |
+| 15 | [ECInstruct / eCeLLM (Ohio State)](https://github.com/ninglab/eCeLLM) | (c) | 116.528 mẫu, 10 tác vụ TMĐT, 4 nhóm | Anh | chưa xác minh (thẻ model eCeLLM-S: CC BY 4.0) | 3 |
+| 16 | [SEATauBench (SEACrowd)](https://github.com/SEACrowd/SEATauBench) | (c) | bản địa hoá τ²-bench; số task chưa xác minh | Việt, Indonesia, Thái, Filipino, Trung | chưa xác minh | 3 |
+| 17 | [Amazon Reviews 2023 (cho FAQ/review-QA)](https://amazon-reviews-2023.github.io/) | (b) | >570 triệu review, 48 triệu sản phẩm, 33 danh mục | Anh | xem file 07 | 3 |
 
 ### (a) Tiếng Việt / Việt Nam
 

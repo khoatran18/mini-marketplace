@@ -43,23 +43,23 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn đã tra) | License | Phù hợp |
 |---|---|---|---|---|---|
-| 1 | Online Retail II (UCI) | b | 1,067,371 dòng (2009-12 đến 2011-12) | CC BY 4.0 | ★★★★★ |
-| 2 | Olist Brazilian E-Commerce | b | ~100K đơn (2016-2018), nhiều bảng | Chưa xác minh (nhớ là CC BY-NC-SA, không kiểm chứng) | ★★★★★ |
-| 3 | Dunnhumby The Complete Journey | b | ~2,500 hộ, 2 năm (bản R: 2,469 hộ, 1 năm) | Chưa xác minh gốc; gói R CC0 | ★★★★ |
-| 4 | Tmall / IJCAI-15 Repeat Buyers | b | Log 6 tháng đến "Double 11"; số user/dòng chưa xác minh (không thấy trong kết quả); tỉ lệ mua lại ~6.1% (theo 1 paper) | Chưa xác minh | ★★★★ |
-| 5 | Instacart Market Basket | b | 3,346,083 đơn, 206,209 user, 49,685 sản phẩm (bản BigML đã xử lý; bản Kaggle gốc có thể lệch nhẹ), 6 file CSV | Điều khoản Instacart (chưa xác minh) | ★★★ |
-| 6 | Criteo Uplift | c | 25,309,483 dòng (TFDS); bản ~13M dòng (Microsoft Fabric/Kaggle mirror); 12 đặc trưng f0-f11 + treatment + visit + conversion | Điều khoản Criteo Research (chưa xác minh) | ★★★★ |
-| 7 | Hillstrom MineThatData | c | 64,000 khách, 3 nhóm email | TFDS; điều khoản gốc chưa xác minh | ★★★★ |
-| 8 | X5 RetailHero | c/d | clients, train (treatment_flg, target), purchases; số khách/dòng chưa xác minh | Chưa xác minh | ★★★★ |
-| 9 | Acquire Valued Shoppers (Kaggle) | b | ~350M dòng, >300K khách, 22 GB | Luật cuộc thi | ★★★ |
-| 10 | Retailrocket e-commerce | b | 2,756,101 sự kiện (2,664,312 view, 69,332 addtocart, 22,457 transaction), 1,407,580 visitor, 417,053 item trong file thuộc tính (nguồn thứ cấp qua search) | Chưa xác minh | ★★★ |
-| 11 | IBM Telco Customer Churn | c | 7,043 khách, 21 cột | IBM sample (chưa xác minh) | ★★ |
-| 12 | Santander Customer Transaction | c | 200,000 dòng, 200 đặc trưng ẩn danh | Luật cuộc thi | ★ |
-| 13 | Open Bandit Dataset (ZOZOTOWN) | c | ~26M dòng impression; 80 item (All), 34 (Men), 46 (Women) | CC BY 4.0 nhưng paper ghi chỉ cho nghiên cứu phi thương mại (nguồn: paper/research.zozo.com qua search) | ★★★ |
-| 14 | Kaggle Retail Price Optimization | b | Chưa xác minh | Chưa xác minh | ★★ |
-| 15 | ViEcomRec (Việt Nam) | a | 369,099 tương tác, sản phẩm sữa rửa mặt | Chưa xác minh | ★★ |
-| 16 | REES46 / Kaggle "E-commerce behavior data from multi category store" | b | Log sự kiện view/cart/remove_from_cart/purchase; file 2019-Nov.csv ~9 GB (qua hướng dẫn YDB); số sự kiện tổng chưa xác minh | Chưa xác minh (một nhận xét ghi phi thương mại; không phải văn bản license) | ★★★★ |
-| 17 | M5 Forecasting (Walmart) | b | 42,840 chuỗi doanh số phân cấp (30,490 ở mức thấp nhất), có giá bán, khuyến mãi, sự kiện | Chưa xác minh (Kaggle/M-competitions) | ★★★ (giá, nhu cầu) |
+| 1 | [Online Retail II (UCI)](https://archive.ics.uci.edu/dataset/502/online+retail+ii) | b | 1,067,371 dòng (2009-12 đến 2011-12) | CC BY 4.0 | ★★★★★ |
+| 2 | [Olist Brazilian E-Commerce](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) | b | ~100K đơn (2016-2018), nhiều bảng | Chưa xác minh (nhớ là CC BY-NC-SA, không kiểm chứng) | ★★★★★ |
+| 3 | [Dunnhumby The Complete Journey](https://dunnhumby.com/sourcefiles) | b | ~2,500 hộ, 2 năm (bản R: 2,469 hộ, 1 năm) | Chưa xác minh gốc; gói R CC0 | ★★★★ |
+| 4 | [Tmall / IJCAI-15 Repeat Buyers](https://groups.google.com/g/resys/c/oK8DzKHho1c) | b | Log 6 tháng đến "Double 11"; số user/dòng chưa xác minh (không thấy trong kết quả); tỉ lệ mua lại ~6.1% (theo 1 paper) | Chưa xác minh | ★★★★ |
+| 5 | [Instacart Market Basket](https://www.instacart.com/datasets/grocery-shopping-2017) | b | 3,346,083 đơn, 206,209 user, 49,685 sản phẩm (bản BigML đã xử lý; bản Kaggle gốc có thể lệch nhẹ), 6 file CSV | Điều khoản Instacart (chưa xác minh) | ★★★ |
+| 6 | [Criteo Uplift](https://ailab.criteo.com/criteo-uplift-prediction-dataset/) | c | 25,309,483 dòng (TFDS); bản ~13M dòng (Microsoft Fabric/Kaggle mirror); 12 đặc trưng f0-f11 + treatment + visit + conversion | Điều khoản Criteo Research (chưa xác minh) | ★★★★ |
+| 7 | [Hillstrom MineThatData](https://blog.minethatdata.com/2008/03/minethatdata-e-mail-analytics-and-data.html) | c | 64,000 khách, 3 nhóm email | TFDS; điều khoản gốc chưa xác minh | ★★★★ |
+| 8 | [X5 RetailHero](https://scikit-uplift.readthedocs.io/en/latest/api/datasets/fetch_x5.html) | c/d | clients, train (treatment_flg, target), purchases; số khách/dòng chưa xác minh | Chưa xác minh | ★★★★ |
+| 9 | [Acquire Valued Shoppers (Kaggle)](https://github.com/auduno/Kaggle-Acquire-Valued-Shoppers-Challenge) | b | ~350M dòng, >300K khách, 22 GB | Luật cuộc thi | ★★★ |
+| 10 | [Retailrocket e-commerce](https://www.kaggle.com/datasets/retailrocket/ecommerce-dataset) | b | 2,756,101 sự kiện (2,664,312 view, 69,332 addtocart, 22,457 transaction), 1,407,580 visitor, 417,053 item trong file thuộc tính (nguồn thứ cấp qua search) | Chưa xác minh | ★★★ |
+| 11 | [IBM Telco Customer Churn](https://data.mendeley.com/datasets/phsxg9ssrf) | c | 7,043 khách, 21 cột | IBM sample (chưa xác minh) | ★★ |
+| 12 | [Santander Customer Transaction](https://arxiv.org/pdf/2406.19380) | c | 200,000 dòng, 200 đặc trưng ẩn danh | Luật cuộc thi | ★ |
+| 13 | [Open Bandit Dataset (ZOZOTOWN)](https://arxiv.org/abs/2008.07146) | c | ~26M dòng impression; 80 item (All), 34 (Men), 46 (Women) | CC BY 4.0 nhưng paper ghi chỉ cho nghiên cứu phi thương mại (nguồn: paper/research.zozo.com qua search) | ★★★ |
+| 14 | [Kaggle Retail Price Optimization](https://baselight.app/u/kaggle/dataset/suddharshan_retail_price_optimization) | b | Chưa xác minh | Chưa xác minh | ★★ |
+| 15 | [ViEcomRec (Việt Nam)](https://doras.dcu.ie/29693/1/viecomrec.pdf) | a | 369,099 tương tác, sản phẩm sữa rửa mặt | Chưa xác minh | ★★ |
+| 16 | [REES46 / Kaggle "E-commerce behavior data from multi category store"](https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store) | b | Log sự kiện view/cart/remove_from_cart/purchase; file 2019-Nov.csv ~9 GB (qua hướng dẫn YDB); số sự kiện tổng chưa xác minh | Chưa xác minh (một nhận xét ghi phi thương mại; không phải văn bản license) | ★★★★ |
+| 17 | [M5 Forecasting (Walmart)](https://www.unic.ac.cy/unic-walmart-and-kaggle-launch-m5-forecasting-competition/) | b | 42,840 chuỗi doanh số phân cấp (30,490 ở mức thấp nhất), có giá bán, khuyến mãi, sự kiện | Chưa xác minh (Kaggle/M-competitions) | ★★★ (giá, nhu cầu) |
 
 ### (a) Tiếng Việt / Việt Nam
 - Ghi chú trung tính: các bộ churn/CLV chính ở mục (b)/(c) là tiếng Anh/quốc tế. Bộ Việt Nam công khai gần nhất trong các nguồn đã tra: **ViEcomRec** (https://doras.dcu.ie/29693/1/viecomrec.pdf): dữ liệu sàn TMĐT VN, 369,099 tương tác user-item trong một ngành hàng; thiên về gợi ý, thời gian/lặp mua cần kiểm tra (chưa xác minh). Một bài báo churn B2B Shopee Việt Nam (https://nghiencuu.tapchikinhtetaichinh.vn/du-bao-hanh-vi-roi-bo-khach-hang-b2b-bang-hoc-may-trong-boi-canh-thuong-mai-dien-tu-tai-viet-nam-159927.html) báo Logistic Regression accuracy 84%, F1 0.85; dữ liệu không công khai (theo search). ★2.

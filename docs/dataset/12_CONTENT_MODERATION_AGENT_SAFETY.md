@@ -43,31 +43,31 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn đã tra) | License / truy cập | Phù hợp |
 |---|---|---|---|---|---|
-| 1 | UIT-ViHSD | a | ~33,400 comment (paper: "hơn 30,000") | HF: MIT (theo search); GitHub yêu cầu liên hệ email | ★★★★★ |
-| 2 | UIT-ViCTSD | a | 10,000 comment (VnExpress) | Ký thoả thuận và email tác giả | ★★★★ |
-| 3 | ViHOS | a | ~26K span / 11K comment | GitHub; license chưa xác minh | ★★★★ |
-| 4 | ViTHSD (hate theo đối tượng) | a | 10K comment | Chưa xác minh | ★★★ |
-| 5 | ViSpamReviews (+v2) | a | 19,868 review | Công khai theo arXiv; license chưa xác minh | ★★★★ |
-| 6 | Jigsaw Toxic Comment | b/c | 159,571 comment train | CC0 (theo TFDS) | ★★ (tiếng Anh) |
-| 7 | Jigsaw Unintended Bias (Civil Comments) | c | ~1,8M comment gốc (một paper dùng 1.999.516) | CC0 (đã xác minh theo search, nguồn: TFDS catalog civil_comments) | ★★★ |
-| 8 | nsfw_data_scraper / NudeNet | b | >220K ảnh (nhiễu) | Scraper; NudeNet GPL | ★★ |
-| 9 | Roboflow counterfeit sets | b | 110 ảnh (set nhỏ) | CC BY 4.0 (một set) | ★ |
-| 10 | AgentDojo | c | 97 task, 629 test an ninh | MIT | ★★★★★ |
-| 11 | InjecAgent | c | 1,054 test case | MIT | ★★★★ |
-| 12 | BIPIA | c | 5 kịch bản, 250 mục tiêu tấn công | Repo lưu trữ; dữ liệu một phần tải từ nguồn gốc | ★★★★ |
-| 13 | HackAPrompt dataset | d | 600K+ prompt | HF; chưa curate, có nội dung xúc phạm | ★★★ |
-| 14 | Lakera Gandalf (ignore_instructions, RCT) | d | ~1K / ~339K dòng (theo phiên bản) | HF; chưa xác minh license | ★★★ |
-| 15 | deepset/prompt-injections | d | <1K dòng | Apache-2.0 (theo search) | ★★★ |
-| 16 | Lakera PINT | d | 4.314 input (3.016 Anh + 1.298 ngoài Anh); phần độc quyền không công khai | Repo MIT, đã archived (đã xác minh, README GitHub); dataset trộn công khai + độc quyền | ★★★ |
-| 17 | JailbreakBench JBB-Behaviors | c | 100 hành vi + 100 lành tính | MIT | ★★ |
-| 18 | R-Judge | c | 162 bản ghi (bản đầu); 569 bản ghi đa lượt, 5 nhóm ứng dụng, 27 kịch bản, 10 loại rủi ro (README GitHub) | README/sidebar không ghi license (chưa xác minh) | ★★★ |
-| 19 | ToolEmu | c | 144 test case, 36 toolkit, 311 tool | Apache-2.0 (đã xác minh, README GitHub ryoungj/ToolEmu) | ★★★ |
-| 20 | Agent-SafetyBench | c | số case không nêu ở README; dữ liệu trong `data/` và HF `thu-coai/Agent-SafetyBench` | MIT (đã xác minh, GitHub thu-coai/Agent-SafetyBench) | ★★★ |
-| 21 | Agent Security Bench (ASB) | c | 10 kịch bản (có e-commerce), 10 agent, >400 tool; DPI/IPI/memory poisoning/backdoor; số case thay đổi theo bản (gần 90.000 ở bản đầu) | code `agiresearch/ASB` (theo search); license chưa xác minh | ★★★★ |
-| 22 | NVIDIA Aegis 2.0 / Nemotron Content Safety v2 | b | 33.416 mẫu (30.007 train/1.445 val/1.964 test), taxonomy 12 nhóm + 9 nhóm con | CC BY 4.0 (theo catalog bên thứ ba; chưa xác minh trên thẻ HF) | ★★★ |
-| 23 | ToxiGen | b/c | 274K câu độc hại/lành tính, 13 nhóm thiểu số (GPT-3 sinh) | license chưa xác minh | ★★★ |
-| 24 | WildGuardMix | b | train ~87K (một paper) hoặc 37.176 (paper khác); test 1.725/1.709 — số lệch theo bản lọc | ODC-BY, gated (đồng ý AI2 Responsible Use) (theo search, thẻ HF) | ★★★ |
-| 25 | BeaverTails | c | 26.643 hàng train; test 33,4K cặp prompt-response (số từ paper, lệch) | chưa rõ; bản evaluation PKU-Alignment ghi cc-by-nc-4.0 (theo search) | ★★ |
+| 1 | [UIT-ViHSD](https://huggingface.co/datasets/sonlam1102/vihsd) | a | ~33,400 comment (paper: "hơn 30,000") | HF: MIT (theo search); GitHub yêu cầu liên hệ email | ★★★★★ |
+| 2 | [UIT-ViCTSD](https://nlp.uit.edu.vn/datasets) | a | 10,000 comment (VnExpress) | Ký thoả thuận và email tác giả | ★★★★ |
+| 3 | [ViHOS](https://arxiv.org/pdf/2301.10186) | a | ~26K span / 11K comment | GitHub; license chưa xác minh | ★★★★ |
+| 4 | [ViTHSD (hate theo đối tượng)](https://arxiv.org/abs/2404.19252) | a | 10K comment | Chưa xác minh | ★★★ |
+| 5 | [ViSpamReviews (+v2)](https://arxiv.org/abs/2207.14636) | a | 19,868 review | Công khai theo arXiv; license chưa xác minh | ★★★★ |
+| 6 | [Jigsaw Toxic Comment](https://www.tensorflow.org/datasets/catalog/wikipedia_toxicity_subtypes) | b/c | 159,571 comment train | CC0 (theo TFDS) | ★★ (tiếng Anh) |
+| 7 | [Jigsaw Unintended Bias (Civil Comments)](https://www.tensorflow.org/datasets/catalog/civil_comments) | c | ~1,8M comment gốc (một paper dùng 1.999.516) | CC0 (đã xác minh theo search, nguồn: TFDS catalog civil_comments) | ★★★ |
+| 8 | [nsfw_data_scraper / NudeNet](https://github.com/Mak0760/nsfw_data_scraper) | b | >220K ảnh (nhiễu) | Scraper; NudeNet GPL | ★★ |
+| 9 | [Roboflow counterfeit sets](https://universe.roboflow.com/computer-vision-oyxux/counterfeit_product_detection) | b | 110 ảnh (set nhỏ) | CC BY 4.0 (một set) | ★ |
+| 10 | [AgentDojo](https://github.com/ethz-spylab/agentdojo) | c | 97 task, 629 test an ninh | MIT | ★★★★★ |
+| 11 | [InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent) | c | 1,054 test case | MIT | ★★★★ |
+| 12 | [BIPIA](https://github.com/microsoft/BIPIA) | c | 5 kịch bản, 250 mục tiêu tấn công | Repo lưu trữ; dữ liệu một phần tải từ nguồn gốc | ★★★★ |
+| 13 | [HackAPrompt dataset](https://huggingface.co/datasets/hackaprompt/hackaprompt-dataset) | d | 600K+ prompt | HF; chưa curate, có nội dung xúc phạm | ★★★ |
+| 14 | [Lakera Gandalf (ignore_instructions, RCT)](https://huggingface.co/collections/Lakera/gandalf) | d | ~1K / ~339K dòng (theo phiên bản) | HF; chưa xác minh license | ★★★ |
+| 15 | [deepset/prompt-injections](https://huggingface.co/datasets/deepset/prompt-injections) | d | <1K dòng | Apache-2.0 (theo search) | ★★★ |
+| 16 | [Lakera PINT](https://github.com/lakeraai/pint-benchmark) | d | 4.314 input (3.016 Anh + 1.298 ngoài Anh); phần độc quyền không công khai | Repo MIT, đã archived (đã xác minh, README GitHub); dataset trộn công khai + độc quyền | ★★★ |
+| 17 | [JailbreakBench JBB-Behaviors](https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors) | c | 100 hành vi + 100 lành tính | MIT | ★★ |
+| 18 | [R-Judge](https://arxiv.org/html/2401.10019v2) | c | 162 bản ghi (bản đầu); 569 bản ghi đa lượt, 5 nhóm ứng dụng, 27 kịch bản, 10 loại rủi ro (README GitHub) | README/sidebar không ghi license (chưa xác minh) | ★★★ |
+| 19 | [ToolEmu](https://github.com/ryoungj/ToolEmu) | c | 144 test case, 36 toolkit, 311 tool | Apache-2.0 (đã xác minh, README GitHub ryoungj/ToolEmu) | ★★★ |
+| 20 | [Agent-SafetyBench](https://github.com/thu-coai/Agent-SafetyBench) | c | số case không nêu ở README; dữ liệu trong `data/` và HF `thu-coai/Agent-SafetyBench` | MIT (đã xác minh, GitHub thu-coai/Agent-SafetyBench) | ★★★ |
+| 21 | [Agent Security Bench (ASB)](https://github.com/agiresearch/ASB) | c | 10 kịch bản (có e-commerce), 10 agent, >400 tool; DPI/IPI/memory poisoning/backdoor; số case thay đổi theo bản (gần 90.000 ở bản đầu) | code `agiresearch/ASB` (theo search); license chưa xác minh | ★★★★ |
+| 22 | [NVIDIA Aegis 2.0 / Nemotron Content Safety v2](https://huggingface.co/datasets/nvidia/Aegis-AI-Content-Safety-Dataset-2.0) | b | 33.416 mẫu (30.007 train/1.445 val/1.964 test), taxonomy 12 nhóm + 9 nhóm con | CC BY 4.0 (theo catalog bên thứ ba; chưa xác minh trên thẻ HF) | ★★★ |
+| 23 | [ToxiGen](https://arxiv.org/pdf/2203.09509) | b/c | 274K câu độc hại/lành tính, 13 nhóm thiểu số (GPT-3 sinh) | license chưa xác minh | ★★★ |
+| 24 | [WildGuardMix](https://huggingface.co/datasets/allenai/wildguardmix) | b | train ~87K (một paper) hoặc 37.176 (paper khác); test 1.725/1.709 — số lệch theo bản lọc | ODC-BY, gated (đồng ý AI2 Responsible Use) (theo search, thẻ HF) | ★★★ |
+| 25 | [BeaverTails](https://arxiv.org/abs/2307.04657v1) | c | 26.643 hàng train; test 33,4K cặp prompt-response (số từ paper, lệch) | chưa rõ; bản evaluation PKU-Alignment ghi cc-by-nc-4.0 (theo search) | ★★ |
 
 ### (a) Tiếng Việt / Việt Nam (tham khảo, không bắt buộc)
 

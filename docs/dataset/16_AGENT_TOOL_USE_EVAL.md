@@ -50,30 +50,30 @@ Eval cần trả lời: (1) chọn đúng tool và tham số? (2) đúng nhiều
 
 | # | Bộ / công cụ | Nhóm | Quy mô (theo nguồn đã tra) | License | Phù hợp |
 |---|---|---|---|---|---|
-| 1 | τ-bench / τ²-bench (Sierra) | c | retail, airline, telecom, banking...; 50 task cố định/domain/ngôn ngữ | MIT | ★★★★★ |
-| 2 | BFCL (Berkeley Function Calling Leaderboard) | c | Live / Non-Live / Multi-turn; V4 thêm web search, memory, format sensitivity | Apache-2.0 (dữ liệu/leaderboard) | ★★★★★ |
-| 3 | WebShop | b/c | ~1.18M sản phẩm, 12,087 chỉ dẫn | MIT | ★★★★ |
-| 4 | WebArena | c | 812 task, có site Shopping + Shopping Admin | Apache-2.0 | ★★★ |
-| 5 | MCPMark | c | 127 task (suite chuẩn), 5 dịch vụ MCP | Apache-2.0 | ★★★★ |
-| 6 | MCP-Bench (Accenture) | c | 28 MCP server | Apache-2.0 | ★★★ |
-| 7 | ToolSandbox (Apple) | c | 6 nhóm kịch bản (đơn/đa tool, đơn/đa lượt, phụ thuộc trạng thái, canonicalization, thiếu thông tin); tổng số kịch bản chưa xác minh (README không nêu) | Repo có LICENSE nhưng nội dung chưa đọc (chưa xác minh) | ★★★★ |
-| 8 | ACEBench | c | 4,538 API, 8 domain/68 sub-domain, song ngữ zh/en | MIT | ★★★ |
-| 9 | NESTFUL (IBM) | c | 1,861 ví dụ gọi API lồng nhau | Apache-2.0 | ★★★ |
-| 10 | ToolBench / ToolLLM | c | 3,451 tool, 16,464 API, 126,486 instance | Apache-2.0 (dữ liệu: chỉ nghiên cứu) | ★★ |
-| 11 | AgentBench | c | 8 môi trường (OS, DB, KG, DCG, LTP, ALFWorld, WebShop, Mind2Web) | Apache-2.0 | ★★ |
-| 12 | API-Bank | c | Đánh giá: 73 API tool, 314 hội thoại, 753 lời gọi API; train: 1,888 hội thoại/2,138 API (đã xác minh, nguồn: arXiv 2304.08244 qua search) | Chưa xác minh (nằm trong repo DAMO-ConvAI) | ★★★ |
-| 13 | AgentDojo, InjecAgent (an toàn) | c | xem [12](12_CONTENT_MODERATION_AGENT_SAFETY.md) | MIT | ★★★★★ (an toàn) |
-| 14 | Framework: promptfoo, DeepEval, Ragas, Inspect AI, LangSmith | công cụ | — | MIT / Apache-2.0 / MIT | công cụ |
-| 15 | GAIA | c | 466 câu hỏi (300 câu giữ đáp án cho leaderboard); người 92% vs GPT-4+plugins 15% (paper) | Chưa xác minh (xem thẻ HF gaia-benchmark/GAIA; có thể gated) | ★★ |
-| 16 | ShoppingBench (Alibaba) | b/c | Môi trường mô phỏng >2.5M sản phẩm thật; 17 agent được đánh giá | Chưa xác minh | ★★★★ |
-| 17 | Shopping MMLU (Amazon) | b/c | 57 tác vụ, 20,799 câu hỏi; không phải môi trường agent | Chưa xác minh (dữ liệu công khai trên GitHub) | ★★★ |
-| 18 | AppWorld (AI2) | c | 9 app, 457 API, 750 task (nguồn thứ cấp) | Chưa xác minh | ★★★★ |
-| 19 | Toolathlon (Tool Decathlon) | c | 108 task, 32 ứng dụng, 604 tool; Claude-4.5-Sonnet 38.6% | Chưa xác minh | ★★★ |
-| 20 | MCP-Universe (Salesforce) | c | 6 domain, 11 MCP server, 231 task (v1) | Chưa xác minh | ★★★ |
-| 21 | MCP-Atlas (Scale AI) | c | 36 MCP server, 220 tool, 1,000 task (500 công khai) | Chưa xác minh | ★★★ |
-| 22 | ASB - Agent Security Bench | c (an toàn) | 10 kịch bản (có e-commerce), >400 tool, 27 kiểu tấn công/phòng thủ | Mâu thuẫn giữa nguồn (README không nêu; một port ghi MIT): chưa xác minh | ★★★★ |
-| 23 | AgentHarm (UK AISI) | c (an toàn) | <1K mẫu; có tập harmful/benign | Thẻ HF ghi license "other" | ★★★ |
-| 24 | ToolEmu | c (an toàn) | 36 toolkit, 144 test case (theo bảng của một survey) | Chưa xác minh | ★★★ |
+| 1 | [τ-bench / τ²-bench (Sierra)](https://github.com/sierra-research/tau-bench) | c | retail, airline, telecom, banking...; 50 task cố định/domain/ngôn ngữ | MIT | ★★★★★ |
+| 2 | [BFCL (Berkeley Function Calling Leaderboard)](https://gorilla.cs.berkeley.edu/leaderboard) | c | Live / Non-Live / Multi-turn; V4 thêm web search, memory, format sensitivity | Apache-2.0 (dữ liệu/leaderboard) | ★★★★★ |
+| 3 | [WebShop](https://github.com/princeton-nlp/WebShop) | b/c | ~1.18M sản phẩm, 12,087 chỉ dẫn | MIT | ★★★★ |
+| 4 | [WebArena](https://github.com/web-arena-x/webarena) | c | 812 task, có site Shopping + Shopping Admin | Apache-2.0 | ★★★ |
+| 5 | [MCPMark](https://github.com/eval-sys/mcpmark) | c | 127 task (suite chuẩn), 5 dịch vụ MCP | Apache-2.0 | ★★★★ |
+| 6 | [MCP-Bench (Accenture)](https://github.com/Accenture/mcp-bench) | c | 28 MCP server | Apache-2.0 | ★★★ |
+| 7 | [ToolSandbox (Apple)](https://github.com/apple/ToolSandbox) | c | 6 nhóm kịch bản (đơn/đa tool, đơn/đa lượt, phụ thuộc trạng thái, canonicalization, thiếu thông tin); tổng số kịch bản chưa xác minh (README không nêu) | Repo có LICENSE nhưng nội dung chưa đọc (chưa xác minh) | ★★★★ |
+| 8 | [ACEBench](https://github.com/ACEBench/ACEBench) | c | 4,538 API, 8 domain/68 sub-domain, song ngữ zh/en | MIT | ★★★ |
+| 9 | [NESTFUL (IBM)](https://github.com/IBM/NESTFUL) | c | 1,861 ví dụ gọi API lồng nhau | Apache-2.0 | ★★★ |
+| 10 | [ToolBench / ToolLLM](https://github.com/OpenBMB/ToolBench) | c | 3,451 tool, 16,464 API, 126,486 instance | Apache-2.0 (dữ liệu: chỉ nghiên cứu) | ★★ |
+| 11 | [AgentBench](https://github.com/THUDM/AgentBench) | c | 8 môi trường (OS, DB, KG, DCG, LTP, ALFWorld, WebShop, Mind2Web) | Apache-2.0 | ★★ |
+| 12 | [API-Bank](https://github.com/AlibabaResearch/DAMO-ConvAI) | c | Đánh giá: 73 API tool, 314 hội thoại, 753 lời gọi API; train: 1,888 hội thoại/2,138 API (đã xác minh, nguồn: arXiv 2304.08244 qua search) | Chưa xác minh (nằm trong repo DAMO-ConvAI) | ★★★ |
+| 13 | [AgentDojo, InjecAgent (an toàn)](https://github.com/ethz-spylab/agentdojo) | c | xem [12](12_CONTENT_MODERATION_AGENT_SAFETY.md) | MIT | ★★★★★ (an toàn) |
+| 14 | Framework: [promptfoo](https://github.com/promptfoo/promptfoo), [DeepEval](https://github.com/confident-ai/deepeval), [Ragas](https://github.com/explodinggradients/ragas), [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai), LangSmith | công cụ | — | MIT / Apache-2.0 / MIT | công cụ |
+| 15 | [GAIA](https://arxiv.org/abs/2311.12983) | c | 466 câu hỏi (300 câu giữ đáp án cho leaderboard); người 92% vs GPT-4+plugins 15% (paper) | Chưa xác minh (xem thẻ HF gaia-benchmark/GAIA; có thể gated) | ★★ |
+| 16 | [ShoppingBench (Alibaba)](https://arxiv.org/pdf/2508.04266) | b/c | Môi trường mô phỏng >2.5M sản phẩm thật; 17 agent được đánh giá | Chưa xác minh | ★★★★ |
+| 17 | [Shopping MMLU (Amazon)](https://arxiv.org/html/2410.20745v2) | b/c | 57 tác vụ, 20,799 câu hỏi; không phải môi trường agent | Chưa xác minh (dữ liệu công khai trên GitHub) | ★★★ |
+| 18 | [AppWorld (AI2)](https://github.com/StonyBrookNLP/appworld) | c | 9 app, 457 API, 750 task (nguồn thứ cấp) | Chưa xác minh | ★★★★ |
+| 19 | [Toolathlon (Tool Decathlon)](https://arxiv.org/abs/2510.25726) | c | 108 task, 32 ứng dụng, 604 tool; Claude-4.5-Sonnet 38.6% | Chưa xác minh | ★★★ |
+| 20 | [MCP-Universe (Salesforce)](https://arxiv.org/pdf/2508.14704) | c | 6 domain, 11 MCP server, 231 task (v1) | Chưa xác minh | ★★★ |
+| 21 | [MCP-Atlas (Scale AI)](https://labs.scale.com/papers/mcpatlas) | c | 36 MCP server, 220 tool, 1,000 task (500 công khai) | Chưa xác minh | ★★★ |
+| 22 | [ASB - Agent Security Bench](https://github.com/agiresearch/ASB) | c (an toàn) | 10 kịch bản (có e-commerce), >400 tool, 27 kiểu tấn công/phòng thủ | Mâu thuẫn giữa nguồn (README không nêu; một port ghi MIT): chưa xác minh | ★★★★ |
+| 23 | [AgentHarm (UK AISI)](https://huggingface.co/datasets/ai-safety-institute/AgentHarm) | c (an toàn) | <1K mẫu; có tập harmful/benign | Thẻ HF ghi license "other" | ★★★ |
+| 24 | [ToolEmu](https://github.com/ryoungj/toolemu) | c (an toàn) | 36 toolkit, 144 test case (theo bảng của một survey) | Chưa xác minh | ★★★ |
 
 Ghi chú: các bộ trong bảng đều là tiếng Anh (hoặc song ngữ Anh-Trung với ACEBench); chủ dự án xác nhận không cần bộ tiếng Việt. Kiểm tra tiếng Việt dùng bộ eval nội bộ (mục 5). Số liệu của dòng 15-24 và API-Bank lấy từ kết quả WebSearch (URL ở mục 4(c) và mục 8).
 

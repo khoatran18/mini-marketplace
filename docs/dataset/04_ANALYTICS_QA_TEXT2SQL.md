@@ -50,19 +50,19 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo README đã đọc) | Ngôn ngữ | License | ★ |
 |---|---|---|---|---|---|---|
-| 1 | ViText2SQL (VinAI) | (a) | ~10K cặp câu hỏi–SQL | Việt | chỉ nghiên cứu/giáo dục, cấm phân phối lại | 5 |
-| 2 | BIRD | (c) | 12.751 cặp, 95 DB, 37 domain, 33,4 GB | Anh | CC BY-SA 4.0 | 4 |
-| 3 | Spider 1.0 | (c) | 10.181 câu hỏi, 5.693 SQL khác nhau, 200 DB, 138 domain (đã xác minh, search paper) | Anh | repo Apache-2.0 | 4 |
-| 4 | Spider 2.0 (Lite/Snow/DBT) | (c) | 547 + 547 + 68 | Anh | MIT | 3 |
-| 5 | LiveSQLBench | (c) | Base-Lite 270 task/18 DB; Base-Full v1 600/22; Large-v1 480/18 | Anh | MIT (sidebar) / CC BY-SA 4.0 (badge) — kiểm tra LICENSE | 4 |
-| 6 | BIRD-Interact | (c) | Full 600 task/22 DB (PostgreSQL); Lite 270 | Anh | code MIT, dữ liệu CC BY-SA 4.0 | 3 |
-| 7 | Dr.Spider | (c) | 17 bộ nhiễu từ Spider dev | Anh | Apache-2.0 + CC-BY-4.0 | 3 |
-| 8 | WikiSQL | (c) | 80.654 cặp, 24.241 bảng Wikipedia (đã xác minh, search) | Anh | BSD-3-Clause | 2 |
-| 9 | SParC / CoSQL | (c) | SParC 4.298 chuỗi câu hỏi; CoSQL ~3K hội thoại, 30K+ lượt, 10K+ SQL (search) | Anh | chưa xác minh | 3 |
-| 10 | KaggleDBQA | (c) | 272 câu hỏi trả lời được (trong 400 thu thập) trên DB thật từ Kaggle (search) | Anh | chưa xác minh | 3 |
-| 11 | Gretel synthetic_text_to_sql | (c)/(d) | 105.851 bản ghi, ~100 vertical (search) | Anh | Apache-2.0 (đã xác minh, search) | 3 |
-| 12 | Olist Brazilian E-Commerce (Kaggle) | (b) | ~100K đơn 2016–2018 (search) | Bồ Đào Nha/Anh | chưa xác minh | 3 |
-| 13 | UCI Online Retail / Online Retail II | (b) | 541.909 dòng (2010-12→2011-12) / 1.067.371 dòng (2009–2011) | Anh | CC BY 4.0 (đã xác minh, search UCI) | 3 |
+| 1 | [ViText2SQL (VinAI)](https://github.com/VinAIResearch/ViText2SQL) | (a) | ~10K cặp câu hỏi–SQL | Việt | chỉ nghiên cứu/giáo dục, cấm phân phối lại | 5 |
+| 2 | [BIRD](https://github.com/AlibabaResearch/DAMO-ConvAI/tree/main/bird) | (c) | 12.751 cặp, 95 DB, 37 domain, 33,4 GB | Anh | CC BY-SA 4.0 | 4 |
+| 3 | [Spider 1.0](https://github.com/taoyds/spider) | (c) | 10.181 câu hỏi, 5.693 SQL khác nhau, 200 DB, 138 domain (đã xác minh, search paper) | Anh | repo Apache-2.0 | 4 |
+| 4 | [Spider 2.0 (Lite/Snow/DBT)](https://github.com/xlang-ai/Spider2) | (c) | 547 + 547 + 68 | Anh | MIT | 3 |
+| 5 | [LiveSQLBench](https://github.com/bird-bench/livesqlbench) | (c) | Base-Lite 270 task/18 DB; Base-Full v1 600/22; Large-v1 480/18 | Anh | MIT (sidebar) / CC BY-SA 4.0 (badge) — kiểm tra LICENSE | 4 |
+| 6 | [BIRD-Interact](https://github.com/bird-bench/BIRD-Interact) | (c) | Full 600 task/22 DB (PostgreSQL); Lite 270 | Anh | code MIT, dữ liệu CC BY-SA 4.0 | 3 |
+| 7 | [Dr.Spider](https://github.com/awslabs/diagnostic-robustness-text-to-sql) | (c) | 17 bộ nhiễu từ Spider dev | Anh | Apache-2.0 + CC-BY-4.0 | 3 |
+| 8 | [WikiSQL](https://github.com/salesforce/WikiSQL) | (c) | 80.654 cặp, 24.241 bảng Wikipedia (đã xác minh, search) | Anh | BSD-3-Clause | 2 |
+| 9 | [SParC / CoSQL](https://yale-lily.github.io/sparc) | (c) | SParC 4.298 chuỗi câu hỏi; CoSQL ~3K hội thoại, 30K+ lượt, 10K+ SQL (search) | Anh | chưa xác minh | 3 |
+| 10 | [KaggleDBQA](https://arxiv.org/pdf/2106.11455) | (c) | 272 câu hỏi trả lời được (trong 400 thu thập) trên DB thật từ Kaggle (search) | Anh | chưa xác minh | 3 |
+| 11 | [Gretel synthetic_text_to_sql](https://huggingface.co/datasets/gretelai/synthetic_text_to_sql) | (c)/(d) | 105.851 bản ghi, ~100 vertical (search) | Anh | Apache-2.0 (đã xác minh, search) | 3 |
+| 12 | [Olist Brazilian E-Commerce (Kaggle)](https://www.kaggle.com/olistbr/brazilian-ecommerce) | (b) | ~100K đơn 2016–2018 (search) | Bồ Đào Nha/Anh | chưa xác minh | 3 |
+| 13 | [UCI Online Retail / Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii) | (b) | 541.909 dòng (2010-12→2011-12) / 1.067.371 dòng (2009–2011) | Anh | CC BY 4.0 (đã xác minh, search UCI) | 3 |
 
 ### (a) Tiếng Việt / Việt Nam
 

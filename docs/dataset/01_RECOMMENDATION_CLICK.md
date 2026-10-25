@@ -47,26 +47,26 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn) | Loại tín hiệu | License | ★ |
 |---|---|---|---|---|---|---|
-| 1 | OTTO RecSys Dataset | (b) | ~12,9M session train, 1,8M item, ~220M event | click/cart/order | CC-BY 4.0 (xác minh từ GitHub) | 5 |
-| 2 | REES46 eCommerce behavior (Kaggle) | (b) | chưa xác minh số dòng (file tháng 11/2019 ~9 GB) | view/cart/purchase | chưa xác minh | 5 |
-| 3 | RetailRocket | (b) | 2.756.101 event, 1.407.580 visitor (nguồn thứ cấp) | view/addtocart/transaction | chưa xác minh | 4 |
-| 4 | YooChoose / RecSys Challenge 2015 | (c)/(d) | 9.249.729 session, 33M click, 1,15M buy | click/buy | chưa xác minh | 4 |
-| 5 | Diginetica (CIKM Cup 2016) | (d) | 573.935 session, 18.025 purchase | query/click/view/purchase | chưa xác minh | 4 |
-| 6 | Coveo Data Challenge (SIGIR eCom 2021) | (d) | >30M browsing event | browse/search/cart/purchase | Điều khoản trong repo (xem mục) | 4 |
-| 7 | Taobao User Behavior (Tianchi) | (d) | ~100M hành vi, 987.994 user | pv/fav/cart/buy | chưa xác minh | 3 |
-| 8 | Ali-CCP (Taobao) | (d) | ~84–85M exposure, ~3,3M click, ~18K conversion | impression/click/conversion | chưa xác minh | 3 |
-| 9 | Amazon Reviews 2023 (McAuley Lab) | (b) | per-category; tổng chưa xác minh | rating/review/metadata | chưa xác minh (xem thẻ HF) | 3 |
-| 10 | H&M Personalized Fashion (Kaggle) | (b) | 31.788.324 giao dịch, ~1,37M khách, 105.542 article | mua + ảnh/metadata | điều khoản cuộc thi (chưa xác minh) | 3 |
-| 11 | Instacart Market Basket | (b) | >3M đơn, >200K user | basket (mua) | "research use" (nguồn thứ cấp) | 3 |
-| 12 | Dunnhumby Complete Journey | (b) | 2.500 household, 2 năm | giao dịch + coupon | chưa xác minh | 2 |
-| 13 | Open Bandit Dataset (ZOZOTOWN) | (c) | ~26M dòng impression (chưa xác minh trực tiếp; README chỉ nêu 7 ngày, 3 campaign, 2 policy) | impression + position + propensity | CC BY 4.0 (nguồn thứ cấp; README repo chỉ nêu Apache-2.0 cho code) | 4 (position bias) |
-| 14 | ViEcomRec (face cleanser, Việt Nam) | (a) | 369.099 interaction | user–item | chưa xác minh | 3 |
-| 15 | KuaiRec | (c) | small: 1.411 user × 3.327 video, 4.676.570 tương tác; big: 7.176 × 10.728, 12.530.806 | xem/tương tác | CC-BY-SA-4.0 (đã xác minh, GitHub) | 2 |
-| 16 | Tenrec (Tencent) | (c) | ~5M user, ~140M interaction (theo paper; README không nêu) | click/like/share/follow + negative thật | CC BY-NC 4.0 (đã xác minh, GitHub) | 2 |
-| 17 | Yambda (Yandex) | (d) | ~4,79–5 tỷ event (bản 500M, 50M), 10 tháng (nguồn: tin tức qua search) | listen/like/dislike + `is_organic` | chưa xác minh | 2 |
-| 18 | Amazon-M2 (KDD Cup 2023) | (c)/(d) | session đa locale (UK, JP, DE, ES, FR, IT); số liệu chưa xác minh | session-based + sinh tiêu đề | chưa xác minh | 4 |
-| 19 | Dressipi RecSys Challenge 2022 | (d) | ~1,1M session thời trang, ~24K item, 18 tháng (search) | view → 1 purchase + nhãn thuộc tính | chưa xác minh | 3 |
-| 20 | Criteo 1TB Click Logs | (d) | ~4 tỷ dòng, 24 ngày | click quảng cáo (feature ẩn danh) | Terms of use (chưa xác minh) | 2 |
+| 1 | [OTTO RecSys Dataset](https://github.com/otto-de/recsys-dataset) | (b) | ~12,9M session train, 1,8M item, ~220M event | click/cart/order | CC-BY 4.0 (xác minh từ GitHub) | 5 |
+| 2 | [REES46 eCommerce behavior (Kaggle)](https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store) | (b) | chưa xác minh số dòng (file tháng 11/2019 ~9 GB) | view/cart/purchase | chưa xác minh | 5 |
+| 3 | [RetailRocket](https://www.kaggle.com/datasets/retailrocket/ecommerce-dataset) | (b) | 2.756.101 event, 1.407.580 visitor (nguồn thứ cấp) | view/addtocart/transaction | chưa xác minh | 4 |
+| 4 | [YooChoose / RecSys Challenge 2015](https://www.cs.toronto.edu/~mvolkovs/recsys2015.pdf) | (c)/(d) | 9.249.729 session, 33M click, 1,15M buy | click/buy | chưa xác minh | 4 |
+| 5 | [Diginetica (CIKM Cup 2016)](https://competitions.codalab.org/competitions/11161) | (d) | 573.935 session, 18.025 purchase | query/click/view/purchase | chưa xác minh | 4 |
+| 6 | [Coveo Data Challenge (SIGIR eCom 2021)](https://github.com/coveooss/SIGIR-ecom-data-challenge) | (d) | >30M browsing event | browse/search/cart/purchase | Điều khoản trong repo (xem mục) | 4 |
+| 7 | [Taobao User Behavior (Tianchi)](https://tianchi.aliyun.com/dataset/dataDetail?dataId=649) | (d) | ~100M hành vi, 987.994 user | pv/fav/cart/buy | chưa xác minh | 3 |
+| 8 | [Ali-CCP (Taobao)](https://arxiv.org/pdf/1910.09337) | (d) | ~84–85M exposure, ~3,3M click, ~18K conversion | impression/click/conversion | chưa xác minh | 3 |
+| 9 | [Amazon Reviews 2023 (McAuley Lab)](https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023) | (b) | per-category; tổng chưa xác minh | rating/review/metadata | chưa xác minh (xem thẻ HF) | 3 |
+| 10 | H&M Personalized Fashion (Kaggle) (chưa có link) | (b) | 31.788.324 giao dịch, ~1,37M khách, 105.542 article | mua + ảnh/metadata | điều khoản cuộc thi (chưa xác minh) | 3 |
+| 11 | [Instacart Market Basket](https://www.kaggle.com/c/instacart-market-basket-analysis/data) | (b) | >3M đơn, >200K user | basket (mua) | "research use" (nguồn thứ cấp) | 3 |
+| 12 | [Dunnhumby Complete Journey](https://dunnhumby.com/sourcefiles) | (b) | 2.500 household, 2 năm | giao dịch + coupon | chưa xác minh | 2 |
+| 13 | [Open Bandit Dataset (ZOZOTOWN)](https://research.zozo.com/data.html) | (c) | ~26M dòng impression (chưa xác minh trực tiếp; README chỉ nêu 7 ngày, 3 campaign, 2 policy) | impression + position + propensity | CC BY 4.0 (nguồn thứ cấp; README repo chỉ nêu Apache-2.0 cho code) | 4 (position bias) |
+| 14 | [ViEcomRec (face cleanser, Việt Nam)](https://github.com/linh222/face_cleanser_recommendation_dataset) | (a) | 369.099 interaction | user–item | chưa xác minh | 3 |
+| 15 | [KuaiRec](https://github.com/chongminggao/KuaiRec) | (c) | small: 1.411 user × 3.327 video, 4.676.570 tương tác; big: 7.176 × 10.728, 12.530.806 | xem/tương tác | CC-BY-SA-4.0 (đã xác minh, GitHub) | 2 |
+| 16 | [Tenrec (Tencent)](https://github.com/yuangh-x/2022-NIPS-Tenrec) | (c) | ~5M user, ~140M interaction (theo paper; README không nêu) | click/like/share/follow + negative thật | CC BY-NC 4.0 (đã xác minh, GitHub) | 2 |
+| 17 | [Yambda (Yandex)](https://arxiv.org/pdf/2505.22238) | (d) | ~4,79–5 tỷ event (bản 500M, 50M), 10 tháng (nguồn: tin tức qua search) | listen/like/dislike + `is_organic` | chưa xác minh | 2 |
+| 18 | [Amazon-M2 (KDD Cup 2023)](https://arxiv.org/pdf/2307.09688) | (c)/(d) | session đa locale (UK, JP, DE, ES, FR, IT); số liệu chưa xác minh | session-based + sinh tiêu đề | chưa xác minh | 4 |
+| 19 | [Dressipi RecSys Challenge 2022](https://www.research-collection.ethz.ch/items/558fe8bb-63e0-47c9-a97f-ed5d9a493058) | (d) | ~1,1M session thời trang, ~24K item, 18 tháng (search) | view → 1 purchase + nhãn thuộc tính | chưa xác minh | 3 |
+| 20 | [Criteo 1TB Click Logs](https://ailab.criteo.com/download-criteo-1tb-click-logs-dataset/) | (d) | ~4 tỷ dòng, 24 ngày | click quảng cáo (feature ẩn danh) | Terms of use (chưa xác minh) | 2 |
 
 ### (a) Tiếng Việt / Việt Nam
 

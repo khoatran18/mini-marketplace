@@ -43,31 +43,31 @@
 
 | # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn đã tra) | License / truy cập | Phù hợp |
 |---|---|---|---|---|---|
-| 1 | PhoATIS (JointIDSF) | a | 5,871 câu; 28 intent, 82 slot | GitHub VinAI; license chưa xác minh | ★★★★ (cách làm) |
-| 2 | VSEC (spelling) | a | Test 9,341 câu thật/11,202 lỗi; train tổng hợp 5M câu | Chưa xác minh | ★★★★ |
-| 3 | Viwiki-Spelling | a | ~14,000 câu, ~1,500 lỗi sửa tay | CC BY 4.0 (theo search) | ★★★ |
-| 4 | Binhvq News Corpus | a | ~15M câu tin tức (làm gốc sinh lỗi) | Chưa xác minh | ★★★ |
-| 5 | DiacBench (HF olaverse/diacbench) | a/c | ~1,000 cặp mỗi ngôn ngữ (có tiếng Việt) | Chưa xác minh | ★★★ |
-| 6 | Corpus khôi phục dấu đa ngữ (LINDAT) | c | 12 ngôn ngữ gồm tiếng Việt, từ Wikipedia | CC BY-NC-SA 4.0 | ★★★ |
-| 7 | VLSP 2013 (tách từ, POS) / VLSP 2016 (NER) | a | WordSeg train 75,389 câu, test 2,120; POS ~27K câu | Chưa xác minh (qua VnCoreNLP) | ★★★★ |
-| 8 | PhoNER_COVID19 | a | Số liệu chưa xác minh | GitHub VinAI; license chưa xác minh | ★★ |
-| 9 | UIT-ViQuAD 1.0/2.0 | a | 23K+ cặp QA / 174 bài wiki; 2.0 có câu không trả lời | Ký thoả thuận corpus | ★★ |
-| 10 | UIT-ViSFD | a | 11,122 comment điện thoại | Xem GitHub; thương mại cần liên hệ | ★★ |
-| 11 | Vietnamese similar-question | a | 7,911 cặp câu hỏi | Chưa có link tải | ★ |
-| 12 | VN-MTEB | a/c | 41 bộ, 6 loại tác vụ, dịch từ MTEB bằng LLM (đã xác minh, nguồn: kết quả search về arXiv 2507.21500) | HF (GreenNode, mteb); license chưa xác minh | ★★★★★ |
-| 13 | mMARCO | c | 8 ngôn ngữ (bản đầu) / 13 (paper v5) / README ghi 14 gồm tiếng Anh; có tiếng Việt hay không: chưa xác minh | Chưa xác minh | ★★★ |
-| 14 | OSCAR / CC100 (tiếng Việt) | b | CC100-vi 138 GB (qua ViT5); OSCAR ~98.9 GB | Web crawl | ★★ |
-| 15 | ModelScope viet-ecommerce-title/query | b | Mô hình NER TMĐT VN (F1 77.8; brand F1 78.91) | Chưa xác minh; chỉ mô hình, không phải dữ liệu | ★★ |
-| 16 | Mô hình tham chiếu: PhoBERT, BGE-M3, ViSoBERT | c | — | PhoBERT (VinAI); BGE-M3 MIT (theo 2 aggregator: llmgateway.io, thegtmdirectory.com; chưa đối chiếu thẻ HF) | tham chiếu |
-| 17 | Amazon Shopping Queries (ESCI) | b (EN/JA/ES) | ~130K truy vấn, 2.6M nhãn (query, product); mỗi truy vấn tối đa 40 ứng viên; nhãn E/S/C/I | Apache-2.0 theo một mirror GitHub; chưa đối chiếu repo amazon-science/esci-data | ★★★★★ |
-| 18 | AmazonQAC | b (EN) | 395M mẫu train + 20K test; chuỗi prefix gõ, session, timestamp | HF `amazon/AmazonQAC`; license chưa xác minh | ★★★★★ (autocomplete) |
-| 19 | MASSIVE (Amazon) | c (đa ngữ, có vi-VN) | >1M câu, 51 locale (1.1: 52, thêm Catalan), 18 domain, 60 intent, 55 slot | Chưa xác minh (repo có LICENSE.txt) | ★★★★ |
-| 20 | MTEB / MMTEB | c | MMTEB: >500 tác vụ, 10 nhóm tác vụ, hàng trăm ngôn ngữ (250+ hoặc 1000+ tuỳ nguồn) | Theo từng tác vụ | ★★★★★ |
-| 21 | Webis-QSpell-17 | b (EN) | 54,772 truy vấn web, 9,171 có biến thể sửa chính tả | Chưa xác minh (Zenodo) | ★★★★ |
-| 22 | ORCAS | b (EN) | 18,823,602 bản ghi click, 10M truy vấn, 1.4M tài liệu TREC DL | Chỉ nghiên cứu phi thương mại | ★★★ |
-| 23 | Wayfair WANDS | b (EN) | 42,994 sản phẩm, 480 truy vấn, 233,448 nhãn (Exact/Partial/Irrelevant) | Chưa xác minh | ★★★★ |
-| 24 | AOL query log | b (EN) | ~20M truy vấn, ~650K user (2006) | Đã bị thu hồi vì riêng tư; README gốc: chỉ nghiên cứu phi thương mại | ★ (cân nhắc đạo đức) |
-| 25 | BANKING77 | c (EN) | 13,083 câu, 77 intent | CC BY 4.0 (theo TFDS qua search) | ★★ (mẫu intent) |
+| 1 | [PhoATIS (JointIDSF)](https://arxiv.org/pdf/2104.02021) | a | 5,871 câu; 28 intent, 82 slot | GitHub VinAI; license chưa xác minh | ★★★★ (cách làm) |
+| 2 | [VSEC (spelling)](https://arxiv.org/pdf/2111.00640) | a | Test 9,341 câu thật/11,202 lỗi; train tổng hợp 5M câu | Chưa xác minh | ★★★★ |
+| 3 | [Viwiki-Spelling](https://arxiv.org/pdf/2105.13578) | a | ~14,000 câu, ~1,500 lỗi sửa tay | CC BY 4.0 (theo search) | ★★★ |
+| 4 | [Binhvq News Corpus](https://arxiv.org/pdf/2405.02573) | a | ~15M câu tin tức (làm gốc sinh lỗi) | Chưa xác minh | ★★★ |
+| 5 | [DiacBench (HF olaverse/diacbench)](https://huggingface.co/datasets/olaverse/diacbench) | a/c | ~1,000 cặp mỗi ngôn ngữ (có tiếng Việt) | Chưa xác minh | ★★★ |
+| 6 | [Corpus khôi phục dấu đa ngữ (LINDAT)](https://b2find.eudat.eu/dataset/6fd801dc-09c6-57b8-b56a-d8db0c299cab) | c | 12 ngôn ngữ gồm tiếng Việt, từ Wikipedia | CC BY-NC-SA 4.0 | ★★★ |
+| 7 | [VLSP 2013 (tách từ, POS) / VLSP 2016 (NER)](https://arxiv.org/html/1801.01331) | a | WordSeg train 75,389 câu, test 2,120; POS ~27K câu | Chưa xác minh (qua VnCoreNLP) | ★★★★ |
+| 8 | [PhoNER_COVID19](https://arxiv.org/pdf/2104.03879) | a | Số liệu chưa xác minh | GitHub VinAI; license chưa xác minh | ★★ |
+| 9 | [UIT-ViQuAD 1.0/2.0](https://nlp.uit.edu.vn/datasets) | a | 23K+ cặp QA / 174 bài wiki; 2.0 có câu không trả lời | Ký thoả thuận corpus | ★★ |
+| 10 | [UIT-ViSFD](https://arxiv.org/pdf/2105.15079) | a | 11,122 comment điện thoại | Xem GitHub; thương mại cần liên hệ | ★★ |
+| 11 | [Vietnamese similar-question](https://vjol.info.vn/halong/en/article/view/76720) | a | 7,911 cặp câu hỏi | Chưa có link tải | ★ |
+| 12 | [VN-MTEB](https://arxiv.org/pdf/2507.21500) | a/c | 41 bộ, 6 loại tác vụ, dịch từ MTEB bằng LLM (đã xác minh, nguồn: kết quả search về arXiv 2507.21500) | HF (GreenNode, mteb); license chưa xác minh | ★★★★★ |
+| 13 | [mMARCO](https://github.com/unicamp-dl/mMARCO) | c | 8 ngôn ngữ (bản đầu) / 13 (paper v5) / README ghi 14 gồm tiếng Anh; có tiếng Việt hay không: chưa xác minh | Chưa xác minh | ★★★ |
+| 14 | [OSCAR / CC100 (tiếng Việt)](https://huggingface.co/datasets/oscar-corpus/OSCAR-2201) | b | CC100-vi 138 GB (qua ViT5); OSCAR ~98.9 GB | Web crawl | ★★ |
+| 15 | [ModelScope viet-ecommerce-title/query](https://cyzone.cn/agi/data/model/581) | b | Mô hình NER TMĐT VN (F1 77.8; brand F1 78.91) | Chưa xác minh; chỉ mô hình, không phải dữ liệu | ★★ |
+| 16 | [Mô hình tham chiếu: PhoBERT, BGE-M3, ViSoBERT](https://cs.paperswithcode.com/paper/phobert-pre-trained-language-models-for) | c | — | PhoBERT (VinAI); BGE-M3 MIT (theo 2 aggregator: llmgateway.io, thegtmdirectory.com; chưa đối chiếu thẻ HF) | tham chiếu |
+| 17 | [Amazon Shopping Queries (ESCI)](https://arxiv.org/abs/2206.06588) | b (EN/JA/ES) | ~130K truy vấn, 2.6M nhãn (query, product); mỗi truy vấn tối đa 40 ứng viên; nhãn E/S/C/I | Apache-2.0 theo một mirror GitHub; chưa đối chiếu repo amazon-science/esci-data | ★★★★★ |
+| 18 | [AmazonQAC](https://huggingface.co/datasets/amazon/AmazonQAC) | b (EN) | 395M mẫu train + 20K test; chuỗi prefix gõ, session, timestamp | HF `amazon/AmazonQAC`; license chưa xác minh | ★★★★★ (autocomplete) |
+| 19 | [MASSIVE (Amazon)](https://github.com/alexa/massive) | c (đa ngữ, có vi-VN) | >1M câu, 51 locale (1.1: 52, thêm Catalan), 18 domain, 60 intent, 55 slot | Chưa xác minh (repo có LICENSE.txt) | ★★★★ |
+| 20 | [MTEB / MMTEB](https://arxiv.org/pdf/2502.13595) | c | MMTEB: >500 tác vụ, 10 nhóm tác vụ, hàng trăm ngôn ngữ (250+ hoặc 1000+ tuỳ nguồn) | Theo từng tác vụ | ★★★★★ |
+| 21 | [Webis-QSpell-17](https://zenodo.org/record/3570912) | b (EN) | 54,772 truy vấn web, 9,171 có biến thể sửa chính tả | Chưa xác minh (Zenodo) | ★★★★ |
+| 22 | [ORCAS](https://microsoft.github.io/msmarco/ORCAS.html) | b (EN) | 18,823,602 bản ghi click, 10M truy vấn, 1.4M tài liệu TREC DL | Chỉ nghiên cứu phi thương mại | ★★★ |
+| 23 | [Wayfair WANDS](https://github.com/wayfair/wands) | b (EN) | 42,994 sản phẩm, 480 truy vấn, 233,448 nhãn (Exact/Partial/Irrelevant) | Chưa xác minh | ★★★★ |
+| 24 | [AOL query log](https://en.wikipedia.org/wiki/AOL_search_log_release) | b (EN) | ~20M truy vấn, ~650K user (2006) | Đã bị thu hồi vì riêng tư; README gốc: chỉ nghiên cứu phi thương mại | ★ (cân nhắc đạo đức) |
+| 25 | [BANKING77](https://github.com/PolyAI-LDN/task-specific-datasets) | c (EN) | 13,083 câu, 77 intent | CC BY 4.0 (theo TFDS qua search) | ★★ (mẫu intent) |
 
 ### (a) Tiếng Việt / Việt Nam
 

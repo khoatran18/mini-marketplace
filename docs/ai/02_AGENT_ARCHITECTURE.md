@@ -5,6 +5,21 @@
 > - LangSmith: gói Developer miễn phí (1 seat, ~5k trace/tháng), Plus ~39 USD/seat/tháng; **tự host / hybrid chỉ có ở gói Enterprise** (giá liên hệ) ([trang giá LangSmith](https://www.langchain.com/langsmith-pricing)). Con số có thể đổi, hãy xem lại trước khi chọn.
 > - Langfuse: mã nguồn mở, lõi giấy phép MIT, tự host bằng Docker / Kubernetes; một số module enterprise (SCIM, audit log, retention) dùng giấy phép thương mại riêng; cần Postgres + ClickHouse + Redis + object storage; có telemetry mặc định (tắt bằng `TELEMETRY_ENABLED=false`); tháng 1/2026 ClickHouse mua lại Langfuse, lõi vẫn MIT ([tài liệu self-hosting](https://langfuse.com/self-hosting.md)). Chưa đối chiếu với file LICENSE chính thức.
 
+## 0. Từ khó, giải thích một lần
+| Từ | Nghĩa trong tài liệu này |
+|---|---|
+| **LLM** | mô hình ngôn ngữ lớn (loại như Claude, GPT) |
+| **Agent** | LLM được phép *tự chọn* gọi công cụ, nhiều lần, đến khi đủ thông tin để trả lời |
+| **Tool / công cụ** | một chức năng agent được phép gọi; ở đây mỗi tool chính là **một API REST có sẵn** của gateway (ví dụ "lấy báo cáo doanh thu") |
+| **Human-in-the-loop** | người dùng phải bấm xác nhận trước khi agent làm việc có tác động (đặt đơn, hủy đơn, hoàn tiền) |
+| **`action_proposal`** | thay vì tự làm, agent trả về một "đề xuất hành động" để giao diện hiển thị nút Xác nhận |
+| **Workflow** | các bước do *bạn* định sẵn, LLM chỉ làm từng bước (khác agent) |
+| **RAG** | tìm đoạn tài liệu liên quan rồi bắt LLM trả lời dựa trên đoạn đó, kèm trích dẫn |
+| **Checkpoint** | lưu trạng thái giữa chừng để dừng chờ người rồi chạy tiếp |
+| **Tracing / eval** | ghi lại từng bước chạy của LLM để xem lại / chấm điểm trên bộ ca thử |
+
+Danh sách tính năng agent cụ thể, từng cái gọi tool nào và người xác nhận ở đâu: [06_AGENT_FEATURES.md](06_AGENT_FEATURES.md).
+
 ## 1. Kết luận trước
 
 - **Đa số scope AI của dự án KHÔNG cần agent.** Gợi ý, tìm kiếm, OCR, phân loại, fraud, dự báo, kiểm duyệt là pipeline / mô hình / workflow: kết quả ổn định, rẻ, dễ đo hơn.
@@ -12,20 +27,24 @@
 - **LangGraph không bắt buộc.** Với 3 persona đầu tiên, một vòng lặp tool-calling tự viết (tối đa 4 vòng, timeout rõ ràng) là đủ và dễ gỡ lỗi. LangGraph đáng dùng khi bạn cần **trạng thái bền vững + dừng chờ người duyệt + chạy tiếp** (human-in-the-loop) hoặc đồ thị nhiều bước có rẽ nhánh / thử lại.
 - **Quan sát và đánh giá (tracing + dataset + eval) mới là thứ bắt buộc**, không phải framework. LangSmith là một lựa chọn; Langfuse (mã nguồn mở, tự host) là lựa chọn thay thế hợp với dự án đang chạy trên Swarm và không muốn đẩy dữ liệu người dùng ra ngoài.
 
-## 2. Thang tự chủ: dùng bậc thấp nhất giải quyết được vấn đề
+## 2. "Mức tự chủ" nghĩa là gì (giải thích đơn giản)
 
-| Bậc | Mô tả | Ví dụ trong dự án |
-|---|---|---|
-| 0 | Mã thường / luật | giới hạn quyền, lọc hết hàng |
-| 1 | Mô hình ML / retrieval | gợi ý, embedding, fraud, forecast |
-| 2 | 1 lần gọi LLM với đầu ra có schema | trích thuộc tính, phân loại danh mục, tóm tắt review, giải thích cảnh báo |
-| 3 | Workflow cố định có bước LLM (đồ thị do **bạn** định) | RAG luật: retrieve → chấm điểm đoạn → trả lời có trích dẫn; OCR: ảnh → text → JSON → kiểm → người duyệt |
-| 4 | **Agent**: LLM tự chọn tool trong vòng lặp có giới hạn | trợ lý shopper / seller / admin |
-| 5 | Nhiều agent phối hợp | **không** cần ở giai đoạn này |
+Câu hỏi cần trả lời cho mỗi chức năng AI: **ai là người quyết định bước tiếp theo, code của bạn hay mô hình ngôn ngữ (LLM)?** Càng để LLM tự quyết thì càng linh hoạt nhưng càng khó đoán, đắt và khó kiểm thử. Vì vậy dùng **mức thấp nhất mà vẫn giải quyết được bài toán**. Mình chia thành 6 mức, đánh số 0–5 (chỉ để gọi cho gọn, không có ý nghĩa gì khác):
+
+| Mức | Gọi là | Ai quyết định bước tiếp theo? | Ví dụ đời thường trong dự án |
+|---|---|---|---|
+| 0 | Code thường | code của bạn, luật cố định | "đơn quá 15 phút chưa trả tiền thì hết hạn" |
+| 1 | Mô hình ML / tìm kiếm | không có "quyết định", chỉ tính điểm và xếp hạng | gợi ý sản phẩm, tìm theo ngữ nghĩa, phát hiện gian lận, dự báo hàng bán |
+| 2 | Gọi LLM **một lần** | code gọi LLM 1 lần rồi dùng kết quả | đọc mô tả sản phẩm rồi trả về JSON {màu, size, thương hiệu}; tóm tắt 50 review |
+| 3 | Quy trình cố định có bước LLM (workflow) | **bạn** vẽ sẵn các bước, LLM chỉ làm từng bước | hỏi luật: tìm đoạn luật → chấm xem có liên quan không → viết câu trả lời kèm trích dẫn |
+| 4 | **Agent** | **LLM tự chọn** gọi công cụ nào, mấy lần, rồi quyết định khi nào đủ để trả lời | "so sánh doanh thu tuần này với tuần trước và cho biết sản phẩm nào kéo giảm" |
+| 5 | Nhiều agent phối hợp | các agent giao việc cho nhau | chưa cần ở giai đoạn này |
+
+Cách nhận biết **agent thật sự (mức 4)**: bạn *không biết trước* cần gọi bao nhiêu công cụ và theo thứ tự nào; câu hỏi của người dùng quyết định. Nếu bạn vẽ được sơ đồ các bước trước, đó là workflow (mức 3), không phải agent.
 
 ## 3. Scope nào cần agent?
 
-| Scope | Bậc đề xuất | Lý do |
+| Scope | Mức đề xuất | Lý do |
 |---|---|---|
 | 1 Gợi ý, 2 Tìm kiếm, 11 Visual search, 15 NLP truy vấn | 1 (+2 cho viết lại truy vấn) | không có bước "quyết định làm gì tiếp" |
 | 3 OCR hóa đơn | 3 | luồng cố định; thất bại thì chuyển người duyệt, không cần LLM tự quyết |
@@ -33,7 +52,7 @@
 | 5 Trợ lý mua sắm / CSKH | **4** + xác nhận | hội thoại nhiều lượt, tra giỏ / đơn / chính sách, đề xuất hành động ghi |
 | 6 RAG luật / chính sách | 3 (4 khi kết hợp đơn của user) | quy trình truy hồi cố định; chỉ cần agent khi phải "tra đơn rồi áp điều khoản" |
 | 7 Review, 10 Phân loại / thuộc tính, 12 Kiểm duyệt | 2–3 | xử lý hàng loạt / theo sự kiện, không cần hội thoại |
-| 8 Fraud, 9 Forecast, 13 CLV / giá | 1 | mô hình số; LLM nhiều lắm để giải thích kết quả (bậc 2) |
+| 8 Fraud, 9 Forecast, 13 CLV / giá | 1 | mô hình số; LLM nhiều lắm để giải thích kết quả (mức 2) |
 | 14 AIOps | 2 (giải thích cảnh báo) / **4 chỉ-đọc** (điều tra) | điều tra: metric → log → giả thuyết là chuỗi quyết định thật sự; phải chỉ-đọc |
 
 ## 4. Khi nào nên dùng LangGraph
