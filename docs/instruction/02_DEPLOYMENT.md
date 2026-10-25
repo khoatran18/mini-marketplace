@@ -1,6 +1,7 @@
 # Triển khai
 
 Ba file compose nhắm tới Docker Swarm (cũng chạy được bằng `docker compose` cục bộ). Mạng overlay dùng chung tên cố định **`marketplace-net`** (`infra.yml` tạo, hai file kia khai `external`).
+
 | Stack (tên) | File | Thành phần |
 |---|---|---|
 | `marketplace-infra` | `deploy/infra.yml` | `postgres:16-alpine`, `redis:8.2.1-alpine` (AOF), **`clickhouse/clickhouse-server:24.8`**, Kafka `apache/kafka:3.9.0` một node KRaft (`broker1`, 3 partition mặc định, retention 168 h); volume `postgres-data redis-data kafka-data clickhouse-data`; healthcheck đủ cả bốn |
@@ -30,6 +31,7 @@ Host: UI `https://marketplace.swarm.localhost`, API `https://api.<host>`, Traefi
 
 ## 3. Biến môi trường
 (`deploy/.env.example` là mẫu; `services.yml` truyền xuống container.)
+
 | Biến | Dùng bởi | Mặc định / ghi chú |
 |---|---|---|
 | `POSTGRES_USER/PASSWORD/DB` | infra, services | mật khẩu bắt buộc |

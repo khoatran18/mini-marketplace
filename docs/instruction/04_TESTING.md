@@ -9,6 +9,7 @@ cd apps/frontend && npx tsc --noEmit && npm run build
 Bảy service: `api-gateway`, `auth-service`, `user-service`, `product-service`, `order-service`, `payment-service`, `analytics-service` (CI chạy đủ bảy trong ma trận `.github/workflows/ci.yml`).
 
 ### Biến môi trường
+
 | Biến | Dùng cho | Khi thiếu |
 |---|---|---|
 | `TEST_POSTGRES_DSN` | auth, user, product, order, payment (mọi test chạm DB) | test **bị skip** |
@@ -34,6 +35,7 @@ Khác biệt chDB ↔ ClickHouse server có thể có ở chi tiết hiếm; b�
 - Sinh traffic giả để xem dashboard (DEV): `python3 scripts/dev/gen_traffic.py --api https://api.marketplace.swarm.localhost --visitors 200 --products 1-60` (chỉ gửi loại event của client; đơn/thanh toán phải đặt thật qua UI/API).
 
 ## 2. Phạm vi từng bộ test
+
 | Khu vực | File | Nội dung chính |
 |---|---|---|
 | Đơn: định giá & checkout | `order-service/internal/service/checkout_test.go` | `toMinor` làm tròn cent; tách đơn theo store; giá luôn từ catalog; idempotency theo (buyer, key); validate (key, method, địa chỉ, ghi chú); preview báo `issue` không lỗi; luật phí ship (flat / free-ship) |

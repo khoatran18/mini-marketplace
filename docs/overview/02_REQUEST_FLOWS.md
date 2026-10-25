@@ -15,7 +15,7 @@ sequenceDiagram
   B->>T: HTTPS api.<host>/orders (Bearer JWT)
   T->>G: chọn replica có /ready = 200
   G->>G: CORS → giới hạn body → log → rate limit toàn cục
-  G->>R: đếm request theo IP (Lua; Redis chết thì cho qua)
+  G->>R: đếm request theo IP (Lua, Redis chết thì cho qua)
   G->>G: AuthMiddleware (gắn theo route): kiểm JWT type=access, pwd_version
   G->>G: AuthorizationMiddleware: role có được vào nhóm route không
   G->>S: gRPC (userID / storeID lấy từ token, không từ body)
@@ -53,7 +53,7 @@ sequenceDiagram
   G->>P: gRPC (full-text không dấu, chỉ sản phẩm active)
   P-->>B: danh sách / chi tiết (tồn kho hiển thị dạng mức, ví dụ "20+")
   B->>G: POST /events [≤50 event, ≤64 KB] (page_view, product_click, add_to_cart…)
-  G->>G: gắn user/role/store/hash IP từ JWT & request; rate limit riêng
+  G->>G: gắn user/role/store/hash IP từ JWT & request, rate limit riêng
   G->>AN: gRPC IngestEvents
   AN->>AN: whitelist loại event, consent, che PII
   AN->>CH: insert theo lô (2 s hoặc 5000 dòng) vào events_raw
@@ -86,7 +86,7 @@ sequenceDiagram
   K-->>PAY: tạo payment REQUIRES_ACTION
   B->>G: POST /payments/:id/confirm (thẻ test / ví / chuyển khoản)
   G->>PAY: gRPC
-  PAY-->>K: payment.succeeded (thẻ: ngay; ví/chuyển khoản: sau webhook giả có ký HMAC)
+  PAY-->>K: payment.succeeded (thẻ: ngay, ví/chuyển khoản: sau webhook giả có ký HMAC)
   K-->>O: đơn → PAID
   Note over O: Seller ship ⇒ SHIPPED (kho reserved→sold) ⇒ DELIVERED<br/>(seller / buyer xác nhận / tự giao sau AUTO_DELIVER_DAYS)
   K-->>AN: order.status_changed, payment.*, product.changed → fact_* ở ClickHouse

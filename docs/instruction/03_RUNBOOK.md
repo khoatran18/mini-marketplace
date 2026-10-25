@@ -11,6 +11,7 @@ docker run --rm --network marketplace-net alpine wget -qO- http://<service>:8081
 
 ## 1. Readiness nghĩa là gì
 `/healthz` luôn 200 nếu process còn sống (Docker dùng nó – **không bao giờ** phụ thuộc dependency). `/ready` mới nói "nhận được traffic chưa": 200 `ready`/`degraded` hoặc **503 `not_ready`** kèm JSON `checks` chỉ ra check nào hỏng. `/ready` 503 + `/healthz` 200 = "có dependency hỏng, **đừng restart**". Mỗi check có timeout 1 s, kết quả cache 3 s. Kiểm tra Kafka chỉ là **dial TCP** tới broker (không đo lag/consumer).
+
 | Service | Critical (hỏng ⇒ 503) | Non-critical (hỏng ⇒ `degraded`, vẫn 200) |
 |---|---|---|
 | api-gateway | kafka, `AuthClient`, `OrderClient`, `ProductClient`, `UserClient` (gRPC health) | redis, `PaymentClient`, `AnalyticsClient` |
@@ -24,6 +25,7 @@ Traefik chỉ route vào replica gateway khi `/ready` = 200. Gateway `degraded` 
 
 ## 2. Đọc dashboard Grafana (`https://grafana.<PUBLIC_HOST>`, thư mục *Marketplace*, làm mới 15 s)
 Chỉ xem, **không có cảnh báo/ thông báo** – người vận hành tự nhìn. Màu ô số chỉ là gợi ý.
+
 | Dashboard | Xem gì | Dấu hiệu xấu |
 |---|---|---|
 | **Overview** | Targets up/down, "Services not ready" (`count(mm_ready==0)`), gateway 5xx %, p95, RPS, bảng phiên bản đang chạy (`mm_build_info`), CPU/RAM theo swarm service | "Targets down" ≥ 1 (đỏ), "Services not ready" ≥ 1 (đỏ), 5xx > 1 % vàng / > 2 % đỏ, p95 > 0,5 s vàng / > 1 s đỏ |
@@ -92,6 +94,7 @@ Group: `product-service-validate-order|cancel-order|ship-order`, `order-service-
 - Admin bootstrap: đặt `ADMIN_BOOTSTRAP_*`, đăng nhập với `role:"admin"`, đổi mật khẩu rồi gỡ biến.
 
 ## 11. Sao lưu / khôi phục
+
 | Dữ liệu | Cách |
 |---|---|
 | Postgres (`postgres-data`) – **nguồn sự thật** (tài khoản, catalog, đơn, payment, outbox) | `docker exec <postgres> pg_dump -U postgres -Fc postgres > mm-$(date +%F).dump`; khôi phục vào DB trống: `pg_restore -U postgres -d postgres --clean --if-exists mm.dump` khi **dừng** các service ghi. Hoặc snapshot volume khi Postgres đã dừng. Dùng cùng một dump cho mọi service (chung DB) |

@@ -27,6 +27,7 @@ Mỗi service Go mở **hai cổng**: nghiệp vụ (gRPC; gateway HTTP :8080) v
 Phụ thuộc gRPC thực tế: gateway → cả 6 service; order → product (giá/tồn); user → auth. **order-service không gọi payment-service bằng gRPC**: giao tiếp order ↔ payment hoàn toàn qua Kafka (`payment.requested`, `payment.succeeded/refunded`, `order.refund_requested`).
 
 ## 2. Service mới / mở rộng
+
 | Service | Ngôn ngữ | Cổng | Trách nhiệm | Trạng thái |
 |---|---|---|---|---|
 | `payment-service` | Go | gRPC 50057 (+ webhook HTTP nội bộ trên :8081) | thanh toán **mô phỏng** (`mockpay`), idempotency, webhook ký HMAC, hoàn tiền; phát `payment.*` (outbox) – xem 04 | ✅ |

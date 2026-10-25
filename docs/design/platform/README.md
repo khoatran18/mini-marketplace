@@ -4,6 +4,7 @@
 > **Không có gì liên quan tới AI ở đây.** Ý tưởng AI nằm ở một file nháp riêng: [05_AI_DRAFT_ORIGINAL.md](../../ai/05_AI_DRAFT_ORIGINAL.md) – *nháp, không được dùng, không được code theo*.
 
 ## Mục lục
+
 | # | Tài liệu | Nội dung | Trạng thái |
 |---|---|---|---|
 | 01 | [01_ARCHITECTURE.md](01_ARCHITECTURE.md) | Kiến trúc, 7 service, cổng, luồng dữ liệu | ✅ |

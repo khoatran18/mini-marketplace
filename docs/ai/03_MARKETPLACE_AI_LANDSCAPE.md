@@ -148,6 +148,7 @@ Quy ước: mỗi bullet ghi chức năng, nguồn (link) và mức tin cậy. "
 Tiêu chí: (a) có dữ liệu sẵn hoặc sinh được; (b) dựng được trong quy mô đồ án (một người/nhóm nhỏ, không GPU riêng); (c) demo thấy ngay giá trị; (d) rủi ro an toàn thấp.
 
 ### Must-have
+
 | Chức năng | Vì sao |
 |---|---|
 | Gợi ý theo click/view/cart | Nhóm phổ biến nhất ở Shopee, Lazada, Alibaba, Flipkart; dữ liệu tracking đã thu; có thể làm bằng item-to-item co-occurrence hoặc matrix factorization nhẹ, không cần LLM. |
@@ -158,6 +159,7 @@ Tiêu chí: (a) có dữ liệu sẵn hoặc sinh được; (b) dựng được 
 | Kiểm duyệt + an toàn agent + eval agent | TikTok dùng AI lọc trước khi hiển thị; với dự án, đây cũng là lớp bảo vệ bắt buộc khi cho LLM đọc dữ liệu người dùng (prompt injection qua review/mô tả). Không có eval thì không biết agent có đúng không. |
 
 ### Nice-to-have
+
 | Chức năng | Vì sao |
 |---|---|
 | Review sentiment/spam + tóm tắt review | Chỉ Walmart có nguồn tóm tắt review trong lần tra cứu này, nhưng bài toán gọn, dữ liệu tự sinh được. Cần có bảng review trước. |
@@ -168,6 +170,7 @@ Tiêu chí: (a) có dữ liệu sẵn hoặc sinh được; (b) dựng được 
 | OCR hoá đơn | Không thấy sàn nào công bố trong tra cứu này, nhưng thuộc scope dự án (KYC seller, hoá đơn nhập hàng). |
 
 ### Để sau
+
 | Chức năng | Vì sao |
 |---|---|
 | CLV/churn/định giá động | Cần lịch sử dài và A/B test thật; rủi ro đạo đức/công bằng khi đổi giá theo người dùng. |

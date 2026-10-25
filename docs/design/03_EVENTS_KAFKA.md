@@ -3,6 +3,7 @@
 Broker: `broker1:9092` (một node, KRaft; retention log 168 giờ = 7 ngày). Mỗi service tự tạo topic cần dùng lúc khởi động (`KafkaClient.EnsureTopicExist`: **3 partition, RF 1**). Key chọn partition bằng `kafka.Hash` ⇒ cùng key luôn cùng partition. Tracking của trình duyệt **không** đi qua Kafka (gateway gọi gRPC `IngestEvents` của analytics-service – ADR-13). Mọi payload mới có trường `v` (phiên bản schema, hiện `1`); tiền là **số nguyên đơn vị nhỏ** (`*_minor`, 1/100 VND – ADR-18).
 
 ## 1. Danh mục topic
+
 | Topic | Producer (nguồn) | Consumer → group | Key |
 |---|---|---|---|
 | `order.create_order` | order-service (`domain_events`) | product-service → `product-service-validate-order` | `order_id` |
@@ -22,6 +23,7 @@ Group của analytics-service luôn là `analytics-service-<topic>` (mỗi topic
 Không có topic `tracking.events`, `cart.updated`, `*.dlq` (đều **chưa làm**; quá 5 lần lỗi thì consumer ghi log và bỏ qua – xem §3).
 
 ## 2. Payload (từ struct trong code)
+
 | Topic | Trường |
 |---|---|
 | `order.create_order`, `order.cancel_order` | `{order_id, items:[{product_id, quantity}]}` (không có `v`) |
@@ -43,6 +45,7 @@ Không có topic `tracking.events`, `cart.updated`, `*.dlq` (đều **chưa làm
 - **Thứ tự**: cùng key ⇒ cùng partition ⇒ giữ thứ tự (các event của một đơn/ một user). Khác topic không có thứ tự tương đối; thiết kế tránh phụ thuộc vào đó (trạng thái đi qua `UPDATE … WHERE status IN (…)`).
 
 ## 4. Quy tắc idempotent theo consumer
+
 | Consumer | Cách khử trùng / xử lý lệch thứ tự |
 |---|---|
 | product `ValidateProductInventory` | bỏ qua nếu `validate_order_events.processed` đã có; giữ hàng trong **một** transaction, khoá thứ tự theo `product_id` (tránh deadlock), PK `order_id` ⇒ giao trùng đồng thời bị rollback phần trừ kho. Thiếu hàng ⇒ `RecordFailedValidation` (`ON CONFLICT DO NOTHING`), không thử lại |

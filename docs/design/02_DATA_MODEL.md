@@ -4,6 +4,7 @@ Nguồn: `services/*/pkg/model`, `services/*/internal/repository/migrate.go`, `s
 
 ## 1. Postgres theo service
 ### auth-service
+
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|
 | `accounts` | `id, username UNIQUE, password (bcrypt), role, pwd_version, store_id, deleted_at` | `role` ∈ `buyer, seller_admin, seller_employee, admin`; `store_id` = id store (0 đến khi tạo store, gán qua event `user.create_seller`); `username` UNIQUE toàn cục dù login theo (username, role) |
@@ -11,6 +12,7 @@ Nguồn: `services/*/pkg/model`, `services/*/internal/repository/migrate.go`, `s
 *Chưa có*: `status/failed_logins/locked_until`, `email`, `audit_log` (khoá đăng nhập & audit: chưa làm).
 
 ### user-service
+
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|
 | `buyers` | `user_id PK, name, gender, date_of_birth, phone, address, deleted_at` | |
@@ -19,6 +21,7 @@ Nguồn: `services/*/pkg/model`, `services/*/internal/repository/migrate.go`, `s
 | `create_seller_events` | `seller_id PK, user_id, status, created_at` | outbox cũ cho `user.create_seller` (AutoMigrate còn tạo thêm bảng thừa `create_seller_kafka_events`) |
 
 ### product-service
+
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|
 | `products` | `id, name, price NUMERIC(18,2), seller_id, inventory, reserved, sold, attributes JSONB, sku, description, category_id, brand, tags JSONB, image_urls JSONB, status, low_stock_threshold, weight_g, version, created_at, updated_at, deleted_at` | UNIQUE `(seller_id, sku)` khi `sku<>''`; GIN index full-text `to_tsvector('simple', mm_unaccent(name‖brand‖sku‖description))` |
@@ -29,24 +32,26 @@ Nguồn: `services/*/pkg/model`, `services/*/internal/repository/migrate.go`, `s
 Hàm SQL `mm_unaccent(text)` (IMMUTABLE, thuần SQL, bỏ dấu tiếng Việt + lower) được tạo khi migrate.
 
 ### order-service
+
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|
 | `checkouts` | `id (co_<20 hex>) PK, buyer_id, idempotency_key, payment_method, total NUMERIC(18,2), created_at` | UNIQUE `(buyer_id, idempotency_key)` – nền của idempotency `POST /orders` |
 | `orders` | `id, checkout_id, buyer_id, store_id, status, payment_method, payment_status, subtotal, shipping_fee, total_price (NUMERIC(18,2)), shipping_address JSONB, note, expires_at, paid_at, shipped_at, delivered_at, canceled_at, cancel_reason, canceled_by, carrier, tracking_code, return_reason, return_rejected, created_at, updated_at` | **mỗi store một đơn** trong một checkout; index `(buyer_id,status)`, `(store_id, …)`, `checkout_id`, `expires_at` |
-| `order_items` | `id, order_id, product_id, quantity, price (đơn giá snapshot), line_total, product_name, sku, image_url, store_id, category_id, status ACTIVE|CANCELED` | snapshot tại thời điểm đặt |
-| `order_status_histories` | `id, order_id, from_status, to_status, actor_type, actor_id, reason, at` | mỗi lần chuyển trạng thái (timeline); `actor_type` ∈ `system|buyer|seller|admin|payment` |
+| `order_items` | `id, order_id, product_id, quantity, price (đơn giá snapshot), line_total, product_name, sku, image_url, store_id, category_id, status ACTIVE\|CANCELED` | snapshot tại thời điểm đặt |
+| `order_status_histories` | `id, order_id, from_status, to_status, actor_type, actor_id, reason, at` | mỗi lần chuyển trạng thái (timeline); `actor_type` ∈ `system\|buyer\|seller\|admin\|payment` |
 | `cart_items` | `(user_id, product_id) PK, quantity (1–99), added_at, updated_at` | giỏ trên server; ≤ 50 dòng/user; giá/tồn đọc sống từ catalog |
 | `domain_events` | §1.5 | outbox chung: `order.create_order`, `order.cancel_order`, `order.status_changed`, `order.refund_requested`, `payment.requested` |
 | `create_order_events`, `cancel_order_events` | `order_id PK, items JSON, status` | outbox **cũ** – chỉ còn được *xả* cho dữ liệu của bản cũ khi nâng cấp |
 Migrate đổi trạng thái cũ `SUCCESS` → `CONFIRMED`.
 
 ### payment-service
+
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|
 | `payments` | `id, checkout_id UNIQUE, buyer_id, method, status, amount_minor, currency, provider ('mockpay'), provider_ref, failure_code, card_last4, failed_count, three_ds_passed, order_ids JSONB, expires_at, paid_at, refunded_minor, created_at, updated_at` | một payment cho **cả checkout** (idempotent theo `checkout_id`); **không** lưu số thẻ/CVV |
-| `attempts` | `id, payment_id, scenario, status (PENDING|SUCCEEDED|FAILED), failure_code, at` | lịch sử các lần thử |
+| `attempts` | `id, payment_id, scenario, status (PENDING\|SUCCEEDED\|FAILED), failure_code, at` | lịch sử các lần thử |
 | `refunds` | `id, payment_id, order_id (0 = cấp checkout), refund_key UNIQUE, amount_minor, reason, status, at` | `refund_key` làm yêu cầu hoàn tiền idempotent |
-| `webhook_deliveries` | `id, payment_id, provider_event_id, type, payload, deliver_at, attempts, status (PENDING|DELIVERED|GAVE_UP), last_code, delivered_at` | thông báo "nhà cung cấp" giả gửi tới webhook của chính service; retry mũ, bỏ cuộc sau 6 lần |
+| `webhook_deliveries` | `id, payment_id, provider_event_id, type, payload, deliver_at, attempts, status (PENDING\|DELIVERED\|GAVE_UP), last_code, delivered_at` | thông báo "nhà cung cấp" giả gửi tới webhook của chính service; retry mũ, bỏ cuộc sau 6 lần |
 | `processed_events` | `provider_event_id PK, at` | khử trùng webhook (at-least-once) |
 | `domain_events` | §1.5 | outbox: `payment.succeeded`, `payment.failed`, `payment.refunded` |
 
@@ -59,6 +64,7 @@ Không có bảng Postgres. Gateway dùng Redis (`rate_limit:<scope>:<ip>`, `<us
 
 ## 2. Ngữ nghĩa
 ### Tồn kho (product-service)
+
 | Đại lượng | Ý nghĩa |
 |---|---|
 | `inventory` | **số còn bán được (available)** – đã trừ phần giữ chỗ |
@@ -66,8 +72,9 @@ Không có bảng Postgres. Gateway dùng Redis (`rate_limit:<scope>:<ip>`, `<us
 | `sold` | đã xuất kho (đơn SHIPPED) – dùng cho sort `best_selling` |
 | tồn vật lý | `inventory + reserved` |
 | `stock_level` (suy ra) | `none` nếu `inventory≤0`; `low` nếu `inventory ≤ ngưỡng`; `ok`. Ngưỡng = `low_stock_threshold` (>0) hoặc 5 |
-| `status` | `draft | active | hidden | banned` (do seller/admin; `banned` chỉ admin). "Hết hàng" **không** là status |
+| `status` | `draft \| active \| hidden \| banned` (do seller/admin; `banned` chỉ admin). "Hết hàng" **không** là status |
 Mọi thay đổi gọi `applyStock` (một câu `UPDATE … WHERE inventory + Δ >= 0 RETURNING`) rồi ghi `inventory_ledgers` + `inventory.changed` trong cùng transaction.
+
 | Sự kiện | `inventory` | `reserved` | `sold` | ledger `reason` |
 |---|---|---|---|---|
 | tạo sản phẩm (tồn>0) | +n | – | – | `initial` |
@@ -105,12 +112,13 @@ Postgres `NUMERIC(18,2)` (orders, items, products); wire gRPC/JSON `double` (VND
 
 ## 3. ClickHouse (analytics-service, DB `CLICKHOUSE_DB`=`marketplace`)
 Tạo/migrate bởi analytics-service khi khởi động (chờ ClickHouse tối đa ~2 phút); migration đánh số trong `schema_migrations(version, applied_at)`, **không bao giờ sửa migration đã chạy – thêm migration mới**. Mọi cột thời gian là `DateTime64(3,'UTC')`; `ingested_at DEFAULT now64(3)` (đo độ trễ pipeline). Engine `ReplacingMergeTree(<cột phiên bản>)` + truy vấn dùng `FINAL` ⇒ idempotent khi Kafka giao lại (ADR-14). **Không có materialized view** – báo cáo gom thẳng bảng fact lúc truy vấn.
+
 | Bảng | ORDER BY / phiên bản | Nội dung |
 |---|---|---|
 | `events_raw` | `(event_type, anonymous_id, ts, event_id)` / `ts_server`; `PARTITION BY toYYYYMM(ts)`; **TTL** `ts + EVENTS_RETENTION_MONTHS` (13) | `event_id, event_type, ts, ts_server, anonymous_id, session_id, user_id, role, store_id, surface, path, referrer, product_id, position, props (JSON chuỗi), device_type, os, country, ua_family, analytics_consent, ip_hash, app_version, ingested_at`. `identify` lưu ở đây với `event_type='identify'` |
 | `fact_order_status` | `(order_id, status)` / `at` | **một dòng cho mỗi (đơn, trạng thái)**: `order_id, status, checkout_id, buyer_id, store_id, payment_method, payment_status, subtotal_minor, shipping_fee_minor, total_minor, at` |
 | `fact_order_items` | `(order_id, item_id)` / `at` | `order_id, item_id, store_id, product_id, category_id, qty, unit_price_minor, at` |
-| `fact_payment_events` | `(payment_id, kind, at)` / `at` | `payment_id, kind (succeeded|failed), checkout_id, buyer_id, method, amount_minor, failure_code, terminal, at` – cấp **lần thử** |
+| `fact_payment_events` | `(payment_id, kind, at)` / `at` | `payment_id, kind (succeeded\|failed), checkout_id, buyer_id, method, amount_minor, failure_code, terminal, at` – cấp **lần thử** |
 | `fact_refunds` | `refund_id` / `at` | `refund_id, payment_id, checkout_id, order_id, amount_minor, reason, at` |
 | `dim_products` | `product_id` / `updated_at` | bản mới nhất: `store_id, name, sku, category_id, brand, price_minor, status` (`op=delete` → `status='deleted'`) |
 | `fact_inventory` | `(product_id, at, reason, ref_type, ref_id)` / `at` | `delta, available, reserved, level, reason, ref_type, ref_id, at` |

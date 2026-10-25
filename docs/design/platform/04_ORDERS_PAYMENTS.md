@@ -17,6 +17,7 @@ PENDING ─▶ AWAITING_PAYMENT (online, có hạn) ─▶ PAID ─▶ SHIPPED �
 - **`SUCCESS` cũ** đã được migrate thành `CONFIRMED` (`order-service` `Migrate`).
 - Terminal: `FAILED, EXPIRED, CANCELED, REFUNDED` (`DELIVERED` chỉ đi tiếp qua luồng trả hàng, một lần).
 - Chuyển trạng thái chạy trong **một transaction có khoá hàng**: kiểm tra bảng `transitions`, cập nhật đơn, ghi `order_status_histories`, phát `order.status_changed` + event kéo theo. Bản giao trùng/ đến muộn → `ErrNotAllowed` → bỏ qua.
+
 | Chuyển | Ai | Điều kiện / hệ quả |
 |---|---|---|
 | `PENDING → AWAITING_PAYMENT` | system (kết quả giữ hàng) | đơn online; `expires_at = now + ORDER_PAYMENT_TTL_MIN` (15) |
@@ -45,6 +46,7 @@ Chi tiết ở [02_DATA_MODEL.md](../02_DATA_MODEL.md) §2 và ADR-21. Tóm tắ
 Một payment **cho cả checkout**, tạo **bất đồng bộ**: order-service phát `payment.requested` khi mọi đơn của checkout online đã rời `PENDING` (số tiền = tổng đơn đang `AWAITING_PAYMENT`, `expires_at` = hạn sớm nhất). `payments.checkout_id` UNIQUE ⇒ idempotent. COD **không** có payment.
 
 ### 3.1 Phương thức
+
 | Method | Hành vi (`POST /payments/:id/confirm`) |
 |---|---|
 | `COD` | không có payment; tiền ghi nhận khi `DELIVERED` |
@@ -54,6 +56,7 @@ Một payment **cho cả checkout**, tạo **bất đồng bộ**: order-service
 Khác thiết kế: không có header `X-Mock-Scenario`; không có nút "admin giả lập đã nhận tiền" (dùng `POST /admin/dev/payments/:id/force` khi `ENV=dev`).
 
 ### 3.2 Thẻ test (cố định, `confirm.go`)
+
 | Số thẻ | Kết quả |
 |---|---|
 | `4242 4242 4242 4242` | thành công ngay |

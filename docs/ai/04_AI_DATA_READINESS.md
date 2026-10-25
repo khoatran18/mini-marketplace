@@ -20,6 +20,7 @@
 Danh sách đầy đủ phần hạ tầng (không gồm tầng LLM): [../planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md](../planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md).
 
 ### Chặn một scope cụ thể
+
 | Thiếu | Chặn | Làm gì |
 |---|---|---|
 | **`request_id` + `model_version` trong envelope tracking** (hiện không có; `impression` / `product_click` không biết do gợi ý nào sinh ra) | đo CTR / CVR của gợi ý (1), A/B | thêm vào envelope & whitelist, ghi vào `events_raw` (cần migration ClickHouse), frontend gửi lại khi click |
@@ -34,6 +35,7 @@ Danh sách đầy đủ phần hạ tầng (không gồm tầng LLM): [../planni
 | Retention `events_raw` 13 tháng; ClickHouse chỉ dựng lại được ≤ 7 ngày từ Kafka | huấn luyện lịch sử | cân nhắc xuất snapshot định kỳ |
 
 ### Tầng LLM (chủ dự án tự xây sau; liệt kê để không quên)
+
 | Thiếu | Làm gì |
 |---|---|
 | `ai-service` (Python: FastAPI + gRPC), proto, route gateway `/ai/*`, rate limit AI riêng | dựng khung với bản mock trước (echo, trending) |

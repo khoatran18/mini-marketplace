@@ -57,6 +57,7 @@ Danh sách đầy đủ biến môi trường: [02_DEPLOYMENT.md](02_DEPLOYMENT.
 Hostname lấy từ `PUBLIC_HOST` (mặc định `marketplace.swarm.localhost`).
 
 ### Tài khoản
+
 | Tài khoản | Cách có | Ghi chú |
 |---|---|---|
 | `buyer1` / `password` | `SEED_DEMO_DATA=true` | đặt hàng, thanh toán thử |
@@ -65,6 +66,7 @@ Hostname lấy từ `PUBLIC_HOST` (mặc định `marketplace.swarm.localhost`).
 | tài khoản mới | `/register` | chọn role buyer hoặc seller |
 
 ### Các trang chính của frontend
+
 | Vai trò | Trang |
 |---|---|
 | Mọi người | `/products`, `/products/[id]`, `/categories/[slug]`, `/login`, `/register` |
@@ -74,6 +76,7 @@ Hostname lấy từ `PUBLIC_HOST` (mặc định `marketplace.swarm.localhost`).
 | Dev | `/dev/tracking` (chỉ hiện khi `NEXT_PUBLIC_APP_ENV=dev`) |
 
 ### Thẻ test thanh toán (mô phỏng)
+
 | Số thẻ | Kết quả |
 |---|---|
 | `4242 4242 4242 4242` | thành công ngay |

@@ -22,6 +22,7 @@ Ngôn ngữ dự kiến: **`ai-service` bằng Python** (FastAPI + gRPC), các s
 Tracking & ClickHouse · analytics API theo vai trò · metrics Prometheus + `/admin/system/*` · catalog đủ trường · cart · thanh toán mô phỏng · role admin · health/ready/metrics mọi service. AI chỉ **gọi lại các API này** (bằng JWT của người dùng), không đọc DB trực tiếp.
 
 ## Điều kiện tối thiểu cho từng ứng dụng AI
+
 | Ứng dụng | Cần có từ platform |
 |---|---|
 | Tìm theo mô tả | `description/category/tags/image` (03 platform), `product.changed` event |
@@ -106,36 +107,39 @@ Một `ai-service`, ba *persona* (system prompt + bộ tool khác nhau), chọn 
 Mỗi tool = 1 endpoint REST ở gateway (xem 08 §1), có JSON schema. LLM **không** viết SQL.
 
 #### 2.1 Shopper
+
 | Tool | Tham số | Trả về | Ghi chú |
 |---|---|---|---|
-| `search_products` | `query?`, `category_id?`, `price_min?`, `price_max?`, `in_stock?`, `sort?`, `k≤20`, `mode=semantic|keyword|hybrid` | `[{product_id,name,price,image,inventory_flag,score,snippet}]` | Server tự lọc `status=active` |
+| `search_products` | `query?`, `category_id?`, `price_min?`, `price_max?`, `in_stock?`, `sort?`, `k≤20`, `mode=semantic\|keyword\|hybrid` | `[{product_id,name,price,image,inventory_flag,score,snippet}]` | Server tự lọc `status=active` |
 | `get_product` | `product_id` | chi tiết + thuộc tính | |
-| `check_stock` | `product_id` | `{in_stock, level: none|low|ok}` | **Không** lộ số tồn chính xác cho người mua (tránh lộ kinh doanh); level thôi |
+| `check_stock` | `product_id` | `{in_stock, level: none\|low\|ok}` | **Không** lộ số tồn chính xác cho người mua (tránh lộ kinh doanh); level thôi |
 | `list_categories` | `parent_id?` | cây danh mục | để agent biết "trong kho có gì" |
 | `catalog_overview` | – | số sản phẩm theo danh mục, khoảng giá, top từ khoá | trả lời "trong kho có gì" nhanh, cache 10 phút |
 | `get_my_orders` | `status?`, `limit` | đơn của chính user | ownership ở gateway |
 | `get_cart` / `add_to_cart` | | | add = action_proposal |
-| `ask_policy` | `question`, `scope?` (`consumer|returns|category:<id>`) | `[{answer_chunks, citations}]` | xem 05 |
+| `ask_policy` | `question`, `scope?` (`consumer\|returns\|category:<id>`) | `[{answer_chunks, citations}]` | xem 05 |
 | `get_recommendations` | `surface`, `seed_product_id?` | items | dùng chung serving với UI |
 
 #### 2.2 Seller (mọi tool tự ép `store_id` từ JWT)
+
 | Tool | Tham số | Trả về |
 |---|---|---|
-| `store_sales_summary` | `from,to` hoặc `period=today|7d|30d|mtd`, `compare=prev_period?` | `{revenue, orders, units, aov, cancel_rate, delta_vs_prev}` |
-| `store_sales_timeseries` | `from,to,granularity=hour|day|week`, `metric` | `[{t,value}]` |
-| `store_top_products` | `period`, `by=revenue|units|views|conversion`, `k` | list |
+| `store_sales_summary` | `from,to` hoặc `period=today\|7d\|30d\|mtd`, `compare=prev_period?` | `{revenue, orders, units, aov, cancel_rate, delta_vs_prev}` |
+| `store_sales_timeseries` | `from,to,granularity=hour\|day\|week`, `metric` | `[{t,value}]` |
+| `store_top_products` | `period`, `by=revenue\|units\|views\|conversion`, `k` | list |
 | `store_low_stock` | `threshold?`, `days_of_cover?` | list + `est_stockout_date` |
 | `store_product_funnel` | `product_id`, `period` | `{impressions, clicks, views, carts, orders}` |
 | `store_orders` | `status?`, `period`, `limit` | list |
 | `search_my_products` | như `search_products` nhưng chỉ shop mình, thấy số tồn thật | |
 
 #### 2.3 Admin
+
 | Tool | Tham số | Trả về |
 |---|---|---|
-| `platform_sales_summary` | `period`, `group_by?=store|category|day` | tổng GMV, đơn, AOV, tỉ lệ huỷ… |
+| `platform_sales_summary` | `period`, `group_by?=store\|category\|day` | tổng GMV, đơn, AOV, tỉ lệ huỷ… |
 | `platform_traffic` | `period`, `granularity` | `{page_views, sessions, unique_visitors, new_vs_returning, top_pages, sources}` |
 | `platform_funnel` | `period` | view→cart→checkout→order |
-| `system_metrics` | `service?`, `metric=cpu|mem|net|latency_p95|error_rate`, `range`, `step` | time series (proxy PromQL **có whitelist** – xem 06) |
+| `system_metrics` | `service?`, `metric=cpu\|mem\|net\|latency_p95\|error_rate`, `range`, `step` | time series (proxy PromQL **có whitelist** – xem 06) |
 | `service_health` | – | trạng thái từng service/replica, Kafka lag, outbox backlog |
 | `list_alerts` | `status`, `severity`, `since` | list |
 | `top_stores` | `period`, `by` | list |
@@ -149,12 +153,13 @@ Mỗi tool = 1 endpoint REST ở gateway (xem 08 §1), có JSON schema. LLM **kh
 
 ### 3. Hợp đồng agent ↔ UI
 Stream sự kiện (SSE) mà `ai-service` phát, gateway chuyển tiếp, UI render:
+
 | `event` | `data` | UI |
 |---|---|---|
 | `token` | `{text}` | nối vào bong bóng chat |
 | `tool_call` | `{id,name,args_summary}` | chip "Đang tra cứu tồn kho…" |
 | `tool_result` | `{id,ok,ms}` | chip hoàn tất / lỗi |
-| `card` | `{type:"product_list"|"metric"|"chart"|"table"|"alert"|"action_proposal", payload}` | render component có cấu trúc (07 §6) |
+| `card` | `{type:"product_list"\|"metric"\|"chart"\|"table"\|"alert"\|"action_proposal", payload}` | render component có cấu trúc (07 §6) |
 | `citation` | `{id,title,doc_number,article,url,quote}` | footnote bấm mở panel nguồn |
 | `suggestions` | `{items:["…"]}` | gợi ý câu hỏi tiếp |
 | `done` | `{message_id, usage}` | bật thumbs up/down |
@@ -198,6 +203,7 @@ Nguồn không tin cậy: mô tả sản phẩm, tên shop, review, tin nhắn n
 - Cổng chất lượng: không bật flag production nếu pass rate dưới ngưỡng (đặt trong CI/ops, bạn quyết).
 
 ### 10. Việc bạn sẽ code (và chỗ nền tảng chừa sẵn)
+
 | Việc | Chỗ cắm |
 |---|---|
 | Agent loop + prompt + chọn model | `ai-service/agents/{shopper,seller,admin}.py` (stub) |
@@ -216,6 +222,7 @@ Mục tiêu tài liệu: (1) chốt **các yếu tố một hệ gợi ý cần*
 - Mục tiêu kỹ thuật: top-K sản phẩm cho (người dùng | phiên | sản phẩm | giỏ) × surface, độ trễ P95 < 100 ms (đọc từ cache/feature đã tính).
 
 ### 2. Các thành phần của một recsys (checklist "đã nghĩ tới chưa")
+
 | Thành phần | Câu hỏi cần trả lời | Ở đây |
 |---|---|---|
 | Tín hiệu phản hồi | explicit vs implicit; mạnh/yếu; âm/dương | §3 |
@@ -234,6 +241,7 @@ Mục tiêu tài liệu: (1) chốt **các yếu tố một hệ gợi ý cần*
 | Riêng tư | consent, ẩn danh | 02 §7 |
 
 ### 3. Tín hiệu phản hồi
+
 | Tín hiệu | Loại | Mạnh | Trọng số gợi ý (khởi đầu, **cần học lại**) | Nguồn |
 |---|---|---|---|---|
 | `impression` không click | implicit âm yếu | rất nhiễu (chưa chắc nhìn thấy) | −0.05, chỉ dùng làm negative sampling | tracking |
@@ -280,6 +288,7 @@ Lưu trữ: offline = ClickHouse (bảng `features_*` dựng bằng job); online
    └─ 5. LOG: request_id, model_version, experiment, danh sách item+điểm+vị trí → `reco_requests`
 ```
 Chọn surface ↔ nguồn ứng viên:
+
 | Surface | Ứng viên chính | Ghi chú |
 |---|---|---|
 | `home_for_you` | collaborative + session + trending (fallback) | vãng lai: trending + session |
@@ -324,6 +333,7 @@ Chọn surface ↔ nguồn ứng viên:
 - Người dùng có thể tắt cá nhân hoá (consent) → chỉ trending/similar theo ngữ cảnh.
 
 ### 11. Lộ trình mô hình đề xuất (bạn làm)
+
 | Mức | Mô hình | Điều kiện dữ liệu | Thu được |
 |---|---|---|---|
 | v0 | Trending theo danh mục + mới | có `fact_order_items`/`events` | baseline + fallback |
@@ -339,6 +349,7 @@ Trước khi có traffic thật: dùng `scripts/datagen` để dev/test pipeline
 
 
 ### 1. Phạm vi tri thức
+
 | Nhóm (`kind`) | Ví dụ | Đối tượng hỏi | Ghi chú |
 |---|---|---|---|
 | `law` | Luật Bảo vệ quyền lợi người tiêu dùng; Luật Giao dịch điện tử; quy định về thương mại điện tử; quy định ghi nhãn hàng hoá; an toàn thực phẩm; quảng cáo; bảo vệ dữ liệu cá nhân | buyer, seller | văn bản nhà nước, có số hiệu, ngày hiệu lực, **bị sửa đổi/thay thế theo thời gian** |

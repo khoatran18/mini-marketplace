@@ -15,11 +15,12 @@ gateway ─ gRPC Query (scope từ JWT) ─▶ analytics-service ─ SQL trên b
 - Consumer idempotent nhờ `ReplacingMergeTree` khoá theo id tự nhiên (ADR-14). Bảng: `events_raw`, `fact_order_status` (một dòng cho mỗi **(đơn, trạng thái)**), `fact_order_items`, `fact_payment_events`, `fact_refunds`, `dim_products`, `fact_inventory` ([02_DATA_MODEL.md](../02_DATA_MODEL.md) §3). **Không có materialized view**: mọi báo cáo gom bảng fact lúc truy vấn với `FINAL`.
 
 ### 1.2 Báo cáo (gateway: `/seller/analytics/*`, `/admin/analytics/*`; JSON: [04_API_REFERENCE.md](../04_API_REFERENCE.md) §9)
+
 | Report | Seller (store) | Admin (platform) | Nội dung |
 |---|---|---|---|
 | `summary` | ✅ | ✅ | `current` & `previous` (kỳ liền trước cùng độ dài): `revenue, refunds, net_revenue, gmv, orders_placed, orders_recognized, aov, canceled, expired, refunded, cancel_rate` |
-| `timeseries` | ✅ | ✅ | doanh thu/ hoàn tiền/ đơn ghi nhận/ đơn đặt theo `hour|day|week|month` (giờ VN), điền bucket rỗng |
-| `top-products` | ✅ | ✅ | xếp hạng `revenue|units|views|conversion|viewed_unsold`; kèm impressions/clicks/views/carts |
+| `timeseries` | ✅ | ✅ | doanh thu/ hoàn tiền/ đơn ghi nhận/ đơn đặt theo `hour\|day\|week\|month` (giờ VN), điền bucket rỗng |
+| `top-products` | ✅ | ✅ | xếp hạng `revenue\|units\|views\|conversion\|viewed_unsold`; kèm impressions/clicks/views/carts |
 | `funnel` | ✅ (checkout = null) | ✅ (+ `by_device`) | `view → cart → checkout → paid`, đếm **session**; `paid` = đơn đã ghi nhận doanh thu |
 | `low-stock` | ✅ | ✅ | tồn thấp/ hết, hoặc hết trong ≤ 7 ngày theo tốc độ bán 14 ngày |
 | `traffic` | ❌ | ✅ | page view, session, visitor, mới/quay lại, series, top path/referrer/device/country |
@@ -55,6 +56,7 @@ Metric (cổng :8081): `mm_ch_buffer_rows`, `mm_ch_insert_lag_seconds`, `mm_ch_r
 - `deploy/observability.yml` (stack `marketplace-obs`): Prometheus v2.55.1 (retention `PROMETHEUS_RETENTION`, mặc định 15d), Grafana 11.3.0 (`https://grafana.$PUBLIC_HOST`, đăng nhập `GRAFANA_ADMIN_*`, không anonymous), cAdvisor + node-exporter (global), postgres/redis/kafka-exporter. **Không có Alertmanager.**
 - `deploy/prometheus/prometheus.yml`: scrape `tasks.<service>:8081/metrics` cho **7** service Go bằng DNS service discovery của Swarm (thêm replica không cần sửa cấu hình), cAdvisor, node-exporter, 3 exporter, Traefik (`:8082`).
 - Grafana provisioning bằng file (`deploy/grafana/provisioning`, dashboard JSON `deploy/grafana/dashboards`, `allowUiUpdates:false`), folder *Marketplace*, làm mới 15 s:
+
 | Dashboard (uid) | Panel chính |
 |---|---|
 | **Overview** (`mm-overview`) | targets up/down, services not ready (`mm_ready`), gateway 5xx %/p95/RPS, bảng `mm_build_info`, CPU/RAM theo swarm service |
@@ -69,6 +71,7 @@ Metric (cổng :8081): `mm_ch_buffer_rows`, `mm_ch_insert_lag_seconds`, `mm_ch_r
 Quyết định (ADR-12): **không có cảnh báo.** Không `alert-service`, Alertmanager, bảng `alerts/notifications`, chuông, SSE, email. Chỉ có Grafana để người vận hành tự nhìn. Ngưỡng ở bảng dưới chỉ là gợi ý **tô màu** (một số đã có trên ô stat của dashboard); khi sau này muốn cảnh báo, thêm Alertmanager + rule trên đúng các metric này, không cần đổi code service.
 
 ### 3.1 Panel/ngưỡng tham khảo – trạng thái
+
 | Dashboard thiết kế | Panel | Vàng / Đỏ | Trạng thái |
 |---|---|---|---|
 | Overview | service ready (`mm_ready`), replicas | ready=0 → đỏ | ✅ |

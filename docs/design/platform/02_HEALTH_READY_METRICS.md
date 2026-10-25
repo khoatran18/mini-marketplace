@@ -11,6 +11,7 @@ Ban đầu chỉ `api-gateway` có HTTP; các service nội bộ chỉ có gRPC 
 > **Đã làm**: `pkg/ops`, `:8081`, `grpc.health.v1`, metrics gRPC/HTTP/DB pool/build info + Go/process (nhãn `service`), tắt êm theo SIGTERM (`DRAIN_SECONDS`), healthcheck Docker + nhãn Traefik, frontend `/api/health|healthz|ready|readyz`, `GET /admin/system/health` (gom `/ready` của 7 service) + trang `/admin/system`, stack Prometheus/Grafana (5 dashboard), metric outbox (product/order/payment), worker (order/payment), pipeline (analytics). **Chưa làm**: `mm_kafka_consumer_lag`/`mm_grpc_client_*`/metric nghiệp vụ, `/admin/system/metrics`, `update_config: start-first` + `wait-ready.sh`.
 
 ## 1. Khác nhau giữa các endpoint
+
 | Endpoint | Câu hỏi | Kiểm tra gì | Khi lỗi | Ai dùng |
 |---|---|---|---|---|
 | `GET /health` · `/healthz` (liveness) | "Tiến trình còn sống, không bị treo?" | **Chỉ** bản thân process (HTTP server trả lời được; tuỳ chọn: goroutine chính/ worker heartbeat không quá cũ). **Không** gọi DB/Kafka/service khác | 200 `{"status":"ok"}`; không 200 ⇒ restart container | Docker `HEALTHCHECK`, Swarm |
@@ -66,6 +67,7 @@ Quy tắc:
 Lưu ý: check Kafka chỉ **dial TCP** tới broker (chưa kiểm consumer/lag); chưa có check MinIO/migrations/signer key (không cần hoặc chưa có). Khác thiết kế: payment-service **không** coi Redis là critical, product-service không có check outbox worker.
 
 Cách kiểm tra từng loại:
+
 | Dependency | Cách check (timeout 1 s) |
 |---|---|
 | Postgres | `db.PingContext` + `SELECT 1`; (tuỳ chọn) pool không cạn: `in_use < max_open` |
@@ -88,6 +90,7 @@ SIGTERM ─▶ đặt NOT_SERVING + /ready 503 ─▶ chờ `DRAIN_SECONDS` (m�
 Đã làm đúng tới đây (`pkg/ops` `handleSignals`). **Chưa làm**: dừng có chủ đích consumer Kafka (commit offset) và outbox/timer worker khi tắt (chúng dùng context nền và chết cùng process; an toàn vì outbox at-least-once, consumer idempotent). Swarm: `stop_grace_period: 30s`.
 
 ## 6. Cổng, docker healthcheck, Traefik
+
 | Thành phần | Probe | Cấu hình |
 |---|---|---|
 | Container Go (mỗi service) | healthcheck compose → **`/healthz`** trên `:8081` (`wget -qO-` trong image alpine) | `interval 10s, timeout 3s, retries 3, start_period 20s` (analytics 30s), `stop_grace_period: 30s` |
@@ -97,6 +100,7 @@ SIGTERM ─▶ đặt NOT_SERVING + /ready 503 ─▶ chờ `DRAIN_SECONDS` (m�
 | Hạ tầng | xem bảng 7 | |
 
 ## 7. Health/ready của container hạ tầng (thực tế trong compose)
+
 | Container | Healthcheck (compose) | Metrics |
 |---|---|---|
 | postgres | `pg_isready -U $POSTGRES_USER -d $POSTGRES_DB` | `postgres-exporter :9187` |
@@ -116,6 +120,7 @@ Mọi service Go: Docker healthcheck `/healthz` :8081 (xem §6). Frontend: `wget
 Thư viện: `prometheus/client_golang`, registry riêng trong `pkg/ops`; collector Go + process (nhãn `service`). Tiền tố `mm_` cho metric tự định nghĩa.
 
 **Có ở mọi service Go** (đã triển khai)
+
 | Metric | Loại | Nhãn | Ghi chú |
 |---|---|---|---|
 | `mm_build_info` | gauge = 1 | `service, version, commit` | |
@@ -128,6 +133,7 @@ Thư viện: `prometheus/client_golang`, registry riêng trong `pkg/ops`; collec
 | `mm_db_pool_wait_seconds_total` | counter | `service` | |
 | `go_*`, `process_*` | chuẩn | `service` | |
 **Chỉ ở một số service**
+
 | Metric | Service | Ghi chú |
 |---|---|---|
 | `mm_outbox_pending{table="domain_events"}`, `mm_outbox_oldest_age_seconds` | product, order, payment | đếm **cả bảng chung** `domain_events` (xem data-model §1.5) |
@@ -137,6 +143,7 @@ Thư viện: `prometheus/client_golang`, registry riêng trong `pkg/ops`; collec
 **Quy tắc**: không đặt `user_id`, `order_id`, `product_id` làm nhãn; chỉ lộ `/metrics` trong mạng nội bộ; middleware đo **sau** khi router khớp để có `route` mẫu.
 
 ## 9. API vận hành khác
+
 | Endpoint | Trạng thái |
 |---|---|
 | `GET /version` | ✅ mọi service (`{service, version, commit, built_at}`) |

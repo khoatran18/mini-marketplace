@@ -3,16 +3,18 @@
 > **Trạng thái: 🟡 phần lớn ĐÃ TRIỂN KHAI nhưng CHƯA chạy thật** (Docker/Swarm/Traefik/ClickHouse server/Grafana chưa từng chạy trong sandbox; CI chỉ build image và chạy test). Chi tiết vận hành: [02_DEPLOYMENT.md](../../instruction/02_DEPLOYMENT.md), [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md). Secrets như cũ: giá trị thật ở `deploy/.env` (ignored), biến mới đã thêm vào `deploy/.env.example`.
 
 ## 1. Stack
+
 | File | Thiết kế | Thực tế |
 |---|---|---|
 | `deploy/infra.yml` | thêm `clickhouse`, `minio`; healthcheck mọi container | ✅ `clickhouse/clickhouse-server:24.8` (mật khẩu bắt buộc, `TZ=UTC`, limit 2 GB, volume `clickhouse-data`, healthcheck `/ping`); ❌ **không có MinIO**; postgres/redis/kafka có healthcheck; Kafka `apache/kafka:3.9.0` retention 168 h, `NUM_PARTITIONS=3` |
 | `deploy/observability.yml` | prometheus, grafana, cadvisor, node-exporter, 3 exporter | ✅ (`marketplace-obs`; không có exporter ClickHouse/MinIO) |
 | `deploy/services.yml` | thêm payment/analytics; HEALTHCHECK + `stop_grace_period 30s` + `update_config: start-first` + limits; Traefik healthcheck `/ready`; grafana sau basic-auth | ✅ payment-service, analytics-service, HEALTHCHECK, `stop_grace_period`, limits, Traefik healthcheck gateway `/ready` (port 8081), `--ping` + metrics; ❌ **`update_config`/`start-first`/rollback chưa có**; Grafana đăng nhập bằng tài khoản Grafana (không có thêm basic-auth Traefik) |
 | `deploy/prometheus/prometheus.yml`, `deploy/grafana/{provisioning,dashboards}` | cấu hình bằng file | ✅ (5 dashboard JSON, datasource Prometheus `uid: prometheus`) |
-| `scripts/deploy.sh` | infra → observability → services → `wait-ready.sh` | ✅ `all` = infra → observability → services; `deploy.sh infra|observability|services`; ❌ `wait-ready.sh` chưa có |
+| `scripts/deploy.sh` | infra → observability → services → `wait-ready.sh` | ✅ `all` = infra → observability → services; `deploy.sh infra\|observability\|services`; ❌ `wait-ready.sh` chưa có |
 | `scripts/build-images.sh` | truyền build-arg phiên bản | ✅ 7 service Go + frontend, `SERVICE_VERSION/GIT_COMMIT/BUILD_TIME` |
 
 ## 2. Container & tài nguyên (limit thực tế trong compose)
+
 | Service | Image | Cổng nội bộ | Admin :8081 | RAM limit |
 |---|---|---|---|---|
 | clickhouse | `clickhouse/clickhouse-server:24.8` | 8123 (HTTP), 9000 | – | 2 GB |
@@ -28,6 +30,7 @@
 Profile `lite` cho máy yếu: ❌ chưa có.
 
 ## 3. Biến môi trường (thực tế)
+
 | Biến | Dùng bởi | Trạng thái / ghi chú |
 |---|---|---|
 | `ADMIN_PORT` (8081), `PPROF_ENABLED`, `DRAIN_SECONDS` (10), `READY_CACHE_SECONDS` (3), `READY_CHECK_TIMEOUT_MS` (1000) | mọi service Go | ✅ |
@@ -56,6 +59,7 @@ Profile `lite` cho máy yếu: ❌ chưa có.
 Volume: `postgres-data`, `redis-data`, `kafka-data`, `clickhouse-data`, `prometheus-data`, `grafana-data` (❌ `minio-data` chưa có). `pg_dump` DB `postgres`. ClickHouse là dữ liệu **dẫn xuất**: dựng lại được tối đa ~7 ngày từ Kafka; **script `backfill` từ service ❌ chưa làm**. Hướng dẫn sao lưu/khôi phục: [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md) §11.
 
 ## 6. CI/CD & kiểm thử
+
 | Thiết kế | Thực tế |
 |---|---|
 | Job Go cho service mới (build, vet, test -race) | ✅ ma trận 7 service; gofmt + vet + build + `go test -race -count=1`; Postgres 16 và **ClickHouse 24.8** là service container (`TEST_POSTGRES_DSN`, `TEST_CLICKHOUSE_URL`) |

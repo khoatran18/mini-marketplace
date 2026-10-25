@@ -18,6 +18,7 @@ Quan sát: Prometheus ◀─ scrape :8081/metrics + cAdvisor + node-exporter + e
 ```
 
 ## Service
+
 | Service | Trách nhiệm | File chính |
 |---|---|---|
 | api-gateway | REST, JWT (`Type=="access"`), RBAC, kiểm sở hữu, CORS, rate limit, giới hạn body, **tracking `/events`** → analytics (gRPC), proxy báo cáo analytics, `/admin/system/health`, metrics HTTP | `internal/router` (danh sách route + quyền), `internal/middleware`, `internal/handler` |

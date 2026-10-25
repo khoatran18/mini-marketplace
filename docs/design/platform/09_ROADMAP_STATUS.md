@@ -9,6 +9,7 @@ Chú thích: ✅ xong · 🟡 một phần · ❌ chưa làm.
 ✅ Đã duyệt; các tài liệu 01–09 (nay đã cập nhật theo code).
 
 ### P1 – Nền vận hành & danh tính
+
 | Hạng mục | Trạng thái | Ghi chú (code) |
 |---|---|---|
 | Thư viện chung `pkg/ops`: admin HTTP `:8081` (`/health /healthz /ready /readyz /metrics /version`), `grpc.health.v1`, interceptor metrics, tắt êm theo SIGTERM | ✅ | 7 bản giống hệt (md5 trùng) ở gateway, auth, user, product, order, payment, analytics |
@@ -21,6 +22,7 @@ Chú thích: ✅ xong · 🟡 một phần · ❌ chưa làm.
 | Giới hạn body (`MAX_BODY_BYTES`, 413) + nhóm route công khai + rate-limit riêng `/events` | ✅ | auth gắn theo route (ADR-19) |
 
 ### P2 – Catalog, giỏ hàng, thanh toán mô phỏng, vòng đời đơn
+
 | Hạng mục | Trạng thái | Ghi chú |
 |---|---|---|
 | Trường mới của product (sku, mô tả, danh mục, brand, tags, ảnh, status, ngưỡng tồn, weight) + `categories` + tìm kiếm full-text không dấu `/search` | ✅ | cây ≤ 3 cấp, `mm_unaccent`, GIN index; seed ≥ 100 sản phẩm demo (`SEED_DEMO_DATA`) |
@@ -35,6 +37,7 @@ Chú thích: ✅ xong · 🟡 một phần · ❌ chưa làm.
 | `GET /products/:id/stock`: số chính xác cho chủ store | 🟡 | công khai chỉ trả `level`; chủ store xem số qua `/products/:id` hoặc `/seller/products` |
 
 ### P3 – Tracking & analytics
+
 | Hạng mục | Trạng thái | Ghi chú |
 |---|---|---|
 | ClickHouse (24.8) + `analytics-service` (consume 6 topic Kafka → 7 bảng) | ✅ | ADR-13/14; CI chạy ClickHouse thật |
@@ -49,6 +52,7 @@ Chú thích: ✅ xong · 🟡 một phần · ❌ chưa làm.
 | `GET /config/features` | ❌ | |
 
 ### P4 – Giám sát hệ thống (Grafana, không cảnh báo)
+
 | Hạng mục | Trạng thái | Ghi chú |
 |---|---|---|
 | Dashboard provision bằng file | 🟡 | **5/10**: Overview, Services (RED), Containers & hosts (gồm Nodes), Kafka·Postgres·Redis·Traefik, Analytics pipeline. Chưa có: Payments, Business, ClickHouse server, panel outbox riêng |
@@ -79,6 +83,7 @@ Chú thích: ✅ xong · 🟡 một phần · ❌ chưa làm.
 
 ## ADR
 Danh sách đầy đủ ở [01_ADR_LOG.md](../../decisions/01_ADR_LOG.md). Ánh xạ từ các đề xuất ban đầu:
+
 | Đề xuất | Trạng thái | ADR |
 |---|---|---|
 | P-1 liveness/readiness tách; critical vs non-critical | ✅ đã nhận | ADR-9 |
@@ -95,6 +100,7 @@ Danh sách đầy đủ ở [01_ADR_LOG.md](../../decisions/01_ADR_LOG.md). Ánh
 | (mới) tracking qua gRPC thay Kafka; fact `ReplacingMergeTree` không MV; múi giờ cố định; `*_minor` trong event; auth theo route; chDB shim; outbox chung; payment async; analytics/payment non-critical | ✅ | ADR-13, 14, 17, 18, 19, 20, 23, 24, 25 |
 
 ## Rủi ro (còn hiệu lực)
+
 | Rủi ro | Giảm thiểu |
 |---|---|
 | Hạ tầng chưa chạy thật (Swarm/ClickHouse/Grafana) | lần deploy đầu đi theo checklist `02_DEPLOYMENT.md`, kiểm Targets/`/ready`; viết lại e2e |

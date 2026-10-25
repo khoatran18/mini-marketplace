@@ -6,6 +6,7 @@ Quy ước giữ nguyên: `Authorization: Bearer`, lỗi `{"error":"…"}`, ánh
 **Tiền**: khác thiết kế ("chuỗi số nguyên `{amount,currency}`"): REST/gRPC trả **VND dạng số thực** (`price`, `total_price`, `amount`…) và payment có thêm `amount_minor`/`refunded_minor` (số nguyên 1/100 VND); event Kafka dùng `*_minor` (ADR-7/18).
 
 ## 1. Vận hành
+
 | Thiết kế | Thực tế |
 |---|---|
 | `GET /health /ready /metrics /version` trên :8081 mọi service | ✅ (+ `/healthz`, `/readyz`) |
@@ -14,6 +15,7 @@ Quy ước giữ nguyên: `Authorization: Bearer`, lỗi `{"error":"…"}`, ánh
 
 ## 2. Gateway REST – đối chiếu
 ### 2.1 Tài khoản & quản trị người dùng
+
 | Thiết kế | Trạng thái |
 |---|---|
 | `POST /auth/login` nhận `role:"admin"` | ✅; khoá tạm khi sai nhiều lần ❌ |
@@ -24,6 +26,7 @@ Quy ước giữ nguyên: `Authorization: Bearer`, lỗi `{"error":"…"}`, ánh
 | `GET/POST/PUT/DELETE /users/me/addresses[/:id]` | ✅ (buyer, ≤ 10) |
 
 ### 2.2 Catalog & tìm kiếm
+
 | Thiết kế | Trạng thái |
 |---|---|
 | `GET /categories`, `/categories/:slug` | 🟡 `GET /categories` (cây phẳng); **không có** `/categories/:slug` |
@@ -39,11 +42,12 @@ Quy ước giữ nguyên: `Authorization: Bearer`, lỗi `{"error":"…"}`, ánh
 | Reviews, wishlist, `/products/trending` | ❌ |
 
 ### 2.3 Giỏ hàng & đơn hàng
+
 | Thiết kế | Trạng thái |
 |---|---|
 | `GET /cart`, `PUT/DELETE /cart/items/:product_id`, `DELETE /cart`, `POST /cart/merge` | ✅ (B) |
-| `POST /checkout/preview` | ✅ (`{from_cart | items}` → nhóm theo store, `can_order`) |
-| `POST /orders` (header `Idempotency-Key` bắt buộc; `{items?|from_cart, address_id, payment_method, note}`) → `{checkout_id, orders:[…], payment?}` | ✅ **201** mới / **200** replay; `payment` thường chưa có ngay (tạo bất đồng bộ); thêm `GET /checkouts/:id` |
+| `POST /checkout/preview` | ✅ (`{from_cart \| items}` → nhóm theo store, `can_order`) |
+| `POST /orders` (header `Idempotency-Key` bắt buộc; `{items?\|from_cart, address_id, payment_method, note}`) → `{checkout_id, orders:[…], payment?}` | ✅ **201** mới / **200** replay; `payment` thường chưa có ngay (tạo bất đồng bộ); thêm `GET /checkouts/:id` |
 | `GET /orders?status=&page=`, `GET /orders/:id` (+ `payment`, `history[]`) | 🟡 `history[]` ✅ khi đọc 1 đơn; `payment` nằm ở checkout, không ở đơn; thêm `GET /orders/summary` |
 | `POST /orders/:id/cancel`, `DELETE /orders/:id` (alias) | ✅ |
 | `POST /orders/:id/confirm-received`, `POST /orders/:id/return` | ✅ |
@@ -52,9 +56,10 @@ Quy ước giữ nguyên: `Authorization: Bearer`, lỗi `{"error":"…"}`, ánh
 | `GET /orders/:id/history` | ❌ riêng (nằm trong `GET /orders/:id`) |
 
 ### 2.4 Thanh toán (mô phỏng)
+
 | Thiết kế | Trạng thái |
 |---|---|
-| `GET /payments/:id`, `POST /payments/:id/confirm` (`{card|otp|approve}`), `POST /payments/:id/cancel` | ✅ (body phẳng `{card_number, card_exp, card_cvc, otp, approve}`) |
+| `GET /payments/:id`, `POST /payments/:id/confirm` (`{card\|otp\|approve}`), `POST /payments/:id/cancel` | ✅ (body phẳng `{card_number, card_exp, card_cvc, otp, approve}`) |
 | `POST /payments/:id/refund` (A/S) | 🟡 chỉ admin: `POST /admin/payments/:id/refund {amount_minor, reason}`; hoàn tiền theo luồng đơn là tự động (event) |
 | `GET /admin/payments`, `GET /admin/payments/:id` | ✅ |
 | `POST /admin/dev/payments/:id/force` | ✅ chỉ `ENV=dev` |
@@ -62,6 +67,7 @@ Quy ước giữ nguyên: `Authorization: Bearer`, lỗi `{"error":"…"}`, ánh
 | `GET /payments/methods` | ✅ (kèm danh sách thẻ test) |
 
 ### 2.5 Tracking, cấu hình
+
 | Thiết kế | Trạng thái |
 |---|---|
 | `POST /events` → 202 `{accepted, rejected}` | ✅ (+ `reasons[]`; analytics down ⇒ 202 `{accepted:0,rejected:0,dropped:N}`) |
@@ -76,6 +82,7 @@ Quy ước giữ nguyên: `Authorization: Bearer`, lỗi `{"error":"…"}`, ánh
 Phản hồi báo cáo: `{as_of, source:"clickhouse", cached, timezone:"Asia/Ho_Chi_Minh", data}` (khác thiết kế: có `cached`, không có `source` Prometheus/Postgres).
 
 ## 3. gRPC nội bộ (thực tế)
+
 | Service | RPC |
 |---|---|
 | `auth` :50051 | `Login`, `Register`, `RefreshToken`, `ChangePassword`, `RegisterSellerRoles`, `GetStoreIDRoleById` (**không có** `GetMe/ListUsers/LockUser/Logout`) |
@@ -88,6 +95,7 @@ Mọi service gRPC có `grpc.health.v1` + interceptor metrics `mm_grpc_server_*`
 
 ## 4. Kafka (thực tế)
 Danh sách, producer/consumer/group, payload: **[03_EVENTS_KAFKA.md](../03_EVENTS_KAFKA.md)**. Khác thiết kế:
+
 | Thiết kế | Thực tế |
 |---|---|
 | `tracking.events` (gateway → analytics) | ❌ **không có**: gateway gọi gRPC `IngestEvents` (ADR-13) |

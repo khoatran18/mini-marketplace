@@ -4,6 +4,7 @@
 
 ## 1. Trường mới theo service
 ### auth-service
+
 | Thiết kế | Trạng thái |
 |---|---|
 | `accounts.role` thêm `admin` (chỉ `ADMIN_BOOTSTRAP_*`) | ✅ |
@@ -12,16 +13,18 @@
 | `audit_log` | ❌ |
 
 ### user-service
+
 | Thiết kế | Trạng thái |
 |---|---|
 | `addresses(id, user_id, label, receiver_name, phone, line1, ward, district, city, is_default)` | ✅ (≤ 10/user, một mặc định, + `created_at/updated_at`) |
 | `sellers`: `status`, `logo_url`, `rating_*`, `low_stock_default`, `created_at` | ❌ |
 
 ### product-service
+
 | Thiết kế | Trạng thái |
 |---|---|
 | `products.sku` (unique `(seller_id, sku)`), `description`, `category_id`, `brand`, `tags`, `image_urls` (≤ 8, **URL**, không MinIO), `low_stock_threshold`, `weight_g`, `reserved`, `version`, `created_at/updated_at` | ✅ (thêm `sold`) |
-| `products.status` | ✅ `draft | active | hidden | banned`; **`out_of_stock` KHÔNG là status** – suy ra `stock_level` (`none|low|ok`) từ tồn (ADR-21) |
+| `products.status` | ✅ `draft \| active \| hidden \| banned`; **`out_of_stock` KHÔNG là status** – suy ra `stock_level` (`none\|low\|ok`) từ tồn (ADR-21) |
 | `products.dimensions` | ❌ |
 | `categories(id, parent_id, name, slug UNIQUE, sort, active)` cây ≤ 3 cấp | ✅ |
 | `inventory_ledgers` (`reason`: `initial, reserve, release, sale, restock, adjust, update`) | ✅ (bảng tên GORM `inventory_ledgers`; `return` không dùng) |
@@ -29,9 +32,10 @@
 | outbox `product.changed`, `inventory.changed` | ✅ trong `domain_events` |
 
 ### order-service
+
 | Thiết kế | Trạng thái |
 |---|---|
-| `orders` mở rộng: `status` (11 giá trị, xem 04), `payment_method`, `payment_status` (**chỉ** `UNPAID|PAID|REFUNDED`), `subtotal`, `shipping_fee`, `total_price`, `shipping_address` JSONB (snapshot), `note`, `expires_at`, `paid_at/shipped_at/delivered_at/canceled_at`, `cancel_reason`, `canceled_by`, `carrier`, `tracking_code` | ✅ (thêm `checkout_id`, `store_id`, `return_reason`, `return_rejected`) |
+| `orders` mở rộng: `status` (11 giá trị, xem 04), `payment_method`, `payment_status` (**chỉ** `UNPAID\|PAID\|REFUNDED`), `subtotal`, `shipping_fee`, `total_price`, `shipping_address` JSONB (snapshot), `note`, `expires_at`, `paid_at/shipped_at/delivered_at/canceled_at`, `cancel_reason`, `canceled_by`, `carrier`, `tracking_code` | ✅ (thêm `checkout_id`, `store_id`, `return_reason`, `return_rejected`) |
 | idempotency `UNIQUE(buyer_id, key)` | ✅ trên bảng `checkouts` (không nằm ở `orders`) |
 | `order_items` snapshot `product_name, sku, image_url, store_id, category_id, line_total` | ✅ |
 | `order_status_history` | ✅ (bảng `order_status_histories`) |

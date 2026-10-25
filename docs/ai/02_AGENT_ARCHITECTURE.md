@@ -6,6 +6,7 @@
 > - Langfuse: mã nguồn mở, lõi giấy phép MIT, tự host bằng Docker / Kubernetes; một số module enterprise (SCIM, audit log, retention) dùng giấy phép thương mại riêng; cần Postgres + ClickHouse + Redis + object storage; có telemetry mặc định (tắt bằng `TELEMETRY_ENABLED=false`); tháng 1/2026 ClickHouse mua lại Langfuse, lõi vẫn MIT ([tài liệu self-hosting](https://langfuse.com/self-hosting.md)). Chưa đối chiếu với file LICENSE chính thức.
 
 ## 0. Từ khó, giải thích một lần
+
 | Từ | Nghĩa trong tài liệu này |
 |---|---|
 | **LLM** | mô hình ngôn ngữ lớn (loại như Claude, GPT) |

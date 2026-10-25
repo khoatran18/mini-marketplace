@@ -3,6 +3,7 @@
 > Nguồn sự thật: `services/api-gateway/internal/router/router.go` (route + role), `internal/handler/*.go` (JSON). `services/api-gateway/docs/swagger.*` **đã cũ** (chỉ có auth/orders cũ/products/users, xem [02_TECH_DEBT_AND_BACKLOG.md](../planning/02_TECH_DEBT_AND_BACKLOG.md)); tài liệu này là bản đầy đủ.
 
 ## 0. Quy ước chung
+
 | Mục | Giá trị |
 |---|---|
 | Base URL | `https://api.<PUBLIC_HOST>` (dev: `http://localhost:8080`) |
@@ -22,6 +23,7 @@ Ký hiệu cột **Ai**: 🌐 công khai · 👁 token tuỳ chọn (có token n
 `InvalidArgument`/lỗi protovalidate→400 · `Unauthenticated`→401 · `PermissionDenied`→403 · `NotFound`→404 · `AlreadyExists`/`Aborted`→409 · `FailedPrecondition`→**422** · `Unavailable`/`DeadlineExceeded`→503 · còn lại 500. Middleware: thiếu/sai token → 401, sai role → 403 (`Do not have permission to access`).
 
 ### Phân trang
+
 | Endpoint | `page` | `page_size` mặc định | Giới hạn |
 |---|---|---|---|
 | `GET /products` | 1 | 10 | >100 → 100 |
@@ -32,6 +34,7 @@ Ký hiệu cột **Ai**: 🌐 công khai · 👁 token tuỳ chọn (có token n
 
 ---
 ## 1. Vận hành
+
 | Method & path | Ai | Ghi chú |
 |---|---|---|
 | GET `/health`, `/healthz` | 🌐 | liveness của gateway `{"status":"ok"}` |
@@ -40,6 +43,7 @@ Ký hiệu cột **Ai**: 🌐 công khai · 👁 token tuỳ chọn (có token n
 
 ## 2. Xác thực & tài khoản
 Username/password phải khớp `^[a-zA-Z0-9_]{3,16}$` (hợp đồng `auth.proto`); gateway thêm: mật khẩu **≥ 8** ký tự ⇒ thực tế 8–16.
+
 | Method & path | Ai | Request | Response / lỗi |
 |---|---|---|---|
 | POST `/auth/register` | 🌐 | `{username,password,role}` – `role` ∈ `buyer`, `seller_admin` | 200 `{message,success}`; 400 sai định dạng hoặc role `admin`; 403 role `seller_employee`; 409 đã tồn tại (cùng username+role). `accounts.username` UNIQUE toàn cục nên trùng username khác role sẽ là lỗi DB (500) |
@@ -51,6 +55,7 @@ Token: access `JWT_EXPIRE_TIME` phút (mặc định 5), refresh ×2; claims `Us
 **Chưa làm**: `GET /auth/me`, `POST /auth/logout`, khoá tạm đăng nhập, `audit_log`, `/admin/users*`, `/admin/stores*`.
 
 ## 3. Hồ sơ buyer / store (user-service)
+
 | Method & path | Ai | Ghi chú |
 |---|---|---|
 | POST `/users/buyers` | B | body `{buyer:{name,gender,date_of_birth,phone,address}}`; luôn tạo cho chính người gọi |
@@ -61,6 +66,7 @@ Token: access `JWT_EXPIRE_TIME` phút (mặc định 5), refresh ×2; claims `Us
 Response chung `{message,success}` (+ `buyer`/`seller`).
 
 ### Địa chỉ giao hàng (buyer, tối đa 10)
+
 | Method & path | Ai | Ghi chú |
 |---|---|---|
 | GET `/users/me/addresses` | B | `{addresses:[…]}`, địa chỉ mặc định trước |
@@ -72,30 +78,33 @@ Body: `{label≤50, receiver_name 1-100, phone (^\+?[0-9][0-9 .\-]{7,14}$), line
 ---
 ## 4. Catalog & tìm kiếm
 ### 4.1 Đọc (công khai)
+
 | Method & path | Ai | Ghi chú |
 |---|---|---|
-| GET `/search` | 👁 | tham số: `q` (không dấu, khớp tiền tố, ≤200 ký tự), `category_id` (gồm danh mục con), `price_min`, `price_max`, `brand`, `seller_id`, `in_stock=true|1`, `sort=relevance|price_asc|price_desc|newest|best_selling`, `page`, `page_size`. → `{message,success,products[],total}`. Khách chỉ thấy `status=active`; chủ store xem được `draft/hidden` của **chính store** khi lọc `seller_id` của mình (admin: của bất kỳ store) |
+| GET `/search` | 👁 | tham số: `q` (không dấu, khớp tiền tố, ≤200 ký tự), `category_id` (gồm danh mục con), `price_min`, `price_max`, `brand`, `seller_id`, `in_stock=true\|1`, `sort=relevance\|price_asc\|price_desc\|newest\|best_selling`, `page`, `page_size`. → `{message,success,products[],total}`. Khách chỉ thấy `status=active`; chủ store xem được `draft/hidden` của **chính store** khi lọc `seller_id` của mình (admin: của bất kỳ store) |
 | GET `/categories` | 🌐 | `{categories:[{id,parent_id,name,slug,sort,active,product_count}]}` danh sách phẳng (dựng cây theo `parent_id`), chỉ `active`; `Cache-Control: public, max-age=30`. `product_count` = sản phẩm active của danh mục + con |
 | GET `/products` | 👁 | danh sách phân trang, **luôn chỉ `active`** → `{message,success,products[]}` |
 | GET `/products/:id` | 👁 | `{message,success,product}`; sản phẩm không `active` → **404** với người không phải chủ/admin |
 | GET `/products/seller/:seller_id` | 👁 | chủ store thấy mọi trạng thái, người khác chỉ `active` |
-| GET `/products/:id/stock` | 🌐 | `{product_id, level}` với `level` ∈ `none|low|ok`; 404 nếu không `active` |
+| GET `/products/:id/stock` | 🌐 | `{product_id, level}` với `level` ∈ `none\|low\|ok`; 404 nếu không `active` |
 **Che số tồn** với người không quản lý sản phẩm: `inventory` bị chặn ở **20** (hiển thị "20+"), `reserved`, `low_stock_threshold`, `version` = 0; `stock_level` giữ nguyên. Lưu ý `GET /products/:id`, `/products`, `/products/seller/:id` dùng DTO không có `category_name` (chỉ `/search` & `/seller/products` có).
 
 Product JSON: `id, name, price, seller_id, inventory (= còn bán được), attributes{}, description, category_id, category_name, brand, tags[], image_urls[], status, sku, low_stock_threshold, weight_g, reserved, sold, version, created_at, updated_at, stock_level`.
 `status` ∈ `draft | active | hidden | banned` (hết hàng **không** phải status: `stock_level` suy ra từ tồn: `none` nếu 0, `low` nếu ≤ ngưỡng, còn lại `ok`; ngưỡng = `low_stock_threshold` của sản phẩm hoặc 5).
 
 ### 4.2 Ghi (seller)
+
 | Method & path | Ai | Ghi chú |
 |---|---|---|
 | POST `/products` | S | 200 `{message,success,id}`. Body: `name`(1-200), `price`>0, `inventory`≥0, `attributes{}`, `description`≤5000, `category_id` (phải tồn tại & active), `brand`≤100, `tags`≤20 (mỗi cái ≤40), `image_urls`≤8 (http/https hoặc `/path`, ≤500), `status` ∈ draft/active/hidden (mặc định `active`; **không** được `banned`), `sku`≤64 (duy nhất trong store → 409), `low_stock_threshold`≥0, `weight_g`≥0. `seller_id` luôn là store của token |
 | PUT `/products/:id` | S | body `{product:{…các trường trên…}}` thay toàn bộ trường sửa được (`status` rỗng = giữ nguyên; sản phẩm `banned` giữ `banned`). Đổi `inventory` ghi ledger lý do `update`. 403 nếu không phải chủ; 404 nếu không có |
-| PATCH `/products/:id/status` | S | `{status}` ∈ `draft|active|hidden`; đặt/gỡ `banned` → 403 |
+| PATCH `/products/:id/status` | S | `{status}` ∈ `draft\|active\|hidden`; đặt/gỡ `banned` → 403 |
 Mỗi thay đổi phát `product.changed`/`inventory.changed` qua outbox ([03_EVENTS_KAFKA.md](03_EVENTS_KAFKA.md)).
 **Chưa làm**: upload ảnh (MinIO) – ảnh chỉ là URL; reviews; wishlist; `/products/trending`; `/search/suggest`.
 
 ---
 ## 5. Giỏ hàng & checkout (buyer)
+
 | Method & path | Ai | Request | Response |
 |---|---|---|---|
 | GET `/cart` | B | – | `{lines:[{product_id,quantity,name,image_url,store_id,unit_price,line_total,stock_level,available,issue}], subtotal, item_count}` – giá/tồn lấy **sống** từ catalog; `subtotal` chỉ cộng dòng `available` |
@@ -121,6 +130,7 @@ Quy tắc: `Idempotency-Key` 1–64 ký tự `[A-Za-z0-9_-]`, duy nhất theo (b
 ---
 ## 6. Đơn hàng
 ### 6.1 Buyer
+
 | Method & path | Ai | Ghi chú |
 |---|---|---|
 | GET `/orders?status=&page=&page_size=` | B | `{orders[],total}` mới nhất trước; `status` sai → 400; `buyer_id` trong query bị bỏ qua |
@@ -132,10 +142,11 @@ Quy tắc: `Idempotency-Key` 1–64 ký tự `[A-Za-z0-9_-]`, duy nhất theo (b
 Không có `PUT /orders/:id` (cố ý: cho phép sửa trạng thái/giá).
 
 ### 6.2 Seller (chỉ đơn của store mình; đơn người khác → 404)
+
 | Method & path | Ghi chú |
 |---|---|
 | GET `/seller/orders?status=&page=&page_size=` · GET `/seller/orders/summary` · GET `/seller/orders/:id` | hộp thư đơn |
-| POST `/seller/orders/:id/ship` | `{carrier≤50, tracking_code≤64}` bắt buộc; `PAID|CONFIRMED→SHIPPED` |
+| POST `/seller/orders/:id/ship` | `{carrier≤50, tracking_code≤64}` bắt buộc; `PAID\|CONFIRMED→SHIPPED` |
 | POST `/seller/orders/:id/deliver` | `SHIPPED→DELIVERED` (COD: ghi `payment_status=PAID`) |
 | POST `/seller/orders/:id/cancel` | `{reason}` bắt buộc |
 | POST `/seller/orders/:id/return/approve` | `REFUND_REQUESTED→REFUNDED` (+ hoàn tiền nếu thanh toán online) |
@@ -158,6 +169,7 @@ Terminal: `FAILED, EXPIRED, CANCELED, REFUNDED`. Chi tiết trong [02_DATA_MODEL
 
 ---
 ## 7. Thanh toán (MÔ PHỎNG – không có cổng thật)
+
 | Method & path | Ai | Ghi chú |
 |---|---|---|
 | GET `/payments/methods` | 🌐 | `{methods:[{code,label,online,simulated,test_cards?}]}` (danh sách cố định ở gateway; `COD` offline, 3 method còn lại `simulated:true`) |
@@ -168,6 +180,7 @@ Payment JSON: `id, checkout_id, buyer_id, method, status, amount_minor, currency
 `status`: `REQUIRES_ACTION → PROCESSING → SUCCEEDED | FAILED | CANCELED | EXPIRED`; `SUCCEEDED → PARTIALLY_REFUNDED → REFUNDED`. `next_action`: `enter_card | otp | approve_in_wallet | transfer_and_confirm | wait | none`.
 
 **Body `confirm`**: `{card_number, card_exp:"MM/YY", card_cvc, otp, approve}`
+
 | Method | Cách xác nhận | Kết quả |
 |---|---|---|
 | `MOCK_CARD` | gửi `card_number`, `card_exp` (chưa hết hạn), `card_cvc` (3–4 số); số thẻ chỉ để chọn kịch bản, **không lưu** (chỉ 4 số cuối) | theo bảng thẻ test |
@@ -175,6 +188,7 @@ Payment JSON: `id, checkout_id, buyer_id, method, status, amount_minor, currency
 | `MOCK_BANK_TRANSFER` | `{"approve":true}` (bắt buộc, nếu không 400); `provider_ref` = `MM`+8 ký tự cuối của checkout id (nội dung chuyển khoản) | `PROCESSING`, sau `MOCK_TRANSFER_DELAY_MS` (8 s) → `SUCCEEDED` |
 
 ### Thẻ test (cố định, dùng cho e2e)
+
 | Số thẻ | Kết quả |
 |---|---|
 | `4242 4242 4242 4242` | thành công ngay |
@@ -189,16 +203,18 @@ Payment JSON: `id, checkout_id, buyer_id, method, status, amount_minor, currency
 Mỗi lần thất bại cộng `failed_count`; **5 lần** ⇒ `FAILED` (kết thúc). Lỗi: 400 thẻ sai định dạng/hết hạn; 404 payment của người khác; 422 trạng thái không cho phép (`the payment is being processed`, `already paid`, `the payment has expired`…).
 
 ### Admin
+
 | Method & path | Ghi chú |
 |---|---|
 | GET `/admin/payments?status=&method=&page=&page_size=` | `{payments[],total}` |
 | GET `/admin/payments/:id` | kèm `attempts[]`, `refunds[]` |
 | POST `/admin/payments/:id/refund` | `{amount_minor>0, reason}` – hoàn ngay (mô phỏng); 422 nếu vượt số đã thu / chưa thanh toán |
-| POST `/admin/dev/payments/:id/force` | `{status: SUCCEEDED|FAILED|EXPIRED}`; **chỉ khi `ENV=dev`** (nếu không 403). `FAILED` kết thúc luôn payment |
+| POST `/admin/dev/payments/:id/force` | `{status: SUCCEEDED\|FAILED\|EXPIRED}`; **chỉ khi `ENV=dev`** (nếu không 403). `FAILED` kết thúc luôn payment |
 Webhook mô phỏng `POST /internal/payments/webhook` nằm trên cổng admin `:8081` của payment-service (không qua gateway/Traefik), ký `X-Signature: t=<unix>,v1=HMAC_SHA256(PAYMENT_WEBHOOK_SECRET, t + "." + body)`, lệch giờ > 5 phút bị 401.
 
 ---
 ## 8. Seller console
+
 | Method & path | Ai | Ghi chú |
 |---|---|---|
 | GET `/seller/products` | S | như `/search` nhưng **mọi trạng thái** của store trong token (`seller_id` query bị bỏ qua) |
@@ -212,21 +228,23 @@ Sản phẩm của người khác → 403 (`store does not own the product`).
 ---
 ## 9. Analytics (ClickHouse, qua analytics-service gRPC `Query`)
 Seller: `GET /seller/analytics/{summary|timeseries|top-products|funnel|low-stock}` (S, scope store từ JWT). Admin: `GET /admin/analytics/{summary|timeseries|top-products|funnel|low-stock|traffic|payments|search-terms|data-health}` (A, toàn nền tảng). Gateway **không** nhận `store_id` từ client; analytics-service kiểm lại scope.
+
 | Query | Ý nghĩa |
 |---|---|
 | `from`, `to` | `YYYY-MM-DD` (hiểu theo `Asia/Ho_Chi_Minh`, `to` là **ngày bao gồm** = hết ngày) hoặc RFC 3339. Mặc định 30 ngày gần nhất; tối đa **400 ngày** (trừ `low-stock`, `data-health`); sai → 400 |
-| `granularity` | `hour|day|week|month` (mặc định `day`; tuần bắt đầu thứ Hai) – cho `timeseries`, `traffic` |
+| `granularity` | `hour\|day\|week\|month` (mặc định `day`; tuần bắt đầu thứ Hai) – cho `timeseries`, `traffic` |
 | `sort` | `top-products`: `revenue` (mặc định), `units`, `views`, `conversion`, `viewed_unsold` (nhiều lượt xem, 0 bán) |
 | `limit` | `top-products` mặc định 20 (≤100); `low-stock` 50 (≤200); `search-terms` 20 (≤100) |
 Phản hồi: `{"as_of":"…","source":"clickhouse","cached":false,"timezone":"Asia/Ho_Chi_Minh","data":…}`. Cache Redis 30 s (`ANALYTICS_CACHE_TTL_SEC`; không cache `data_health`).
 **Doanh thu** = `subtotal` (tiền hàng, **không** gồm ship) của đơn **PAID** (online) hoặc **DELIVERED** (COD), tính theo thời điểm đó; `refunds` trừ theo thời điểm hoàn tiền; `net_revenue = revenue − refunds`.
+
 | Report | `data` |
 |---|---|
 | `summary` | `{current:{revenue,refunds,net_revenue,gmv,orders_placed,orders_recognized,aov,canceled,expired,refunded,cancel_rate}, previous:{…kỳ liền trước cùng độ dài}, from, to}` – VND |
 | `timeseries` | `[{bucket:"YYYY-MM-DD HH:MM:SS" (giờ VN), revenue, refunds, orders, placed}]` – bucket rỗng được điền 0 |
 | `top-products` | `[{product_id,name,status,units,revenue,impressions,clicks,views,carts,conversion}]` |
-| `funnel` | `{steps:[{step:"view|cart|checkout|paid",count}], unit, by_device? }` – đếm **session**; store scope: `checkout` = `null`; `paid` = số đơn đã ghi nhận doanh thu; `by_device` chỉ admin |
-| `low-stock` | `[{product_id,name,available,reserved,level,units_per_day,days_left|null,store_id?}]` – hết/ sắp hết, hoặc hết trong ≤ 7 ngày theo tốc độ bán 14 ngày |
+| `funnel` | `{steps:[{step:"view\|cart\|checkout\|paid",count}], unit, by_device? }` – đếm **session**; store scope: `checkout` = `null`; `paid` = số đơn đã ghi nhận doanh thu; `by_device` chỉ admin |
+| `low-stock` | `[{product_id,name,available,reserved,level,units_per_day,days_left\|null,store_id?}]` – hết/ sắp hết, hoặc hết trong ≤ 7 ngày theo tốc độ bán 14 ngày |
 | `traffic` (admin) | `{page_views,sessions,visitors,client_errors,new_visitors,returning_visitors,series[],top_paths,top_referrers,devices,countries}` |
 | `payments` (admin) | `{succeeded,failed,success_rate,amount_succeeded,by_method[],failure_codes[],refunds{count,amount},orders_awaiting_payment}` (đếm theo **lần thử**) |
 | `search-terms` (admin) | `{top:[{term,count,avg_results}], zero_results:[{term,count}]}` |
@@ -235,17 +253,19 @@ Lỗi: ClickHouse/analytics-service down → **503** (`analytics store error` / 
 
 ---
 ## 10. Admin khác
+
 | Method & path | Ghi chú |
 |---|---|
 | GET `/admin/categories` | gồm cả danh mục `active=false` |
 | POST `/admin/categories` | **201**; `{parent_id, name (1-100), slug (tự sinh từ name nếu trống; a-z0-9 và `-`), sort, active (mặc định true)}`; tối đa **3 cấp**; slug trùng/vòng lặp → 400; cha không tồn tại → 404 |
 | PUT `/admin/categories/:id` | 200, thay toàn bộ |
-| PATCH `/admin/products/:id/status` | `{status}` ∈ `draft|active|hidden|banned` (chỉ admin được `banned`; seller không gỡ được) |
+| PATCH `/admin/products/:id/status` | `{status}` ∈ `draft\|active\|hidden\|banned` (chỉ admin được `banned`; seller không gỡ được) |
 | Thanh toán, đơn, analytics, `/admin/system/health` | §1, §6.3, §7, §9 |
 **Chưa làm**: `/admin/system/metrics` (proxy Prometheus), `/admin/system/outbox`, `/admin/system/kafka`, requeue outbox qua API, `/admin/users`, `/admin/stores`, `/admin/audit-log`, `/admin/dev` khác ngoài force-payment. Xem Grafana thay thế ([03_RUNBOOK.md](../instruction/03_RUNBOOK.md)).
 
 ---
 ## 11. Tracking (clickstream)
+
 | Method & path | Ai | Ghi chú |
 |---|---|---|
 | POST `/events` | 👁 | rate-limit riêng; token tuỳ chọn (chỉ để gắn user) |
@@ -267,6 +287,7 @@ Lý do từ chối: `unknown_or_server_only_type`, `id_too_long` (>64), `props_t
 
 ---
 ## 12. Bản đồ route → quyền (tóm tắt)
+
 | Nhóm | Route | Ai |
 |---|---|---|
 | Công khai | `/health`, `/healthz`, `/auth/{login,register,refresh-token}`, `/categories`, `/payments/methods`, `/products/:id/stock`, `POST /events` | 🌐 |
@@ -279,6 +300,7 @@ Lý do từ chối: `unknown_or_server_only_type`, `id_too_long` (>64), `props_t
 Bảng test truy cập: `services/api-gateway/internal/router/router_test.go` ([04_TESTING.md](../instruction/04_TESTING.md)).
 
 ## Token & lỗi thường gặp
+
 | Tình huống | Mã |
 |---|---|
 | Thiếu/sai/hết hạn token; dùng refresh token như access | 401 |
