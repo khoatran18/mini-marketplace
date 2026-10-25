@@ -1,6 +1,9 @@
 # Agent, LangGraph, LangSmith: có cần không, dùng khi nào
 
-> **Lưu ý về độ tin cậy:** phần này viết theo hiểu biết sẵn có về LangGraph / LangSmith và các lựa chọn thay thế. Trong lần soạn này hạn mức WebSearch đã hết nên **chưa xác minh được số phiên bản, giá và tính năng hiện hành**. Trước khi chọn, hãy đọc lại tài liệu chính thức của từng công cụ.
+> **Độ tin cậy (tra cứu 2026-10-25, qua kết quả WebSearch, chưa đọc trang chính thức):**
+> - LangGraph ra bản **1.0 (GA) vào tháng 10/2025**, với durable execution, checkpointing và hỗ trợ human-in-the-loop (dừng chờ người duyệt rồi chạy tiếp) là các trụ cột của runtime; LangChain 1.0 dựng trên cùng runtime ([changelog LangChain](https://changelog.langchain.com/announcements/ann_lxOZRCoFw2Qn9), [diễn đàn LangChain](https://forum.langchain.com/t/we-launched-1-0-versions-of-langchain-and-langgraph/1904)).
+> - LangSmith: gói Developer miễn phí (1 seat, ~5k trace/tháng), Plus ~39 USD/seat/tháng; **tự host / hybrid chỉ có ở gói Enterprise** (giá liên hệ) ([trang giá LangSmith](https://www.langchain.com/langsmith-pricing)). Con số có thể đổi, hãy xem lại trước khi chọn.
+> - Langfuse: mã nguồn mở, lõi giấy phép MIT, tự host bằng Docker / Kubernetes; một số module enterprise (SCIM, audit log, retention) dùng giấy phép thương mại riêng; cần Postgres + ClickHouse + Redis + object storage; có telemetry mặc định (tắt bằng `TELEMETRY_ENABLED=false`); tháng 1/2026 ClickHouse mua lại Langfuse, lõi vẫn MIT ([tài liệu self-hosting](https://langfuse.com/self-hosting.md)). Chưa đối chiếu với file LICENSE chính thức.
 
 ## 1. Kết luận trước
 
@@ -52,8 +55,8 @@ LangSmith (của LangChain) cung cấp: tracing từng lần chạy (prompt, too
 
 | Công cụ | Điểm mạnh | Lưu ý với dự án này |
 |---|---|---|
-| LangSmith | tích hợp sâu LangGraph, dataset + eval + tracing trong một chỗ | bản dịch vụ đám mây gửi trace (chứa nội dung hội thoại, có thể có PII) ra ngoài; tự host có thể phải trả phí — **chưa xác minh điều kiện hiện hành** |
-| Langfuse | mã nguồn mở, tự host (thêm 1 stack vào Swarm), dataset + eval + prompt management | tự vận hành thêm Postgres / ClickHouse của riêng nó |
+| LangSmith | tích hợp sâu LangGraph, dataset + eval + tracing trong một chỗ | bản đám mây gửi trace (chứa nội dung hội thoại, có thể có PII) ra ngoài; tự host / hybrid chỉ ở gói Enterprise (xem ghi chú đầu file) |
+| Langfuse | mã nguồn mở, tự host (thêm 1 stack vào Swarm), dataset + eval + prompt management | tự vận hành thêm Postgres, ClickHouse, Redis, object storage của riêng nó (dự án đã có Postgres / ClickHouse / Redis nhưng nên tách instance để không ảnh hưởng nghiệp vụ) |
 | Arize Phoenix | mã nguồn mở, dựa OpenTelemetry, mạnh về eval RAG | ít tính năng quản trị hơn |
 | OpenTelemetry (GenAI semantic conventions) + Prometheus/Grafana có sẵn | không thêm dịch vụ mới, đồng bộ với `mm_*` metric | phải tự dựng phần dataset / eval |
 | promptfoo, DeepEval, Ragas, Inspect AI | chạy eval trong CI | bổ trợ, không thay thế tracing |
