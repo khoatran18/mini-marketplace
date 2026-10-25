@@ -9,8 +9,7 @@ import (
 	"strings"
 	"time"
 	"user-service/internal/config/messagequeue/kafkaimpl"
-	"user-service/pkg/model"
-	"user-service/pkg/outbox"
+	"user-service/internal/migrate"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -89,7 +88,14 @@ func initPostgresDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate(&model.Seller{}, &model.Buyer{}, &outbox.CreateSellerEvent{}, &outbox.CreateSellerKafkaEvent{})
+	// Schema do goose quản lý (migrations/*.sql), thay cho GORM AutoMigrate cũ.
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if err := migrate.Run(context.Background(), sqlDB); err != nil {
+		return nil, err
+	}
 
 	fmt.Println("Init Postgres DB successfully!")
 

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"testing"
+	"user-service/internal/migrate"
 	"user-service/internal/repository"
 	"user-service/pkg/model"
 
@@ -36,7 +37,11 @@ func testService(t *testing.T) *UserService {
 	if err != nil {
 		t.Fatalf("connect test db: %v", err)
 	}
-	if err := db.AutoMigrate(&model.Address{}); err != nil {
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := migrate.Run(context.Background(), sqlDB); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	t.Cleanup(func() {

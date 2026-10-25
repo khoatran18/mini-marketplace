@@ -11,13 +11,14 @@ import (
 	"user-service/internal/client/serviceclientmanager"
 	"user-service/internal/config"
 	"user-service/internal/repository"
+	"user-service/internal/requestid"
 	"user-service/internal/server"
 	"user-service/internal/service"
-	"user-service/pkg/model"
 	"user-service/pkg/ops"
 	userpb "user-service/pkg/pb"
 
 	"github.com/lpernett/godotenv"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -37,13 +38,6 @@ func main() {
 	}
 	fmt.Println("Create EnvConfig successfully!")
 
-	// err = serviceConfig.PostgresDB.AutoMigrate(&dto.Product{})
-	if err != nil {
-		log.Fatalf("Can not migrate database: %v", err)
-	} else {
-		fmt.Println("Migration successfully!")
-	}
-
 	grpcClientManager := clientmanager.NewClientManager()
 	defer grpcClientManager.CloseAll()
 
@@ -51,10 +45,6 @@ func main() {
 
 	defer serviceConfig.KafkaInstance.KafkaManager.CloseWriterAll()
 	defer serviceConfig.KafkaInstance.KafkaManager.CloseReaderAll()
-
-	if err := serviceConfig.PostgresDB.AutoMigrate(&model.Address{}); err != nil {
-		log.Fatalf("Can not migrate addresses: %v", err)
-	}
 
 	userRepo := repository.NewUserRepository(serviceConfig.PostgresDB)
 	userService := service.NewUserService(userRepo, serviceConfig.ZapLogger, scm, serviceConfig.KafkaInstance.KafkaProducer, serviceConfig.KafkaInstance.KafkaConsumer, serviceConfig.KafkaInstance.KafkaClient)
@@ -88,7 +78,7 @@ func main() {
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
 		adm.AttachDB(sqlDB)
 	}
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), errLogInterceptor(serviceConfig.ZapLogger), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	userpb.RegisterUserServiceServer(s, &server.UserServer{
 		UserService: userService,
 		ZapLogger:   serviceConfig.ZapLogger,
@@ -101,4 +91,15 @@ func main() {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 
+}
+
+// errLogInterceptor log các RPC lỗi kèm request_id để lần theo xuyên service.
+func errLogInterceptor(base *zap.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		resp, err := handler(ctx, req)
+		if err != nil {
+			requestid.Logger(ctx, base).Warn("rpc failed", zap.String("method", info.FullMethod), zap.Error(err))
+		}
+		return resp, err
+	}
 }
