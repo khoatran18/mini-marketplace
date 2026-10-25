@@ -1,0 +1,3 @@
+# datagen chỉ dùng thư viện chuẩn của Python >= 3.9 (không có gói nào cần cài).
+# Công cụ ngoài: lệnh `psql` (hoặc `docker exec -i <container> psql ...`) và một ClickHouse có HTTP (cổng 8123).
+# Tuỳ chọn (không bắt buộc): bcrypt, chỉ khi muốn tự tạo lại hằng PASSWORD_HASH trong mmdatagen/world.py.
