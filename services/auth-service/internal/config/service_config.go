@@ -2,8 +2,7 @@ package config
 
 import (
 	"auth-service/internal/config/messagequeue/kafkaimpl"
-	"auth-service/pkg/model"
-	"auth-service/pkg/outbox"
+	"auth-service/internal/migrate"
 	"context"
 	"errors"
 	"fmt"
@@ -110,7 +109,9 @@ func initPostgresDB() (*gorm.DB, error) {
 	sqlDB.SetMaxIdleConns(5)
 	sqlDB.SetMaxOpenConns(25)
 	sqlDB.SetConnMaxLifetime(time.Hour)
-	db.AutoMigrate(&model.Account{}, &outbox.PwdVersionEvent{})
+	if err := migrate.Run(context.Background(), sqlDB); err != nil {
+		return nil, fmt.Errorf("migrate database: %w", err)
+	}
 
 	fmt.Println("Init postgres db successfully!")
 	return db, nil

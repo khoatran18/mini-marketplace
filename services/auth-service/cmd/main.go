@@ -3,13 +3,12 @@ package main
 import (
 	"auth-service/internal/config"
 	"auth-service/internal/repository"
+	"auth-service/internal/requestid"
 	"auth-service/internal/server"
 	"auth-service/internal/service"
-	"auth-service/pkg/model"
 	"auth-service/pkg/ops"
 	authpb "auth-service/pkg/pb"
 	"context"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -32,13 +31,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Error NewEnvConfig: ", err)
 	}
-	err = serviceConfig.PostgresDB.AutoMigrate(&model.Account{})
-	if err != nil {
-		log.Fatalf("Can not migrate database: %v", err)
-	} else {
-		fmt.Println("Migration successfully!")
-	}
-
 	defer serviceConfig.KafkaInstance.KafkaManager.CloseWriterAll()
 	defer serviceConfig.KafkaInstance.KafkaManager.CloseReaderAll()
 
@@ -68,7 +60,7 @@ func main() {
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
 		adm.AttachDB(sqlDB)
 	}
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	authpb.RegisterAuthServiceServer(s, &authServer)
 
 	// Platform administrator (never self-registered): created once from ADMIN_BOOTSTRAP_USERNAME/PASSWORD

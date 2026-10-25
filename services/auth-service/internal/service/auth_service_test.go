@@ -1,9 +1,9 @@
 package service
 
 import (
+	"auth-service/internal/migrate"
 	"auth-service/internal/repository"
 	"auth-service/pkg/dto"
-	"auth-service/pkg/model"
 	"auth-service/pkg/outbox"
 	"context"
 	"fmt"
@@ -42,7 +42,11 @@ func testService(t *testing.T) *AuthService {
 	if err != nil {
 		t.Fatalf("connect test db: %v", err)
 	}
-	if err := db.AutoMigrate(&model.Account{}, &outbox.PwdVersionEvent{}); err != nil {
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("sql db: %v", err)
+	}
+	if err := migrate.Run(context.Background(), sqlDB); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	t.Cleanup(func() {
