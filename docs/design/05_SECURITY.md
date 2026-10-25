@@ -6,6 +6,27 @@
 - Gateway accepts only `Type=="access"` tokens. Refresh tokens are only accepted by auth-service, which also compares `PwdVersion` with the DB.
 - Password change bumps `pwd_version`; the gateway caches the new version in Redis for `JWT_EXPIRE_TIME + 1 min` (= access token lifetime) so older access tokens are rejected immediately. A missing key is fine: tokens older than the TTL are expired anyway.
 
+### Request flow: token, route middleware, ownership
+
+```mermaid
+flowchart TD
+  REQ["HTTP request"] --> GL["Global middleware: CORS, body limit, request log, rate limit"]
+  GL --> RT{"Route needs a token?"}
+  RT -->|"public, e.g. /search, /categories, /events"| OPT["OptionalAuth only adds identity if a valid token is sent"]
+  RT -->|"authenticated group"| AM["AuthMiddleware: Bearer token, HS256 signature and expiry, Type access"]
+  AM -->|"invalid"| E401["401"]
+  AM --> PV{"pwd_version in token matches Redis key userId:pwd_version?"}
+  PV -->|"no"| E401
+  PV -->|"yes"| RO["AuthorizationMiddleware: role allowed for this group?"]
+  RO -->|"no"| E403["403"]
+  RO -->|"yes"| OWN["Handler and owning service: ownership check with ids taken from the token"]
+  OWN -->|"foreign order, payment or address"| E404["404"]
+  OWN -->|"own data"| OK["gRPC call to the service"]
+  OPT --> OK
+```
+
+Authentication and role checks are attached per route or group, so public routes stay public. Ownership is the last gate: the user id, role and store id come only from the token, never from the request body.
+
 ## Administrator role
 `admin` is a fourth role that can **never** be self-registered: `Register` (gateway and auth-service) rejects it, and the protobuf `RegisterRequest` does not allow it. The only way to create one is `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` read by auth-service at start-up (idempotent; an existing admin's password is never overwritten; credentials must satisfy the login contract: 3–16 characters `[a-zA-Z0-9_]`, password ≥ 8). Only `Login` and `ChangePassword` accept `admin`. Admin routes live under `/admin/*` (`AuthMiddleware` + role `admin`). Change the bootstrap password after the first login and remove the variables from the environment afterwards.
 
@@ -21,6 +42,57 @@
 - Payments are a SIMULATION: no real card network. Card numbers only choose the simulated outcome; **only the last 4 digits** are stored, never the full number/CVV, and the gateway never echoes a request body that may contain card data.
 - The simulated provider notifies `POST /internal/payments/webhook` on the internal admin port only (not routed by Traefik), signed `X-Signature: t=<unix>,v1=HMAC_SHA256(PAYMENT_WEBHOOK_SECRET, t + "." + body)`, 5-minute tolerance, idempotent per `provider_event_id`. `PAYMENT_WEBHOOK_SECRET` must be ≥ 16 characters or the service does not start. `POST /admin/dev/payments/:id/force` works only with `ENV=dev`.
 - `POST /events` is public and rate limited (`EVENTS_RATE_LIMIT_PER_MINUTE`); the browser cannot set `user_id`/`role`/`store_id`/IP (the gateway attaches them). IPs are never stored: only `HMAC(IP_HASH_SECRET, UTC date | ip)`, which changes daily. Without analytics consent only anonymous `page_view`/`error_client` are kept (identifiers dropped). E-mail addresses/phone numbers in free text (search queries) are masked, URLs lose query strings. Raw events expire after `EVENTS_RETENTION_MONTHS` (13). **Not implemented**: user data erasure (`DELETE /users/me/data`), a `consents` store.
+
+### Signed webhook flow
+
+```mermaid
+sequenceDiagram
+  participant W as Simulated provider worker
+  participant H as POST /internal/payments/webhook on port 8081
+  participant D as Postgres
+  W->>W: Build body, sign with t and HMAC_SHA256 of t + "." + body
+  W->>H: X-Signature t=unix,v1=hex
+  H->>H: Check HMAC with PAYMENT_WEBHOOK_SECRET and 5 minute tolerance
+  alt signature invalid or too old
+    H-->>W: 401
+  else valid
+    H->>D: INSERT processed_events provider_event_id ON CONFLICT DO NOTHING
+    alt already processed
+      H-->>W: 200 duplicate
+    else first time
+      H->>D: Lock payment, update status, write payment.succeeded to outbox
+      H-->>W: 200 applied
+    end
+  end
+```
+
+The endpoint lives on the internal admin port and is not routed by Traefik. Idempotency comes from `processed_events`, so retries from `webhook_deliveries` are harmless.
+
+## Trust boundaries
+
+```mermaid
+flowchart LR
+  NET(("Internet")) -->|"443 TLS, 80 redirects"| TR["Traefik"]
+  subgraph PUB["Public through Traefik"]
+    FE["frontend"]
+    GW["api-gateway :8080, JWT, RBAC, rate limit"]
+    GF["Grafana, password login"]
+    TD["Traefik dashboard, basic auth"]
+  end
+  TR --> FE
+  TR --> GW
+  TR --> GF
+  TR --> TD
+  subgraph INT["Overlay marketplace-net only, never published"]
+    SV["gRPC services :50051 to :50057"]
+    AD["admin port :8081: health, ready, metrics, payment webhook"]
+    DS[("Postgres, Redis, Kafka, ClickHouse, Prometheus")]
+  end
+  GW --> SV
+  SV --> DS
+```
+
+Only Traefik publishes ports (80 and 443). The gateway is the only application entry point and the only place that verifies tokens. Everything inside the overlay (gRPC, `:8081`, databases, Prometheus, ClickHouse) is plaintext and unauthenticated, so it must stay unpublished.
 
 ## Abuse protection
 - Redis rate limiter (global `RATE_LIMIT_PER_MINUTE`, default 300; `/auth/*` `AUTH_RATE_LIMIT_PER_MINUTE`, default 20; `/events*` `EVENTS_RATE_LIMIT_PER_MINUTE`, default 120) per client IP, atomic Lua script, fails open if Redis is down.

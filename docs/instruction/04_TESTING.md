@@ -1,11 +1,31 @@
 # Kiểm thử
 
 ## 1. Chạy test
+
+Các tầng kiểm thử và điều kiện chạy:
+
+```mermaid
+flowchart TD
+  T["go test trong services/name"] --> U["Tầng 1 - unit: luôn chạy, không cần hạ tầng"]
+  U --> U1["Kafka thay bằng gọi thẳng handler, Redis là miniredis, gRPC phụ thuộc là fake"]
+  T --> PGQ{"Có TEST_POSTGRES_DSN?"}
+  PGQ -->|"có"| PG["Tầng 2 - DB test: Postgres thật, một database tạm cho mỗi test"]
+  PGQ -->|"không"| PGS["Test chạm DB bị skip"]
+  T --> CHQ{"Có TEST_CLICKHOUSE_URL?"}
+  CHQ -->|"có"| CH["Tầng 3 - analytics: ClickHouse 24.8 thật hoặc chDB shim"]
+  CHQ -->|"không"| CHS["Test ClickHouse bị skip"]
+  T -.-> E["Tầng 4 - e2e trên Swarm (scripts/e2e): LỖI THỜI, xem mục 5"]
+```
+
+Tầng 1 luôn chạy; tầng 2 và 3 tự bật khi có biến môi trường, nếu thiếu thì test **bị skip** chứ không fail. Tầng 4 cần cả hệ thống chạy trên Swarm và hiện không còn khớp API.
+
 Mỗi service là một Go module riêng (Go 1.25): chạy từ `services/<name>`.
+
 ```bash
 cd services/<name> && gofmt -l . && go vet ./... && go build ./... && go test -race -count=1 ./...
 cd apps/frontend && npx tsc --noEmit && npm run build
 ```
+
 Bảy service: `api-gateway`, `auth-service`, `user-service`, `product-service`, `order-service`, `payment-service`, `analytics-service` (CI chạy đủ bảy trong ma trận `.github/workflows/ci.yml`).
 
 ### Biến môi trường
@@ -14,25 +34,56 @@ Bảy service: `api-gateway`, `auth-service`, `user-service`, `product-service`,
 |---|---|---|
 | `TEST_POSTGRES_DSN` | auth, user, product, order, payment (mọi test chạm DB) | test **bị skip** |
 | `TEST_CLICKHOUSE_URL` | analytics-service (`internal/ch`, `internal/store`, `internal/service/service_ch_test.go`) | test **bị skip** |
+
 ```bash
 export TEST_POSTGRES_DSN="host=localhost port=5432 user=postgres password=postgres sslmode=disable"
 export TEST_CLICKHOUSE_URL="http://127.0.0.1:8123"
 ```
+
 Test DB tạo một database tạm (`CREATE DATABASE …_test_<rand>`) cho **mỗi test** rồi xoá, nên role phải có quyền tạo database. Test ClickHouse tạo database riêng cho mỗi test (`store_test.go`). Không test nào cần Kafka/Redis thật: Kafka được thay bằng handler gọi trực tiếp, Redis bằng `miniredis`, gRPC phụ thuộc bằng fake nhúng interface client.
 
 ### Postgres cục bộ không cần Docker
 `initdb`/`pg_ctl` từ `/usr/lib/postgresql/16/bin` dưới user OS `postgres` (thư mục dữ liệu ngoài `/tmp/claude-*`), rồi `export TEST_POSTGRES_DSN="host=localhost port=5433 user=postgres sslmode=disable"`.
 
 ### ClickHouse cho test: server thật hoặc chDB shim
+
+```mermaid
+flowchart LR
+  A["go test analytics-service"] --> B{"TEST_CLICKHOUSE_URL trỏ tới đâu?"}
+  B -->|"CI"| C["Service container clickhouse-server 24.8, cổng 8123"]
+  B -->|"máy không Docker"| D["scripts/dev/chdb_server.py trên chDB, cổng 8123"]
+```
+
+Cả hai cùng giao diện HTTP nên lệnh test không đổi, chỉ khác `TEST_CLICKHOUSE_URL` trỏ vào đâu.
+
 - **CI** chạy ClickHouse **24.8** thật (service container, `TEST_CLICKHOUSE_URL=http://localhost:8123`).
 - **Máy không có Docker**: `scripts/dev/chdb_server.py` giả lập giao diện HTTP của ClickHouse (GET/POST `/ping`, `/?query=…&param_x=…`, phần thân nối vào câu lệnh cho `INSERT … FORMAT JSONEachRow`, tham số `database`) trên **chDB** (engine ClickHouse nhúng) để SQL thật của analytics-service chạy trên engine thật. Chỉ dùng cho TEST (bỏ qua auth, một session có khoá).
+
 ```bash
 pip install chdb                         # SQL đã được xác thực trên chDB 26.9
 python3 scripts/dev/chdb_server.py --port 8123 --path /var/tmp/chdb-data &
 cd services/analytics-service && TEST_CLICKHOUSE_URL=http://127.0.0.1:8123 go test -race -count=1 ./...
 ```
+
 Khác biệt chDB ↔ ClickHouse server có thể có ở chi tiết hiếm; bản 24.8 trong CI là phép thử cuối.
 - Sinh traffic giả để xem dashboard (DEV): `python3 scripts/dev/gen_traffic.py --api https://api.marketplace.swarm.localhost --visitors 200 --products 1-60` (chỉ gửi loại event của client; đơn/thanh toán phải đặt thật qua UI/API).
+
+### CI pipeline
+
+```mermaid
+flowchart TD
+  TR["push lên main, hoặc pull_request"] --> GO
+  TR --> FE
+  subgraph GO["job go - ma trận 7 service, fail-fast tắt"]
+    G1["gofmt, bỏ qua .pb.go"] --> G2["go vet"] --> G3["go build"] --> G4["go test -race -count=1"]
+  end
+  subgraph FE["job frontend - Node 20"]
+    F1["npm install"] --> F2["npx tsc --noEmit"] --> F3["npm run build"]
+  end
+  GO -->|"needs"| DK["job docker - ma trận 8 context, build không push"]
+```
+
+`.github/workflows/ci.yml`: job `go` chạy kèm service container Postgres 16-alpine và ClickHouse 24.8 nên `TEST_POSTGRES_DSN` và `TEST_CLICKHOUSE_URL` đều được đặt. Job `docker` chờ job `go` (không chờ `frontend`), build 7 service Go cùng `apps/frontend` bằng buildx và **không push** registry.
 
 ## 2. Phạm vi từng bộ test
 
@@ -71,12 +122,14 @@ Danh sách đầy đủ + hành vi: [04_API_REFERENCE.md §7](../design/04_API_R
 - Mỗi thay đổi hành vi phải kèm test (CLAUDE.md). Hành vi bất đồng bộ qua Kafka được test bằng cách gọi trực tiếp handler consumer (`UpdateOrderStatusByKafka`, `HandlePaymentSucceeded`, …) và `events.PublishBatch`.
 
 ## 5. Kiểm thử trên hạ tầng thật (Docker Swarm) – **đang LỖI THỜI**
+
 ```bash
 ./scripts/deploy.sh                                   # sau build-images.sh
 scripts/e2e/run-in-swarm.sh                           # từ container tạm trong mạng marketplace-net
 RATE_LIMIT_TEST=1 scripts/e2e/run-in-swarm.sh         # cần AUTH_RATE_LIMIT_PER_MINUTE=20; bộ chính cần nâng (vd. 1000)
 scripts/e2e/resilience.sh                             # tiêm lỗi: Kafka down, product/order down, rolling restart, Postgres restart
 ```
+
 `scripts/e2e/e2e.mjs` và `resilience.mjs` được viết cho API **trước** P2: đặt hàng bằng `POST /orders {order:{order_items…}}` không có `Idempotency-Key`/địa chỉ, chờ trạng thái `SUCCESS`, huỷ bằng `DELETE`. Với API hiện tại (checkout theo store, `AWAITING_PAYMENT/CONFIRMED`, bắt buộc `Idempotency-Key` và địa chỉ) các bước đó sẽ **thất bại** cho tới khi viết lại. Chưa có e2e cho payment/analytics/cart. Các phần auth, edge (TLS/CORS), store/catalog, thu hồi token vẫn đúng ý tưởng nhưng cần chạy lại.
 
 ## 6. Chưa được kiểm thử

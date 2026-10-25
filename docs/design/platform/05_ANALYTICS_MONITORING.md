@@ -82,6 +82,7 @@ Khác thiết kế: không có `stockout-forecast`/`payments-breakdown`/`export.
 Metric (cổng :8081): `mm_ch_buffer_rows`, `mm_ch_insert_lag_seconds`, `mm_ch_rows_inserted_total`, `mm_ch_insert_failures_total`, `mm_ch_rows_dropped_total`, `mm_events_accepted_total`, `mm_events_rejected_total` (đăng ký dạng gauge nhưng giá trị là bộ đếm tăng dần – dùng `rate()/increase()`). Readiness: `clickhouse` critical; `insert_pipeline` non-critical (có hàng đợi mà > 1 phút không insert được). Dashboard **Analytics pipeline**.
 
 ## 2. Giám sát hệ thống (CPU, RAM…)
+
 ```mermaid
 flowchart LR
   subgraph APP["7 service Go, cổng admin 8081"]

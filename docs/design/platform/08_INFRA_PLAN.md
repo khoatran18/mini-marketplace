@@ -4,6 +4,59 @@
 
 ## 1. Stack
 
+### 1.1 Topology deploy
+
+```mermaid
+flowchart TB
+  NET(("Internet")) -->|"cổng 80 chuyển sang 443"| TR
+  subgraph OVL["Mạng overlay marketplace-net, attachable"]
+    subgraph SVC["Stack marketplace, services.yml"]
+      TR["traefik, 1 replica, node manager"]
+      FE["frontend, 1 replica"]
+      GW["api-gateway, 2 replica"]
+      GO["auth, user, product, order, payment, analytics, mỗi service 1 replica"]
+    end
+    subgraph INF["Stack marketplace-infra, infra.yml"]
+      PG[("postgres")]
+      RD[("redis")]
+      CH[("clickhouse")]
+      KF[("broker1, Kafka")]
+    end
+    subgraph OBS["Stack marketplace-obs, observability.yml"]
+      PM["prometheus"]
+      GF["grafana"]
+      EXP["cadvisor, node-exporter global, 3 exporter"]
+    end
+  end
+  TR --> FE
+  TR --> GW
+  TR --> GF
+  GW -->|"gRPC"| GO
+  GW --> RD
+  GO --> PG
+  GO --> KF
+  GO --> CH
+  PM --> EXP
+```
+
+Chỉ Traefik publish cổng ra máy chủ (80 và 443, mode ingress); mọi thứ còn lại chỉ nói chuyện qua tên service trong `marketplace-net`. `scripts/deploy.sh` triển khai theo thứ tự infra, observability, services.
+
+### 1.2 Ai publish cổng nào, định tuyến theo host
+
+```mermaid
+flowchart LR
+  U["Trình duyệt"] -->|"443 TLS"| TR["traefik"]
+  TR -->|"PUBLIC_HOST"| FE["frontend :3000"]
+  TR -->|"api.PUBLIC_HOST, healthcheck /ready cổng 8081"| GW["api-gateway :8080, 2 replica"]
+  TR -->|"grafana.PUBLIC_HOST"| GF["grafana :3000"]
+  TR -->|"dashboard.PUBLIC_HOST, basic-auth"| DB["traefik api@internal"]
+  TR -.->|"không có router, không publish"| AD["cổng admin :8081, Prometheus, ClickHouse"]
+```
+
+Cổng admin :8081 của mọi service Go, Prometheus và ClickHouse không có router Traefik và không publish nên chỉ truy cập được từ bên trong overlay.
+
+### 1.3 Chi tiết file stack
+
 | File | Thiết kế | Thực tế |
 |---|---|---|
 | `deploy/infra.yml` | thêm `clickhouse`, `minio`; healthcheck mọi container | ✅ `clickhouse/clickhouse-server:24.8` (mật khẩu bắt buộc, `TZ=UTC`, limit 2 GB, volume `clickhouse-data`, healthcheck `/ping`); ❌ **không có MinIO**; postgres/redis/kafka có healthcheck; Kafka `apache/kafka:3.9.0` retention 168 h, `NUM_PARTITIONS=3` |
