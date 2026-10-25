@@ -4,6 +4,7 @@ import (
 	"errors"
 	"product-service/pkg/events"
 	"product-service/pkg/model"
+	"product-service/pkg/ops"
 	"strconv"
 	"time"
 
@@ -70,6 +71,7 @@ func applyStock(tx *gorm.DB, productID uint64, dInv, dRes, dSold int64, reason, 
 
 // recordStock appends the ledger row and the inventory.changed event for an already applied change.
 func recordStock(tx *gorm.DB, productID uint64, row *stockRow, delta int64, reason, refType, refID string) error {
+	ops.IncAdjustment(reason)
 	if err := tx.Create(&model.InventoryLedger{
 		ProductID: productID, Delta: delta, Reason: reason, RefType: refType, RefID: refID, BalanceAfter: row.Inventory,
 	}).Error; err != nil {

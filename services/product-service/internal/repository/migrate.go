@@ -1,12 +1,9 @@
 package repository
 
 import (
-	"fmt"
-	"product-service/pkg/events"
+	"context"
+	"product-service/internal/migrate"
 	"product-service/pkg/model"
-	"product-service/pkg/outbox"
-	"strings"
-	"unicode"
 
 	"gorm.io/gorm"
 )
@@ -17,50 +14,17 @@ const (
 	TopicInventoryChanged = "inventory.changed"
 )
 
-// Migrate creates/updates every table and the search helpers. Idempotent; used by main and by tests.
+// Migrate áp dụng các migration goose (migrations/*.sql: bảng, hàm mm_unaccent, index GIN tìm kiếm).
+// Idempotent; dùng bởi main và test.
 func Migrate(db *gorm.DB) error {
-	if err := db.AutoMigrate(&model.Product{}, &model.Category{}, &model.InventoryLedger{}, &outbox.ValidateOrderEvent{}); err != nil {
+	sqlDB, err := db.DB()
+	if err != nil {
 		return err
 	}
-	if err := events.Migrate(db); err != nil {
-		return err
-	}
-	return migrateSearch(db)
+	return migrate.Run(context.Background(), sqlDB)
 }
 
-// vietnameseFold maps accented Vietnamese letters (both cases) to the ASCII letter used for searching.
-func vietnameseFold() (from, to string) {
-	groups := map[rune]string{
-		'a': "àáạảãâầấậẩẫăằắặẳẵ", 'e': "èéẹẻẽêềếệểễ", 'i': "ìíịỉĩ",
-		'o': "òóọỏõôồốộổỗơờớợởỡ", 'u': "ùúụủũưừứựửữ", 'y': "ỳýỵỷỹ", 'd': "đ",
-	}
-	var f, t strings.Builder
-	for base, letters := range groups {
-		for _, r := range letters {
-			f.WriteRune(r)
-			t.WriteRune(base)
-			if up := unicode.ToUpper(r); up != r {
-				f.WriteRune(up)
-				t.WriteRune(base)
-			}
-		}
-	}
-	return f.String(), t.String()
-}
-
-// migrateSearch installs mm_unaccent (pure SQL, IMMUTABLE, no extension needed: lower-cases and removes
-// Vietnamese diacritics) and a GIN index on the product search document.
-func migrateSearch(db *gorm.DB) error {
-	from, to := vietnameseFold()
-	fn := fmt.Sprintf(`CREATE OR REPLACE FUNCTION mm_unaccent(t text) RETURNS text
-		LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$ SELECT lower(translate(t, '%s', '%s')) $$`, from, to)
-	if err := db.Exec(fn).Error; err != nil {
-		return err
-	}
-	return db.Exec(`CREATE INDEX IF NOT EXISTS idx_products_search ON products USING GIN (to_tsvector('simple', ` + searchDocument + `))`).Error
-}
-
-// searchDocument is the text a query is matched against; it must be identical in the index and in queries.
+// searchDocument is the text a query is matched against; it must be identical in the index (migrations/00001_baseline.sql) and in queries.
 const searchDocument = `mm_unaccent(coalesce(name,'') || ' ' || coalesce(brand,'') || ' ' || coalesce(sku,'') || ' ' || coalesce(description,''))`
 
 // DefaultCategories is the initial category tree (inserted only into an empty table). Admins edit it afterwards.

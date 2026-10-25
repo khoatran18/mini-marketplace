@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"product-service/pkg/model"
+	"product-service/pkg/ops"
 	"product-service/pkg/outbox"
 	"strconv"
 
@@ -47,7 +48,8 @@ func (r *ProductRepository) UpdateValOrdEventStatus(ctx context.Context, orderID
 // ReleaseInventory gives the inventory of a canceled/expired/failed order back, exactly once.
 // It does nothing when the order never reserved inventory or was already released (or already shipped).
 func (r *ProductRepository) ReleaseInventory(ctx context.Context, orderID uint64, items []ItemQuantity) error {
-	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	done := false
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var event outbox.ValidateOrderEvent
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("order_id = ?", orderID).First(&event).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -66,15 +68,24 @@ func (r *ProductRepository) ReleaseInventory(ctx context.Context, orderID uint64
 				return err
 			}
 		}
-		return tx.Model(&outbox.ValidateOrderEvent{}).Where("order_id = ?", orderID).Update("restored", true).Error
+		if err := tx.Model(&outbox.ValidateOrderEvent{}).Where("order_id = ?", orderID).Update("restored", true).Error; err != nil {
+			return err
+		}
+		done = true
+		return nil
 	})
+	if err == nil && done {
+		ops.IncReservation("released")
+	}
+	return err
 }
 
 // MarkShipped records that the reserved goods of an order left the warehouse: reserved goes down and the
 // sold counter up (available stock does not change). Exactly once per order; no-op when the order never
 // reserved, was released, or was already shipped.
 func (r *ProductRepository) MarkShipped(ctx context.Context, orderID uint64, items []ItemQuantity) error {
-	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	done := false
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var event outbox.ValidateOrderEvent
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("order_id = ?", orderID).First(&event).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -92,6 +103,14 @@ func (r *ProductRepository) MarkShipped(ctx context.Context, orderID uint64, ite
 				return err
 			}
 		}
-		return tx.Model(&outbox.ValidateOrderEvent{}).Where("order_id = ?", orderID).Update("shipped", true).Error
+		if err := tx.Model(&outbox.ValidateOrderEvent{}).Where("order_id = ?", orderID).Update("shipped", true).Error; err != nil {
+			return err
+		}
+		done = true
+		return nil
 	})
+	if err == nil && done {
+		ops.IncReservation("committed")
+	}
+	return err
 }

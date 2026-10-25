@@ -7,6 +7,7 @@ import (
 	"os"
 	"product-service/internal/config"
 	"product-service/internal/repository"
+	"product-service/internal/requestid"
 	"product-service/internal/server"
 	"product-service/internal/service"
 	"product-service/pkg/events"
@@ -122,7 +123,7 @@ func main() {
 	}
 	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": "domain_events"}, func() float64 { n, _ := backlog(); return n })
 	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": "domain_events"}, func() float64 { _, a := backlog(); return a })
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	productpb.RegisterProductServiceServer(s, &productServer)
 	log.Printf("Product Server Listen at %v", lis.Addr())
 

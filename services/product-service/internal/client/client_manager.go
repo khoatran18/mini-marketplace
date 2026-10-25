@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"product-service/internal/config"
+	"product-service/internal/requestid"
 	authpb "product-service/pkg/client/authclient"
 
 	"google.golang.org/grpc"
@@ -22,7 +23,7 @@ func NewServiceClient[T any](addr string, createClient func(conn *grpc.ClientCon
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
-		//grpc.WithUnaryInterceptor(interceptor),
+		grpc.WithChainUnaryInterceptor(requestid.UnaryClientInterceptor()),
 	)
 
 	if err != nil {

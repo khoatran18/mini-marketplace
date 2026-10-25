@@ -248,3 +248,25 @@ func TestMountAddsServiceRoutes(t *testing.T) {
 		t.Fatalf("mounted route: %d", rec.Code)
 	}
 }
+
+func TestDomainMetricsExposed(t *testing.T) {
+	s := newTestServer()
+	IncReservation("reserved")
+	IncReservation("bogus") // ignored: unbounded labels are not allowed
+	IncAdjustment("restock")
+	IncAdjustment("free text")
+	IncProductChanged("create")
+	_, _, body := get(t, s.Handler(), "/metrics")
+	for _, want := range []string{
+		`mm_inventory_reservations_total{result="reserved",service="test-service"}`,
+		`mm_inventory_adjustments_total{reason="restock",service="test-service"}`,
+		`mm_products_changed_total{op="create",service="test-service"}`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %s", want)
+		}
+	}
+	if strings.Contains(body, "bogus") || strings.Contains(body, "free text") {
+		t.Error("unknown label values must be dropped")
+	}
+}

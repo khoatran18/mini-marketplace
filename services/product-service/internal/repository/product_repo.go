@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"product-service/pkg/model"
+	"product-service/pkg/ops"
 	"product-service/pkg/outbox"
 	"slices"
 	"strconv"
@@ -26,7 +27,7 @@ func NewProductRepository(db *gorm.DB) *ProductRepository {
 
 // CreateProduct create new product
 func (r *ProductRepository) CreateProduct(ctx context.Context, product *model.Product) error {
-	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(product).Error; err != nil {
 			return err
 		}
@@ -40,13 +41,17 @@ func (r *ProductRepository) CreateProduct(ctx context.Context, product *model.Pr
 		}
 		return nil
 	})
+	if err == nil {
+		ops.IncProductChanged("create")
+	}
+	return err
 }
 
 // UpdateProduct replaces the editable fields of a product. Owner (seller_id) is never changed,
 // and zero values (price/inventory 0) are written explicitly. A changed inventory is recorded in the
 // ledger (reason "update"). Status "banned" can not be set or cleared here (see SetProductStatus).
 func (r *ProductRepository) UpdateProduct(ctx context.Context, product *model.Product) error {
-	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var old model.Product
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", product.ID).First(&old).Error; err != nil {
 			return err
@@ -85,6 +90,10 @@ func (r *ProductRepository) UpdateProduct(ctx context.Context, product *model.Pr
 		merged.Name, merged.Price, merged.SKU, merged.CategoryID, merged.Brand, merged.Status = product.Name, product.Price, product.SKU, product.CategoryID, product.Brand, status
 		return emitProductChanged(tx, &merged, "upsert")
 	})
+	if err == nil {
+		ops.IncProductChanged("update")
+	}
+	return err
 }
 
 // GetProductByID get product by ProductID
@@ -165,7 +174,7 @@ func sortItems(items []ItemQuantity) []ItemQuantity {
 // ErrInsufficientInventory is returned. A concurrent duplicate delivery of the same order fails on
 // the primary key of the result row and rolls back its own decrements.
 func (r *ProductRepository) ReserveInventory(ctx context.Context, orderID uint64, items []ItemQuantity) error {
-	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		ref := strconv.FormatUint(orderID, 10)
 		for _, item := range sortItems(items) {
 			if _, err := applyStock(tx, item.ProductID, -item.Quantity, item.Quantity, 0, model.ReasonReserve, "order", ref); err != nil {
@@ -179,6 +188,13 @@ func (r *ProductRepository) ReserveInventory(ctx context.Context, orderID uint64
 			Processed: true,
 		}).Error
 	})
+	switch {
+	case err == nil:
+		ops.IncReservation("reserved")
+	case errors.Is(err, ErrInsufficientInventory):
+		ops.IncReservation("insufficient")
+	}
+	return err
 }
 
 // GetProductsBySellerID get product array by SellerID
