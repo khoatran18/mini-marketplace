@@ -1,10 +1,16 @@
-# Monitoring stack: Prometheus + Grafana + cAdvisor + node-exporter + Postgres/Redis/Kafka exporters.
+# Monitoring stack: Prometheus + Grafana + Loki + Vector (log) + cAdvisor + node-exporter + Postgres/Redis/Kafka exporters.
 # View-only: there is deliberately NO alerting (no Alertmanager) – see docs/design/platform/05_ANALYTICS_MONITORING.md.
 # Requires infra.yml (shared external network). Deploy with: scripts/deploy.sh observability
 # Config files are bind-mounted from this directory (single-node swarm; on a multi-node swarm pin Prometheus/Grafana to the node that has the repo).
+x-logging: &logging
+  # Giới hạn log Docker (json-file): tối đa 3 file x 10MB mỗi container, tránh đầy đĩa. Vector đọc log từ đây.
+  driver: json-file
+  options: {max-size: "10m", max-file: "3"}
+
 services:
 
   prometheus:
+    logging: *logging
     image: prom/prometheus:v2.55.1
     hostname: prometheus
     networks: [marketplace]
@@ -29,6 +35,7 @@ services:
         limits: {memory: 768M}
 
   grafana:
+    logging: *logging
     image: grafana/grafana:11.3.0
     hostname: grafana
     networks: [marketplace]
@@ -64,6 +71,7 @@ services:
 
   # Per-container CPU/RAM/network (labelled with the swarm service name)
   cadvisor:
+    logging: *logging
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     networks: [marketplace]
     command:
@@ -89,6 +97,7 @@ services:
 
   # Host CPU/RAM/disk/network
   node-exporter:
+    logging: *logging
     image: prom/node-exporter:v1.8.2
     networks: [marketplace]
     command:
@@ -108,40 +117,120 @@ services:
         limits: {memory: 128M}
 
   postgres-exporter:
+    logging: *logging
     image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
     hostname: postgres-exporter
     networks: [marketplace]
     environment:
       DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}?sslmode=disable
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:9187/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     deploy:
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
         limits: {memory: 64M}
 
   redis-exporter:
+    logging: *logging
     image: oliver006/redis_exporter:v1.62.0
     hostname: redis-exporter
     networks: [marketplace]
     environment:
       REDIS_ADDR: redis://redis:6379
+    # Không có healthcheck: image oliver006/redis_exporter là scratch (chỉ có binary /redis_exporter,
+    # không có sh/wget/curl), nên không thể gọi HTTP từ trong container. Trạng thái được theo dõi qua
+    # `up{job="redis"}` trong Prometheus.
     deploy:
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
         limits: {memory: 64M}
 
   kafka-exporter:
+    logging: *logging
     image: danielqsj/kafka-exporter:v1.8.0
     hostname: kafka-exporter
     networks: [marketplace]
     command: ["--kafka.server=broker1:9092"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:9308/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     deploy:
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
         limits: {memory: 64M}
 
+  # Log tập trung: Loki (lưu, single binary, filesystem) + Vector (thu log container, che PII).
+  # Loki KHÔNG publish cổng: chỉ Vector (push) và Grafana (query) truy cập qua marketplace-net.
+  loki:
+    logging: *logging
+    image: grafana/loki:3.2.1
+    hostname: loki
+    networks: [marketplace]
+    command: ["-config.file=/etc/loki/loki.yml", "-config.expand-env=true"]
+    environment:
+      LOKI_RETENTION: ${LOKI_RETENTION:-168h}
+    configs:
+      - source: loki-config
+        target: /etc/loki/loki.yml
+    volumes:
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    deploy:
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+      resources:
+        limits: {memory: 512M}
+
+  # Mỗi node một bản: đọc log json-file của container qua docker.sock (chỉ đọc), gửi sang Loki.
+  vector:
+    logging: *logging
+    image: timberio/vector:0.41.1-alpine
+    networks: [marketplace]
+    command: ["--config", "/etc/vector/vector.yaml"]
+    environment:
+      ENV: ${ENV:-prod}
+      LOKI_URL: http://loki:3100
+    configs:
+      - source: vector-config
+        target: /etc/vector/vector.yaml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - vector-data:/var/lib/vector
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8686/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      mode: global
+      restart_policy: {condition: on-failure, delay: 10s}
+      resources:
+        limits: {memory: 128M}
+
 volumes:
   prometheus-data:
   grafana-data:
+  loki-data:
+  vector-data:
+
+configs:
+  loki-config:
+    file: ./loki/loki.yml
+  vector-config:
+    file: ./vector/vector.yaml
 
 networks:
   marketplace:

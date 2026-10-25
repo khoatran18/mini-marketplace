@@ -9,3 +9,12 @@ datasources:
     editable: false
     jsonData:
       timeInterval: 15s
+  # Log (Loki, xem deploy/loki/loki.yml). Truy vấn qua LogQL; request_id KHÔNG phải nhãn nên lọc bằng | json.
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      maxLines: 1000

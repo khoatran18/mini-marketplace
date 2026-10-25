@@ -1,8 +1,14 @@
 # Infrastructure stack: Postgres, Redis, Kafka (single broker, dev/small deployments).
 # Deploy: docker stack deploy -c <(docker compose --env-file deploy/.env -f deploy/infra.yml config) marketplace-infra
+x-logging: &logging
+  # Giới hạn log Docker (json-file): tối đa 3 file x 10MB mỗi container, tránh đầy đĩa. Vector đọc log từ đây.
+  driver: json-file
+  options: {max-size: "10m", max-file: "3"}
+
 services:
 
   postgres:
+    logging: *logging
     image: postgres:16-alpine
     hostname: postgres
     environment:
@@ -24,6 +30,7 @@ services:
         delay: 3s
 
   redis:
+    logging: *logging
     image: redis:8.2.1-alpine
     hostname: redis
     command: ["redis-server", "--appendonly", "yes"]
@@ -43,6 +50,7 @@ services:
 
   # Analytics store (analytics-service creates the database and tables itself on start)
   clickhouse:
+    logging: *logging
     image: clickhouse/clickhouse-server:24.8
     hostname: clickhouse
     environment:
@@ -52,6 +60,10 @@ services:
       TZ: UTC
     volumes:
       - clickhouse-data:/var/lib/clickhouse
+    # Bật endpoint Prometheus built-in :9363 (chỉ trong overlay network, không publish); Prometheus scrape job "clickhouse"
+    configs:
+      - source: clickhouse-prometheus
+        target: /etc/clickhouse-server/config.d/prometheus.xml
     ulimits:
       nofile: {soft: 262144, hard: 262144}
     healthcheck:
@@ -70,6 +82,7 @@ services:
         limits: {memory: 2G}
 
   broker1:
+    logging: *logging
     image: apache/kafka:3.9.0
     hostname: broker1
     environment:
@@ -104,6 +117,10 @@ services:
       restart_policy:
         condition: on-failure
         delay: 2s
+
+configs:
+  clickhouse-prometheus:
+    file: ./clickhouse/prometheus.xml
 
 volumes:
   postgres-data:

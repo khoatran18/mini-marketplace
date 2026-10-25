@@ -50,7 +50,22 @@ scrape_configs:
     static_configs:
       - targets: ['kafka-exporter:9308']
 
+  # ClickHouse server: endpoint Prometheus built-in (deploy/clickhouse/prometheus.xml, mount qua infra.yml)
+  - job_name: clickhouse
+    static_configs:
+      - targets: ['clickhouse:9363']
+
   # Traefik (internal "metrics" entrypoint, not published)
   - job_name: traefik
     dns_sd_configs:
       - {names: [tasks.traefik], type: A, port: 8082, refresh_interval: 15s}
+
+  # Loki (log store): /metrics trên cổng HTTP 3100 trong overlay
+  - job_name: loki
+    dns_sd_configs:
+      - {names: [tasks.loki], type: A, port: 3100, refresh_interval: 15s}
+
+  # Vector (mỗi node một bản): internal_metrics qua prometheus_exporter :9598 (xem deploy/vector/vector.yaml)
+  - job_name: vector
+    dns_sd_configs:
+      - {names: [tasks.vector], type: A, port: 9598, refresh_interval: 15s}

@@ -1,0 +1,106 @@
+# Vector: đọc log container qua docker.sock (:ro) -> parse JSON -> che PII -> đẩy vào Loki.
+# Chạy global (mỗi node một bản). ${ENV}/${LOKI_URL} bắt buộc có trong env của container (xem observability.yml).
+data_dir: /var/lib/vector
+
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
+sources:
+  docker:
+    type: docker_logs
+    # Chỉ lấy container thuộc stack marketplace* (lọc ở transform bên dưới vì include_labels không hỗ trợ regex)
+    include_labels: ["com.docker.stack.namespace"]
+    # Gộp stack trace nhiều dòng không có định dạng JSON thì giữ nguyên từng dòng (đơn giản, không đoán)
+    auto_partial_merge: true
+
+  vector_metrics:
+    type: internal_metrics
+    scrape_interval_secs: 15
+
+transforms:
+  only_marketplace:
+    type: filter
+    inputs: [docker]
+    # Stack: marketplace, marketplace-infra, marketplace-obs...; bỏ chính vector để không tạo vòng log
+    condition: |
+      stack = string(.label."com.docker.stack.namespace") ?? ""
+      svc = string(.label."com.docker.swarm.service.name") ?? ""
+      starts_with(stack, "marketplace") && !ends_with(svc, "_vector")
+
+  # Che PII TRƯỚC khi parse/gửi: chạy trên dòng thô nên áp dụng cho cả log JSON lẫn text.
+  redact_pii:
+    type: remap
+    inputs: [only_marketplace]
+    source: |
+      msg = string(.message) ?? ""
+      # Giá trị của các trường nhạy cảm dạng JSON: "password":"..." , "authorization":"..." ...
+      msg = replace(msg, r'(?i)("(?:password|passwd|new_password|old_password|authorization|access_token|refresh_token|token|secret|api_key|card_number|cvv)"\s*:\s*)"(?:[^"\\]|\\.)*"', "$$1\"[REDACTED]\"")
+      # ... và dạng logfmt/query: password=abc, authorization=abc
+      msg = replace(msg, r'(?i)\b(password|passwd|authorization|access_token|refresh_token|secret|api_key)=[^\s&"]+', "$$1=[REDACTED]")
+      # Bearer token và JWT trần
+      msg = replace(msg, r'(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+', "Bearer [REDACTED]")
+      msg = replace(msg, r'\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*', "[REDACTED_JWT]")
+      # Email
+      msg = replace(msg, r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}', "[REDACTED_EMAIL]")
+      # Số điện thoại VN: +84xxxxxxxxx / 84xxxxxxxxx / 0[35789]xxxxxxxx (cho phép . - khoảng trắng giữa nhóm không xử lý, chỉ dạng liền)
+      msg = replace(msg, r'(?:\+84|\b84|\b0)[35789]\d{8}\b', "[REDACTED_PHONE]")
+      # Số thẻ: 13-16 chữ số liền, hoặc 4 nhóm cách bằng space/gạch
+      msg = replace(msg, r'\b(?:\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{1,4}|\d{13,16})\b', "[REDACTED_CARD]")
+      .message = msg
+
+  to_loki:
+    type: remap
+    inputs: [redact_pii]
+    source: |
+      # Nhãn Loki CHỈ gồm: service, stack, level, env. request_id nằm trong nội dung dòng log (lọc bằng | json).
+      svc = string(.label."com.docker.swarm.service.name") ?? string(.container_name) ?? "unknown"
+      stack = string(.label."com.docker.stack.namespace") ?? "unknown"
+      # Bỏ tiền tố "<stack>_" để nhãn service là tên ngắn (api-gateway, postgres...)
+      svc = replace(svc, stack + "_", "", count: 1)
+
+      level = "unknown"
+      m = string(.message) ?? ""
+      parsed, err = parse_json(m)
+      if err == null && is_object(parsed) {
+        lv = string(parsed.level) ?? string(parsed.lvl) ?? string(parsed.severity) ?? ""
+        if lv != "" { level = downcase(lv) }
+      } else if match(m, r'(?i)\b(error|fatal|panic)\b') {
+        level = "error"
+      }
+      if level == "warning" { level = "warn" }
+      if !includes(["debug", "info", "warn", "error", "fatal", "panic", "trace"], level) { level = "unknown" }
+
+      .labels = {"service": svc, "stack": stack, "level": level, "env": "${ENV}"}
+
+sinks:
+  loki:
+    type: loki
+    inputs: [to_loki]
+    endpoint: "${LOKI_URL}"
+    encoding:
+      codec: text
+    # Chỉ message (đã che PII) là nội dung; timestamp lấy từ log Docker
+    labels:
+      service: "{{ labels.service }}"
+      stack: "{{ labels.stack }}"
+      level: "{{ labels.level }}"
+      env: "{{ labels.env }}"
+    out_of_order_action: accept
+    remove_label_fields: true
+    batch:
+      max_bytes: 1048576
+      timeout_secs: 2
+    request:
+      retry_attempts: 10
+      timeout_secs: 30
+    # Đệm đĩa có giới hạn (tối thiểu của Vector ~256MB) để sống sót qua lúc Loki restart; đầy thì chặn nguồn thay vì phình
+    buffer:
+      type: disk
+      max_size: 268435488
+      when_full: block
+
+  prom_exporter:
+    type: prometheus_exporter
+    inputs: [vector_metrics]
+    address: 0.0.0.0:9598

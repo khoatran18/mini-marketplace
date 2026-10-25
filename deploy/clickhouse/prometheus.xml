@@ -1,0 +1,10 @@
+<!-- Bật endpoint Prometheus built-in của ClickHouse 24.8 (cổng 9363, chỉ trong mạng overlay, không publish). -->
+<clickhouse>
+    <prometheus>
+        <endpoint>/metrics</endpoint>
+        <port>9363</port>
+        <metrics>true</metrics>
+        <events>true</events>
+        <asynchronous_metrics>true</asynchronous_metrics>
+    </prometheus>
+</clickhouse>
