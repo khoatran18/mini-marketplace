@@ -15,6 +15,8 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"payment-service/internal/migrate"
+	"payment-service/internal/requestid"
 	"payment-service/pkg/events"
 	"payment-service/pkg/model"
 	"strconv"
@@ -91,6 +93,8 @@ type PaymentService struct {
 	Cfg    Config
 	HTTP   *http.Client
 	Now    func() time.Time
+	// Metrics is optional (nil-safe); set it before the workers start.
+	Metrics *Metrics
 
 	rndMu sync.Mutex
 	rnd   *rand.Rand
@@ -101,12 +105,13 @@ func NewPaymentService(db *gorm.DB, logger *zap.Logger, cfg Config) *PaymentServ
 	return &PaymentService{DB: db, Logger: logger, Cfg: cfg, HTTP: &http.Client{Timeout: 5 * time.Second}, Now: time.Now, rnd: rand.New(rand.NewSource(time.Now().UnixNano()))}
 }
 
-// Migrate creates the tables.
+// Migrate chạy migration goose (bảng version riêng goose_db_version_payment).
 func Migrate(db *gorm.DB) error {
-	if err := db.AutoMigrate(&model.Payment{}, &model.Attempt{}, &model.Refund{}, &model.WebhookDelivery{}, &model.ProcessedEvent{}); err != nil {
+	sqlDB, err := db.DB()
+	if err != nil {
 		return err
 	}
-	return events.Migrate(db)
+	return migrate.Run(context.Background(), sqlDB)
 }
 
 func (s *PaymentService) chaos() bool {
@@ -181,6 +186,7 @@ func (s *PaymentService) succeed(tx *gorm.DB, p *model.Payment, providerEventID 
 	if err := tx.Model(p).Updates(map[string]any{"status": p.Status, "paid_at": now, "failure_code": ""}).Error; err != nil {
 		return false, err
 	}
+	s.Metrics.paymentCompleted(p.Method, "succeeded", p.AmountMinor, p.CreatedAt, now)
 	return true, events.Emit(tx, TopicSucceeded, pkey(p.ID), succeededEvent{
 		V: 1, PaymentID: p.ID, CheckoutID: p.CheckoutID, BuyerID: p.BuyerID, Method: p.Method, AmountMinor: p.AmountMinor, At: now, ProviderEventID: providerEventID,
 	})
@@ -206,6 +212,9 @@ func (s *PaymentService) fail(tx *gorm.DB, p *model.Payment, scenario, code stri
 	updates["status"] = p.Status
 	if err := tx.Model(p).Updates(updates).Error; err != nil {
 		return err
+	}
+	if terminal {
+		s.Metrics.paymentCompleted(p.Method, "failed", 0, p.CreatedAt, s.Now())
 	}
 	return events.Emit(tx, TopicFailed, pkey(p.ID), failedEvent{
 		V: 1, PaymentID: p.ID, CheckoutID: p.CheckoutID, BuyerID: p.BuyerID, Method: p.Method, FailureCode: code, Terminal: terminal, At: s.Now().UTC(),
@@ -269,6 +278,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, req paymentRequested
 		}
 		return &existing, false, nil
 	}
+	s.Metrics.paymentCreated(p.Method)
 	return p, true, nil
 }
 
@@ -321,29 +331,47 @@ func (s *PaymentService) WebhookHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 64<<10))
 		if err != nil {
+			s.Metrics.webhook("error")
 			http.Error(w, "body too large", http.StatusRequestEntityTooLarge)
 			return
 		}
 		if err := VerifySignature(s.Cfg.WebhookSecret, r.Header.Get("X-Signature"), body, s.Now(), s.Cfg.WebhookMaxSkew); err != nil {
+			s.Metrics.webhook("invalid_signature")
 			http.Error(w, "invalid signature", http.StatusUnauthorized)
 			return
 		}
 		var ev webhookBody
 		if err := json.Unmarshal(body, &ev); err != nil || ev.ProviderEventID == "" || ev.PaymentID == 0 {
+			s.Metrics.webhook("error")
 			http.Error(w, "malformed event", http.StatusBadRequest)
 			return
 		}
-		result, err := s.ApplyProviderEvent(r.Context(), ev)
+		ctx := r.Context()
+		if id := r.Header.Get(requestid.HTTPHeader); id != "" {
+			ctx = requestid.NewContext(ctx, id)
+		}
+		result, late, err := s.applyProviderEvent(ctx, ev)
 		switch {
 		case err == nil:
+			switch {
+			case result == "duplicate":
+				s.Metrics.webhook("duplicate")
+			case late:
+				s.Metrics.webhook("late")
+			default:
+				s.Metrics.webhook("accepted")
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"status":"` + result + `"}`))
 		case status.Code(err) == codes.NotFound:
+			s.Metrics.webhook("error")
 			http.Error(w, "unknown payment", http.StatusNotFound)
 		case status.Code(err) == codes.InvalidArgument:
+			s.Metrics.webhook("error")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		default:
-			s.Logger.Error("webhook processing failed", zap.Error(err))
+			s.Metrics.webhook("error")
+			requestid.Logger(ctx, s.Logger).Error("webhook processing failed", zap.Error(err))
 			http.Error(w, "processing failed", http.StatusInternalServerError)
 		}
 	}
@@ -352,7 +380,15 @@ func (s *PaymentService) WebhookHandler() http.HandlerFunc {
 // ApplyProviderEvent applies a (verified) provider notification exactly once per provider_event_id.
 // Returns "applied" or "duplicate".
 func (s *PaymentService) ApplyProviderEvent(ctx context.Context, ev webhookBody) (string, error) {
+	result, _, err := s.applyProviderEvent(ctx, ev)
+	return result, err
+}
+
+// applyProviderEvent also reports whether a success arrived "late": after the payment was already expired,
+// canceled or failed.
+func (s *PaymentService) applyProviderEvent(ctx context.Context, ev webhookBody) (string, bool, error) {
 	result := "applied"
+	late := false
 	err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		res := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&model.ProcessedEvent{ProviderEventID: ev.ProviderEventID})
 		if res.Error != nil {
@@ -368,6 +404,7 @@ func (s *PaymentService) ApplyProviderEvent(ctx context.Context, ev webhookBody)
 		}
 		switch ev.Type {
 		case model.EventSucceeded:
+			late = p.Status == model.StatusExpired || p.Status == model.StatusCanceled || p.Status == model.StatusFailed
 			if err := tx.Create(&model.Attempt{PaymentID: p.ID, Scenario: "webhook", Status: model.AttemptSucceeded}).Error; err != nil {
 				return err
 			}
@@ -383,9 +420,9 @@ func (s *PaymentService) ApplyProviderEvent(ctx context.Context, ev webhookBody)
 		return status.Errorf(codes.InvalidArgument, "unknown event type %q", ev.Type)
 	})
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
-	return result, nil
+	return result, late, nil
 }
 
 // DeliverDueWebhooks sends the notifications that are due to our own webhook endpoint (signed, retried with
@@ -440,8 +477,14 @@ func (s *PaymentService) postWebhook(ctx context.Context, body []byte) int {
 
 // ExpirePayments closes payments whose deadline passed without any buyer action.
 func (s *PaymentService) ExpirePayments(ctx context.Context) (int64, error) {
-	res := s.DB.WithContext(ctx).Model(&model.Payment{}).
+	var rows []model.Payment
+	res := s.DB.WithContext(ctx).Model(&rows).Clauses(clause.Returning{Columns: []clause.Column{{Name: "id"}, {Name: "method"}, {Name: "created_at"}}}).
 		Where("status = ? AND expires_at < ?", model.StatusRequiresAction, s.Now()).Update("status", model.StatusExpired)
+	if res.Error == nil {
+		for _, p := range rows {
+			s.Metrics.paymentCompleted(p.Method, "expired", 0, p.CreatedAt, s.Now())
+		}
+	}
 	return res.RowsAffected, res.Error
 }
 

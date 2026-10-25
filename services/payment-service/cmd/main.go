@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"payment-service/internal/config"
+	"payment-service/internal/requestid"
 	"payment-service/internal/server"
 	"payment-service/internal/service"
 	"payment-service/pkg/events"
@@ -48,6 +49,7 @@ func main() {
 	defer serviceConfig.KafkaInstance.KafkaManager.CloseReaderAll()
 
 	svc := service.NewPaymentService(serviceConfig.PostgresDB, serviceConfig.ZapLogger, cfg)
+	svc.Metrics = service.NewMetrics()
 
 	ctx := context.Background()
 	for _, topic := range []string{service.TopicPaymentRequested, service.TopicRefundRequested, service.TopicSucceeded, service.TopicFailed, service.TopicRefunded} {
@@ -94,6 +96,7 @@ func main() {
 		// the simulated provider notifies this endpoint (internal port only, HMAC signed)
 		Mount: func(mux *http.ServeMux) { mux.HandleFunc("POST /internal/payments/webhook", svc.WebhookHandler()) },
 	})
+	svc.Metrics.Register(adm.Registry(), "payment-service")
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
 		adm.AttachDB(sqlDB)
 	}
@@ -107,7 +110,7 @@ func main() {
 	})
 	adm.GaugeFunc("mm_worker_last_tick_timestamp_seconds", "Unix time of the last worker round.", map[string]string{"worker": "payment_workers"}, func() float64 { return float64(lastTick.Load()) })
 
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	paymentpb.RegisterPaymentServiceServer(s, &server.PaymentServer{Service: svc})
 	reflection.Register(s)
 

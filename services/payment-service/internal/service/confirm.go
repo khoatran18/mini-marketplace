@@ -133,6 +133,7 @@ func (s *PaymentService) Confirm(ctx context.Context, in ConfirmInput) (*View, e
 		if s.Now().After(p.ExpiresAt) {
 			expired = true
 			p.Status = model.StatusExpired
+			s.Metrics.paymentCompleted(p.Method, "expired", 0, p.CreatedAt, s.Now())
 			return tx.Model(p).Update("status", model.StatusExpired).Error
 		}
 		switch p.Method {
@@ -255,6 +256,7 @@ func (s *PaymentService) Cancel(ctx context.Context, paymentID, buyerID uint64) 
 		if err := tx.Model(p).Update("status", p.Status).Error; err != nil {
 			return err
 		}
+		s.Metrics.paymentCompleted(p.Method, "cancelled", 0, p.CreatedAt, s.Now())
 		out = *p
 		return nil
 	})

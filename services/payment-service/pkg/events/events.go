@@ -35,8 +35,7 @@ type Event struct {
 // TableName keeps the table name stable.
 func (Event) TableName() string { return "domain_events" }
 
-// Migrate creates the outbox table.
-func Migrate(db *gorm.DB) error { return db.AutoMigrate(&Event{}) }
+// Bảng domain_events được tạo bởi migration goose của từng service (00001_baseline.sql).
 
 // Emit stores an event in the caller's transaction (pass the *gorm.DB of the transaction).
 // payload is JSON-encoded; a "v" (version) field is advisable in payload types.

@@ -155,12 +155,14 @@ func (s *PaymentService) Refund(ctx context.Context, in RefundInput) (*model.Ref
 		if err := q.First(&p).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				s.Logger.Info("refund requested for a checkout without payment", zap.String("checkout", in.CheckoutID))
+				s.Metrics.refund("ignored")
 				return nil
 			}
 			return err
 		}
 		if p.Status != model.StatusSucceeded && p.Status != model.StatusPartialRefunded {
 			s.Logger.Info("refund ignored: payment was not paid", zap.Uint64("payment", p.ID), zap.String("status", p.Status))
+			s.Metrics.refund("ignored")
 			return nil
 		}
 		r := &model.Refund{PaymentID: p.ID, OrderID: in.OrderID, RefundKey: in.Key, AmountMinor: in.AmountMinor, Reason: in.Reason, Status: model.RefundSucceeded}
@@ -169,12 +171,14 @@ func (s *PaymentService) Refund(ctx context.Context, in RefundInput) (*model.Ref
 			return res.Error
 		}
 		if res.RowsAffected == 0 {
+			s.Metrics.refund("duplicate")
 			return nil // duplicate request
 		}
 		if in.AmountMinor > p.AmountMinor-p.RefundedMinor {
 			r.Status = model.RefundFailed
 			r.Reason = "exceeds_paid_amount"
 			refund = r
+			s.Metrics.refund("failed")
 			return tx.Model(r).Updates(map[string]any{"status": r.Status, "reason": r.Reason}).Error
 		}
 		p.RefundedMinor += in.AmountMinor
@@ -186,6 +190,7 @@ func (s *PaymentService) Refund(ctx context.Context, in RefundInput) (*model.Ref
 			return err
 		}
 		refund = r
+		s.Metrics.refund("succeeded")
 		return events.Emit(tx, TopicRefunded, pkey(p.ID), refundedEvent{
 			V: 1, PaymentID: p.ID, RefundID: r.ID, CheckoutID: p.CheckoutID, OrderID: in.OrderID, AmountMinor: in.AmountMinor, Reason: in.Reason, At: s.Now().UTC(),
 		})
@@ -224,6 +229,7 @@ func (s *PaymentService) ForceStatus(ctx context.Context, paymentID uint64, to s
 			return s.fail(tx, p, "forced", "forced_failure")
 		case model.StatusExpired:
 			p.Status = model.StatusExpired
+			s.Metrics.paymentCompleted(p.Method, "expired", 0, p.CreatedAt, s.Now())
 			return tx.Model(p).Update("status", p.Status).Error
 		}
 		return status.Error(codes.InvalidArgument, "status must be SUCCEEDED, FAILED or EXPIRED")
