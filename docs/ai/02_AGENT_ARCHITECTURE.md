@@ -21,6 +21,22 @@
 
 Danh sách tính năng agent cụ thể, từng cái gọi tool nào và người xác nhận ở đâu: [06_AGENT_FEATURES.md](06_AGENT_FEATURES.md).
 
+### Quyết định nhanh: chức năng này cần mức nào?
+
+```mermaid
+flowchart TD
+  Q1{"Có luật cố định<br/>giải quyết được không?"}
+  Q1 -->|có| L0["Mức 0: code thường"]
+  Q1 -->|không| Q2{"Chỉ cần tính điểm,<br/>xếp hạng, dự báo?"}
+  Q2 -->|có| L1["Mức 1: mô hình ML / tìm kiếm"]
+  Q2 -->|không, cần hiểu chữ| Q3{"Vẽ trước được<br/>các bước?"}
+  Q3 -->|một bước| L2["Mức 2: gọi LLM một lần,<br/>đầu ra có schema"]
+  Q3 -->|nhiều bước, cố định| L3["Mức 3: workflow<br/>bạn vẽ, LLM làm từng bước"]
+  Q3 -->|không, tùy câu hỏi| Q4{"Có hành động ghi,<br/>tác động thật?"}
+  Q4 -->|không| L4a["Mức 4: agent chỉ-đọc"]
+  Q4 -->|có| L4b["Mức 4: agent + người xác nhận"]
+```
+
 ## 1. Kết luận trước
 
 - **Đa số scope AI của dự án KHÔNG cần agent.** Gợi ý, tìm kiếm, OCR, phân loại, fraud, dự báo, kiểm duyệt là pipeline / mô hình / workflow: kết quả ổn định, rẻ, dễ đo hơn.
@@ -45,16 +61,37 @@ Cách nhận biết **agent thật sự (mức 4)**: bạn *không biết trư�
 
 ## 3. Scope nào cần agent?
 
-| Scope | Mức đề xuất | Lý do |
-|---|---|---|
-| 1 Gợi ý, 2 Tìm kiếm, 11 Visual search, 15 NLP truy vấn | 1 (+2 cho viết lại truy vấn) | không có bước "quyết định làm gì tiếp" |
-| 3 OCR hóa đơn | 3 | luồng cố định; thất bại thì chuyển người duyệt, không cần LLM tự quyết |
-| 4 Hỏi đáp số liệu seller / admin | **4** | câu hỏi tự do ("so với tuần trước", "sản phẩm nào sắp hết hàng và bán chạy?") cần gọi nhiều tool rồi ghép kết quả |
-| 5 Trợ lý mua sắm / CSKH | **4** + xác nhận | hội thoại nhiều lượt, tra giỏ / đơn / chính sách, đề xuất hành động ghi |
-| 6 RAG luật / chính sách | 3 (4 khi kết hợp đơn của user) | quy trình truy hồi cố định; chỉ cần agent khi phải "tra đơn rồi áp điều khoản" |
-| 7 Review, 10 Phân loại / thuộc tính, 12 Kiểm duyệt | 2–3 | xử lý hàng loạt / theo sự kiện, không cần hội thoại |
-| 8 Fraud, 9 Forecast, 13 CLV / giá | 1 | mô hình số; LLM nhiều lắm để giải thích kết quả (mức 2) |
-| 14 AIOps | 2 (giải thích cảnh báo) / **4 chỉ-đọc** (điều tra) | điều tra: metric → log → giả thuyết là chuỗi quyết định thật sự; phải chỉ-đọc |
+```mermaid
+flowchart LR
+  subgraph M1["Mức 1: ML / tìm kiếm (không cần LLM)"]
+    s1["1 gợi ý"]
+    s2["2 tìm kiếm ngữ nghĩa"]
+    s8["8 fraud"]
+    s9["9 dự báo"]
+    s11["11 visual search"]
+    s13["13 CLV, churn, giá"]
+    s15["15 NLP truy vấn"]
+  end
+  subgraph M2["Mức 2: gọi LLM một lần"]
+    s7["7 review: sentiment, tóm tắt"]
+    s10["10 thuộc tính, danh mục"]
+    s14a["14 giải thích cảnh báo"]
+  end
+  subgraph M3["Mức 3: workflow"]
+    s3["3 OCR hóa đơn"]
+    s6["6 RAG luật, chính sách"]
+    s12["12 kiểm duyệt"]
+  end
+  subgraph M4["Mức 4: AGENT"]
+    s4["4 hỏi đáp số liệu seller, admin"]
+    s5["5 trợ lý mua sắm, CSKH<br/>+ xác nhận"]
+    s14b["14 điều tra sự cố<br/>chỉ-đọc"]
+  end
+  classDef agent fill:#cfe2ff,stroke:#0d6efd,color:#000
+  class s4,s5,s14b agent
+```
+
+Ba chức năng ở mức 4 là chỗ agent thật sự có giá trị vì câu hỏi tự do, số bước không biết trước. Riêng scope 6 chỉ lên mức 4 khi phải kết hợp dữ liệu đơn của chính người dùng với điều khoản ("đơn này còn trả được không?"). Chi tiết từng tính năng agent: [06_AGENT_FEATURES.md](06_AGENT_FEATURES.md).
 
 ## 4. Khi nào nên dùng LangGraph
 

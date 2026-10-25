@@ -3,6 +3,49 @@
 > Phạm vi: **chỉ phần hạ tầng / dữ liệu / vận hành**. Tầng LLM (`ai-service`, agent, prompt, quan sát LLM, eval agent) do chủ dự án tự xây sau nên **không** liệt kê ở đây. Nguồn: đối chiếu code, `deploy/*.yml`, CI và tài liệu hiện có; các vấn đề nhỏ hơn nằm ở [01_OPEN_ISSUES.md](01_OPEN_ISSUES.md).
 > Cột "Cỡ": S = vài ngày, M = 1–3 tuần, L = hơn một tháng (ước lượng thô, không phải cam kết). "Chặn scope" dùng số thứ tự trong [../ai/01_AI_SCOPES_OVERVIEW.md](../ai/01_AI_SCOPES_OVERVIEW.md).
 
+## Sơ đồ: thiếu gì chặn scope nào
+
+```mermaid
+flowchart LR
+  subgraph GAP["Hạ tầng / dữ liệu còn thiếu"]
+    D1["D1 kho đối tượng MinIO<br/>+ S4 upload ảnh"]
+    D2["D2 vector store pgvector"]
+    D3["D3 xuất snapshot huấn luyện"]
+    D4["D4 đối soát + backfill"]
+    D5["D5 datagen có seed"]
+    D6["D6 scheduler job nền"]
+    S1["S1 request_id + model_version"]
+    S2["S2 review"]
+    S3["S3 wishlist API"]
+    S6["S6 consent + xóa dữ liệu"]
+    R1["R1 chạy thật + e2e"]
+  end
+  subgraph SC["Scope AI"]
+    A1["1 gợi ý"]
+    A2["2 tìm kiếm ngữ nghĩa"]
+    A3["3 OCR hóa đơn"]
+    A6["6 RAG luật"]
+    A7["7 sentiment review"]
+    A8["8 fraud"]
+    A9["9 dự báo"]
+    A11["11 visual search"]
+    A13["13 CLV churn"]
+  end
+  D1 --> A3 & A11
+  D2 --> A1 & A2 & A6 & A11
+  D3 --> A1 & A8 & A9 & A13
+  D4 --> A1 & A8 & A9 & A13
+  D6 --> A1 & A7 & A8 & A9 & A13
+  S1 --> A1
+  S2 --> A7
+  S3 --> A1
+  S6 --> A1 & A8 & A13
+  D5 -.->|dev pipeline| A1 & A8 & A9
+  R1 -.->|nền đáng tin| SC
+```
+
+Đọc sơ đồ: mũi tên là "phải có thì scope mới làm được". Mũi tên đứt nét là "giúp phát triển và tin cậy hơn".
+
 ## Khái niệm dùng trong tài liệu này
 - **Dữ liệu tín hiệu** = những dấu vết hành vi / phản hồi mà mô hình học từ đó: người dùng xem gì, bấm gì, bỏ giỏ gì, mua gì, đánh giá mấy sao, trả hàng vì sao. Không có tín hiệu thì chưa có gì để học hay đo.
 - **E2E (end-to-end)** = kịch bản kiểm thử chạy trên hệ thống đã deploy thật, đi qua toàn bộ chuỗi trình duyệt → Traefik → gateway → các service → Postgres / Kafka. Khác test đơn vị (chạy từng hàm, giả lập phụ thuộc).
@@ -89,8 +132,14 @@
 
 ## 8. Thứ tự đề xuất (chỉ hạ tầng)
 
-1. **Làm cho nền đáng tin**: R1 (chạy thật + viết lại e2e), R4 (dead-letter), R5 (backup có kiểm thử khôi phục), P1.
-2. **Mở đường cho dữ liệu**: S1, S3, S5, D5 (datagen), D4 (đối soát / backfill), D3 (xuất snapshot), S6 (consent / xóa).
-3. **Mở đường cho các scope**: D2 (vector store) → scope 1, 2; D1 + S4 (kho đối tượng, upload) → scope 3, 11; S2 (review) → scope 7.
-4. **Khung tích hợp**: I1 (flag), I3 (job nền), I6 (OpenAPI), D6 (scheduler), I4 (token job nền).
-5. **Mở rộng**: R3, R6, R7, R9, D7, D8, D9 khi tải và số mô hình tăng.
+```mermaid
+flowchart LR
+  A["1. Nền đáng tin<br/>R1 chạy thật + e2e<br/>R4 dead-letter<br/>R5 backup có thử khôi phục<br/>P1 xoay secret"]
+  B["2. Mở đường dữ liệu<br/>S1 request_id<br/>S3 wishlist, S5 nối danh tính<br/>D5 datagen<br/>D4 đối soát + backfill<br/>D3 snapshot, S6 consent"]
+  C["3. Mở đường scope<br/>D2 vector store: scope 1, 2<br/>D1 + S4 upload: scope 3, 11<br/>S2 review: scope 7"]
+  D["4. Khung tích hợp<br/>I1 feature flag<br/>I3 job nền, D6 scheduler<br/>I6 OpenAPI, I4 token job nền"]
+  E["5. Mở rộng<br/>R3 Kafka, R6 replica<br/>R7 tracing, R9 gRPC<br/>D7 feature store<br/>D8 GPU, D9 registry"]
+  A --> B --> C --> D --> E
+```
+
+Làm tuần tự từ trái sang phải; bước 5 chỉ khi tải và số mô hình tăng.

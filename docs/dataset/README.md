@@ -3,6 +3,19 @@
 > **Trạng thái: tài liệu nghiên cứu, chưa có code AI nào dùng các bộ này.** Mỗi scope trong [../ai/01_AI_SCOPES_OVERVIEW.md](../ai/01_AI_SCOPES_OVERVIEW.md) có một file riêng: mục tiêu, hướng làm, metric, danh sách bộ dữ liệu (kèm link, license, kích thước, độ phù hợp ★1–5, ánh xạ vào bảng / event của hệ thống), cách tự dựng bộ vàng từ dữ liệu của chính hệ thống, lộ trình dùng, rủi ro. Tra cứu ngày 2026-10-25.
 > Dữ liệu tiếng Anh / quốc tế đều dùng được để chọn và kiểm phương pháp; phần tiếng Việt (nếu có bộ) được nêu riêng trong từng file.
 
+## Quy trình dùng dữ liệu
+
+```mermaid
+flowchart LR
+  A["Bộ công khai<br/>(file 01-16, mục 4)"] --> B["Chọn phương pháp<br/>so baseline"]
+  B --> C["Bộ vàng tự dựng từ<br/>dữ liệu hệ thống<br/>(mục 5 mỗi file)"]
+  C --> D["Đo trên miền thật:<br/>metric, ca từ chối,<br/>ca prompt injection"]
+  D --> E{"Thắng baseline?"}
+  E -->|có| F["Bật sau feature flag,<br/>thử A/B"]
+  E -->|không| B
+  G["Dữ liệu demo / datagen"] -.->|chỉ để dev pipeline,<br/>không kết luận chất lượng| B
+```
+
 ## Cách đọc độ tin cậy
 - Nhãn **"đã xác minh (nguồn …)"**: số liệu / license thấy trong kết quả tra cứu hoặc trang GitHub.
 - Nhãn **"chưa xác minh"**: chưa thấy được trang gốc. Công cụ tải trang không mở được Kaggle, HuggingFace, arXiv, Zenodo, nên nhiều mục chỉ dựa vào kết quả WebSearch. **Trước khi tải hoặc trích dẫn, hãy mở trang gốc kiểm lại license và kích thước.**

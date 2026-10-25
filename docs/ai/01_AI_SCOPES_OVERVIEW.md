@@ -72,8 +72,17 @@ Các sàn lớn đang làm gì và scope nào còn thiếu so với danh sách n
 
 ## 4. Thứ tự đề xuất
 
-1. **Nền cho mọi thứ**: thêm `request_id` / `model_version` vào tracking, feature flag, review / wishlist, khung eval và quan sát LLM ([04_AI_DATA_READINESS.md](04_AI_DATA_READINESS.md)).
-2. **Không cần LLM, thắng nhanh**: scope 15 → 2 → 1 (đo bằng bộ công khai trước, rồi bằng click thật).
-3. **Agent chỉ-đọc**: scope 4 (seller / admin) rồi 5 (buyer, kèm `action_proposal`). Dựng bộ eval 16 *trước*.
-4. **Workflow LLM nhẹ**: scope 10, 6, 12.
-5. **Cần dữ liệu / tính năng mới**: 3 (upload ảnh), 11, 7 (review), 8, 9, 13, 14.
+```mermaid
+flowchart LR
+  N["0. Nền<br/>request_id, feature flag,<br/>review + wishlist,<br/>khung eval"]
+  W["1. Thắng nhanh, không cần LLM<br/>15 NLP truy vấn<br/>2 tìm kiếm ngữ nghĩa<br/>1 gợi ý"]
+  G["2. Agent chỉ-đọc<br/>4 hỏi đáp số liệu<br/>14 điều tra sự cố<br/>(dựng eval 16 trước)"]
+  H["3. Agent có xác nhận<br/>5 trợ lý mua sắm<br/>đặt đơn, hủy, hoàn tiền"]
+  L["4. Workflow LLM nhẹ<br/>10 thuộc tính, 6 RAG luật,<br/>12 kiểm duyệt"]
+  X["5. Cần tính năng mới<br/>3 OCR, 11 visual search,<br/>7 review, 8, 9, 13"]
+  N --> W --> G --> H
+  N --> L
+  N --> X
+```
+
+Mục tiêu của thứ tự này: làm trước những scope rẻ, đo được và không rủi ro quyền, rồi mới đến agent có hành động ghi.

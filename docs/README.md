@@ -2,6 +2,20 @@
 
 > Điểm bắt đầu duy nhất. Tài liệu phản ánh **code hiện tại**; khi khác nhau thì code đúng. Tên file theo dạng `NN_TEN_VIET_HOA.md`, mỗi thư mục có `README.md` làm mục lục.
 
+## Lộ trình đọc
+
+```mermaid
+flowchart LR
+  A([Bắt đầu]) --> B["overview<br/>hệ thống là gì,<br/>sơ đồ request"]
+  B --> C["instruction<br/>cài, chạy, địa chỉ<br/>giao diện"]
+  C --> D["process<br/>đã làm được gì"]
+  D --> E["planning<br/>còn tồn đọng gì"]
+  E --> F["design<br/>API, DB, Kafka,<br/>bảo mật"]
+  E --> G["ai<br/>scope AI, agent"]
+  G --> H["dataset<br/>bộ dữ liệu để<br/>kiểm chứng"]
+  F -.->|vì sao| I["decisions<br/>ADR"]
+```
+
 ## Bạn muốn gì? Đọc đâu?
 
 | Câu hỏi | Đọc |

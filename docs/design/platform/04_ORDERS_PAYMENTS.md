@@ -5,14 +5,31 @@
 Mục tiêu: có dòng tiền/ trạng thái **giống thật** (bất đồng bộ, thất bại, hết hạn, hoàn tiền, webhook trễ/ trùng) để dashboard doanh thu có nghĩa và luyện vận hành, **không dùng cổng thật**.
 
 ## 1. Vòng đời đơn hàng
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> AWAITING_PAYMENT: online, có hạn
+    PENDING --> CONFIRMED: COD
+    PENDING --> FAILED: hết hàng
+    AWAITING_PAYMENT --> PAID: payment.succeeded
+    AWAITING_PAYMENT --> EXPIRED: quá hạn, system
+    AWAITING_PAYMENT --> CANCELED: buyer, seller, admin
+    CONFIRMED --> SHIPPED: seller
+    CONFIRMED --> CANCELED: buyer, seller, admin
+    PAID --> SHIPPED: seller
+    PAID --> CANCELED: buyer, seller, admin
+    SHIPPED --> DELIVERED: seller, buyer, admin, system
+    DELIVERED --> REFUND_REQUESTED: buyer, một lần
+    REFUND_REQUESTED --> REFUNDED: seller, admin
+    REFUND_REQUESTED --> DELIVERED: từ chối trả hàng
+    FAILED --> [*]
+    EXPIRED --> [*]
+    CANCELED --> [*]
+    REFUNDED --> [*]
 ```
-PENDING ─▶ AWAITING_PAYMENT (online, có hạn) ─▶ PAID ─▶ SHIPPED ─▶ DELIVERED ─▶ REFUND_REQUESTED ─▶ REFUNDED
-   │             │  │                              │                     ▲                  └─▶ DELIVERED (từ chối)
-   │             │  └─▶ EXPIRED (quá hạn, system)  └─▶ CANCELED          │ (COD: thu tiền ⇒ payment_status=PAID)
-   │             └─▶ CANCELED (buyer/seller/admin)
-   ├─▶ CONFIRMED (COD) ─▶ SHIPPED | CANCELED
-   └─▶ FAILED (hết hàng)
-```
+
+Sơ đồ khớp bảng `transitions` trong `order-service/internal/repository/statemachine.go`. COD thu tiền khi `DELIVERED` (`payment_status=PAID`).
+
 - Mỗi **store một đơn** trong một checkout (`checkout_id`, ADR-15). `PENDING` = đang chờ product-service giữ hàng.
 - **`SUCCESS` cũ** đã được migrate thành `CONFIRMED` (`order-service` `Migrate`).
 - Terminal: `FAILED, EXPIRED, CANCELED, REFUNDED` (`DELIVERED` chỉ đi tiếp qua luồng trả hàng, một lần).
@@ -31,10 +48,22 @@ PENDING ─▶ AWAITING_PAYMENT (online, có hạn) ─▶ PAID ─▶ SHIPPED �
 | `DELIVERED → REFUND_REQUESTED` | buyer | trong `RETURN_WINDOW_DAYS` (7) kể từ `delivered_at`, kèm lý do, **một lần** |
 | `REFUND_REQUESTED → REFUNDED` | seller, admin | online ⇒ `order.refund_requested` (`order:<id>:return`, toàn bộ `total_price` gồm ship); `payment_status=REFUNDED` |
 | `REFUND_REQUESTED → DELIVERED` | seller, admin (từ chối, kèm lý do) | đánh dấu `return_rejected`; không yêu cầu lại được |
+
 Khác thiết kế: không có bước "seller xác nhận"; không có `canceled` bởi hệ thống ngoài `EXPIRED/FAILED`; **không** nhập lại kho khi `REFUNDED`; COD khi duyệt trả hàng chỉ đổi nhãn `payment_status`. Địa chỉ giao hàng là snapshot JSON trong `orders.shipping_address` (bắt buộc `receiver_name, phone, line1, city`).
 
 ## 2. Tồn kho & giữ chỗ
 Chi tiết ở [02_DATA_MODEL.md](../02_DATA_MODEL.md) §2 và ADR-21. Tóm tắt:
+```mermaid
+stateDiagram-v2
+    [*] --> available: nhập kho, adjust
+    available --> reserved: order.create_order, giữ hàng (ledger reserve)
+    reserved --> sold: SHIPPED (ledger sale, một lần)
+    reserved --> available: CANCELED hoặc EXPIRED (ledger release, một lần)
+    sold --> [*]
+```
+
+`available` = `products.inventory`; tồn vật lý = `available + reserved`. Đơn đã `SHIPPED` thì không nhả kho nữa; `REFUNDED` cũng không nhập lại kho.
+
 - `products.inventory` = **còn bán được**; `reserved` = đang giữ; `sold` = đã xuất kho. Tồn vật lý = `inventory + reserved`.
 - Đặt hàng → `order.create_order` → **giữ hàng all-or-nothing** cho cả đơn (`inventory−q`, `reserved+q`, ledger `reserve`); `SHIPPED` → `reserved−q`, `sold+q` (ledger `sale`, đúng một lần); `CANCELED/EXPIRED` → `order.cancel_order` → `inventory+q`, `reserved−q` (ledger `release`, đúng một lần; bỏ qua nếu đã xuất kho).
 - Mọi thay đổi ghi `inventory_ledgers` (chỉ thêm) + `inventory.changed` (analytics ghi `fact_inventory`).
@@ -71,16 +100,67 @@ Khác thiết kế: không có header `X-Mock-Scenario`; không có nút "admin 
 Mỗi thất bại phát `payment.failed` (`terminal=false`); đến lần **5** thì payment `FAILED` (`terminal=true`). Chỉ lưu `card_last4` và `attempts.scenario`; không số thẻ đầy đủ/CVV.
 
 ### 3.3 Luồng
+
+```mermaid
+sequenceDiagram
+    participant B as Buyer
+    participant G as gateway
+    participant O as order-service
+    participant K as Kafka
+    participant Y as payment-service
+    B->>G: POST /orders (MOCK_CARD)
+    G->>O: tạo checkout, đơn PENDING
+    O-)K: payment.requested (mọi đơn đã rời PENDING)
+    K-)Y: HandlePaymentRequested
+    Y->>Y: payments REQUIRES_ACTION, expires_at
+    B->>G: POST /payments/id/confirm
+    G->>Y: confirm
+    alt thẻ thành công ngay
+        Y-)K: payment.succeeded
+    else ví, chuyển khoản, timeout, webhook đôi hoặc sau hạn
+        Y->>Y: PROCESSING + webhook_deliveries
+        Y->>Y: worker 1 s gửi webhook ký HMAC tới :8081/internal/payments/webhook
+        Y->>Y: khử trùng theo provider_event_id
+        Y-)K: payment.succeeded
+    end
+    K-)O: các đơn AWAITING_PAYMENT của checkout sang PAID
 ```
-POST /orders {payment_method:"MOCK_CARD"} ─▶ orders PENDING ─▶ (giữ hàng OK) AWAITING_PAYMENT ─▶ [mọi đơn rời PENDING] payment.requested
-payment-service: HandlePaymentRequested ─▶ payments(REQUIRES_ACTION, expires_at) ; gateway ghép `payment` vào GET /checkouts/:id (pay_url=/pay/<id>)
-buyer ─▶ POST /payments/:id/confirm
-   thẻ thành công ─▶ SUCCEEDED + payment.succeeded           ví/chuyển khoản/timeout/webhook đôi/sau hạn ─▶ PROCESSING + webhook_deliveries
-   worker 1 s: gửi webhook ký HMAC tới http://127.0.0.1:8081/internal/payments/webhook (retry 2 s,10 s,30 s,2 min,10 min; bỏ cuộc sau 6 lần = GAVE_UP)
-   webhook ─▶ processed_events (khử trùng theo provider_event_id) ─▶ SUCCEEDED + payment.succeeded
-order-service: HandlePaymentSucceeded ─▶ mọi đơn AWAITING_PAYMENT của checkout ─▶ PAID
-   tiền > tổng đơn đã PAID (đơn đã huỷ/hết hạn) ─▶ order.refund_requested "checkout:<id>:overpay" ─▶ payment.refunded
+
+Webhook thất bại được thử lại sau 2 s, 10 s, 30 s, 2 min, 10 min; sau 6 lần là `GAVE_UP`.
+
+Hoàn tiền và tiền về muộn:
+
+```mermaid
+sequenceDiagram
+    participant O as order-service
+    participant K as Kafka
+    participant Y as payment-service
+    O-)K: order.refund_requested (refund_key duy nhất)
+    K-)Y: HandleRefundRequested
+    Y->>Y: kiểm tra tổng hoàn không vượt đã thu
+    Y-)K: payment.refunded
+    K-)O: payment_status = REFUNDED
+    Note over O,Y: payment.succeeded đến muộn và dư tiền, order phát refund_requested checkout overpay
 ```
+
+Trạng thái payment:
+
+```mermaid
+stateDiagram-v2
+    [*] --> REQUIRES_ACTION
+    REQUIRES_ACTION --> PROCESSING: ví, chuyển khoản, timeout
+    REQUIRES_ACTION --> SUCCEEDED: thẻ thành công
+    REQUIRES_ACTION --> FAILED: 5 lần thất bại
+    REQUIRES_ACTION --> CANCELED: buyer huỷ
+    REQUIRES_ACTION --> EXPIRED: quá expires_at
+    PROCESSING --> SUCCEEDED: webhook
+    EXPIRED --> SUCCEEDED: webhook đến muộn
+    CANCELED --> SUCCEEDED: webhook đến muộn
+    SUCCEEDED --> PARTIALLY_REFUNDED
+    PARTIALLY_REFUNDED --> REFUNDED
+    SUCCEEDED --> REFUNDED
+```
+
 - **Idempotency**: `payments.checkout_id UNIQUE`; webhook trùng không đổi trạng thái hai lần; refund theo `refund_key UNIQUE`.
 - **Số tiền**: payment dùng `amount_minor` từ `payment.requested`; order-service so với tổng đơn khi nhận `payment.succeeded` (khác thiết kế: không có metric `mm_payment_amount_mismatch_total`).
 - **Chữ ký webhook**: `X-Signature: t=<unix>,v1=HMAC_SHA256(PAYMENT_WEBHOOK_SECRET, t + "." + body)`; lệch giờ > 5 phút ⇒ 401; sai chữ ký ⇒ 401. Secret < 16 ký tự ⇒ service không khởi động.

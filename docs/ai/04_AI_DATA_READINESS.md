@@ -2,6 +2,59 @@
 
 > Đối chiếu từng scope ([01_AI_SCOPES_OVERVIEW.md](01_AI_SCOPES_OVERVIEW.md)) với những gì **code hiện tại** thật sự thu thập / cung cấp. Kiểm tra ngày 2026-10-25 trên nhánh làm việc; khi khác code thì code đúng.
 
+## Nhìn nhanh: nguồn dữ liệu → scope, và chỗ thiếu
+
+```mermaid
+flowchart LR
+  subgraph HAVE["Đã có"]
+    t["tracking client<br/>impression, click, cart, search"]
+    f["fact đơn, thanh toán, tồn kho<br/>ClickHouse"]
+    c["catalog đủ trường + product.changed"]
+    r["API analytics theo vai trò"]
+    o["API cart, order, payment"]
+    m["metric Prometheus"]
+  end
+  subgraph MISS["Còn thiếu"]
+    x1["request_id + model_version"]
+    x2["review, rating"]
+    x3["upload ảnh"]
+    x4["đối soát + backfill"]
+    x5["kho văn bản luật"]
+    x6["lịch sử dài, dữ liệu thật"]
+  end
+  subgraph SC["Scope"]
+    a1["1 gợi ý"]
+    a2["2 tìm kiếm"]
+    a3["3 OCR"]
+    a4["4 hỏi đáp số liệu"]
+    a5["5 trợ lý buyer"]
+    a6["6 RAG luật"]
+    a7["7 review"]
+    a8["8 fraud"]
+    a10["10 thuộc tính"]
+    a11["11 visual search"]
+    a14["14 AIOps"]
+  end
+  t --> a1 & a8
+  f --> a1 & a8
+  c --> a2 & a10
+  r --> a4
+  o --> a5
+  m --> a14
+  x1 -.-> a1
+  x2 -.-> a7
+  x3 -.-> a3 & a11
+  x4 -.-> a8
+  x5 -.-> a6
+  x6 -.-> a1 & a8
+  classDef have fill:#d4edda,stroke:#28a745,color:#000
+  classDef miss fill:#f8d7da,stroke:#dc3545,color:#000
+  class t,f,c,r,o,m have
+  class x1,x2,x3,x4,x5,x6 miss
+```
+
+Nét liền: dữ liệu đã có, scope dùng được ngay. Nét đứt: phải làm thêm (ô đỏ) thì scope mới làm đủ hoặc đo được.
+
 ## 1. Đã có
 
 | Thứ | Chi tiết | Dùng cho scope |

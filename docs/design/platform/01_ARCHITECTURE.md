@@ -3,26 +3,37 @@
 > **Trạng thái: ✅ backend ĐÃ TRIỂN KHAI** (7 service Go + Postgres/Redis/Kafka/ClickHouse + Prometheus/Grafana). Chưa có: MinIO, cảnh báo (cố ý), reviews/wishlist, đối soát analytics. Xem bảng "Trạng thái triển khai" ở [09_ROADMAP_STATUS.md](09_ROADMAP_STATUS.md). Bản mô tả luồng ngắn gọn: [01_ARCHITECTURE.md](../01_ARCHITECTURE.md).
 
 ## 1. Sơ đồ
+
+```mermaid
+flowchart TB
+    B["Browser + tracking SDK"] -->|HTTPS| TR["Traefik TLS, health check /ready :8081"]
+    TR --> FE["frontend Next.js :3000"]
+    TR --> GW["api-gateway gin :8080, admin :8081"]
+    GW -->|"gRPC + grpc.health.v1"| AU["auth :50051"]
+    GW -->|gRPC| US["user :50054"]
+    GW -->|gRPC| PR["product :50053"]
+    GW -->|gRPC| OR["order :50052"]
+    GW -->|gRPC| PA["payment :50057"]
+    GW -->|gRPC| AN["analytics :50055"]
 ```
-                       Traefik (TLS)   health check LB: /ready (cổng 8081)
-Browser ───────────────▶ frontend (Next.js :3000)   [/api/health, /api/ready]
-  │ tracking SDK            │
-  └──────── HTTPS ─────────▶ api-gateway (gin :8080 public, :8081 admin)
-                                │ gRPC (kèm grpc.health.v1)
-   ┌───────────┬────────────┬───┴────────┬────────────┬────────────┐
-   ▼           ▼            ▼            ▼            ▼            ▼
- auth        user        product       order       payment      analytics
- :50051      :50054      :50053        :50052      :50057       :50055
- (+admin     (+địa chỉ   (+catalog,    (+cart,     (mockpay     (Kafka +
-  bootstrap)  giao hàng)  tồn kho,      checkout,   MÔ PHỎNG,    gRPC tracking
-                          ledger)       lifecycle,  webhook      → ClickHouse,
-                                        expiry)     nội bộ)      báo cáo)
-   └───────────┴────────────┴─────┬──────┴────────────┴─────┬──────┘
-                                  ▼                         ▼
-                     Postgres   Kafka   Redis         ClickHouse         (MinIO: ❌ chưa có)
-Giám sát: Prometheus ◀─ scrape :8081/metrics (7 service) + cAdvisor + node-exporter + postgres/redis/kafka exporters
-          Grafana đọc Prometheus (chỉ theo dõi, KHÔNG có cảnh báo)
+
+Gateway là điểm vào duy nhất; auth có thêm bootstrap admin, user giữ địa chỉ giao hàng, product giữ catalog/ tồn kho/ ledger, order giữ giỏ/ checkout/ vòng đời/ hết hạn, payment là mockpay MÔ PHỎNG (+ webhook nội bộ), analytics nhận Kafka và gRPC tracking.
+
+Lưu trữ và giám sát:
+
+```mermaid
+flowchart LR
+    SV["các service Go"] --> PG[("Postgres")]
+    SV <--> KF{{"Kafka"}}
+    GW["api-gateway"] --> RD[("Redis")]
+    AN["analytics"] --> CH[("ClickHouse")]
+    SV -->|":8081/metrics"| PM["Prometheus"]
+    EX["cAdvisor, node-exporter, postgres/redis/kafka exporters"] --> PM
+    PM --> GR["Grafana (chỉ xem, KHÔNG cảnh báo)"]
 ```
+
+MinIO chưa có. Prometheus scrape `:8081/metrics` của cả 7 service Go (gồm gateway).
+
 Mỗi service Go mở **hai cổng**: nghiệp vụ (gRPC; gateway HTTP :8080) và **admin HTTP :8081** (`/health /healthz /ready /readyz /metrics /version`) – xem [02](02_HEALTH_READY_METRICS.md). Cổng admin **không publish, không route qua Traefik**. Địa chỉ gRPC giữa service cứng trong code (`grpc_config.go`).
 Phụ thuộc gRPC thực tế: gateway → cả 6 service; order → product (giá/tồn); user → auth. **order-service không gọi payment-service bằng gRPC**: giao tiếp order ↔ payment hoàn toàn qua Kafka (`payment.requested`, `payment.succeeded/refunded`, `order.refund_requested`).
 

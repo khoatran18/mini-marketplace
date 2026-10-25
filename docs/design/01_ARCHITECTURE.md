@@ -1,20 +1,51 @@
 # Kiến trúc
 
+Đường đồng bộ: trình duyệt chỉ nói chuyện với Traefik, gateway là cửa công khai duy nhất và gọi các service bằng gRPC.
+
+```mermaid
+flowchart LR
+    B["Browser"] -->|HTTPS| T["Traefik"]
+    T --> FE["frontend Next.js :3000"]
+    T --> GW["api-gateway gin :8080"]
+    GW -->|gRPC| AU["auth-service :50051"]
+    GW -->|gRPC| OR["order-service :50052"]
+    GW -->|gRPC| PR["product-service :50053"]
+    GW -->|gRPC| US["user-service :50054"]
+    GW -->|"gRPC IngestEvents, Query"| AN["analytics-service :50055"]
+    GW -->|"gRPC (mô phỏng)"| PA["payment-service :50057"]
+    OR -->|"gRPC giá/tồn"| PR
+    US -->|gRPC| AU
+    GW --> RD[("Redis")]
+    AN -->|"HTTP :8123"| CH[("ClickHouse")]
+    GW -.->|"/admin/system/health: HTTP :8081/ready"| ALL["mọi service"]
 ```
-Browser ──HTTPS──▶ Traefik ──▶ frontend (Next.js :3000)
-                        └────▶ api-gateway (gin :8080) ──gRPC──▶ auth-service      :50051
-                                   │  │  │                  ├───▶ order-service     :50052
-                                   │  │  │                  ├───▶ product-service   :50053
-                                   │  │  │                  ├───▶ user-service      :50054
-                                   │  │  │                  ├───▶ analytics-service :50055   (IngestEvents, Query)
-                                   │  │  │                  └───▶ payment-service   :50057   (SIMULATED provider)
-                                   │  │  └─ Kafka (consumer auth.change_password)
-                                   │  └──── Redis (rate limit, pwd_version)
-                                   └─────── /admin/system/health ──HTTP──▶ :8081/ready của mọi service
-Kafka ◀── outbox ── order · product · payment · auth · user ──▶ consumer: order · product · payment · analytics · auth · gateway
-analytics-service ──HTTP :8123──▶ ClickHouse        order-service ──gRPC──▶ product-service (giá/tồn)        user-service ──gRPC──▶ auth-service
-Mỗi service Go: cổng nghiệp vụ (gRPC; gateway HTTP :8080) + cổng admin nội bộ :8081 (/health /healthz /ready /readyz /metrics /version)
-Quan sát: Prometheus ◀─ scrape :8081/metrics + cAdvisor + node-exporter + exporters ──▶ Grafana (chỉ xem, không cảnh báo)
+
+Gateway dùng Redis cho rate limit và `pwd_version`; analytics ghi/đọc ClickHouse. order-service chỉ gọi gRPC tới product-service (định giá, tồn), user-service gọi auth-service.
+
+Đường bất đồng bộ: mọi hiệu ứng liên service đi qua outbox rồi Kafka, consumer phải idempotent (chi tiết: [03_EVENTS_KAFKA.md](03_EVENTS_KAFKA.md)).
+
+```mermaid
+flowchart LR
+    OR["order"] --> K{{"Kafka"}}
+    PR["product"] --> K
+    PA["payment"] --> K
+    AU["auth"] --> K
+    US["user"] --> K
+    K --> OR2["order"]
+    K --> PR2["product"]
+    K --> PA2["payment"]
+    K --> AN["analytics"]
+    K --> AU2["auth"]
+    K --> GW["gateway"]
+```
+
+Cột trái là producer (outbox), cột phải là consumer; order, product, payment vừa phát vừa nhận. Mỗi service Go có thêm cổng admin nội bộ `:8081` (`/health /healthz /ready /readyz /metrics /version`).
+
+```mermaid
+flowchart LR
+    S["7 service Go :8081/metrics"] --> P["Prometheus"]
+    C["cAdvisor, node-exporter, exporters"] --> P
+    P --> G["Grafana (chỉ xem, không cảnh báo)"]
 ```
 
 ## Service
@@ -28,6 +59,7 @@ Quan sát: Prometheus ◀─ scrape :8081/metrics + cAdvisor + node-exporter + e
 | order-service | **giỏ hàng**, checkout tách theo store (idempotent), định giá phía server, **máy trạng thái đơn mở rộng** + lịch sử, worker hết hạn/ tự giao, yêu cầu thanh toán/ hoàn tiền | `internal/service/{checkout,cart,orders,kafka_service}.go`, `internal/repository/{orders,statemachine,domain_events}.go` |
 | payment-service | thanh toán **MÔ PHỎNG** (`mockpay`): thẻ test, ví, chuyển khoản, webhook ký HMAC, hoàn tiền | `internal/service/{service,confirm,queries}.go` |
 | analytics-service | nhận tracking (gRPC) + event Kafka → ClickHouse; trả báo cáo theo scope platform/store; cache Redis | `internal/{ingest,store,service,ch}` |
+
 Lớp trong một service: `server` (gRPC, protovalidate, ánh xạ lỗi) → `service` (nghiệp vụ) → `repository` (GORM); `client/*` bọc gRPC gửi đi; `config/messagequeue/kafkaimpl` bọc kafka-go; `pkg/ops` (admin :8081, bản sao giống hệt ở mọi service), `pkg/events` (outbox chung ở product/order/payment).
 
 ## Mô hình danh tính
@@ -36,6 +68,28 @@ Lớp trong một service: `server` (gRPC, protovalidate, ánh xạ lỗi) → `
 - Buyer là người duy nhất đặt hàng/ thanh toán; seller (`seller_admin`, `seller_employee`) quản lý catalog/ tồn/ đơn của store; admin quản trị nền tảng (không tự đăng ký được).
 
 ## Luồng đặt hàng → thanh toán → giao hàng (tóm tắt, chi tiết: [platform/04](platform/04_ORDERS_PAYMENTS.md))
+```mermaid
+sequenceDiagram
+    participant B as Buyer
+    participant O as order-service
+    participant K as Kafka
+    participant P as product-service
+    participant Y as payment-service
+    B->>O: POST /orders (qua gateway)
+    O->>O: 1 transaction: orders PENDING + outbox
+    O-)K: order.create_order
+    K-)P: giữ hàng reserve
+    P-)K: product.validate_order
+    K-)O: PENDING sang AWAITING_PAYMENT, CONFIRMED hoặc FAILED
+    O-)K: payment.requested (đơn online)
+    K-)Y: tạo payment REQUIRES_ACTION
+    B->>Y: confirm tại /pay/id
+    Y-)K: payment.succeeded
+    K-)O: AWAITING_PAYMENT sang PAID
+```
+
+Mọi bước đổi trạng thái đều phát thêm `order.status_changed` cho analytics; sau `PAID` seller giao hàng (kho `reserved` sang `sold`). Các bước chi tiết:
+
 1. `POST /orders` (header `Idempotency-Key`): gateway lấy buyer từ token, dựng snapshot địa chỉ; order-service định giá từ product-service, **tách đơn theo store**, trong **một transaction** ghi `checkouts`, `orders` (`PENDING`), lịch sử và outbox (`order.create_order`, `order.status_changed`).
 2. product-service giữ hàng (`inventory−`, `reserved+`, ledger `reserve`) cho từng đơn, ghi kết quả → `product.validate_order`.
 3. order-service: `PENDING → AWAITING_PAYMENT` (online, `expires_at = +ORDER_PAYMENT_TTL_MIN`) / `CONFIRMED` (COD) / `FAILED` (hết hàng). Khi mọi đơn của checkout online rời `PENDING` ⇒ `payment.requested`.

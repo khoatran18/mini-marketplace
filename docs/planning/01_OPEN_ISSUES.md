@@ -2,6 +2,37 @@
 
 > Gom một chỗ những gì **chưa làm / chưa kiểm chứng / có rủi ro**, rút từ [../design/platform/09_ROADMAP_STATUS.md](../design/platform/09_ROADMAP_STATUS.md), [02_TECH_DEBT_AND_BACKLOG.md](02_TECH_DEBT_AND_BACKLOG.md), [../design/05_SECURITY.md](../design/05_SECURITY.md) và đối chiếu thêm với code / repo. Mức ưu tiên là **đề xuất** (P1 = nên làm trước khi demo thật hoặc trước khi gắn AI; P2 = quan trọng; P3 = để sau).
 
+```mermaid
+mindmap
+  root((Tồn đọng))
+    Chưa kiểm chứng
+      Swarm Traefik Grafana chưa chạy thật
+      e2e viết cho API cũ
+      chưa thử nhiều replica
+    Tính năng thiếu
+      review wishlist
+      upload ảnh
+      consent và xóa dữ liệu
+      admin users stores
+    Độ tin cậy
+      outbox dùng chung, dòng độc chặn hàng
+      mất tracking khi analytics restart
+      không backfill ClickHouse
+      Kafka 1 broker
+    Bảo mật
+      xoay secret trong lịch sử git
+      token trong localStorage
+      gRPC plaintext
+      thẻ img canary trong README
+    Quan sát
+      thiếu tracing, metric nghiệp vụ
+      Grafana 5 trên 10 dashboard
+    Công cụ
+      Swagger cũ
+      README frontend cũ
+      7 bản sao module dùng chung
+```
+
 ## 1. Chưa kiểm chứng (rủi ro lớn nhất)
 
 | # | Vấn đề | Ưu tiên | Ghi chú |

@@ -3,6 +3,40 @@
 > **Trạng thái: thiết kế đề xuất, chưa có code.** Tầng LLM do chủ dự án tự xây; tài liệu này chỉ chốt *làm gì*, *agent gọi công cụ nào*, *người xác nhận ở đâu*, và *nền còn thiếu gì*. Khái niệm (agent, tool, human-in-the-loop, `action_proposal`) giải thích ở [02_AGENT_ARCHITECTURE.md](02_AGENT_ARCHITECTURE.md) §0. Tool nào đã có / chưa có đối chiếu với [../design/04_API_REFERENCE.md](../design/04_API_REFERENCE.md).
 > Quy ước cột "Tool": ✅ = đã có REST ở gateway, 🆕 = **chưa có**, cần làm thêm trong nền. Cột "Xác nhận" = chỗ người dùng phải bấm trước khi có tác động thật.
 
+## Tổng quan ba persona và công cụ
+
+```mermaid
+flowchart LR
+  subgraph SHOP["shopper (buyer + khách)"]
+    b1["B1 tìm hàng"]
+    b2["B2 đặt hàng hộ + xác nhận"]
+    b3["B3 trạng thái đơn, hủy, trả"]
+    b4["B4 hỏi luật, chính sách"]
+    b7["B7 giỏ hàng bao nhiêu tiền"]
+  end
+  subgraph SELL["seller"]
+    s1["S1 hỏi đáp số liệu"]
+    s2["S2 cố vấn nhập hàng + xác nhận"]
+    s3["S3 đăng sản phẩm + xác nhận"]
+    s4["S4 xử lý đơn hàng loạt + xác nhận"]
+    s7["S7 nhập hóa đơn OCR + xác nhận"]
+  end
+  subgraph ADM["admin"]
+    a1["A1 điều tra sự cố"]
+    a3["A3 phân tích kinh doanh"]
+    a4["A4 kiểm duyệt + xác nhận"]
+    a5["A5 khiếu nại, hoàn tiền + xác nhận"]
+  end
+  GW["api-gateway REST<br/>JWT của chính người dùng"]
+  SHOP --> GW
+  SELL --> GW
+  ADM --> GW
+  classDef w fill:#fff3cd,stroke:#e0a800,color:#000
+  class b2,b3,s2,s3,s4,s7,a4,a5 w
+```
+
+Ô vàng là tính năng có hành động ghi, bắt buộc đi qua bước người dùng xác nhận (mục 2). Mọi persona đều đi qua cùng một cổng gateway nên quyền luôn bị kiểm ở server.
+
 ## 1. Nguyên tắc chung cho mọi agent
 
 1. **Ba persona, chọn theo vai trò trong JWT** (không theo lời người dùng): `shopper` (buyer + khách), `seller`, `admin`. Mỗi persona chỉ thấy bộ tool của mình.
@@ -125,16 +159,20 @@ Dữ liệu kiểm thử: [../dataset/05_SHOPPER_ASSISTANT_CUSTOMER_SUPPORT.md](
 | **Công tắc khẩn cấp** | tắt agent khi vượt ngân sách chi phí hoặc phát hiện lạm dụng | 🆕 feature flag, 🆕 theo dõi chi phí |
 | **Nhật ký độc lập** | gateway ghi mỗi lượt, mỗi tool-call (không do agent tự khai) | 🆕 `ai_audit` |
 
-## 7. Ma trận ưu tiên đề xuất
+## 7. Thứ tự làm đề xuất
 
-| Ưu tiên | Tính năng | Lý do |
-|---|---|---|
-| 1 | S1, B7, A3 (hỏi đáp số liệu & giỏ hàng, chỉ-đọc) | tool đã có sẵn; rủi ro thấp; dựng được khung agent + eval |
-| 2 | A1 (điều tra sự cố) | giá trị cao cho admin; cần làm thêm 3–4 API chỉ-đọc ở phần admin/system |
-| 3 | B1, B3, B4 | tìm hàng, hỏi đơn, hỏi chính sách |
-| 4 | **B2 đặt hàng hộ, S2, S4, A5** (có xác nhận) | khi khung xác nhận (mục 2) và eval "từ chối vượt quyền" đã vững |
-| 5 | S3, S7, A4, S6 | cần upload ảnh, OCR, review |
-| 6 | A2, B8 và các tính năng cần thông báo | cần lịch chạy nền, thông báo |
+```mermaid
+flowchart LR
+  P1["1. Chỉ-đọc, tool đã có<br/>S1 số liệu cửa hàng<br/>B7 giỏ hàng<br/>A3 phân tích kinh doanh"]
+  P2["2. Điều tra sự cố<br/>A1<br/>(thêm 3-4 API chỉ-đọc<br/>ở admin/system)"]
+  P3["3. Hỏi đáp buyer<br/>B1 tìm hàng<br/>B3 hỏi đơn<br/>B4 chính sách"]
+  P4["4. Có xác nhận<br/>B2 đặt hàng hộ<br/>S2, S4, A5"]
+  P5["5. Cần tính năng mới<br/>S3, S7, A4, S6<br/>(upload, OCR, review)"]
+  P6["6. Cần nền thông báo, lịch<br/>A2, B8"]
+  P1 --> P2 --> P3 --> P4 --> P5 --> P6
+```
+
+Lý do: bước 1 dùng tool sẵn có, rủi ro thấp, dựng được khung agent + eval. Bước 4 chỉ làm khi khung xác nhận (mục 2) và eval "từ chối vượt quyền" đã vững.
 
 ## 8. Nền cần làm thêm để mở khóa các tính năng trên (tóm tắt)
 

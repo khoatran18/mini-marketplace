@@ -82,14 +82,59 @@ Ghi chú:
 
 Mạng overlay dùng chung tên cố định **`marketplace-net`**. Ba stack Swarm: `marketplace-infra`, `marketplace-obs`, `marketplace`.
 
+### Sơ đồ triển khai (Docker Swarm)
+
+```mermaid
+flowchart TB
+  subgraph S3["stack marketplace"]
+    TR["traefik x1 (node manager)<br/>:80 / :443"]
+    FE["frontend x1"]
+    GW["api-gateway x2"]
+    AU["auth x1"]
+    US["user x1"]
+    PR["product x1"]
+    OR["order x1"]
+    PA["payment x1"]
+    AN["analytics x1"]
+  end
+  subgraph S1["stack marketplace-infra"]
+    PG[("postgres x1")]
+    RD[("redis x1")]
+    KF{{"kafka broker1 x1"}}
+    CH[("clickhouse x1")]
+  end
+  subgraph S2["stack marketplace-obs"]
+    PM["prometheus x1"]
+    GR["grafana x1"]
+    CA["cadvisor<br/>mỗi node"]
+    NE["node-exporter<br/>mỗi node"]
+    EX["3 exporter<br/>pg / redis / kafka"]
+  end
+  NET(["mạng overlay marketplace-net<br/>chỉ Traefik publish cổng ra ngoài"])
+  TR --- NET
+  S1 --- NET
+  S2 --- NET
+```
+
+Ba stack dùng chung một mạng overlay. Chỉ Traefik mở cổng 80/443 ra máy chủ. Postgres, Redis, Kafka, ClickHouse, Prometheus và cổng `:8081` của mọi service không publish.
+
 ## 4. Vai trò người dùng
 
-| Vai trò | Làm được gì | Không làm được |
-|---|---|---|
-| Khách (chưa đăng nhập) | Xem catalog, tìm kiếm, gửi tracking ẩn danh | Giỏ hàng, đặt đơn |
-| `buyer` | Giỏ hàng, địa chỉ, checkout, thanh toán (mô phỏng), hủy / trả hàng, xem đơn của mình | Xem đơn người khác |
-| `seller_admin` / `seller_employee` | Quản lý store: sản phẩm, tồn kho, đơn của store (ship / deliver / duyệt trả hàng), analytics của store | Dữ liệu store khác |
-| `admin` | Toàn sàn: analytics nền tảng, thanh toán, danh mục, trạng thái hệ thống | Không tự đăng ký (chỉ bootstrap qua biến môi trường) |
+```mermaid
+flowchart LR
+  K["Khách"] --> K1["xem catalog, tìm kiếm<br/>gửi tracking ẩn danh"]
+  B["buyer"] --> K1
+  B --> B1["giỏ hàng, địa chỉ,<br/>checkout, thanh toán mô phỏng"]
+  B --> B2["hủy, trả hàng,<br/>xem đơn CỦA MÌNH"]
+  S["seller_admin /<br/>seller_employee"] --> S1["sản phẩm, tồn kho<br/>của store mình"]
+  S --> S2["đơn của store:<br/>ship, deliver, duyệt trả hàng"]
+  S --> S3["analytics của store"]
+  A["admin"] --> A1["analytics toàn sàn,<br/>thanh toán, hoàn tiền"]
+  A --> A2["danh mục, cấm sản phẩm,<br/>trạng thái hệ thống"]
+  A -.-> N["không tự đăng ký được:<br/>chỉ tạo qua biến môi trường"]
+```
+
+Quyền luôn lấy từ JWT: buyer không xem được đơn của người khác, seller không đụng được store khác.
 
 ## 5. Dữ liệu và nguyên tắc
 
