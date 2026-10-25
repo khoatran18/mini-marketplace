@@ -26,7 +26,7 @@ flowchart LR
   subgraph Data
     PG[(Postgres 16)]
     R[(Redis)]
-    K{{Kafka 3.9<br/>1 broker KRaft}}
+    K{{Kafka 3.9<br/>3 broker KRaft}}
     CH[(ClickHouse 24.8)]
   end
   subgraph Obs["Giám sát"]
@@ -73,7 +73,7 @@ Ghi chú:
 |---|---|---|---|
 | Postgres | `postgres:16-alpine` (`marketplace-infra`) | 1 | Một database chung, mỗi service sở hữu bảng riêng (không join chéo); bảng outbox `domain_events` dùng chung |
 | Redis | `redis:8.2.1-alpine` (AOF) | 1 | Rate limit, `pwd_version`, cache báo cáo `analytics:v1:*` |
-| Kafka | `apache/kafka:3.9.0`, KRaft, 1 broker (`broker1`) | 1 | Bus sự kiện; 3 partition / topic, retention 7 ngày |
+| Kafka | `apache/kafka:3.9.0`, KRaft, 3 broker (`broker1..3`; lite: 1) | 3 | Bus sự kiện; 3 partition / topic, retention 7 ngày |
 | ClickHouse | `clickhouse/clickhouse-server:24.8` | 1 (RAM 2 GB) | Kho phân tích (dẫn xuất): `events_raw`, bảng `fact_*`, `dim_products` |
 | Prometheus | `prom/prometheus:v2.55.1` (`marketplace-obs`) | 1 (768 MB) | Thu metric `:8081/metrics` của mọi service + exporter |
 | Grafana | `grafana/grafana:11.3.0` | 1 | 11 dashboard (chỉ xem, **không cảnh báo**) |

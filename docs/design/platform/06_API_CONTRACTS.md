@@ -107,4 +107,4 @@ Danh sách, producer/consumer/group, payload: **[03_EVENTS_KAFKA.md](../03_EVENT
 | `product.changed`, `inventory.changed` | ✅ (thêm `reserved`, `ref_type`, `ref_id`) |
 | `cart.updated` | ❌ |
 | `*.dlq` | ❌ (quá 5 lần lỗi thì ghi log và bỏ qua) |
-Quy tắc cũ giữ nguyên (outbox, `acks=all`, commit sau xử lý, idempotent). Topic do service tự `EnsureTopicExist` (3 partition, RF 1); retention Kafka 168 h.
+Quy tắc cũ giữ nguyên (outbox, `acks=all`, commit sau xử lý, idempotent). Topic do service tự `EnsureTopicExist` (3 partition; RF hiện đặt trong code client = 1, cần nâng lên 3); retention Kafka 168 h.

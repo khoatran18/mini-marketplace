@@ -4,7 +4,7 @@ Ba file compose nhắm tới Docker Swarm (cũng chạy được bằng `docker 
 
 | Stack (tên) | File | Thành phần |
 |---|---|---|
-| `marketplace-infra` | `deploy/infra.yml` | `postgres:16-alpine`, `redis:8.2.1-alpine` (AOF), **`clickhouse/clickhouse-server:24.8`**, Kafka `apache/kafka:3.9.0` một node KRaft (`broker1`, 3 partition mặc định, retention 168 h); volume `postgres-data redis-data kafka-data clickhouse-data`; healthcheck đủ cả bốn |
+| `marketplace-infra` | `deploy/infra.yml` | `postgres:16-alpine`, `redis:8.2.1-alpine` (AOF), **`clickhouse/clickhouse-server:24.8`**, Kafka `apache/kafka:3.9.0` cụm **3 broker KRaft** (`broker1..3`, mỗi node vừa broker vừa controller, quorum `1@broker1:9093,2@broker2:9093,3@broker3:9093`; RF 3, `min.insync.replicas` 2, 3 partition mặc định, retention 168 h, heap `-Xmx512m`, giới hạn RAM 768M/broker); volume `postgres-data redis-data kafka-data-1 kafka-data-2 kafka-data-3 clickhouse-data`; healthcheck đủ cả bốn. Mất 1 broker thì ghi/đọc vẫn bình thường (mất 2 thì dừng ghi). Kafka không còn là điều kiện `/ready` của service nhờ outbox |
 | `marketplace-obs` | `deploy/observability.yml` | Prometheus v2.55.1, Grafana 11.3.0, cAdvisor (global), node-exporter (global), postgres/redis/kafka-exporter; volume `prometheus-data grafana-data` |
 | `marketplace` | `deploy/services.yml` | Traefik v3.6, frontend, `api-gateway` (2 replica), `auth/user/product/order-service`, **`payment-service`**, **`analytics-service`** (mỗi cái 1 replica). Mọi service có `update_config` + `rollback_config` (xem §11) |
 
@@ -16,7 +16,7 @@ flowchart LR
     PG[("postgres")]
     RD[("redis")]
     CH[("clickhouse")]
-    KF[("broker1 - Kafka")]
+    KF[("broker1..3 - Kafka")]
   end
   NET{{"overlay marketplace-net"}}
   subgraph OBS["marketplace-obs (2)"]
@@ -61,8 +61,8 @@ Env lấy từ shell/`deploy/.env` qua nội suy compose; **không `.env` nào �
 
 ```mermaid
 flowchart TD
-  A["1. cp deploy/.env.example deploy/.env, điền biến bắt buộc"] --> B["2. ./scripts/gen-dev-certs.sh, hoặc đặt cert thật vào deploy/traefik/certs"]
-  B --> C["3. API_BASE_URL=... ./scripts/build-images.sh"]
+  A["1. cp deploy/.env.example deploy/.env, điền biến bắt buộc"] --> B["2. (chỉ khi PUBLIC_SCHEME=https) ./scripts/gen-dev-certs.sh hoặc cert thật"]
+  B --> C["3. ./scripts/build-images.sh"]
   C --> D["4. docker swarm init"]
   D --> E["5. ./scripts/deploy.sh: infra, rồi observability, rồi services"]
   E --> F["6. Thêm 4 host vào /etc/hosts"]
@@ -76,8 +76,8 @@ flowchart TD
 Bảy bước theo thứ tự; bước 7 lặp lại cho tới khi đạt. Chi tiết và lệnh từng bước ở danh sách dưới.
 
 1. `cp deploy/.env.example deploy/.env`, đặt tối thiểu: `POSTGRES_PASSWORD`, `JWT_SECRET` (≥16 ký tự), `TRAEFIK_DASHBOARD_USERS` (htpasswd, `$`→`$$`), `GRAFANA_ADMIN_PASSWORD`, **`CLICKHOUSE_PASSWORD`**, **`PAYMENT_WEBHOOK_SECRET`** (≥16 ký tự – thiếu thì payment-service không khởi động), `IP_HASH_SECRET` (khuyến nghị đặt để hash IP khớp giữa các replica), `ADMIN_BOOTSTRAP_USERNAME/PASSWORD` nếu cần admin. Giữ `ENV=prod` và `SEED_DEMO_DATA=false` ở môi trường thật.
-2. `./scripts/gen-dev-certs.sh` (hoặc đặt cert thật vào `deploy/traefik/certs/{local.crt,local.key}`).
-3. `API_BASE_URL=https://api.marketplace.swarm.localhost ./scripts/build-images.sh` (frontend nướng URL API lúc build).
+2. HTTPS (tùy chọn, mặc định `PUBLIC_SCHEME=http` không cần cert): đặt `PUBLIC_SCHEME=https`, rồi `./scripts/gen-dev-certs.sh` (hoặc cert thật vào `deploy/traefik/certs/{local.crt,local.key}`). `deploy.sh` tự gộp `services.https.yml` / `observability.https.yml`; staging/prod example đã để `https`. Cert thật tự gia hạn: dùng Let's Encrypt (ACME) của Traefik thay cho file cert.
+3. `./scripts/build-images.sh` (frontend nướng URL API `${PUBLIC_SCHEME}://api.${PUBLIC_HOST}` lúc build, đọc từ `deploy/.env`; đổi scheme/host thì phải build lại frontend).
 4. `docker swarm init`.
 5. `./scripts/deploy.sh` (= `infra` → `observability` → `services`; chạy riêng: `deploy.sh infra|observability|services`). Script render compose bằng `docker compose config`, bỏ `name:` và ép cổng số vì `docker stack deploy` không hiểu. Sau khi deploy, script gọi `scripts/wait-ready.sh` (xem §9); bỏ qua bằng `--no-wait` hoặc `SKIP_WAIT=1`. Chọn file cấu hình và môi trường: xem §10.
 6. Thêm `/etc/hosts`: `marketplace.swarm.localhost`, `api.marketplace.swarm.localhost`, `dashboard.marketplace.swarm.localhost`, `grafana.marketplace.swarm.localhost`.
@@ -85,12 +85,12 @@ Bảy bước theo thứ tự; bước 7 lặp lại cho tới khi đạt. Chi t
 8. Thứ tự khởi động không bắt buộc (service tự chờ/ thử lại): analytics-service **chờ ClickHouse tối đa ~2 phút** (60 lần × 2 s) rồi mới migrate schema và mở cổng; nếu quá hạn nó thoát và Swarm khởi động lại (sơ đồ ở §2).
 > **Chưa được kiểm chứng**: toàn bộ các bước Docker/Swarm/Traefik/ClickHouse/Grafana ở trên chưa từng chạy trong sandbox soạn tài liệu (xem [09_ROADMAP_STATUS.md](../design/platform/09_ROADMAP_STATUS.md), "Giới hạn đã biết"). Lần deploy đầu hãy theo dõi `docker service logs` từng service.
 
-Host: UI `https://marketplace.swarm.localhost`, API `https://api.<host>`, Traefik dashboard `https://dashboard.<host>` (basic auth), Grafana `https://grafana.<host>`.
+Host (scheme theo `PUBLIC_SCHEME`, mặc định http): UI `http://marketplace.swarm.localhost`, API `http://api.<host>`, Traefik dashboard `http://dashboard.<host>` (basic auth), Grafana `http://grafana.<host>`.
 
 ## 2. ClickHouse + analytics-service
-- ClickHouse **không publish cổng**, chỉ trong overlay (`clickhouse:8123` HTTP; `clickhouse:9363` là endpoint Prometheus built-in, bật bằng `deploy/clickhouse/prometheus.xml` nạp qua Swarm `configs`); user/mật khẩu qua `CLICKHOUSE_USER` (mặc định `default`) / `CLICKHOUSE_PASSWORD` (bắt buộc); `TZ=UTC`; giới hạn RAM 2 GB; `nofile` 262144. Volume `clickhouse-data`.
+- ClickHouse **không publish cổng**, chỉ trong overlay (`clickhouse:8123` HTTP; `clickhouse:9363` là endpoint Prometheus built-in, bật bằng `deploy/clickhouse/prometheus.xml` nạp qua Swarm `configs`); user/mật khẩu qua `CLICKHOUSE_USER` (mặc định `default`) / `CLICKHOUSE_PASSWORD` (bắt buộc, đổi `change-me` khi lên prod); `deploy/clickhouse/users-networks.xml` (Swarm `configs` → `users.d/zz-networks.xml`) chỉ cho user `default` kết nối từ loopback và dải private (overlay); `TZ=UTC`; giới hạn RAM 2 GB; `nofile` 262144. Volume `clickhouse-data`.
 - analytics-service tự `CREATE DATABASE` (`CLICKHOUSE_DB`=`marketplace`) và tạo 7 bảng bằng migration có version ([02_DATA_MODEL.md](../design/02_DATA_MODEL.md) §3). Không cần chạy SQL tay.
-- Tiêu thụ 6 topic Kafka (`order.status_changed`, `payment.{succeeded,failed,refunded}`, `product.changed`, `inventory.changed`) và nhận tracking qua gRPC `IngestEvents` từ gateway. Ghi vào ClickHouse theo lô trong bộ đệm bộ nhớ (`ANALYTICS_FLUSH_INTERVAL_MS` 2000, `ANALYTICS_FLUSH_ROWS` 5000); ClickHouse down ⇒ giữ lại tới `ANALYTICS_BUFFER_MAX_ROWS` (100000) rồi **rớt dòng cũ nhất** (đếm ở `mm_ch_rows_dropped_total`).
+- Tiêu thụ 6 topic Kafka (`order.status_changed`, `payment.{succeeded,failed,refunded}`, `product.changed`, `inventory.changed`) và nhận tracking qua gRPC `IngestEvents` từ gateway. Ghi vào ClickHouse theo lô trong bộ đệm bộ nhớ (`ANALYTICS_FLUSH_INTERVAL_MS` 2000, `ANALYTICS_FLUSH_ROWS` 5000); ClickHouse down ⇒ giữ lại tới `ANALYTICS_BUFFER_MAX_ROWS` (100000) rồi chuyển sang spool bền trên volume `analytics-spool` (`ANALYTICS_SPOOL_DIR`, `ANALYTICS_SPOOL_MAX_MB`; replay khi khởi động / khi ClickHouse về); tắt spool hoặc spool đầy thì **rớt dòng cũ nhất** (đếm ở `mm_ch_rows_dropped_total`).
 - **ClickHouse là phần phụ**: gateway coi payment/analytics là non-critical; ClickHouse hay analytics-service down thì dashboard analytics trả **503** nhưng cửa hàng (xem, đặt hàng, thanh toán) và `POST /events` (vẫn 202) chạy bình thường.
 - Lần đầu chạy trên dữ liệu đã có sẵn: ClickHouse **không** được backfill từ Postgres (chưa làm); chỉ có event còn nằm trong Kafka (retention 7 ngày): group mới (`analytics-service-<topic>`) đọc từ offset đầu tiên còn giữ (mặc định `FirstOffset` của kafka-go), nên dựng lại được tối đa ~7 ngày gần nhất bằng cách xoá bảng/ đổi group.
 
@@ -137,6 +137,7 @@ ClickHouse chạy song song trong stack nên thường chưa sẵn lúc analytic
 | `GRAFANA_ADMIN_USER/PASSWORD`, `PROMETHEUS_RETENTION` (15d) | observability | mật khẩu bắt buộc |
 | `SEED_DEMO_DATA` | auth, product | `true`: `buyer1`/`seller1` (mật khẩu `password`, **không** tạo store) + ~100 sản phẩm demo gán `seller_id=2` vào catalog rỗng. Không bao giờ bật ở production |
 | `SEED_DEFAULT_CATEGORIES` | product | `false` để không seed 7 danh mục mặc định |
+| `METRICS_TOKEN` | mọi service Go + Prometheus | bearer token cho `:8081/metrics`, `/version`, pprof; trống = mở; Prometheus lấy cùng giá trị (xem [05_SECURITY.md](../design/05_SECURITY.md)). `/health` `/ready` luôn mở. Đổi giá trị rồi deploy lại cả `observability` và `services` |
 | `ADMIN_PORT` (8081), `DRAIN_SECONDS` (10), `READY_CACHE_SECONDS` (3), `READY_CHECK_TIMEOUT_MS` (1000), `PPROF_ENABLED` | mọi service Go | chuẩn vận hành; `SERVICE_VERSION/GIT_COMMIT/BUILD_TIME` do build-arg |
 | `AUTH_SERVICE_ADDR`, `ORDER_SERVICE_ADDR`, `PRODUCT_SERVICE_ADDR`, `USER_SERVICE_ADDR`, `ANALYTICS_SERVICE_ADDR`, `PAYMENT_SERVICE_ADDR` | gateway (đủ 6), order / auth / user / product (`AUTH_SERVICE_ADDR`, `PRODUCT_SERVICE_ADDR`) | địa chỉ gRPC giữa service; mặc định đúng giá trị cũ (`auth-service:50051`, `order-service:50052`, `product-service:50053`, `user-service:50054`, `analytics-service:50055`, `payment-service:50057`), biến rỗng cũng dùng mặc định. Nằm ở `internal/config/grpc_config.go` (gateway) hoặc `client_config.go` (các service còn lại); `services.yml` truyền xuống qua anchor `svc_env`. Đã có unit test, nhưng chưa deploy thử |
 | `DEPLOY_ENV`, `ENV_FILE`, `LITE` | `scripts/deploy.sh` | chọn môi trường, xem §10 |
@@ -157,7 +158,7 @@ Khởi động hạ tầng bằng `docker compose --env-file deploy/.env -f depl
 - Docker Hub giới hạn tốc độ (429) có thể làm gián đoạn pull/build; thử lại hoặc dùng mirror.
 
 ## 6. Giám sát (Prometheus + Grafana)
-`scripts/deploy.sh observability` triển khai `marketplace-obs`: Prometheus (scrape `tasks.<service>:8081/metrics`, cAdvisor, node-exporter, exporters, ClickHouse `:9363`, Traefik `:8082`), Grafana ở `https://grafana.<PUBLIC_HOST>` (đăng nhập `GRAFANA_ADMIN_*`, không anonymous), **chỉ xem – không có cảnh báo**. 11 dashboard provision bằng file (`deploy/grafana/dashboards`, không sửa trong UI): **Overview, Services (RED), Containers & hosts, Kafka·Postgres·Redis·Traefik, Analytics pipeline, ClickHouse server, Outbox & Workers, Payments, Business, Kafka consumer lag, Logs**. Sáu dashboard sau cùng mới viết, chưa xem trên Grafana thật. Cách đọc: [03_RUNBOOK.md](03_RUNBOOK.md). Chi tiết: [05_ANALYTICS_MONITORING.md](../design/platform/05_ANALYTICS_MONITORING.md).
+`scripts/deploy.sh observability` triển khai `marketplace-obs`: Prometheus (không publish, không qua Traefik, không có web auth; scrape `tasks.<service>:8081/metrics` kèm bearer `METRICS_TOKEN` nếu có, cAdvisor, node-exporter, exporters, ClickHouse `:9363`, Traefik `:8082`), Grafana ở `<scheme>://grafana.<PUBLIC_HOST>` (đăng nhập `GRAFANA_ADMIN_*`, không anonymous), **chỉ xem – không có cảnh báo**. 11 dashboard provision bằng file (`deploy/grafana/dashboards`, không sửa trong UI): **Overview, Services (RED), Containers & hosts, Kafka·Postgres·Redis·Traefik, Analytics pipeline, ClickHouse server, Outbox & Workers, Payments, Business, Kafka consumer lag, Logs**. Sáu dashboard sau cùng mới viết, chưa xem trên Grafana thật. Cách đọc: [03_RUNBOOK.md](03_RUNBOOK.md). Chi tiết: [05_ANALYTICS_MONITORING.md](../design/platform/05_ANALYTICS_MONITORING.md).
 
 ### Log tập trung và migration lúc khởi động
 - **Log**: service ghi JSON ra stdout (Docker `json-file`, giới hạn `10m` × 3 file mỗi container). **Vector** (global, một bản mỗi node, mount `/var/run/docker.sock:ro`) che PII rồi gửi tới **Loki** (`grafana/loki:3.2.1`, filesystem, volume `loki-data`, retention `LOKI_RETENTION`, không publish cổng). Xem log ở Grafana → dashboard *Logs* (lọc `service`, `level`, `request_id`). Nhãn Loki chỉ `service`, `stack`, `level`, `env`; `request_id` không là nhãn. Chạy thật Loki + Vector cục bộ, **chưa thử trong Swarm** (`deploy.mode: global`, `configs:`).
@@ -198,7 +199,7 @@ Mọi service Go mở cổng HTTP **nội bộ** `ADMIN_PORT` (8081; không publ
 | `EVENTS_RETENTION_MONTHS` | `1` | `3` | `13` |
 | `PUBLIC_HOST` | `marketplace.swarm.localhost` | `staging.example.com` | `marketplace.example.com` |
 
-- Profile `lite` cho máy yếu: `LITE=true` (biến môi trường hoặc trong file env) tự gộp `deploy/services.lite.yml`: gateway 1 replica; giới hạn RAM gateway 192M, auth/user/payment 128M, product/order 160M, analytics 192M. `observability.yml` **chưa có** bản lite nên Prometheus/Grafana vẫn chạy đủ.
+- Profile `lite` cho máy yếu: `LITE=true` (biến môi trường hoặc trong file env) tự gộp `deploy/services.lite.yml`: gateway 1 replica; giới hạn RAM gateway 192M, auth/user/payment 128M, product/order 160M, analytics 192M. `observability.yml` **chưa có** bản lite nên Prometheus/Grafana vẫn chạy đủ. `LITE=true` cũng gộp `deploy/infra.lite.yml`: Kafka chỉ **1 broker** (`broker1`, RF 1, min ISR 1; `broker2/3` replicas 0) và `deploy.sh` đặt `KAFKA_BROKERS_ADDR=broker1:9092` cho các service (mặc định trong `services.yml` là 3 broker). Đổi giữa lite và đầy đủ trên cùng volume `kafka-data-1` không an toàn (quorum khác nhau): `scripts/teardown.sh --volumes` (hoặc xóa `kafka-data-*`) trước khi đổi. Chưa deploy thật cụm 3 broker; mới kiểm `docker compose config`.
 - Ví dụ: `DEPLOY_ENV=dev ./scripts/deploy.sh`. Mới kiểm `docker compose config` render đúng; chưa deploy thật.
 
 ## 11. Cập nhật không gián đoạn và image registry

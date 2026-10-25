@@ -2,7 +2,7 @@
 
 > Admin hỏi/giám sát hệ thống: phát hiện bất thường trên metric Prometheus, giải thích cảnh báo, xác định nguyên nhân gốc cho microservices, phân tích bất thường log. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp: WebFetch không mở được Kaggle/HF/arXiv/Zenodo (DNS); thông tin lấy từ WebSearch và GitHub (RCAEval, OpenRCA đọc trực tiếp README). Phiên bổ sung (2026-10-25) xác minh thêm bằng WebSearch (nguồn ghi "kết quả search"). Chỗ không kiểm chứng ghi "chưa xác minh".
+> Ghi chú phương pháp: WebFetch không mở được Kaggle/HF/arXiv/Zenodo (DNS); thông tin lấy từ WebSearch và GitHub (RCAEval, OpenRCA đọc trực tiếp README). Phiên bổ sung (2026-10-25) xác minh thêm bằng WebSearch (nguồn ghi "kết quả search"). Chỗ không kiểm chứng ghi "chưa xác minh". Quy tắc ngôn ngữ (2026-10-26): các bộ ở đây là số liệu chuỗi thời gian/metric/trace/log máy nên không có văn bản ngôn ngữ tự nhiên; không loại bộ nào. Log của AIOps Challenge (Trung Quốc) là log máy; nếu có trường văn bản tiếng Trung thì bỏ qua, chỉ dùng metric/trace. Cột "Quy mô / dung lượng" ghi số mẫu và dung lượng tải kèm nguồn; "dung lượng: không tìm thấy" = không thấy trong kết quả search.
 
 | Liên quan | File |
 |---|---|
@@ -38,27 +38,27 @@
 
 ### Bảng tổng hợp
 
-| # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn đã tra) | License / truy cập | Phù hợp |
+| # | Bộ dữ liệu | Nhóm | Quy mô / dung lượng (theo nguồn đã tra) | License / truy cập | Phù hợp |
 |---|---|---|---|---|---|
-| 1 | [RCAEval (RE1/RE2/RE3)](https://github.com/phamquiluan/RCAEval) | c | 735 ca lỗi, 3 hệ thống (Online Boutique, Sock Shop, Train Ticket) | MIT (code+dữ liệu của tác giả); HF ~3.4 GB parquet | ★★★★★ |
-| 2 | [TSB-AD (kế nhiệm TSB-UAD)](https://github.com/TheDatumOrg/TSB-AD) | c | 1070 chuỗi, 40 bộ | Mã nguồn mở TheDatumOrg/TSB-AD | ★★★★★ |
-| 3 | [NAB](https://github.com/numenta/NAB) | c | 58 chuỗi (README: ">50") | MIT (theo diễn đàn/ecosyste.ms) | ★★★★ |
-| 4 | [SMD (OmniAnomaly)](https://github.com/NetManAIOps/OmniAnomaly) | c | 28 máy (3 nhóm), 5 tuần, chia đôi train/test; số metric 38 chưa xác nhận trong kết quả search (Merlion ghi 33) | Repo NetManAIOps; license chưa xác minh | ★★★★★ |
-| 5 | [SMAP / MSL (NASA)](https://github.com/NetManAIOps/OmniAnomaly) | c | 55x25 / 27x55 (số liệu hay bị đảo) | Nguồn NASA; qua repo OmniAnomaly | ★★ |
-| 6 | [OpenRCA](https://github.com/microsoft/OpenRCA) | c | 335 lỗi, 68 GB telemetry, 3 hệ thống | Repo MIT; dữ liệu Google Drive | ★★★★ |
-| 7 | [AIOps Challenge 2020 (NetManAIOps)](https://github.com/NetManAIOps/AIOps-Challenge-2020-Data) | d | Giai đoạn 1; giai đoạn 2 không có | Chỉ phi thương mại | ★★★ |
-| 8 | [AIOps Challenge (CCF/Tsinghua/CCB, 2022)](https://arxiv.org/pdf/2406.19711) | d | Hệ thống e-commerce mô phỏng, 40 instance, 6 node | Chưa xác minh | ★★★★ |
-| 9 | [Loghub](https://github.com/logpai/loghub) | b | 19+ bộ log (HDFS, BGL, Thunderbird...) | Nghiên cứu/học thuật ("other") | ★★★★ |
-| 10 | [Yahoo S5](https://webscope.sandbox.yahoo.com/catalog.php?datatype=s&did=70) | c | A1 65 chuỗi thật; A2-A4 100 chuỗi tổng hợp | Webscope (cần yêu cầu) | ★★ |
-| 11 | [Exathlon](https://github.com/exathlonbenchmark/exathlon) | c | Spark streaming, 10 ứng dụng, 6 loại bất thường, ~93 file trace (nguồn thứ cấp) | CC BY-NC-SA 4.0 (đã xác minh, nguồn: README repo qua search) | ★★★ |
-| 12 | [LEMMA-RCA](https://arxiv.org/abs/2406.05375) | c | 2 miền (IT, OT), 4 tập con: Product Review và Cloud Computing (microservices), SWaT, WADI | Chưa xác minh | ★★★ |
-| 13 | [TrainTicketTrace (SANER 2026)](https://conf.researchr.org/details/saner-2026/saner-2026-workshops-tutorials-track/43/TrainTicketTrace-A-Multi-Fault-Distributed-Dataset-for-Microservice-Fault-Detection-) | c | Train Ticket sạch + 9 bản có lỗi | Chưa xác minh | ★★★ |
-| 14 | [Alibaba cluster-trace-microservices](https://github.com/alibaba/clusterdata) | d | 2021: 20M trace/12h; 2022: ~13B trace/13 ngày | Cần làm khảo sát; chất lượng có vấn đề | ★★ |
-| 15 | [Azure Public Dataset](https://github.com/Azure/AzurePublicDataset) | d | VM, Functions, LLM inference traces | Chưa rõ (CC-BY-4.0 theo 1 index; chưa xác minh) | ★★ |
-| 16 | [Google Cluster Data 2019](https://github.com/google/cluster-data) | d | 8 cell Borg, 2.4 TiB | CC-BY, qua BigQuery | ★ |
-| 17 | [AIOpsLab (Microsoft, MLSys 2025)](https://www.microsoft.com/en-us/research/publication/aiopslab-a-holistic-framework-for-evaluating-ai-agents-for-enabling-autonomous-cloud) | c (agent) | Khung triển khai microservice (DeathStarBench), chèn lỗi (ChaosMesh), xuất telemetry; ~48 problem (nguồn thứ cấp) | Chưa xác minh | ★★★★ |
-| 18 | [ITBench (IBM)](https://researchweb.draco.res.ibm.com/publications/developing-ai-agents-for-it-automation-tasks-with-itbench) | c (agent) | 2 tầng: dataset tĩnh và môi trường live; số kịch bản SRE chưa xác minh | Chưa xác minh | ★★★ |
-| 19 | [SKAB (Skoltech)](https://github.com/waico/skab) | c | v0.9: 34 dataset có bất thường tập thể (testbed vật lý, đang dừng thu thập) | Chưa xác minh | ★★ |
+| 1 | [RCAEval (RE1/RE2/RE3)](https://github.com/phamquiluan/RCAEval) | c | 735 ca lỗi, 3 hệ thống (Online Boutique, Sock Shop, Train Ticket); dung lượng: HF parquet ~3.4 GB, Zenodo 5.2 GB nén ~38 GB giải nén (README/GitHub) | MIT (code+dữ liệu của tác giả); HF ~3.4 GB parquet | ★★★★★ |
+| 2 | [TSB-AD (kế nhiệm TSB-UAD)](https://github.com/TheDatumOrg/TSB-AD) | c | 1070 chuỗi, 40 bộ (bài báo NeurIPS); một paper bên thứ ba qua search ghi TSB-AD-U = 870 chuỗi/23 bộ đơn biến (Eval 350, Tuning 48), nên 1070 có thể gồm cả phần đa biến; dung lượng: không tìm thấy | Mã nguồn mở TheDatumOrg/TSB-AD | ★★★★★ |
+| 3 | [NAB](https://github.com/numenta/NAB) | c | 58 file, 1,000-22,000 điểm mỗi file, tổng 365,551 điểm (paper NAB qua search); dung lượng: không tìm thấy (nhỏ, vài MB, ước tính) | MIT (theo diễn đàn/ecosyste.ms) | ★★★★ |
+| 4 | [SMD (OmniAnomaly)](https://github.com/NetManAIOps/OmniAnomaly) | c | 28 máy (3 nhóm), 5 tuần, chia đôi train/test; 708,405 điểm train + 708,420 điểm test, 38 chiều, 4.16% bất thường (README OmniAnomaly qua search); dung lượng: không tìm thấy; số metric 38 chưa xác nhận trong kết quả search (Merlion ghi 33) | Repo NetManAIOps; license chưa xác minh | ★★★★★ |
+| 5 | [SMAP / MSL (NASA)](https://github.com/NetManAIOps/OmniAnomaly) | c | SMAP 55 thực thể x 25 chiều (135,183 train / 427,617 test, 13.13% bất thường); MSL 27 x 55 (58,317 / 73,729, 10.72%) (README OmniAnomaly qua search); dung lượng: không tìm thấy | Nguồn NASA; qua repo OmniAnomaly | ★★ |
+| 6 | [OpenRCA](https://github.com/microsoft/OpenRCA) | c | 335 lỗi, 68 GB telemetry (>68 GB log/metric/trace), 3 hệ thống; cần ≥80 GB đĩa (README GitHub) | Repo MIT; dữ liệu Google Drive | ★★★★ |
+| 7 | [AIOps Challenge 2020 (NetManAIOps)](https://github.com/NetManAIOps/AIOps-Challenge-2020-Data) | d | Giai đoạn 1; giai đoạn 2 không có; số mẫu và dung lượng: không tìm thấy | Chỉ phi thương mại | ★★★ |
+| 8 | [AIOps Challenge (CCF/Tsinghua/CCB, 2022)](https://arxiv.org/pdf/2406.19711) | d | Hệ thống e-commerce mô phỏng, 40 instance, 6 node; số mẫu và dung lượng: không tìm thấy | Chưa xác minh | ★★★★ |
+| 9 | [Loghub](https://github.com/logpai/loghub) | b | 19 bộ log, tổng >77 GB (paper Loghub qua search); ví dụ HDFS_1 11,175,629 dòng/1.47 GB, HDFS_2 71,118,073 dòng/16.06 GB; mỗi bộ có bản mẫu 2K dòng trong repo | Nghiên cứu/học thuật ("other") | ★★★★ |
+| 10 | [Yahoo S5](https://webscope.sandbox.yahoo.com/catalog.php?datatype=s&did=70) | c | A1 65 chuỗi thật; A2-A4 100 chuỗi tổng hợp; dung lượng: không tìm thấy (nhỏ) | Webscope (cần yêu cầu) | ★★ |
+| 11 | [Exathlon](https://github.com/exathlonbenchmark/exathlon) | c | Spark streaming, 10 ứng dụng, 6 loại bất thường, ~93 file trace (nguồn thứ cấp); VLDB paper qua search: ~100 lần chạy lặp của 10 job, >30 lần chạy bị gây nhiễu, gần 100 bất thường; dung lượng: không tìm thấy (zip trong repo) | CC BY-NC-SA 4.0 (đã xác minh, nguồn: README repo qua search) | ★★★ |
+| 12 | [LEMMA-RCA](https://arxiv.org/abs/2406.05375) | c | 2 miền (IT, OT), 4 tập con: Product Review và Cloud Computing (microservices), SWaT, WADI; Product Review 6 node OpenShift/216 pod, 4 loại lỗi; SWaT 11 ngày/51 cảm biến/16 lỗi; WADI 16 ngày/123 cảm biến/15 lỗi (paper qua search); dung lượng: không tìm thấy | Chưa xác minh | ★★★ |
+| 13 | [TrainTicketTrace (SANER 2026)](https://conf.researchr.org/details/saner-2026/saner-2026-workshops-tutorials-track/43/TrainTicketTrace-A-Multi-Fault-Distributed-Dataset-for-Microservice-Fault-Detection-) | c | Train Ticket sạch + 9 bản có lỗi; số mẫu và dung lượng: không tìm thấy | Chưa xác minh | ★★★ |
+| 14 | [Alibaba cluster-trace-microservices](https://github.com/alibaba/clusterdata) | d | 2021: 20M trace/12h; 2022: ~13B trace/13 ngày; dung lượng: không tìm thấy | Cần làm khảo sát; chất lượng có vấn đề | ★★ |
+| 15 | [Azure Public Dataset](https://github.com/Azure/AzurePublicDataset) | d | VM, Functions, LLM inference traces; dung lượng: không tìm thấy (nhiều file, vài trăm MB đến nhiều GB, ước tính) | Chưa rõ (CC-BY-4.0 theo 1 index; chưa xác minh) | ★★ |
+| 16 | [Google Cluster Data 2019](https://github.com/google/cluster-data) | d | 8 cell Borg, 2.4 TiB nén (README GitHub) | CC-BY, qua BigQuery | ★ |
+| 17 | [AIOpsLab (Microsoft, MLSys 2025)](https://www.microsoft.com/en-us/research/publication/aiopslab-a-holistic-framework-for-evaluating-ai-agents-for-enabling-autonomous-cloud) | c (agent) | Khung triển khai microservice (DeathStarBench), chèn lỗi (ChaosMesh), xuất telemetry; ~48 problem (nguồn thứ cấp); không phải tệp dữ liệu (môi trường sinh sự cố), dung lượng: không áp dụng | Chưa xác minh | ★★★★ |
+| 18 | [ITBench (IBM)](https://researchweb.draco.res.ibm.com/publications/developing-ai-agents-for-it-automation-tasks-with-itbench) | c (agent) | 2 tầng: dataset tĩnh và môi trường live; số kịch bản SRE chưa xác minh; dung lượng: không tìm thấy | Chưa xác minh | ★★★ |
+| 19 | [SKAB (Skoltech)](https://github.com/waico/skab) | c | v0.9: 34 dataset có bất thường tập thể (testbed vật lý, đang dừng thu thập); dung lượng: không tìm thấy (nhỏ) | Chưa xác minh | ★★ |
 
 ### (a) Tiếng Việt / Việt Nam
 Không có. Tín hiệu hạ tầng không phụ thuộc ngôn ngữ; chỉ phần diễn giải/trả lời dùng tiếng Việt (prompt và đánh giá nội bộ).
@@ -66,31 +66,31 @@ Không có. Tín hiệu hạ tầng không phụ thuộc ngôn ngữ; chỉ ph�
 ### (b) TMĐT / miền liên quan (microservices thương mại)
 
 **RCAEval** — https://github.com/phamquiluan/RCAEval ; paper https://arxiv.org/pdf/2412.17015 ; Zenodo DOI 10.5281/zenodo.14590730.
-- RE1: 375 ca chỉ metric; RE2: 270 ca metric+log+trace; RE3: 90 ca lỗi mức mã. Hệ thống: Online Boutique (12 service, gRPC), Sock Shop (15, HTTP), Train Ticket (64). 15 baseline tái lập được.
+- RE1: 375 ca chỉ metric; RE2: 270 ca metric+log+trace; RE3: 90 ca lỗi mức mã. Hệ thống: Online Boutique (12 service, gRPC), Sock Shop (15, HTTP), Train Ticket (64). 15 baseline tái lập được. **Quy mô / dung lượng**: 735 ca; HF parquet ~3.4 GB, Zenodo 5.2 GB nén (~38 GB giải nén) (README).
 - Truy cập: HF Parquet (~3.4 GB, tải theo phần), Figshare, Zenodo (5.2 GB nén ~38 GB). License MIT cho code/dữ liệu của tác giả; baseline bên thứ ba có license riêng. Cảnh báo: schema cột RE1 không đồng nhất giữa hệ thống; tra cứu ngây thơ trả rỗng ở 250/375 ca (theo một nghiên cứu phân tích lại).
 - Dùng: validate RCA trên microservices TMĐT giống kiến trúc dự án. ★5.
 
-**AIOps Challenge 2022 (CCF/Tsinghua/CCB)** — mô tả qua https://arxiv.org/pdf/2406.19711 (CHASE): hệ thống e-commerce microservice mô phỏng, 40 instance trên 6 node, metric/log/trace, lỗi mức service/pod/node; thời điểm kết thúc lỗi không được cung cấp. Link tải chưa xác minh. ★4.
+**AIOps Challenge 2022 (CCF/Tsinghua/CCB)** — mô tả qua https://arxiv.org/pdf/2406.19711 (CHASE): hệ thống e-commerce microservice mô phỏng, 40 instance trên 6 node (số mẫu, dung lượng: không tìm thấy), metric/log/trace, lỗi mức service/pod/node; thời điểm kết thúc lỗi không được cung cấp. Link tải chưa xác minh. ★4.
 
-**Loghub** — https://github.com/logpai/loghub ; paper https://arxiv.org/pdf/2008.06448 : HDFS, Hadoop, Spark, Zookeeper, OpenStack, BGL, HPC, Thunderbird (nhãn alert theo cột đầu), Linux, Android, Apache, OpenSSH... Log thật không ẩn danh; chỉ cho nghiên cứu/học thuật. Không phải log Go/JSON của dự án. ★4.
+**Loghub** — https://github.com/logpai/loghub ; paper https://arxiv.org/pdf/2008.06448 : HDFS, Hadoop, Spark, Zookeeper, OpenStack, BGL, HPC, Thunderbird (nhãn alert theo cột đầu), Linux, Android, Apache, OpenSSH... Log thật không ẩn danh; chỉ cho nghiên cứu/học thuật. **Quy mô / dung lượng**: 19 bộ, >77 GB tổng (paper qua search); HDFS_1 11.2M dòng/1.47 GB. Không phải log Go/JSON của dự án. ★4.
 
 ### (c) Benchmark / paper học thuật
 
-**TSB-AD (NeurIPS 2024)** — https://github.com/TheDatumOrg/TSB-AD ; https://proceedings.neurips.cc/paper_files/paper/2024/file/c3f3c690b7a99fba16d0efd35cb83b2c-Paper-Datasets_and_Benchmarks_Track.pdf : 1070 chuỗi chất lượng cao từ 40 bộ, đánh giá 40 thuật toán, metric chính VUS-PR; danh sách đánh giá 350 chuỗi đơn biến và 180 đa biến; phát hiện: mô hình đơn giản/thống kê thường tốt. Quan hệ với TSB-UAD chưa xác minh (không thấy trang riêng). Lưu ý bài 2026 (https://arxiv.org/abs/2603.18985, qua search) báo PCA đạt kết quả tương đương OmniAnomaly trên SMD qua 100 lần lặp mỗi máy và có thể vượt khi không dùng point-adjustment: nên so baseline đơn giản. ★5.
+**TSB-AD (NeurIPS 2024)** — https://github.com/TheDatumOrg/TSB-AD ; https://proceedings.neurips.cc/paper_files/paper/2024/file/c3f3c690b7a99fba16d0efd35cb83b2c-Paper-Datasets_and_Benchmarks_Track.pdf : 1070 chuỗi chất lượng cao từ 40 bộ, đánh giá 40 thuật toán, metric chính VUS-PR; danh sách đánh giá 350 chuỗi đơn biến và 180 đa biến; dung lượng tải: không tìm thấy; phát hiện: mô hình đơn giản/thống kê thường tốt. Quan hệ với TSB-UAD chưa xác minh (không thấy trang riêng). Lưu ý bài 2026 (https://arxiv.org/abs/2603.18985, qua search) báo PCA đạt kết quả tương đương OmniAnomaly trên SMD qua 100 lần lặp mỗi máy và có thể vượt khi không dùng point-adjustment: nên so baseline đơn giản. ★5.
 
-**NAB** — https://github.com/numenta/NAB ; paper https://www.arxiv.org/pdf/1510.03336 : 58 chuỗi thực+nhân tạo có nhãn, điểm số thưởng phát hiện sớm. Code chuyển AGPL sang MIT (diễn đàn Numenta); kiểm tra LICENSE khi dùng. Nhỏ, cổ điển. ★4.
+**NAB** — https://github.com/numenta/NAB ; paper https://www.arxiv.org/pdf/1510.03336 : 58 file (365,551 điểm tổng, 1,000-22,000 điểm/file, paper qua search; dung lượng: không tìm thấy) thực+nhân tạo có nhãn, điểm số thưởng phát hiện sớm. Code chuyển AGPL sang MIT (diễn đàn Numenta); kiểm tra LICENSE khi dùng. Nhỏ, cổ điển. ★4.
 
-**SMD / SMAP / MSL** — https://github.com/NetManAIOps/OmniAnomaly : SMD 28 máy x 38 metric (Merlion ghi 33), tỉ lệ bất thường 4.16%, ~708K điểm train/test; SMAP 55 thực thể x 25 chiều; MSL 27 x 55 (con số hay bị hiểu nhầm, xem ESA benchmark https://arxiv.org/pdf/2406.17826 phê bình các bộ NASA). SMD gần nhất với metric máy chủ. ★5 (SMD), ★2 (SMAP/MSL). Cũng có trong Time-Series-Library (https://github.com/thuml/Time-Series-Library, MIT, liệt kê SMD/SMAP; MSL không thấy nêu).
+**SMD / SMAP / MSL** — https://github.com/NetManAIOps/OmniAnomaly : SMD 28 máy x 38 metric (Merlion ghi 33; 708,405 điểm train, 708,420 điểm test; dung lượng: không tìm thấy), tỉ lệ bất thường 4.16%, ~708K điểm train/test; SMAP 55 thực thể x 25 chiều; MSL 27 x 55 (con số hay bị hiểu nhầm, xem ESA benchmark https://arxiv.org/pdf/2406.17826 phê bình các bộ NASA). SMD gần nhất với metric máy chủ. ★5 (SMD), ★2 (SMAP/MSL). Cũng có trong Time-Series-Library (https://github.com/thuml/Time-Series-Library, MIT, liệt kê SMD/SMAP; MSL không thấy nêu).
 
-**Yahoo S5** — Webscope https://webscope.sandbox.yahoo.com/catalog.php?datatype=s&did=70 : A1 65 chuỗi traffic thật, A2-A4 100 chuỗi tổng hợp mỗi nhóm. Điều khoản chưa xác minh (không có trong kết quả search); có thể cần yêu cầu. ★2.
+**Yahoo S5** — Webscope https://webscope.sandbox.yahoo.com/catalog.php?datatype=s&did=70 : A1 65 chuỗi traffic thật, A2-A4 100 chuỗi tổng hợp mỗi nhóm; dung lượng: không tìm thấy. Điều khoản chưa xác minh (không có trong kết quả search); có thể cần yêu cầu. ★2.
 
-**OpenRCA** — https://github.com/microsoft/OpenRCA ; ICLR 2025 : 335 lỗi, 3 hệ thống (Telecom, Bank, Market với cloudbed-1/2), >68 GB log/metric/trace; tác tử RCA tốt nhất giải 11.34% (Claude 3.5); nghiên cứu AIOps 2026 báo 3.9%-12.5% trên 5 model. Cần ≥80 GB đĩa, 32 GB RAM; dữ liệu trên Google Drive. Dùng: **đo giới hạn LLM agent**. ★4.
+**OpenRCA** — https://github.com/microsoft/OpenRCA ; ICLR 2025 : 335 lỗi, 3 hệ thống (Telecom, Bank, Market với cloudbed-1/2), >68 GB log/metric/trace; tác tử RCA tốt nhất giải 11.34% (Claude 3.5); nghiên cứu AIOps 2026 báo 3.9%-12.5% trên 5 model. **Quy mô / dung lượng**: 335 lỗi, >68 GB; cần ≥80 GB đĩa, 32 GB RAM (README); dữ liệu trên Google Drive. Dùng: **đo giới hạn LLM agent**. ★4.
 
-**Exathlon** — https://github.com/exathlonbenchmark/exathlon ; https://arxiv.org/pdf/2010.05073 : vết job streaming Spark, 6 loại bất thường, nhãn khoảng nguyên nhân và khoảng hệ quả, hỗ trợ cả giải thích. ★3.
+**Exathlon** — https://github.com/exathlonbenchmark/exathlon ; https://arxiv.org/pdf/2010.05073 : vết job streaming Spark, 6 loại bất thường, nhãn khoảng nguyên nhân và khoảng hệ quả, hỗ trợ cả giải thích. Quy mô: ~100 lần chạy của 10 job, gần 100 bất thường (VLDB paper qua search); dung lượng: không tìm thấy. ★3.
 
-**LEMMA-RCA** — https://arxiv.org/abs/2406.05375 : tập RCA đa miền/đa phương thức (microservices, hệ thống nước...). Theo paper: 2 miền IT/OT, 4 tập con (Product Review, Cloud Computing microservices; SWaT, WADI hệ thống nước); license chưa xác minh (nguồn: kết quả search). ★3.
+**LEMMA-RCA** — https://arxiv.org/abs/2406.05375 : tập RCA đa miền/đa phương thức (microservices, hệ thống nước...). Theo paper: 2 miền IT/OT, 4 tập con (Product Review, Cloud Computing microservices; SWaT, WADI hệ thống nước); license chưa xác minh (nguồn: kết quả search). Quy mô: SWaT 11 ngày/51 cảm biến, WADI 16 ngày/123 cảm biến; dung lượng: không tìm thấy. ★3.
 
-**TrainTicketTrace** — https://conf.researchr.org/details/saner-2026/saner-2026-workshops-tutorials-track/43/ : trace/metric/log Train-Ticket sạch + 9 bản lỗi gieo. ★3.
+**TrainTicketTrace** — https://conf.researchr.org/details/saner-2026/saner-2026-workshops-tutorials-track/43/ : trace/metric/log Train-Ticket sạch + 9 bản lỗi gieo; số mẫu và dung lượng: không tìm thấy. ★3.
 
 **Benchmark LLM agent AIOps**: danh mục https://github.com/Jun-jie-Huang/awesome-LLM-AIOps. **AIOpsLab** (https://www.microsoft.com/en-us/research/publication/aiopslab-a-holistic-framework-for-evaluating-ai-agents-for-enabling-autonomous-cloud ; arXiv 2501.06706; MLSys 2025): khung triển khai môi trường microservice, chèn lỗi, sinh tải, xuất telemetry và giao diện cho agent; mã nguồn công khai (aka.ms/aiopslab-repo); testbed DeathStarBench + Kubernetes/Helm + ChaosMesh và 48 problem theo một bài review thứ cấp (nên đối chiếu paper). **ITBench** (IBM, https://researchweb.draco.res.ibm.com/publications/developing-ai-agents-for-it-automation-tasks-with-itbench): benchmark tự động hoá IT có log, metric, alert, trace; 2 tầng gồm dataset tĩnh nhẹ và môi trường live dạng gym; số kịch bản và license chưa xác minh. Cả hai là môi trường sinh sự cố, không phải bộ cảnh báo nhãn sẵn. Nguồn: kết quả search.
 

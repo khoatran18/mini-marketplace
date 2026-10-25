@@ -2,7 +2,7 @@
 
 > Tìm sản phẩm bằng mô tả tự nhiên, từ khoá không dấu, đồng nghĩa; kết hợp BM25 và vector, rồi rerank theo mức độ liên quan query–sản phẩm. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp: không mở được trực tiếp Kaggle/HuggingFace/arXiv (lỗi DNS của công cụ fetch); các trang GitHub (ESCI, WANDS, mMARCO, ViRE, JDsearch, SQID, Baidu-ULTR) được đọc trực tiếp, phần còn lại qua kết quả WebSearch. Điều gì không thấy trong nguồn được ghi **"chưa xác minh"**. Phạm vi: dữ liệu tiếng Anh/đa ngôn ngữ dùng được để chọn phương pháp (hybrid, rerank, LTR); dữ liệu tiếng Việt: tự tạo (mục 5) hoặc các benchmark retrieval Việt nêu ở mục (a).
+> Ghi chú phương pháp: không mở được trực tiếp Kaggle/HuggingFace/arXiv (lỗi DNS của công cụ fetch); các trang GitHub (ESCI, WANDS, mMARCO, ViRE, SQID) được đọc trực tiếp, phần còn lại qua kết quả WebSearch. Điều gì không thấy trong nguồn được ghi **"chưa xác minh"**. Phạm vi: dữ liệu tiếng Anh/đa ngôn ngữ dùng được để chọn phương pháp (hybrid, rerank, LTR); dữ liệu tiếng Việt: tự tạo (mục 5) hoặc các benchmark retrieval Việt nêu ở mục (a). Theo quy tắc ngôn ngữ của dự án (chỉ giữ tiếng Anh/tiếng Việt), đã loại JDsearch và Baidu-ULTR (tiếng Trung), KuaiSearch (nền tảng Kuaishou, văn bản tiếng Trung suy ra từ nguồn), Shopee Price Match (tiêu đề chủ yếu tiếng Indonesia); bộ đa ngôn ngữ (ESCI, Amazon-M2, mMARCO) chỉ dùng phần tiếng Anh (và Việt nếu có). Cột "Quy mô / dung lượng" nêu số mẫu và dung lượng tải; "không tìm thấy" nghĩa là README/kết quả search không nêu con số (không suy đoán); Kaggle/HuggingFace/arXiv không mở trực tiếp được nên các số mới lấy từ snippet search.
 
 | Liên quan | File |
 |---|---|
@@ -35,33 +35,29 @@
 - Retrieval: **Recall@K (K=10/50/100), MRR@10, nDCG@10**, MAP; với nhãn nhiều mức (Exact/Substitute/...) dùng nDCG có gain khác nhau (ví dụ E=1.0, S=0.1, C=0.01, I=0 như ESCI).
 - Quan hệ liên quan: F1/accuracy trên phân loại E/S/C/I; RMSE cho nhãn điểm (Home Depot).
 - Hệ thống: latency p95, tỉ lệ "không có kết quả" (zero-result rate), CTR kết quả đầu, search-to-cart, search-to-order (online).
-- Unbiased LTR: so sánh click-model vs. nhãn chuyên gia (kinh nghiệm Baidu-ULTR: cải thiện click prediction không chắc cải thiện ranking).
+- Unbiased LTR: so sánh click-model vs. nhãn chuyên gia (cải thiện click prediction không chắc cải thiện ranking).
 
 ## 4. Bộ dữ liệu
 
 ### Bảng tổng hợp
 
-| # | Bộ dữ liệu | Nhóm | Quy mô (theo nguồn) | Ngôn ngữ | License | ★ |
+| # | Bộ dữ liệu | Nhóm | Quy mô / dung lượng | Ngôn ngữ | License | ★ |
 |---|---|---|---|---|---|---|
-| 1 | [VN-MTEB (GreenNode + ĐH Quốc tế)](https://arxiv.org/pdf/2507.21500) | (a)/(c) | 41 dataset, 6 loại task | Việt | chưa xác minh | 4 |
-| 2 | [ViRE (multi-domain Vietnamese IR)](https://github.com/longstnguyen/ViRE) | (a)/(c) | 10 dataset + 2 bonus, tối đa 1.000 cặp/dataset | Việt | code MIT; dữ liệu theo từng bộ (EduCoQA, CSConDa CC BY-NC 4.0) | 4 |
-| 3 | [Vietnamese IR benchmark (PACLIC 2024)](https://aclanthology.org/2024.paclic-1.5) | (a)/(c) | chưa xác minh | Việt | chưa xác minh | 3 |
-| 4 | [mMARCO (có tiếng Việt: chưa xác minh)](https://github.com/unicamp-dl/mMARCO) | (a)/(c) | MS MARCO 8,8M passage, dịch máy | 14 ngôn ngữ (Việt chưa xác minh) | Apache-2.0 (repo); gốc MS MARCO phi thương mại | 3 |
-| 5 | [TVPL / Zalo Legal retrieval (Việt)](https://huggingface.co/datasets/GreenNode/TVPL-Retrieval) | (a)/(d) | TVPL: 165.334 query train, 10.000 test, 224.006 passage (theo paper) | Việt | chưa xác minh | 2 |
-| 6 | [Mô hình/dữ liệu Việt: product-e5-small-vietnamese, hllj/synthetic-text-embedding](https://huggingface.co/trantuan1701/product-e5-small-vietnamese) | (a) | chưa xác minh | Việt | chưa xác minh | 3 |
-| 7 | [Amazon ESCI Shopping Queries](https://github.com/amazon-science/esci-data) | (b) | 130.652 query, ~2,6M judgement (bản đầy đủ); 48.300 query/1.118.011 judgement (bản rút gọn) | Anh, Tây Ban Nha, Nhật | Apache-2.0 | 5 |
-| 8 | [WANDS (Wayfair)](https://github.com/wayfair/WANDS) | (b) | 480 query, 42.994 sản phẩm, 233.448 judgement | Anh | MIT | 5 |
-| 9 | [Home Depot Product Search Relevance (Kaggle)](https://nycdatascience.com/blog/student-works/improving-home-depot-search-relevance) | (b) | train 74.067 cặp, test ~166.693, 124.428 sản phẩm (đã xác minh, search) | Anh | điều khoản cuộc thi (chưa xác minh) | 3 |
-| 10 | [Amazon-M2 (KDD Cup 2023)](https://arxiv.org/pdf/2307.09688) | (b)/(d) | hàng triệu session, 6 locale | Anh, Đức, Nhật, Pháp, Ý, Tây Ban Nha | Apache-2.0 (theo paper) | 2 |
-| 11 | [Amazon Reviews 2023 (metadata)](https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023) | (b) | chưa xác minh | Anh | chưa xác minh | 2 |
-| 12 | [JDsearch (JD.com)](https://github.com/rucliujn/jdsearch) | (b) | ~173.831 user, 12,87M sản phẩm, ~26,7M tương tác, 171.728 query test | Trung (văn bản bị ẩn danh) | CC BY-NC-SA 4.0 (đã xác minh, GitHub) | 3 |
-| 13 | [Baidu-ULTR](https://arxiv.org/pdf/2207.03051v2) | (b)/(c) | 1,2 tỷ session; 7.008 query có nhãn chuyên gia (theo paper) | Trung | chưa xác minh; README: hiện không tải công khai được do hạn chế pháp lý với Baidu, phải xin link riêng | 3 |
-| 14 | [Shopee Price Match (Kaggle 2021)](https://github.com/jingxuanyang/Shopee-Product-Matching) | (d) | ~34K ảnh/tiêu đề, 11.014 nhóm | Chủ yếu Indonesia/Anh (chưa xác minh) | điều khoản cuộc thi (chưa xác minh) | 3 |
-| 15 | [Marqo e-commerce evals (HF)](https://huggingface.co/datasets/Marqo/amazon-products-eval) | (b)/(d) | amazon-products-eval 1M–10M; google-shopping-general-eval 100K–1M | Anh | chưa xác minh | 2 |
-| 16 | [MS MARCO / BEIR](https://microsoft.github.io/msmarco/) | (c) | 8,8M passage; 532.761 cặp train; BEIR 17–18 dataset | Anh | phi thương mại, nghiên cứu | 2 |
-| 18 | [Shopping Queries Image Dataset (SQID)](https://github.com/Crossing-Minds/shopping-queries-image-dataset) | (b) | >190.000 sản phẩm (164.900 từ ESCI test US + 27.139 bổ sung); URL ảnh 156.545 sản phẩm; CLIP embedding | Anh | MIT (đã xác minh, GitHub); dữ liệu gốc ESCI Apache-2.0 | 4 |
-| 19 | [TREC Product Search Track (2023–2025)](https://trec.nist.gov/data/product.html) | (c) | topics + qrels + corpus (số liệu chưa xác minh) | Anh | chưa xác minh | 3 |
-| 17 | [KuaiSearch (arXiv 2026)](https://arxiv.org/pdf/2602.11518v1) | (c) | chưa xác minh | Trung (chưa xác minh) | chưa xác minh | 2 |
+| 1 | [VN-MTEB (GreenNode + ĐH Quốc tế)](https://arxiv.org/pdf/2507.21500) | (a)/(c) | 41 dataset, 6 loại task (paper); số mẫu tổng và dung lượng: không tìm thấy | Việt | chưa xác minh | 4 |
+| 2 | [ViRE (multi-domain Vietnamese IR)](https://github.com/longstnguyen/ViRE) | (a)/(c) | 10 dataset + 2 bonus, tối đa 1.000 cặp/dataset (README GitHub), tức tối đa ~12.000 cặp (suy ra, ước tính); dung lượng: không tìm thấy (nhỏ) | Việt | code MIT; dữ liệu theo từng bộ (EduCoQA, CSConDa CC BY-NC 4.0) | 4 |
+| 3 | [Vietnamese IR benchmark (PACLIC 2024)](https://aclanthology.org/2024.paclic-1.5) | (a)/(c) | số mẫu và dung lượng: không tìm thấy | Việt | chưa xác minh | 3 |
+| 4 | [mMARCO (có tiếng Việt: chưa xác minh)](https://github.com/unicamp-dl/mMARCO) | (a)/(c) | MS MARCO gốc 8.841.823 passage (paper MS MARCO qua search), bản dịch giữ cùng quy mô mỗi ngôn ngữ; chỉ dùng phần Anh gốc và phần Việt (nếu có). Bản dịch Việt khác trên HF (5CD-AI/Vietnamese-msMARCO-ggtranslated): nhóm 10M–100M dòng (thẻ HF qua search). Dung lượng GB: không tìm thấy | Anh (gốc) + Việt (chưa xác minh trong mMARCO); bỏ các ngôn ngữ khác | Apache-2.0 (repo); gốc MS MARCO phi thương mại | 3 |
+| 5 | [TVPL / Zalo Legal retrieval (Việt)](https://huggingface.co/datasets/GreenNode/TVPL-Retrieval) | (a)/(d) | TVPL: 165.334 query train, 10.000 test, 224.006 passage (paper); dung lượng: không tìm thấy | Việt | chưa xác minh | 2 |
+| 6 | [Mô hình/dữ liệu Việt: product-e5-small-vietnamese, hllj/synthetic-text-embedding](https://huggingface.co/trantuan1701/product-e5-small-vietnamese) | (a) | số mẫu và dung lượng: không tìm thấy | Việt | chưa xác minh | 3 |
+| 7 | [Amazon ESCI Shopping Queries](https://github.com/amazon-science/esci-data) | (b) | Toàn bộ: 130.652 query, ~2,6M judgement (bản rút gọn 48.300 query/1.118.011 judgement) (README GitHub). **Chỉ dùng phần tiếng Anh**: ~97K query (74,9K train + 13,5K val + 8,9K test) và ~1,2M sản phẩm (bản mirror HF qua search, chưa kiểm trực tiếp). Dung lượng: không tìm thấy | Anh (dùng); bỏ Tây Ban Nha, Nhật | Apache-2.0 | 5 |
+| 8 | [WANDS (Wayfair)](https://github.com/wayfair/WANDS) | (b) | 480 query, 42.994 sản phẩm, 233.448 judgement (README GitHub); dung lượng MB: không tìm thấy (3 file CSV, clone trực tiếp từ git) | Anh | MIT | 5 |
+| 9 | [Home Depot Product Search Relevance (Kaggle)](https://nycdatascience.com/blog/student-works/improving-home-depot-search-relevance) | (b) | train 74.067 cặp, test ~166.693, 124.428 sản phẩm (đã xác minh, search); dung lượng: không tìm thấy | Anh | điều khoản cuộc thi (chưa xác minh) | 3 |
+| 10 | [Amazon-M2 (KDD Cup 2023)](https://arxiv.org/pdf/2307.09688) | (b)/(d) | 6 locale; **chỉ dùng phần tiếng Anh (UK)**. Toàn bộ: 3.606.249 session train, 361.659 test, 1.410.675 sản phẩm (paper NeurIPS qua search); riêng phần UK và dung lượng: không tìm thấy | Anh (UK, dùng); bỏ Đức, Nhật, Pháp, Ý, Tây Ban Nha | Apache-2.0 (theo paper) | 2 |
+| 11 | [Amazon Reviews 2023 (metadata)](https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023) | (b) | ~570M review, ~48M sản phẩm, 33 danh mục (thẻ HF qua search); dung lượng GB: không tìm thấy | Anh | chưa xác minh | 2 |
+| 12 | [Marqo e-commerce evals (HF)](https://huggingface.co/datasets/Marqo/amazon-products-eval) | (b)/(d) | amazon-products-eval nhóm 1M–10M dòng; google-shopping-general-eval nhóm 100K–1M (thẻ HF qua search; số chính xác và dung lượng: không tìm thấy) | Anh | chưa xác minh | 2 |
+| 13 | [MS MARCO / BEIR](https://microsoft.github.io/msmarco/) | (c) | 8.841.823 passage từ 3.563.535 tài liệu web (search); 532.761 cặp train; BEIR 17–18 dataset; dung lượng: không tìm thấy | Anh | phi thương mại, nghiên cứu | 2 |
+| 14 | [Shopping Queries Image Dataset (SQID)](https://github.com/Crossing-Minds/shopping-queries-image-dataset) | (b) | >190.000 sản phẩm (164.900 từ ESCI test US + 27.139 bổ sung); URL ảnh 156.545 sản phẩm; CLIP embedding (README GitHub); dung lượng: không tìm thấy | Anh | MIT (đã xác minh, GitHub); dữ liệu gốc ESCI Apache-2.0 | 4 |
+| 15 | [TREC Product Search Track (2023–2025)](https://trec.nist.gov/data/product.html) | (c) | topics + qrels + corpus; số liệu và dung lượng: không tìm thấy (chưa xác minh) | Anh | chưa xác minh | 3 |
 
 ### (a) Tiếng Việt / Việt Nam
 
@@ -73,7 +69,7 @@
 
 **Advancing Vietnamese Information Retrieval with Learning Objective and Benchmark** — arXiv 2503.07470 / ACL Anthology 2024.paclic-1.5. Benchmark retrieval tiếng Việt + objective huấn luyện; chi tiết dữ liệu và license **chưa xác minh**. ★3.
 
-**mMARCO** — https://github.com/unicamp-dl/mMARCO (đã đọc); HF `unicamp-dl/mmarco`. MS MARCO dịch máy sang 14 ngôn ngữ (bao gồm tiếng Anh gốc) bằng Helsinki-NLP opus-mt (một số phiên bản dùng Google Translate theo model card thứ cấp). Đã xác minh (GitHub): 14 ngôn ngữ gồm tiếng Anh gốc, bản hiện hành là v2 (v1 ở README_old.md); README không liệt kê ngôn ngữ nên **chưa xác minh có tiếng Việt**; một model card cross-encoder liệt kê `vi`. License repo Apache-2.0. Dùng cho pretrain/fine-tune cross-encoder tiếng Việt. ★3. Hạn chế: passage Wikipedia/web, không phải sản phẩm; dịch máy.
+**mMARCO** — https://github.com/unicamp-dl/mMARCO (đã đọc); HF `unicamp-dl/mmarco`. MS MARCO dịch máy sang 14 ngôn ngữ (bao gồm tiếng Anh gốc) bằng Helsinki-NLP opus-mt (một số phiên bản dùng Google Translate theo model card thứ cấp). Đã xác minh (GitHub): 14 ngôn ngữ gồm tiếng Anh gốc, bản hiện hành là v2 (v1 ở README_old.md); README không liệt kê ngôn ngữ nên **chưa xác minh có tiếng Việt**; một model card cross-encoder liệt kê `vi`. License repo Apache-2.0. Quy mô: MS MARCO gốc 8.841.823 passage; bản dịch giữ cùng quy mô mỗi ngôn ngữ; **chỉ dùng phần Anh gốc và Việt**, bỏ các ngôn ngữ khác; dung lượng GB: không tìm thấy. Dùng cho pretrain/fine-tune cross-encoder tiếng Việt. ★3. Hạn chế: passage Wikipedia/web, không phải sản phẩm; dịch máy.
 
 **TVPL / Zalo Legal Text Retrieval** — bài arXiv 2412.00657 mô tả TVPL (165.334 query train, 10.000 test, 224.006 passage) và Zalo Legal 2021; HF `GreenNode/TVPL-Retrieval` được nhắc đến. Chỉ dùng để thử encoder tiếng Việt (thuộc file 06). ★2.
 
@@ -81,19 +77,15 @@
 
 ### (b) TMĐT công khai
 
-**Amazon Shopping Queries (ESCI)** — https://github.com/amazon-science/esci-data (đã đọc); paper "Shopping Queries Dataset" (KDD Cup 2022; AICrowd). Bản rút gọn (Task 1): 48.300 query, 1.118.011 judgement; bản lớn (Task 2/3): 130.652 query, ~2,6M judgement (README ghi 2.621.738 trong văn bản và 2.621.288 trong bảng). Ngôn ngữ en/es/ja. Nhãn E/S/C/I. License Apache-2.0. Cột: `example_id, query, query_id, product_id, product_locale, esci_label, small_version, large_version, split`; bảng sản phẩm: `product_title, product_description, product_bullet_point, product_brand, product_color`. Ánh xạ: `product_title/description/brand`→`products.name/description/brand`; nhãn→ground truth rerank. ★5. Hạn chế: không có tiếng Việt; thị trường Amazon. Biến thể có ảnh: SQID (arXiv 2405.15190).
+**Amazon Shopping Queries (ESCI)** — https://github.com/amazon-science/esci-data (đã đọc); paper "Shopping Queries Dataset" (KDD Cup 2022; AICrowd). Bản rút gọn (Task 1): 48.300 query, 1.118.011 judgement; bản lớn (Task 2/3): 130.652 query, ~2,6M judgement (README ghi 2.621.738 trong văn bản và 2.621.288 trong bảng). Ngôn ngữ en/es/ja: **chỉ dùng phần tiếng Anh** (~97K query, ~1,2M sản phẩm theo bản mirror HF qua search; bỏ es, ja); dung lượng tải: không tìm thấy. Nhãn E/S/C/I. License Apache-2.0. Cột: `example_id, query, query_id, product_id, product_locale, esci_label, small_version, large_version, split`; bảng sản phẩm: `product_title, product_description, product_bullet_point, product_brand, product_color`. Ánh xạ: `product_title/description/brand`→`products.name/description/brand`; nhãn→ground truth rerank. ★5. Hạn chế: không có tiếng Việt; thị trường Amazon. Biến thể có ảnh: SQID (arXiv 2405.15190).
 
 **WANDS** — https://github.com/wayfair/WANDS (đã đọc). `product.csv` 42.994 sản phẩm (product_name, product_class, category_hierarchy, product_description, product_features dạng `attr:value|...`, rating_count, average_rating, review_count), `query.csv` 480 query (query_class), `label.csv` 233.448 judgement với nhãn Exact/Partial/Irrelevant. License MIT. Ánh xạ: product_features→`products.attributes`, category_hierarchy→`categories`. ★5 vì nhãn chuyên gia sạch, nhỏ, chạy nhanh trên laptop. Hạn chế: đồ nội thất Mỹ, tiếng Anh, chỉ 480 query.
 
 **Home Depot Product Search Relevance (Kaggle)** — cuộc thi 2016 (không mở được trang Kaggle; qua blog/paper). Nhãn relevance trung bình ≥3 người chấm, thang 1–3, hồi quy RMSE; đã xác minh (nguồn: WebSearch — towardsdatascience, NYC Data Science, báo cáo Stanford CS224D): train.csv 74.067 dòng, test ~166.693 (một nguồn ghi 166.694), 124.428 sản phẩm trong file mô tả. Điều khoản dữ liệu = luật cuộc thi (tải cần tài khoản Kaggle, chưa xác minh). ★3.
 
-**Amazon-M2** — arXiv 2307.09688 (NeurIPS 2023 D&B); tải từ AIcrowd. Session mua sắm đa locale (6 locale; en, de, ja, fr, it, es), phục vụ gợi ý và sinh tiêu đề; Apache-2.0 theo phụ lục bài báo. Dùng cho query-less session; ít liên quan search → ★2.
+**Amazon-M2** — arXiv 2307.09688 (NeurIPS 2023 D&B); tải từ AIcrowd. Session mua sắm đa locale (6 locale; en, de, ja, fr, it, es), **chỉ dùng phần tiếng Anh (UK)**; toàn bộ 3.606.249 session train, 361.659 test, 1.410.675 sản phẩm (qua search), riêng phần UK và dung lượng: không tìm thấy; phục vụ gợi ý và sinh tiêu đề; Apache-2.0 theo phụ lục bài báo. Dùng cho query-less session; ít liên quan search → ★2.
 
 **Amazon Reviews 2023** — https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023 : metadata (mô tả, giá, ảnh, bought-together) giúp tạo cặp tổng hợp (tiêu đề ↔ mô tả). ★2; số liệu/license **chưa xác minh**.
-
-**JDsearch** — https://github.com/rucliujn/jdsearch ; arXiv 2305.14810 (SIGIR 2023). Truy vấn thật + toàn bộ tương tác (click, cart, follow, purchase); README: 173.831 user, 12.872.636 item, 26.667.260 tương tác, 171.728 query test. Văn bản bị ẩn danh nên hạn chế cho mô hình ngữ nghĩa. Tải qua JD Cloud Disk (link có mật khẩu). License dữ liệu **CC BY-NC-SA 4.0**, repo Apache-2.0 (đã xác minh, GitHub). ★3 (cho personalized search/LTR).
-
-**Baidu-ULTR** — arXiv 2207.03051 (NeurIPS 2022 D&B). 1,2 tỷ session tìm kiếm; train ~383M query; 7.008 query/367.262 doc có nhãn chuyên gia; có `position`, chiều cao hiển thị. Dùng để thử khử position bias; ánh xạ `events_raw.position`. Đã xác minh (GitHub README): hiện không tải công khai được do hạn chế pháp lý với Baidu, phải email tác giả xin link riêng; README không nêu license/kích thước. ★3. Hạn chế: tiếng Trung, search web (không TMĐT); nghiên cứu lặp lại (arXiv 2404.02543) cho thấy các kỹ thuật ULTR phổ biến không cải thiện ranking rõ rệt.
 
 **Marqo e-commerce evals (HF)** — `Marqo/amazon-products-eval` (1M–10M dòng, ảnh+text), `Marqo/amazon-products-eval-100k`, `Marqo/google-shopping-general-eval`, `Marqo/marqo-general-ecommerce-eval`. Nguồn: Marqo (vendor), blog giới thiệu mô hình Marqo-Ecommerce-B/L; các số liệu là vendor-reported. Đã xác minh (nguồn: WebSearch): các repo `Marqo/marqo-general-ecommerce-eval` (nhóm 1M–10M, ảnh+text, có subset google_shopping) và `Marqo/google-shopping-general-eval` (100K–1M) tồn tại trên HF; không thấy license trong kết quả nên **license chưa xác minh**. ★2 (chủ yếu text-to-image).
 
@@ -101,11 +93,7 @@
 
 **MS MARCO / BEIR** — https://microsoft.github.io/msmarco/ ; arXiv 2104.08663 (BEIR). MS MARCO: 8,8M passage, 532.761 cặp train, dev 6.980 query; điều khoản chính thức: **phi thương mại, chỉ nghiên cứu** (một nguồn thứ cấp ghi MIT — mâu thuẫn, ưu tiên điều khoản chính thức). BEIR: 17–18 dataset zero-shot (tuỳ phiên bản). Dùng làm baseline nghiên cứu, không dùng để huấn luyện mô hình thương mại. ★2.
 
-**KuaiSearch** — arXiv 2602.11518 (2026): bộ dữ liệu search TMĐT quy mô lớn cho recall/rank/relevance. Chỉ thấy tiêu đề và nhận xét rằng JDsearch ẩn danh văn bản; kích thước, ngôn ngữ, license, nơi tải **chưa xác minh**. ★2.
-
 ### (d) Cuộc thi / công ty
-
-**Shopee — Price Match Guarantee (Kaggle 2021)** — ~34.251 ảnh JPEG, 11.014 lớp (nguồn thứ cấp); train.csv: `posting_id, image, image_phash, title, label_group`. Tiêu đề lẫn ngôn ngữ (Indonesia/Anh/Malay, chưa xác minh). Dùng cho entity matching/dedupe sản phẩm trùng. Điều khoản cuộc thi (chưa xác minh). ★3.
 
 **Shopping Queries Image Dataset (SQID)** — https://github.com/Crossing-Minds/shopping-queries-image-dataset (đã đọc). Bổ sung cho ESCI: URL ảnh (156.545 sản phẩm, ~95% của 164.900 sản phẩm lõi thuộc ESCI test US small; 442 mục trỏ tới ảnh nền chung), CLIP embedding (ViT-L/14) cho ảnh, query và tiêu đề, cộng 27.139 sản phẩm bổ sung. Tổng >190.000 sản phẩm. License MIT. Dùng thử multimodal/hybrid text+ảnh trên nền nhãn ESCI. ★4. Hạn chế: chỉ locale US, ảnh là URL có thể hỏng.
 
@@ -124,12 +112,12 @@
 1. **Bước 1:** WANDS + ESCI (small) để dựng harness đánh giá (nDCG@10), thử BM25 vs. dense vs. hybrid vs. rerank, chọn kiến trúc.
 2. **Bước 2:** VN-MTEB + ViRE (+ PACLIC benchmark) để chọn/so sánh encoder và reranker tiếng Việt; mMARCO (nếu có bản `vi`) để fine-tune rerank.
 3. **Bước 3:** tự dựng bộ vàng từ catalog thật (mục 5) – đây là thước đo chính cho go/no-go.
-4. **Bước 4:** LTR với tín hiệu hành vi; thử khử position bias (Baidu-ULTR để kiểm quy trình, nhưng đừng kỳ vọng nhiều).
+4. **Bước 4:** LTR với tín hiệu hành vi; thử khử position bias bằng `position` trong `events_raw` (dữ liệu công khai phù hợp: Open Bandit, xem file 01).
 5. **Bước 5:** A/B online (CTR, search-to-cart, zero-result rate).
 
 ## 7. Rủi ro, license, thiên lệch, lưu ý pháp lý/PII
 
-- Phi thương mại: MS MARCO, một số bộ ViRE (CC BY-NC), điều khoản cuộc thi Kaggle (Home Depot, Shopee). Thương mại được rõ: ESCI (Apache-2.0), WANDS (MIT) — vẫn cần giữ ghi công và kiểm lại LICENSE trước khi dùng.
+- Phi thương mại: MS MARCO, một số bộ ViRE (CC BY-NC), điều khoản cuộc thi Kaggle (Home Depot). Thương mại được rõ: ESCI (Apache-2.0), WANDS (MIT) — vẫn cần giữ ghi công và kiểm lại LICENSE trước khi dùng.
 - Không có dữ liệu TMĐT tiếng Việt công khai đủ lớn → rủi ro domain shift (tiếng Việt không dấu, tên thương hiệu, từ lóng); dịch máy làm sai sắc thái.
 - Thiên lệch: click bias/position bias/popularity; nhãn chuyên gia theo văn hoá Mỹ (Wayfair).
 - Query người dùng có thể chứa PII (số điện thoại, địa chỉ): lọc trước khi lưu/gửi cho LLM bên ngoài; chỉ dùng log khi `analytics_consent`.
@@ -152,11 +140,7 @@ Qua kết quả tìm kiếm (chưa mở trực tiếp trang gốc):
 - https://arxiv.org/pdf/2503.07470 ; https://aclanthology.org/2024.paclic-1.5
 - https://arxiv.org/pdf/2412.00657 (TVPL, Zalo Legal)
 - https://huggingface.co/trantuan1701/product-e5-small-vietnamese ; https://huggingface.co/AITeamVN/Vietnamese_Reranker
-- https://github.com/rucliujn/jdsearch ; https://arxiv.org/abs/2305.14810
-- https://arxiv.org/pdf/2207.03051v2 ; https://arxiv.org/pdf/2404.02543
 - https://microsoft.github.io/msmarco/ ; https://arxiv.org/pdf/2104.08663
-- https://arxiv.org/pdf/2602.11518v1 (KuaiSearch)
-- https://github.com/jingxuanyang/Shopee-Product-Matching ; https://wandb.ai/andrada/shopee-kaggle/reports/I-Shopee-Competition-EDA-and-Preprocessing--Vmlldzo1NDEzNzU
 - https://huggingface.co/datasets/Marqo/amazon-products-eval ; https://marqo.ai/blog/introducing-marqos-ecommerce-embedding-models
 
-Chưa xác minh: license của VN-MTEB, TVPL, JDsearch, Baidu-ULTR, KuaiSearch, Marqo; có hay không cấu hình tiếng Việt trong mMARCO; số dòng của Home Depot.
+Chưa xác minh: license của VN-MTEB, TVPL, Marqo; dung lượng tải của hầu hết bộ (search không trả về GB); có hay không cấu hình tiếng Việt trong mMARCO; số dòng của Home Depot.

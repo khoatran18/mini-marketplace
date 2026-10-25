@@ -20,7 +20,7 @@ flowchart TB
       PG[("postgres")]
       RD[("redis")]
       CH[("clickhouse")]
-      KF[("broker1, Kafka")]
+      KF[("broker1..3, Kafka")]
     end
     subgraph OBS["Stack marketplace-obs, observability.yml"]
       PM["prometheus"]
@@ -84,7 +84,7 @@ Cổng admin :8081 của mọi service Go, Prometheus và ClickHouse không có 
 | grafana | `grafana/grafana:11.3.0` | 3000 | – | 384 MB |
 | cadvisor / node-exporter | global | 8080 / 9100 | – | 256 MB / 128 MB |
 | postgres/redis/kafka-exporter | | 9187 / 9121 / 9308 | – | 64 MB mỗi cái |
-Profile `lite` cho máy yếu: ❌ chưa có.
+Profile `lite`: ✅ `services.lite.yml` + `infra.lite.yml` (Kafka 1 broker, RF 1).
 
 ## 3. Biến môi trường (thực tế)
 
@@ -113,7 +113,7 @@ Profile `lite` cho máy yếu: ❌ chưa có.
 - `TRUSTED_PROXIES` phải đúng (sai thì rate-limit và `ip_hash` sai).
 
 ## 5. Dữ liệu & sao lưu
-Volume: `postgres-data`, `redis-data`, `kafka-data`, `clickhouse-data`, `prometheus-data`, `grafana-data`, `loki-data`, `vector-data` (buffer đĩa 256 MB) (❌ `minio-data` chưa có). `pg_dump` DB `postgres`. ClickHouse là dữ liệu **dẫn xuất**: dựng lại được tối đa ~7 ngày từ Kafka; **script `backfill` từ service ❌ chưa làm**. Hướng dẫn sao lưu/khôi phục: [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md) §11.
+Volume: `postgres-data`, `redis-data`, `kafka-data-1..3`, `clickhouse-data`, `prometheus-data`, `grafana-data`, `loki-data`, `vector-data` (buffer đĩa 256 MB) (❌ `minio-data` chưa có). `pg_dump` DB `postgres`. ClickHouse là dữ liệu **dẫn xuất**: dựng lại được tối đa ~7 ngày từ Kafka; **script `backfill` từ service ❌ chưa làm**. Hướng dẫn sao lưu/khôi phục: [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md) §11.
 
 ## 6. CI/CD & kiểm thử
 

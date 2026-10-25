@@ -45,7 +45,7 @@ sequenceDiagram
 Scope không do client gửi nên seller không thể mở rộng sang store khác; Redis hỏng thì báo cáo vẫn chạy (chỉ tính lại).
 
 - **Tracking đi gRPC, không qua Kafka** (`tracking.events` không tồn tại – ADR-13).
-- Bộ đệm `Sink`: gom theo bảng, insert `JSONEachRow` mỗi `ANALYTICS_FLUSH_INTERVAL_MS` (2000) hoặc khi đủ `ANALYTICS_FLUSH_ROWS` (5000); lỗi thì giữ lại thử vòng sau; vượt `ANALYTICS_BUFFER_MAX_ROWS` (100000) thì **rớt dòng cũ nhất** và đếm. Dòng idempotent nên retry vô hại. Consumer Kafka commit khi dòng đã vào đệm.
+- Bộ đệm `Sink`: gom theo bảng, insert `JSONEachRow` mỗi `ANALYTICS_FLUSH_INTERVAL_MS` (2000) hoặc khi đủ `ANALYTICS_FLUSH_ROWS` (5000); lỗi thì giữ lại thử vòng sau; vượt `ANALYTICS_BUFFER_MAX_ROWS` (100000) thì dòng cũ nhất được ghi vào spool bền (`ANALYTICS_SPOOL_DIR`, file `spool.ndjson`, replay khi khởi động / khi ClickHouse về, cũng dùng khi SIGTERM) hoặc **rớt và đếm** nếu spool tắt / đầy (`ANALYTICS_SPOOL_MAX_MB`). Dòng idempotent nên retry vô hại. Consumer Kafka commit khi dòng đã vào đệm.
 - Consumer idempotent nhờ `ReplacingMergeTree` khoá theo id tự nhiên (ADR-14). Bảng: `events_raw`, `fact_order_status` (một dòng cho mỗi **(đơn, trạng thái)**), `fact_order_items`, `fact_payment_events`, `fact_refunds`, `dim_products`, `fact_inventory` ([02_DATA_MODEL.md](../02_DATA_MODEL.md) §3). **Không có materialized view**: mọi báo cáo gom bảng fact lúc truy vấn với `FINAL`.
 
 ### 1.2 Báo cáo (gateway: `/seller/analytics/*`, `/admin/analytics/*`; JSON: [04_API_REFERENCE.md](../04_API_REFERENCE.md) §9)

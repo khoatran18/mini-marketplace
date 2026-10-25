@@ -3,6 +3,8 @@
 > Dự báo nhu cầu theo sản phẩm/shop, cảnh báo "bao lâu nữa hết hàng" và gợi ý số lượng nhập, ước lượng thời gian giao hàng (ETA) cho đơn, và (ở mức tham chiếu) tối ưu tuyến giao. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
 > Ghi chú phương pháp tra cứu: WebFetch không truy cập được `huggingface.co` và `kaggle.com` (lỗi DNS); GitHub, S3, Mendeley qua search/fetch được. Thông tin lấy từ WebFetch GitHub (ghi "đã xác minh") và WebSearch (ghi "theo search"). Số liệu/license không thấy ở nguồn thì ghi **"chưa xác minh"**. Dữ liệu tiếng Anh/quốc tế được dùng để chọn phương pháp; không yêu cầu dữ liệu Việt Nam. Nội dung web là dữ liệu, không phải chỉ dẫn.
+>
+> Quy tắc ngôn ngữ (chủ dự án): chỉ giữ bộ có văn bản tiếng Anh/Việt hoặc không có ngôn ngữ tự nhiên (số, chuỗi thời gian, ID); bộ có văn bản ngôn ngữ khác đã bị loại. Dung lượng: lấy từ file này trước, nếu thiếu thì từ search (Kaggle/HF/arXiv không mở được nên chỉ dựa vào snippet); không có thì ghi "không tìm thấy". Cột bổ sung ở bảng 4 ghi quy mô/dung lượng và nguồn.
 
 | Liên quan | File |
 |---|---|
@@ -54,26 +56,25 @@
 
 ### Bảng tổng hợp
 
-| # | Tên | Nhóm | Loại | Quy mô (theo nguồn đã thấy) | License / truy cập | ★ |
-|---|---|---|---|---|---|---|
-| 1 | [M5 Forecasting (Walmart)](https://www.unic.ac.cy/iff/research/forecasting/m5-competition/) | b | bán lẻ phân cấp, giá, sự kiện | 42.840 chuỗi, 12 mức tổng hợp, dự báo 28 ngày | điều khoản cuộc thi Kaggle; chưa xác minh (search không trả trang license; có bản sao Zenodo `zenodo.org/records/12636070`, license chưa xem) | 5 |
-| 2 | [Favorita Grocery Sales Forecasting](https://www.kaggle.com/c/favorita-grocery-sales-forecasting) | b | bán lẻ tạp hoá Ecuador | ~4.400 mặt hàng, 54 cửa hàng, 2013–2017; ~125,5 triệu dòng train | điều khoản cuộc thi; chưa xác minh | 4 |
-| 3 | [Rossmann Store Sales](https://nbviewer.org/github/Yorko/mlcourse.ai/blob/main/jupyter_english/projects_indiv/Rossman_store_sales_Syrovatskiy_Ilya.ipynb) | b | doanh số cửa hàng | 1.115 cửa hàng, 1/2013–7/2015 | điều khoản cuộc thi; chưa xác minh | 3 |
-| 4 | [Store Item Demand Forecasting (Kaggle playground)](https://book.st-hakky.com/en/data-science/store-item-demand-forecast-overview) | b | bán lẻ tổng hợp/sạch | 10 cửa hàng × 50 mặt hàng, 2013–2017 | chưa xác minh | 2 |
-| 5 | [Online Retail II (UCI)](https://archive.ics.uci.edu/dataset/502/online+retail+ii) | b | giao dịch bán lẻ trực tuyến UK | 1.067.371 dòng, 12/2009–12/2011 | CC BY 4.0 (trang UCI) | 4 |
-| 6 | [Olist (đơn, giao hàng)](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) | b | đơn TMĐT + ngày giao ước tính/thực tế | ~100K đơn 2016–2018 | CC BY-NC-SA 4.0 (theo trí nhớ; search 2 lần không xác nhận; chưa xác minh) | 4 |
-| 7 | [Instacart Market Basket](https://github.com/archd3sai/Instacart-Market-Basket-Analysis) | b | giỏ hàng, tái mua | >3 triệu đơn, >200.000 người dùng | phi thương mại, "as-is", theo Terms & Conditions Instacart (đã xác minh, nguồn: blog tech.instacart.com qua search) | 3 |
-| 8 | [FreshRetailNet-50K](https://arxiv.org/abs/2505.16319v1) | c | nhu cầu bị kiểm duyệt do hết hàng | 50.000 chuỗi theo giờ, 898 cửa hàng, 18 thành phố | chưa xác minh (HF không mở được; search chỉ thấy bản sao nyb123/FreshRetailNet-50K, không có license) | 4 |
-| 9 | [Amazon Last Mile Routing Challenge](https://registry.opendata.aws/amazon-last-mile-challenges) | c | tuyến giao hàng | 9.184 tuyến, 5 vùng đô thị Mỹ (2018) | CC BY-NC 4.0 (theo bản sao DagsHub; chưa xác minh) | 2 |
-| 10 | [Tmall/Tianchi repeat buyers (IJCAI-15)](https://ira.lib.polyu.edu.hk/handle/10397/103877?mode=full) | b | hành vi mua lặp | log 6 tháng đến "Double Eleven" | chưa xác minh | 1 |
-| 11 | [Food delivery time (Kaggle, Ấn Độ ~45.000 bản ghi; bản "multi-factor")](https://arxiv.org/pdf/2503.15177) | b | ETA giao đồ ăn | ~45.000 bản ghi, 19 feature (1 bộ) | chưa xác minh | 2 |
-| 12 | [SynDelay](https://arxiv.org/pdf/2509.05325) | c | delay giao hàng tổng hợp | từ nguồn ~180.000 dòng | chưa xác minh | 2 |
-| 13 | [GIFT-Eval](https://github.com/SalesforceAIResearch/gift-eval) | c | benchmark foundation models | 23 dataset, >144.000 chuỗi, 177 triệu điểm | code Apache-2.0; dữ liệu `Salesforce/GiftEval` + `GiftEvalPretrain` trên HF (đã xác minh, nguồn: README GitHub); license dữ liệu chưa xác minh | 4 |
-| 14 | [Monash Time Series Forecasting Archive](https://arxiv.org/abs/2105.06643v1) | c | kho benchmark | 20 (arXiv v1) hay 25 (NeurIPS D&B) dataset; bản Zenodo mới có thể nhiều hơn (chưa xác minh) | CC BY 4.0 (theo loader HF, nguồn thứ cấp); Zenodo record 4656093 | 3 |
-| 15 | [M4](https://github.com/Mcompetitions/M4-methods) | c | benchmark | thư mục `Dataset` (Train/Test/Info) trong GitHub `Mcompetitions/M4-methods`; số chuỗi không nêu ở README (chưa xác minh) | license không ghi ở README; chưa xác minh | 3 |
-| 16 | Foundation models: Chronos-2, TimesFM, Moirai (chưa có link) | d | mô hình, không phải dữ liệu | – | xem mục 4d | 3 |
-| 17 | [DataCo Smart Supply Chain](https://data.mendeley.com/datasets/8gx2fvg2k6) | b | đơn TMĐT + giao hàng/chuỗi cung ứng | ~180K dòng đơn (README Mendeley: `DataCoSupplyChainDataset.csv`; số chính xác chưa xác minh) + `tokenized_access_logs.csv` (469.977 dòng, theo bản Kaggle mirror) | CC BY 4.0 (đã xác minh, nguồn: trang so sánh phiên bản Mendeley, v5) | 3 |
-| 18 | [Nixtla `datasetsforecast` (loader)](https://github.com/Nixtla/datasetsforecast) | c | thư viện tải M3/M4/M5/Favorita/Hierarchical/Long-horizon/PHM2008 | – | loader MIT (đã xác minh, nguồn: GitHub); license từng dataset: xem THIRD_PARTY_LICENSES | 3 |
+| # | Tên | Nhóm | Loại | Quy mô (theo nguồn đã thấy) | Dung lượng / số mẫu bổ sung (nguồn) | License / truy cập | ★ |
+|---|---|---|---|---|---|---|---|
+| 1 | [M5 Forecasting (Walmart)](https://www.unic.ac.cy/iff/research/forecasting/m5-competition/) | b | bán lẻ phân cấp, giá, sự kiện | 42.840 chuỗi, 12 mức tổng hợp, dự báo 28 ngày | Dung lượng: không tìm thấy (search không trả; xem tab Data của Kaggle). Ước tính ~59 triệu điểm (30.490 chuỗi × 1.941 ngày) | điều khoản cuộc thi Kaggle; chưa xác minh (search không trả trang license; có bản sao Zenodo `zenodo.org/records/12636070`, license chưa xem) | 5 |
+| 2 | [Favorita Grocery Sales Forecasting](https://www.kaggle.com/c/favorita-grocery-sales-forecasting) | b | bán lẻ tạp hoá Ecuador | ~4.400 mặt hàng, 54 cửa hàng, 2013–2017; ~125,5 triệu dòng train | `train.csv` ~4,65 GB (bài forum fast.ai qua search); tổng dung lượng tải: không tìm thấy | điều khoản cuộc thi; chưa xác minh | 4 |
+| 3 | [Rossmann Store Sales](https://nbviewer.org/github/Yorko/mlcourse.ai/blob/main/jupyter_english/projects_indiv/Rossman_store_sales_Syrovatskiy_Ilya.ipynb) | b | doanh số cửa hàng | 1.115 cửa hàng, 1/2013–7/2015 | Dung lượng: không tìm thấy; ~1,0 triệu dòng train (theo trí nhớ, chưa xác minh) | điều khoản cuộc thi; chưa xác minh | 3 |
+| 4 | [Store Item Demand Forecasting (Kaggle playground)](https://book.st-hakky.com/en/data-science/store-item-demand-forecast-overview) | b | bán lẻ tổng hợp/sạch | 10 cửa hàng × 50 mặt hàng, 2013–2017 | Dung lượng: không tìm thấy; ~913.000 dòng (10×50×1.826 ngày, ước tính) | chưa xác minh | 2 |
+| 5 | [Online Retail II (UCI)](https://archive.ics.uci.edu/dataset/502/online+retail+ii) | b | giao dịch bán lẻ trực tuyến UK | 1.067.371 dòng, 12/2009–12/2011 | 43,5 MB (`online_retail_II.xlsx`, trang UCI qua search) | CC BY 4.0 (trang UCI) | 4 |
+| 7 | [Instacart Market Basket](https://github.com/archd3sai/Instacart-Market-Basket-Analysis) | b | giỏ hàng, tái mua | >3 triệu đơn, >200.000 người dùng | Dung lượng: không tìm thấy; ~3,4 triệu đơn, 32.434.489 dòng `order_products__prior` (search) | phi thương mại, "as-is", theo Terms & Conditions Instacart (đã xác minh, nguồn: blog tech.instacart.com qua search) | 3 |
+| 8 | [FreshRetailNet-50K](https://arxiv.org/abs/2505.16319v1) | c | nhu cầu bị kiểm duyệt do hết hàng | 50.000 chuỗi theo giờ, 898 cửa hàng, 18 thành phố | Dung lượng: không tìm thấy; ~4,85 triệu dòng (viewer HF qua search); nhóm 1M–10M bản ghi (thẻ HF qua search) | CC BY 4.0 (thẻ HF qua search, trên bản sao `sky5268`, đánh dấu trùng với `Dingdong-Inc`; chưa xác minh trên bản gốc) | 4 |
+| 9 | [Amazon Last Mile Routing Challenge](https://registry.opendata.aws/amazon-last-mile-challenges) | c | tuyến giao hàng | 9.184 tuyến, 5 vùng đô thị Mỹ (2018) | Dung lượng: không tìm thấy (có thể đo bằng `aws s3 ls --summarize --human-readable --recursive s3://amazon-last-mile-challenges`); 6.112 tuyến train + 3.072 tuyến eval (search) | CC BY-NC 4.0 (theo bản sao DagsHub; chưa xác minh) | 2 |
+| 10 | [Tmall/Tianchi repeat buyers (IJCAI-15)](https://ira.lib.polyu.edu.hk/handle/10397/103877?mode=full) | b | hành vi mua lặp | log 6 tháng đến "Double Eleven" | Dung lượng: không tìm thấy | chưa xác minh | 1 |
+| 11 | [Food delivery time (Kaggle, Ấn Độ ~45.000 bản ghi; bản "multi-factor")](https://arxiv.org/pdf/2503.15177) | b | ETA giao đồ ăn | ~45.000 bản ghi, 19 feature (1 bộ) | Dung lượng: không tìm thấy; ~45.000 bản ghi | chưa xác minh | 2 |
+| 12 | [SynDelay](https://arxiv.org/pdf/2509.05325) | c | delay giao hàng tổng hợp | từ nguồn ~180.000 dòng | Dung lượng: không tìm thấy; ~180.000 dòng | chưa xác minh | 2 |
+| 13 | [GIFT-Eval](https://github.com/SalesforceAIResearch/gift-eval) | c | benchmark foundation models | 23 dataset, >144.000 chuỗi, 177 triệu điểm | Dung lượng tổng: không tìm thấy; file lẻ từ ~96 kB đến ~208 MB (HF qua search); nhóm 100K–1M (GiftEval) và 1M–10M (Pretrain) bản ghi | code Apache-2.0; dữ liệu `Salesforce/GiftEval` + `GiftEvalPretrain` trên HF (đã xác minh, nguồn: README GitHub); license dữ liệu chưa xác minh | 4 |
+| 14 | [Monash Time Series Forecasting Archive](https://arxiv.org/abs/2105.06643v1) | c | kho benchmark | 20 (arXiv v1) hay 25 (NeurIPS D&B) dataset; bản Zenodo mới có thể nhiều hơn (chưa xác minh) | Dung lượng: không tìm thấy | CC BY 4.0 (theo loader HF, nguồn thứ cấp); Zenodo record 4656093 | 3 |
+| 15 | [M4](https://github.com/Mcompetitions/M4-methods) | c | benchmark | thư mục `Dataset` (Train/Test/Info) trong GitHub `Mcompetitions/M4-methods`; số chuỗi không nêu ở README (chưa xác minh) | Dung lượng: không tìm thấy | license không ghi ở README; chưa xác minh | 3 |
+| 16 | Foundation models: Chronos-2, TimesFM, Moirai (chưa có link) | d | mô hình, không phải dữ liệu | – | – | xem mục 4d | 3 |
+| 17 | [DataCo Smart Supply Chain](https://data.mendeley.com/datasets/8gx2fvg2k6) | b | đơn TMĐT + giao hàng/chuỗi cung ứng | ~180K dòng đơn (README Mendeley: `DataCoSupplyChainDataset.csv`; số chính xác chưa xác minh) + `tokenized_access_logs.csv` (469.977 dòng, theo bản Kaggle mirror) | 180.519 dòng (Research Square qua search); `tokenized_access_logs.csv` 4,24 MB (Kaggle mirror qua search); CSV chính: dung lượng không tìm thấy | CC BY 4.0 (đã xác minh, nguồn: trang so sánh phiên bản Mendeley, v5) | 3 |
+| 18 | [Nixtla `datasetsforecast` (loader)](https://github.com/Nixtla/datasetsforecast) | c | thư viện tải M3/M4/M5/Favorita/Hierarchical/Long-horizon/PHM2008 | – | – | loader MIT (đã xác minh, nguồn: GitHub); license từng dataset: xem THIRD_PARTY_LICENSES | 3 |
 
 ### (a) Dữ liệu Việt Nam (ghi chú)
 
@@ -85,6 +86,7 @@ Chủ dự án xác nhận không cần bộ dữ liệu tiếng Việt: dùng d
 - Link: [trang cuộc thi M5 (ĐH Nicosia)](https://www.unic.ac.cy/iff/research/forecasting/m5-competition/), [bài kết quả](https://pure.unic.ac.cy/en/publications/m5-accuracy-competition-results-findings-and-conclusions/), bản PDF [M5 accuracy competition](https://statmodeling.stat.columbia.edu/wp-content/uploads/2021/10/M5_accuracy_competition.pdf); trang Kaggle: chưa mở.
 - 42.840 chuỗi doanh số đơn vị theo ngày của Walmart, 12 mức tổng hợp (mặt hàng, phòng, danh mục, cửa hàng, bang CA/TX/WI), dự báo 28 ngày (30.490 chuỗi mức thấp nhất); kèm giá, khuyến mãi, thứ trong tuần, sự kiện (Super Bowl, Lễ Tình nhân, Easter chính thống…). Phần lớn chuỗi ngắt quãng. Chạy 2/3–30/6/2020. Mốc chia chuẩn (một nguồn): huấn luyện đến 24/4/2016, validation tới 22/5/2016, test tới 19/6/2016. Metric chính WRMSSE; có track phân vị (pinball loss 9 mức). License: chưa xác minh.
 - Cột (theo mô tả cuộc thi, chưa xác minh tên file): chuỗi bán theo ngày, lịch có sự kiện, giá theo tuần/cửa hàng.
+- Ngôn ngữ: dữ liệu số (doanh số, giá, lịch) nên giữ nguyên.
 - Ánh xạ: `item_id` ↔ `product_id`; `dept/cat` ↔ `category_id`; `store` ↔ `store_id`; `sell_price` ↔ `unit_price_minor`; `snap/event` ↔ lịch Tết/ngày đôi.
 - ★5. Hạn chế: dữ liệu bán lẻ vật lý Mỹ, không có kênh online/tracking; không có hết hàng rõ ràng.
 
@@ -100,9 +102,6 @@ Chủ dự án xác nhận không cần bộ dữ liệu tiếng Việt: dùng d
 **5. Online Retail II (UCI)**
 - Link: [UCI 502](https://archive.ics.uci.edu/dataset/502/online+retail+ii). 1.067.371 dòng giao dịch của một nhà bán lẻ online ở UK, 12/2009–12/2011, **CC BY 4.0** (trang UCI; bản OpenML ghi CC0 — dùng theo UCI); trích dẫn Chen, D. (2012), DOI 10.24432/C5CG6D. Cột: mã hoá đơn, mã sản phẩm, mô tả, số lượng, thời điểm, đơn giá, mã khách, quốc gia (tên cột chính xác: chưa xác minh trong phiên). Dùng: dữ liệu giao dịch TMĐT thật gần nhất (có hoá đơn trả hàng âm); ánh xạ `Invoice` ↔ `order_id`, `StockCode` ↔ `product_id`, `Quantity` ↔ `qty`, `Price` ↔ `unit_price_minor`. ★4. Hạn chế: nhà bán sỉ/quà tặng, nhiều SKU thưa; không có tồn kho/giao hàng.
 
-**6. Olist**
-- Kaggle [`olistbr/brazilian-ecommerce`](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) (chưa mở). ~100K đơn 2016–2018 nhiều marketplace Brazil, đã ẩn danh; có trạng thái đơn, giá, vận chuyển, địa chỉ, thuộc tính sản phẩm, review. Cho ETA: dùng ngày mua, `order_estimated_delivery_date`, ngày giao thực tế (`delivered_customer_date`). Một nghiên cứu giữ 96.470 đơn giao hợp lệ trên 99.441, 7.826 đơn trễ ([arXiv 2607.18573](https://arxiv.org/pdf/2607.18573)). Mẹo: nhãn trễ định nghĩa theo hai cột ngày; ngày ước tính là tín hiệu mạnh nên cẩn thận rò rỉ khi dự đoán thời gian giao thực. ★4 cho ETA, ★3 cho cầu. Hạn chế: Brazil; nhãn "ngày giao" không đo bằng GPS; license CC BY-NC-SA 4.0 theo trí nhớ, **chưa xác minh**.
-
 **7. Instacart Market Basket**
 - >3 triệu đơn, >200.000 người dùng (ẩn danh), có cờ `reordered`; nguồn: cuộc thi Kaggle 2017 ([một repo mô tả](https://github.com/archd3sai/Instacart-Market-Basket-Analysis)). License: chưa xác minh (một thư viện ghi "research use" thứ cấp). Dùng: chu kỳ mua lặp (hàng tiêu dùng) -> phát hiện khi nào khách cần mua lại và dự báo cầu lặp. ★3. Hạn chế: không có tồn kho/giá/thời gian giao.
 
@@ -112,7 +111,7 @@ Chủ dự án xác nhận không cần bộ dữ liệu tiếng Việt: dùng d
 ### (c) Benchmark / bài báo học thuật
 
 **9. FreshRetailNet-50K**
-- Link: [arXiv 2505.16319](https://arxiv.org/abs/2505.16319v1) (xem thêm [bản tổng hợp](https://sotaverified.org/papers/freshretailnet-50k-a-stockout-annotated)). 50.000 chuỗi cửa hàng–sản phẩm bán hàng tươi theo giờ, 898 cửa hàng/18 thành phố, **có trạng thái tồn từng giờ** để tách "không có cầu" khỏi "hết hàng". Dùng: duy nhất bộ công khai ánh xạ trực tiếp ý tưởng `fact_inventory.level` -> nhu cầu bị kiểm duyệt. ★4. Hạn chế: hàng tươi Trung Quốc (chưa xác minh chi tiết); license chưa xác minh; chưa tìm được trang tải.
+- Link: [arXiv 2505.16319](https://arxiv.org/abs/2505.16319v1) (xem thêm [bản tổng hợp](https://sotaverified.org/papers/freshretailnet-50k-a-stockout-annotated)). 50.000 chuỗi cửa hàng–sản phẩm bán hàng tươi theo giờ, 898 cửa hàng/18 thành phố, **có trạng thái tồn từng giờ** để tách "không có cầu" khỏi "hết hàng". Dùng: duy nhất bộ công khai ánh xạ trực tiếp ý tưởng `fact_inventory.level` -> nhu cầu bị kiểm duyệt. ★4. Hạn chế: hàng tươi Trung Quốc (chưa xác minh chi tiết); dữ liệu số theo giờ, không có văn bản tự nhiên nên không bị ràng buộc ngôn ngữ; license CC BY 4.0 theo thẻ HF qua search; chưa mở được trang tải. 898 cửa hàng/18 thành phố, 865 SKU hàng tươi, chuỗi 90 ngày theo giờ (thẻ HF qua search).
 
 **10. Amazon Last Mile Routing Research Challenge**
 - Link: [AWS Open Data](https://registry.opendata.aws/amazon-last-mile-challenges), [MIT challenge](https://routingchallenge.mit.edu/routing-challenge-dataset-now-publicly-available), [PDF mô tả dữ liệu](https://cdn.amazon.science/1f/02/349d1f594f8d8f97b21ebc02c7b2/2021-amazon-last-mile-routing-research-challenge-data-set.pdf). Mức tuyến/điểm dừng/gói của 9.184 tuyến tài xế Amazon năm 2018 tại 5 vùng đô thị Mỹ, ID đã tái sinh ngẫu nhiên, vị trí bị làm mờ. License: bản sao DagsHub ghi CC BY-NC 4.0 và bản quyền Amazon — **chưa xác minh trên trang chính thức**; phi thương mại. Trích dẫn: Merchán và cộng sự, Transportation Science 2022, DOI 10.1287/trsc.2022.1173. ★2 (ta chưa tự vận hành giao hàng; dùng khi có module tuyến).
@@ -155,13 +154,13 @@ Chủ dự án xác nhận không cần bộ dữ liệu tiếng Việt: dùng d
 1. **Giai đoạn 0:** dựng pipeline đánh giá (rolling-origin, WRMSSE/pinball) trên M5 và Favorita; thử seasonal naive, Croston, LightGBM, và một foundation model (Chronos) làm baseline.
 2. **Giai đoạn 1:** thử logic stockout/censored demand trên FreshRetailNet-50K (nếu tải được) và trên synthetic có cầu thật.
 3. **Giai đoạn 2:** áp lên `fact_order_items` + `fact_inventory` của hệ thống (demo rồi thật): cảnh báo `days_of_cover`, gợi ý `reorder_qty`; mô phỏng chính sách để đo chi phí.
-4. **Giai đoạn 3 (ETA):** baseline theo trung vị tuyến trên Olist để chọn feature/mô hình, rồi huấn luyện lại trên `orders.shipped_at/delivered_at` thật; xử lý nhãn `AUTO_DELIVER_DAYS`.
+4. **Giai đoạn 3 (ETA):** baseline theo trung vị tuyến trên DataCo/dữ liệu synthetic (mục 5) để chọn feature/mô hình, rồi huấn luyện lại trên `orders.shipped_at/delivered_at` thật; xử lý nhãn `AUTO_DELIVER_DAYS`.
 5. **Giai đoạn 4:** tín hiệu sớm từ `events_raw` (view/cart) cải thiện dự báo ngắn hạn; tuyến giao (Amazon Last Mile) chỉ khi có nhu cầu.
 
 ## 7. Rủi ro, license, thiên lệch, lưu ý pháp lý/PII
 
-- **License hạn chế thương mại:** Olist (nhớ là NC-SA), Amazon Last Mile (NC theo bản sao), TimesFM 3.0/Moirai (non-commercial); M5/Favorita/Instacart/TalkingData là dữ liệu cuộc thi — đọc điều khoản. Online Retail II (CC BY 4.0) rõ ràng nhất.
-- **Domain gap:** M5/Favorita/Rossmann là cửa hàng vật lý; Olist là Brazil; ETA ở Việt Nam phụ thuộc hãng vận chuyển, ngoại thành/nông thôn, mùa mưa, Tết — ngoài phân bố các bộ công khai.
+- **License hạn chế thương mại:** Amazon Last Mile (NC theo bản sao), TimesFM 3.0/Moirai (non-commercial); M5/Favorita/Instacart/TalkingData là dữ liệu cuộc thi — đọc điều khoản. Online Retail II (CC BY 4.0) rõ ràng nhất.
+- **Domain gap:** M5/Favorita/Rossmann là cửa hàng vật lý; ETA ở Việt Nam phụ thuộc hãng vận chuyển, ngoại thành/nông thôn, mùa mưa, Tết — ngoài phân bố các bộ công khai.
 - **Stockout bias:** huấn luyện trên doanh số quan sát khi hết hàng sẽ dự báo thấp (dự báo "lượng bán" thay vì "nhu cầu").
 - **Nhãn ETA nhiễu:** `delivered_at` có thể là xác nhận tự động; thiếu GPS/mốc hãng vận chuyển.
 - **Hierarchical/tổng hợp:** WRMSSE bị chi phối bởi tầng trên; shop nhỏ có series thưa nên cần chỉ số riêng.
@@ -176,7 +175,6 @@ Chủ dự án xác nhận không cần bộ dữ liệu tiếng Việt: dùng d
 - Rossmann: https://nbviewer.org/github/Yorko/mlcourse.ai/blob/main/jupyter_english/projects_indiv/Rossman_store_sales_Syrovatskiy_Ilya.ipynb ; https://nycdatascience.com/blog/student-works/gradient-boosters-and-the-rossmann-project
 - Store Item: https://book.st-hakky.com/en/data-science/store-item-demand-forecast-overview
 - Online Retail II: https://archive.ics.uci.edu/dataset/502/online+retail+ii
-- Olist: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce (chưa mở) ; https://arxiv.org/pdf/2607.18573
 - Instacart: https://github.com/archd3sai/Instacart-Market-Basket-Analysis
 - FreshRetailNet-50K: https://arxiv.org/abs/2505.16319v1
 - Amazon Last Mile: https://registry.opendata.aws/amazon-last-mile-challenges ; https://routingchallenge.mit.edu/routing-challenge-dataset-now-publicly-available ; https://cdn.amazon.science/1f/02/349d1f594f8d8f97b21ebc02c7b2/2021-amazon-last-mile-routing-research-challenge-data-set.pdf
@@ -186,4 +184,4 @@ Chủ dự án xác nhận không cần bộ dữ liệu tiếng Việt: dùng d
 - Foundation models: https://www.beri.net/article/timesfm-vs-chronos-vs-moirai-time-series-foundation-model-licence-bigquery-sagemaker-cost-2026 ; https://www.kdnuggets.com/5-time-series-foundation-models-you-are-missing-out-on
 - Phân cấp/xác suất: https://arxiv.org/pdf/2606.26774 ; https://arxiv.org/pdf/2103.08250
 - Tmall repeat buyers (thứ cấp): https://ira.lib.polyu.edu.hk/handle/10397/103877?mode=full
-- Chưa tra được: Dunnhumby, Walmart Recruiting; license chính thức trên Kaggle của M5/Favorita/Rossmann/Olist (Kaggle không mở được); không cần dataset bán lẻ Việt Nam (xem mục (a)). Thêm nguồn: [DataCo](https://data.mendeley.com/datasets/8gx2fvg2k6), [M4-methods](https://github.com/Mcompetitions/M4-methods), [datasetsforecast](https://github.com/Nixtla/datasetsforecast), [Instacart blog](https://tech.instacart.com/3-million-instacart-orders-open-sourced-d40d29ead6f2).
+- Chưa tra được: Dunnhumby, Walmart Recruiting; license chính thức trên Kaggle của M5/Favorita/Rossmann (Kaggle không mở được); không cần dataset bán lẻ Việt Nam (xem mục (a)). Thêm nguồn: [DataCo](https://data.mendeley.com/datasets/8gx2fvg2k6), [M4-methods](https://github.com/Mcompetitions/M4-methods), [datasetsforecast](https://github.com/Nixtla/datasetsforecast), [Instacart blog](https://tech.instacart.com/3-million-instacart-orders-open-sourced-d40d29ead6f2).

@@ -30,14 +30,14 @@ Details: [`docs/overview/01_SYSTEM_OVERVIEW.md`](docs/overview/01_SYSTEM_OVERVIE
 
 ```bash
 cp deploy/.env.example deploy/.env     # set POSTGRES_PASSWORD, JWT_SECRET, TRAEFIK_DASHBOARD_USERS, GRAFANA_ADMIN_PASSWORD, CLICKHOUSE_PASSWORD, PAYMENT_WEBHOOK_SECRET
-./scripts/gen-dev-certs.sh             # self-signed TLS for *.marketplace.swarm.localhost
+# ./scripts/gen-dev-certs.sh          # only for HTTPS (PUBLIC_SCHEME=https); default is plain HTTP
 ./scripts/build-images.sh              # builds marketplace/<service>:latest
 docker swarm init
 ./scripts/deploy.sh                    # infra stack, then application stack
 ```
 
 Add `127.0.0.1 marketplace.swarm.localhost api.marketplace.swarm.localhost dashboard.marketplace.swarm.localhost`
-to `/etc/hosts`, open <https://marketplace.swarm.localhost>. Set `SEED_DEMO_DATA=true` in `deploy/.env` for demo
+to `/etc/hosts`, open <http://marketplace.swarm.localhost>. Set `SEED_DEMO_DATA=true` in `deploy/.env` for demo
 accounts (`buyer1` / `seller1`, password `password`) and sample products.
 
 ## Development

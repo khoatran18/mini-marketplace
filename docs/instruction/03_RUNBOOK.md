@@ -29,7 +29,7 @@ flowchart TD
 
 Chỉ khi process chết/treo thì container mới bị restart; dependency hỏng chỉ làm `/ready` 503 hoặc `degraded`.
 
-Dependency nào làm service nào 503 (nét liền = critical, nét đứt = non-critical, chỉ vẽ quan hệ giữa các service và Postgres/ClickHouse; **Kafka là critical với cả 7 service**, **Redis là non-critical với mọi service**):
+Dependency nào làm service nào 503 (nét liền = critical, nét đứt = non-critical, chỉ vẽ quan hệ giữa các service và Postgres/ClickHouse; **Kafka là non-critical với cả 7 service** (đổi 2026-10-26: trước đó critical nên Kafka sập làm Traefik bỏ cả gateway và `POST /orders` 503 dù outbox đủ sức nhận đơn; giờ `/ready` chỉ báo `degraded`), **Redis là non-critical với mọi service**):
 
 ```mermaid
 flowchart LR
@@ -75,7 +75,7 @@ Chỉ xem, **không có cảnh báo/ thông báo** – người vận hành tự
 | **Containers & hosts** | cAdvisor theo swarm service: CPU cores, RAM working set, **RAM % so với limit**, mạng, số lần restart 1 giờ; node-exporter: CPU %, RAM %, disk %, load, mạng, I/O | RAM % sát 100 (OOM-kill, restart tăng); disk `/` > 80 % |
 | **Kafka · Postgres · Redis · Traefik** | lag theo `consumergroup, topic` (kafka-exporter); msg/s; Postgres: connections vs max, tps, commit/rollback, cache hit; Redis: RAM, ops/s, clients; Traefik: req/s & 5xx theo service | lag tăng đều (consumer chết/chậm); cache hit thấp; connections gần `max_connections` |
 | **ClickHouse server** | (endpoint Prometheus built-in `clickhouse:9363`) up, uptime, bộ nhớ, truy vấn đang chạy, số bảng, số part tối đa mỗi partition; query/s và lỗi; rows insert/s; insert bị delayed/rejected; kết nối, merge, đĩa | `up` = 0; số part tối đa tăng mãi (merge không theo kịp); insert bị delayed/rejected > 0 |
-| **Outbox & Workers** | `mm_outbox_pending`, `mm_outbox_oldest_age_seconds` (product/order/payment), `mm_worker_last_tick_timestamp_seconds` (order timers, payment workers), `mm_ready` | outbox tuổi cũ nhất tăng đều (dòng độc chặn đầu hàng, xem mục 5); worker không tick quá ngưỡng readiness |
+| **Outbox & Workers** | `mm_outbox_pending`, `mm_outbox_oldest_age_seconds`, `mm_outbox_dead`, `mm_outbox_publish_failures_total` (product/order/payment), `mm_worker_last_tick_timestamp_seconds` (order timers, payment workers), `mm_ready` | outbox tuổi cũ nhất tăng đều hoặc `mm_outbox_dead` > 0 (dòng độc / dead-letter, xem mục 5); worker không tick quá ngưỡng readiness |
 | **Analytics pipeline** | `mm_ch_buffer_rows` (hàng chờ), `mm_ch_insert_lag_seconds` (tuổi hàng cũ nhất), batch lỗi 1 h, **hàng bị rớt 1 h**, rows inserted/s, tracking events/s (accepted/rejected), **lag của các group `analytics-service-*`**, p95 gRPC `Query` | buffer > 1000 vàng / > 20000 đỏ; lag insert > 60 s vàng / > 120 s đỏ; rớt hàng ≥ 1 đỏ |
 
 Sáu dashboard *ClickHouse server*, *Outbox & Workers*, *Payments*, *Business*, *Kafka consumer lag*, *Logs* mới viết, chưa xem trên Grafana thật (tổng 11 dashboard). Metric nghiệp vụ: xem [05_ANALYTICS_MONITORING.md](../design/platform/05_ANALYTICS_MONITORING.md) §2.2; lag Kafka lấy từ `kafka_consumergroup_lag`. Redis-exporter không có healthcheck container (image scratch), xem `up{job="redis"}`. Prometheus cũng scrape job `clickhouse` (`clickhouse:9363`). Lần deploy đầu: Prometheus → Status → Targets (job `mm-services`, `cadvisor`, `node-exporter`, `postgres`, `redis`, `kafka`, `traefik`) phải `UP`.
@@ -106,7 +106,7 @@ flowchart TD
 
 **Lệnh và chi tiết**
 
-1. Consumer có chạy không: `docker service logs marketplace_product-service | grep -i "reserve\|validate"`. Lag: `$KAFKA/kafka-consumer-groups.sh --bootstrap-server broker1:9092 --describe --group product-service-validate-order`.
+1. Consumer có chạy không: `docker service logs marketplace_product-service | grep -i "reserve\|validate"`. Lag: `$KAFKA/kafka-consumer-groups.sh --bootstrap-server broker1:9092,broker2:9092,broker3:9092 --describe --group product-service-validate-order`.
 2. Backlog outbox (§5): `order.create_order` nằm ở `domain_events` của order-service; kết quả nằm ở `validate_order_events` của product-service (`SELECT status, count(*) FROM validate_order_events WHERE processed GROUP BY 1`).
 3. Đơn rời `PENDING` nhờ `product.validate_order` → group `order-service-validate-result` (xem log `validate-order event ignored`). Handler idempotent nên có thể phát lại.
 4. Consumer thử 5 lần rồi bỏ message (`giving up on message … offset N`): sửa nguyên nhân rồi **phát lại** bằng cách đặt dòng outbox về `PENDING` (§5) hoặc reset offset group (§6). Bên product việc giữ hàng idempotent.
@@ -143,26 +143,37 @@ Payment được tạo bất đồng bộ, nên trước hết phải biết nó
 flowchart TD
   A["mm_outbox_pending hoặc oldest_age tăng"] --> B{"Kafka tới được?"}
   B -->|"không"| B1["Dòng PENDING / FAILED tăng, tự hết khi Kafka về: khôi phục Kafka"]
-  B -->|"có"| C{"Có dòng FAILED với attempts rất lớn ở đầu hàng?"}
-  C -->|"có"| C1["Dòng độc chặn đầu hàng: sửa nguyên nhân, hoặc cân nhắc đặt status SUCCESS"]
+  B -->|"có"| C{"mm_outbox_dead > 0 (có dòng DEAD)?"}
+  C -->|"có"| C1["Dòng độc đã vào dead-letter: xem last_error, sửa nguyên nhân rồi requeue bằng SQL bên dưới"]
   C -->|"không"| C2["Xem log worker của order / product / payment"]
   B1 --> R["Cần phát lại event đã SUCCESS: đặt status về PENDING, consumer idempotent"]
   C1 --> R
 ```
 
-Worker gửi mỗi 2 s, lô 100, không bao giờ bỏ cuộc: lỗi đầu tiên dừng cả lô nên một dòng độc làm nghẽn mọi dòng sau.
+Worker gửi mỗi 2 s, lô 100. Lỗi được xử lý **theo từng dòng**: dòng lỗi được ghi `attempts+1`, `last_error` và hẹn `next_attempt_at` (backoff mũ 5 s, 10 s, 20 s … tối đa 15 phút); sau `OUTBOX_MAX_ATTEMPTS` lần (mặc định 10) dòng chuyển sang `DEAD` (dead-letter: giữ lại để điều tra, **không** tự thử lại). Dòng lỗi chỉ chặn các dòng **sau nó có cùng `key`** (cùng aggregate, giữ thứ tự) khi nó còn đang chờ thử lại; key khác vẫn đi. Dòng `DEAD` không chặn ai. Nếu cả một lô lỗi (từ 3 dòng, không dòng nào thành công) thì coi như Kafka sập: vẫn tăng `attempts` và backoff nhưng **không** chuyển `DEAD`, nên sự cố Kafka không làm chết event lành.
 
 **Lệnh và chi tiết**
 
 ```sql
 -- bảng dùng chung của order/product/payment (một database Postgres, một bảng `domain_events`):
 SELECT topic, status, count(*), min(created_at) FROM domain_events WHERE status <> 'SUCCESS' GROUP BY 1,2;
-SELECT id, topic, key, attempts, created_at FROM domain_events WHERE status='FAILED' ORDER BY id LIMIT 5;
+SELECT id, topic, key, attempts, next_attempt_at, last_error FROM domain_events WHERE status='FAILED' ORDER BY id LIMIT 5;
+-- dead-letter (DEAD): xem trước khi requeue
+SELECT id, topic, key, attempts, dead_at, left(last_error, 200) AS last_error FROM domain_events WHERE status='DEAD' ORDER BY id;
 ```
 
-Gauge: `mm_outbox_pending{table="domain_events"}`, `mm_outbox_oldest_age_seconds` ở `:8081/metrics` của order/product/payment (cả ba cùng đếm **toàn bộ** bảng chung, nên giá trị gần như trùng nhau). Worker 2 s/lần, lô 100, **không có trạng thái "bỏ cuộc"**: dòng `FAILED` được thử lại mãi. Hai nguyên nhân thường gặp: (a) Kafka không tới được → mọi dòng `FAILED`/`PENDING` tăng, tự hết khi Kafka về; (b) một dòng "độc" (publish luôn lỗi, vd. payload quá lớn) → **chặn đầu hàng** vì lỗi đầu tiên dừng cả lô (các dòng sau không đi) – tìm bằng `attempts` lớn nhất, sửa nguyên nhân hoặc sau khi cân nhắc tác động đặt `status='SUCCESS'` cho dòng đó.
+**Requeue dòng DEAD** (sau khi đã sửa nguyên nhân; consumer idempotent nên phát lại an toàn). Một dòng, hoặc cả một topic:
+
+```sql
+UPDATE domain_events SET status='PENDING', attempts=0, next_attempt_at=now(), dead_at=NULL
+ WHERE status='DEAD' AND id = <id>;          -- hoặc: AND topic = '<topic>'
+```
+
+Không đặt `SUCCESS` để "bỏ qua" nếu chưa chắc: event đó sẽ mất vĩnh viễn. Cấu hình: `OUTBOX_MAX_ATTEMPTS` (10), `OUTBOX_BACKOFF_BASE` (5s), `OUTBOX_BACKOFF_MAX` (15m) trong `deploy/.env`.
+
+Metric: gauge `mm_outbox_pending{table="domain_events"}`, `mm_outbox_oldest_age_seconds`, `mm_outbox_dead` (số dòng `DEAD`, cần xử lý khi > 0) và counter `mm_outbox_published_total`, `mm_outbox_publish_failures_total`, `mm_outbox_dead_total` (từ lúc process khởi động) ở `:8081/metrics` của order/product/payment (gauge đếm **toàn bộ** bảng chung, nên giá trị gần như trùng nhau). Hai nguyên nhân thường gặp: (a) Kafka không tới được → mọi dòng `FAILED`/`PENDING` tăng, tự hết khi Kafka về (không bị `DEAD`); (b) một dòng "độc" (publish luôn lỗi, vd. payload quá lớn) → thử lại theo backoff rồi vào `DEAD`; các dòng key khác không bị chặn, chỉ các dòng sau cùng key chờ.
 Phát lại một event đã `SUCCESS`: `UPDATE domain_events SET status='PENDING' WHERE id=<id>;` (consumer idempotent). Outbox **cũ** vẫn còn ở auth (`pwd_version_events`), user (`create_seller_events`), product (`validate_order_events`), order (`create_order_events`, `cancel_order_events`): đặt cột `status` về `'PENDING'` theo khoá chính của bảng đó.
-Chưa có API requeue (`/admin/system/outbox*` chưa làm).
+Chưa có API requeue (`/admin/system/outbox*` chưa làm): requeue bằng SQL ở trên.
 
 ## 6. Kafka lag / consumer đứng im
 
@@ -184,14 +195,29 @@ flowchart TD
 **Lệnh và chi tiết**
 
 ```bash
-$KAFKA/kafka-consumer-groups.sh --bootstrap-server broker1:9092 --list
-$KAFKA/kafka-consumer-groups.sh --bootstrap-server broker1:9092 --describe --group <group>      # LAG theo partition
-$KAFKA/kafka-topics.sh --bootstrap-server broker1:9092 --list
+$KAFKA/kafka-consumer-groups.sh --bootstrap-server broker1:9092,broker2:9092,broker3:9092 --list
+$KAFKA/kafka-consumer-groups.sh --bootstrap-server broker1:9092,broker2:9092,broker3:9092 --describe --group <group>      # LAG theo partition
+$KAFKA/kafka-topics.sh --bootstrap-server broker1:9092,broker2:9092,broker3:9092 --list
 ```
 
 Group: `product-service-validate-order|cancel-order|ship-order`, `order-service-validate-result|payment-succeeded|payment-refunded`, `payment-service-create|refund`, `analytics-service-<topic>`, `api-gateway-group-3`, `auth-service` ([03_EVENTS_KAFKA.md](../design/03_EVENTS_KAFKA.md)). Lag tăng + service sống: xem log `Consumer handler error … attempt n/5` (handler lỗi liên tục), kiểm tra Postgres/ClickHouse của service đó. Topic thiếu: service tạo lúc khởi động – restart nó. Công cụ ngoài container: listener quảng bá là `broker1:9092`.
 **Phát lại từ đầu một group** (dừng service trước, `docker service scale marketplace_<svc>=0`):
 `$KAFKA/kafka-consumer-groups.sh --bootstrap-server broker1:9092 --group <group> --topic <topic> --reset-offsets --to-earliest --execute` rồi scale lại 1. Chỉ làm với consumer **idempotent** (tất cả đều vậy; analytics ghi đè cùng dòng nhờ ReplacingMergeTree). Kafka chỉ giữ 7 ngày.
+
+### Dead-letter queue (DLQ) của consumer Kafka
+
+Consumer thử handler tối đa 5 lần (backoff tăng dần). Hết lượt, message gốc được publish sang topic **`<topic>.dlq`** (tự tạo lúc consumer khởi động, 3 partition) rồi mới commit offset. Nếu publish DLQ lỗi thì **không commit** và thử lại tới khi được (partition đó đứng im, log `Consumer DLQ publish failed`) nên không mất message. Mỗi message DLQ giữ nguyên key / value / header gốc, thêm header `dlq.error`, `dlq.attempts`, `dlq.source_topic`, `dlq.source_partition`, `dlq.source_offset`, `dlq.failed_at` (RFC3339 UTC). Metric: `mm_kafka_dlq_total{topic}` (tăng ở service có consumer; nên điều tra mọi giá trị > 0).
+
+```bash
+# danh sách topic DLQ và số message
+docker exec $(docker ps -qf name=marketplace-infra_broker1) kafka-topics.sh --bootstrap-server localhost:9092 --list | grep '\.dlq$'
+# đọc kèm header (đổi topic cho đúng)
+docker exec $(docker ps -qf name=marketplace-infra_broker1) kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+  --topic <topic>.dlq --from-beginning --timeout-ms 5000 \
+  --property print.key=true --property print.headers=true --property print.offset=true
+```
+
+Quy trình: (1) đọc `dlq.error` để biết nguyên nhân (log service theo `request_id` / thời điểm `dlq.failed_at`); (2) sửa lỗi hoặc triển khai bản vá; (3) phát lại: handler đều idempotent nên chỉ cần publish lại **value** (và key) của message vào topic gốc `dlq.source_topic`, ví dụ `kafka-console-producer.sh --topic <topic gốc> --property parse.key=true --property key.separator=:` với từng dòng `key:value` lấy từ lệnh consumer ở trên; (4) message không cứu được (dữ liệu sai thật) thì ghi nhận rồi bỏ qua. Topic DLQ dùng retention mặc định của broker (7 ngày), nên xử lý trước khi hết hạn. Chưa có công cụ replay tự động và chưa có cảnh báo (ADR-12).
 
 ## 7. Tỉ lệ thanh toán thất bại cao
 
@@ -237,7 +263,8 @@ Cửa hàng không phụ thuộc ClickHouse; rủi ro duy nhất là mất số 
 **Lệnh và chi tiết**
 
 - **ClickHouse down ⇒ dashboard analytics 503, cửa hàng vẫn chạy.** `/admin/analytics/*` & `/seller/analytics/*` trả 503; `POST /events` vẫn 202; đặt hàng/thanh toán không bị ảnh hưởng. analytics-service `/ready` = 503 (check `clickhouse` critical) nhưng gateway chỉ coi `degraded`. Kiểm tra: `docker service ps marketplace-infra_clickhouse`, log, disk (`clickhouse-data`), RAM (limit 2 GB).
-- Trong lúc down: analytics-service **giữ** event trong bộ đệm RAM (`mm_ch_buffer_rows` tăng, `mm_ch_insert_failures_total` tăng); khi ClickHouse về sẽ tự insert (idempotent). Đệm tối đa `ANALYTICS_BUFFER_MAX_ROWS` (100000): vượt thì **rớt dòng cũ nhất** (`mm_ch_rows_dropped_total`, panel "Rows dropped" đỏ). Event Kafka vẫn được commit khi đã vào đệm ⇒ nếu bị rớt hoặc service restart lúc còn đệm, dữ liệu **mất** khỏi ClickHouse (chưa có backfill): có thể dựng lại bằng reset offset (§6) trong 7 ngày; event tracking (gRPC) thì không dựng lại được.
+- **Spool bền** (`ANALYTICS_SPOOL_DIR`, mặc định `/var/spool/analytics` trên volume `analytics-spool`; để trống = tắt): dòng bị đẩy khỏi bộ đệm RAM (vượt `ANALYTICS_BUFFER_MAX_ROWS`) và dòng còn đệm khi nhận SIGTERM được ghi vào `spool.ndjson` (append-only, fsync, tối đa `ANALYTICS_SPOOL_MAX_MB` = 256; đầy thì rớt và tính vào `mm_ch_rows_dropped_total`). Khi khởi động, và mỗi lần flush thành công khi file còn dữ liệu, service replay file vào ClickHouse (idempotent) rồi xoá. Theo dõi `mm_ch_rows_spooled_total`, `mm_ch_rows_replayed_total`, `mm_ch_spool_bytes` (> 0 kéo dài = replay đang lỗi, xem log `analytics spool:`). Xem file: `docker run --rm -v marketplace_analytics-spool:/s alpine head -c 600 /s/spool.ndjson` (tên volume có thể khác, `docker volume ls`). Không bảo vệ được SIGKILL / OOM: phần còn trong RAM lúc đó vẫn mất.
+- Khi không có spool, analytics-service **giữ** event trong bộ đệm RAM (`mm_ch_buffer_rows` tăng, `mm_ch_insert_failures_total` tăng); khi ClickHouse về sẽ tự insert (idempotent). Đệm tối đa `ANALYTICS_BUFFER_MAX_ROWS` (100000): vượt thì **rớt dòng cũ nhất** (`mm_ch_rows_dropped_total`, panel "Rows dropped" đỏ). Event Kafka vẫn được commit khi đã vào đệm ⇒ nếu bị rớt hoặc service restart lúc còn đệm, dữ liệu **mất** khỏi ClickHouse (chưa có backfill): có thể dựng lại bằng reset offset (§6) trong 7 ngày; event tracking (gRPC) thì không dựng lại được.
 - Insert chậm (lag > 60 s): xem `mm_ch_insert_lag_seconds`, tải/ RAM ClickHouse, `ANALYTICS_FLUSH_ROWS`.
 - Kiểm tra dữ liệu: admin `GET /admin/analytics/data-health` (số dòng, thời điểm cuối, độ trễ trung bình 15 phút từng bảng; `reconciliation` = `not_implemented` – **chưa có** đối soát Postgres↔ClickHouse). Truy vấn tay: `$CH -q "SELECT event_type, count() FROM events_raw FINAL WHERE ts_server > now() - INTERVAL 1 HOUR GROUP BY 1"`.
 - Số liệu lệch với Postgres: nhớ định nghĩa doanh thu ([02_DATA_MODEL.md](../design/02_DATA_MODEL.md) §3) – chỉ đơn `PAID` (online)/`DELIVERED` (COD), tính `subtotal` (không ship), hoàn tiền trừ theo thời điểm hoàn; cache báo cáo 30 s.
@@ -262,7 +289,7 @@ Cửa hàng không phụ thuộc ClickHouse; rủi ro duy nhất là mất số 
 |---|---|
 | Postgres (`postgres-data`) – **nguồn sự thật** (tài khoản, catalog, đơn, payment, outbox) | `docker exec <postgres> pg_dump -U postgres -Fc postgres > mm-$(date +%F).dump`; khôi phục vào DB trống: `pg_restore -U postgres -d postgres --clean --if-exists mm.dump` khi **dừng** các service ghi. Hoặc snapshot volume khi Postgres đã dừng. Dùng cùng một dump cho mọi service (chung DB) |
 | Redis (`redis-data`, AOF) | chỉ là cache/ bộ đếm/ `pwd_version`; mất thì tự dựng (token cũ trước khi đổi mật khẩu có thể hợp lệ lại tới khi hết hạn ≤ 5 phút) – không cần sao lưu |
-| Kafka (`kafka-data`) | không phải nguồn sự thật dài hạn (retention 7 ngày); outbox trong Postgres bảo vệ message chưa gửi |
+| Kafka (`kafka-data-1..3`) | không phải nguồn sự thật dài hạn (retention 7 ngày); outbox trong Postgres bảo vệ message chưa gửi; 3 broker nhân bản nhau (RF 3) nên mất 1 volume không mất dữ liệu |
 | ClickHouse (`clickhouse-data`) | **dẫn xuất**: có thể mất mà shop vẫn đúng, nhưng chỉ dựng lại được ~7 ngày từ Kafka. Sao lưu: dừng analytics-service, `docker run --rm -v <volume>:/data -v $PWD:/out alpine tar czf /out/ch-$(date +%F).tgz -C /data .` (hoặc `BACKUP DATABASE marketplace TO Disk(…)` nếu cấu hình disk backup). Khôi phục: bung tar vào volume rỗng khi ClickHouse dừng, rồi khởi động; analytics-service chạy lại migration idempotent |
 | Prometheus/Grafana | dashboard nằm trong repo (`deploy/grafana`), không cần sao lưu volume; số liệu lịch sử Prometheus (`prometheus-data`) tuỳ chọn |
 
@@ -307,3 +334,13 @@ python3 scripts/export/export.py --from 2026-07-01 --to 2026-09-30 --profile ott
 ```
 
 Mỗi lần xuất có `manifest.json` (phiên bản, khoảng, số dòng, sha256, cột). Chạy lại cùng tham số cho file giống hệt từng byte.
+
+## Kafka 3 broker: kiểm tra và xử lý
+```bash
+$KAFKA/kafka-topics.sh --bootstrap-server broker1:9092 --describe --under-replicated-partitions   # trống = đủ replica
+$KAFKA/kafka-topics.sh --bootstrap-server broker1:9092 --describe --topic <topic>                   # Leader / Replicas / Isr
+$KAFKA/kafka-metadata-quorum.sh --bootstrap-server broker1:9092 describe --status                   # leader controller + voter
+```
+- Mất 1 broker (`docker service scale marketplace-infra_broker3=0`): producer/consumer vẫn chạy (RF 3, min ISR 2); khi bật lại broker tự đồng bộ. Mất 2 broker: ghi bị từ chối (dưới min ISR) và quorum controller mất; đơn vẫn được nhận nhờ outbox và xử lý khi cụm trở lại. Kịch bản kiểm: `scripts/e2e/resilience.sh J` (1 broker) và `B` (cả 3).
+- Topic do service tạo qua `EnsureTopicExist` có RF `min(3, số broker)`; kiểm bằng lệnh `--describe` ở trên (topic tạo trước khi đổi code có thể còn RF 1).
+- Chế độ `LITE=true`: chỉ `broker1` chạy (RF 1).

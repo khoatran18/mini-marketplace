@@ -1,6 +1,6 @@
 # REST API (api-gateway)
 
-> Nguồn sự thật: `services/api-gateway/internal/router/router.go` (route + role), `internal/handler/*.go` (JSON). `services/api-gateway/docs/swagger.*` **đã cũ** (chỉ có auth/orders cũ/products/users, xem [02_TECH_DEBT_AND_BACKLOG.md](../planning/02_TECH_DEBT_AND_BACKLOG.md)); tài liệu này là bản đầy đủ.
+> Nguồn sự thật: `services/api-gateway/internal/router/router.go` (route + role), `internal/handler/*.go` (JSON). `services/api-gateway/docs/swagger.*` là bản OpenAPI 2.0 viết tay theo tài liệu này (cập nhật 2026-10-26, schema gọn; khi lệch thì tài liệu này thắng, xem [02_TECH_DEBT_AND_BACKLOG.md](../planning/02_TECH_DEBT_AND_BACKLOG.md)).
 
 ## 0. Quy ước chung
 
@@ -123,7 +123,7 @@ curl -X POST $API/orders -H "Authorization: Bearer $T" -H "Idempotency-Key: 7c1f
   -d '{"from_cart":true,"address_id":0,"payment_method":"MOCK_CARD","note":"Giao giờ hành chính"}'
 ```
 Quy tắc: `Idempotency-Key` 1–64 ký tự `[A-Za-z0-9_-]`, duy nhất theo (buyer, key) → gọi lại trả đúng checkout cũ (200, `replayed:true`) mà không tạo thêm. Đơn được **tách theo store** (mỗi store một đơn, chung `checkout_id`); ≤ 50 sản phẩm khác nhau, mỗi dòng ≤ 100000; dòng trùng được gộp; `from_cart` chỉ xoá khỏi giỏ những dòng đã đặt. Phí ship mỗi đơn-store: `SHIPPING_FLAT_FEE` (30000 VND), miễn phí khi `subtotal ≥ FREE_SHIP_OVER` (500000). Lỗi: 400 thiếu/sai `Idempotency-Key`, giỏ/`items` rỗng, method không hỗ trợ, địa chỉ thiếu trường; **404** không có địa chỉ (`address not found`); **422** có dòng không đặt được (`<tên>: out of stock`); 503 product-service không sẵn sàng.
-`payment` (nếu có) do gateway ghép từ payment-service: **payment được tạo bất đồng bộ** (sau khi kho đã giữ xong, qua Kafka `payment.requested`) nên ngay sau `POST /orders` thường **chưa có** `payment` – hãy poll `GET /checkouts/:id` (hoặc đọc đơn: `status` `PENDING → AWAITING_PAYMENT`). COD không có payment.
+`payment` (nếu có) do gateway ghép từ payment-service: **payment được tạo bất đồng bộ** (sau khi kho đã giữ xong, qua Kafka `payment.requested`) nên ngay sau `POST /orders` thường **chưa có** `payment` – hãy poll `GET /checkouts/:id` (hoặc đọc đơn: `status` `PENDING → AWAITING_PAYMENT`; thường vài trăm ms – vài giây). Frontend checkout poll tối đa ~8 s rồi chuyển tới `/pay/<id>`, hết thời gian thì về trang đơn. COD không có payment.
 
 ### Order JSON
 `id, checkout_id, buyer_id, store_id, status, payment_method, payment_status (UNPAID|PAID|REFUNDED), subtotal, shipping_fee, total_price, shipping_address{label,receiver_name,phone,line1,ward,district,city}, note, expires_at, created_at, updated_at, paid_at, shipped_at, delivered_at, canceled_at, cancel_reason, canceled_by, carrier, tracking_code, return_reason, items[{id,order_id,product_id,name,sku,image_url,store_id,category_id,quantity,unit_price,line_total,status ACTIVE|CANCELED}], history[{from_status,to_status,actor_type,actor_id,reason,at}]` (`history` chỉ có khi đọc **một** đơn / sau một action). Giá, tên, sku là snapshot lúc đặt.
@@ -209,7 +209,7 @@ Mỗi lần thất bại cộng `failed_count`; **5 lần** ⇒ `FAILED` (kết 
 |---|---|
 | GET `/admin/payments?status=&method=&page=&page_size=` | `{payments[],total}` |
 | GET `/admin/payments/:id` | kèm `attempts[]`, `refunds[]` |
-| POST `/admin/payments/:id/refund` | `{amount_minor>0, reason}` – hoàn ngay (mô phỏng); 422 nếu vượt số đã thu / chưa thanh toán |
+| POST `/admin/payments/:id/refund` | `{amount_minor>0, reason}` – hoàn ngay (mô phỏng); 422 nếu vượt số đã thu / chưa thanh toán. Khi payment đã hoàn **toàn bộ**, các đơn `PAID` của checkout được đặt `payment_status=REFUNDED` (bất đồng bộ qua `payment.refunded`); hoàn một phần thì đơn giữ `PAID` |
 | POST `/admin/dev/payments/:id/force` | `{status: SUCCEEDED\|FAILED\|EXPIRED}`; **chỉ khi `ENV=dev`** (nếu không 403). `FAILED` kết thúc luôn payment |
 Webhook mô phỏng `POST /internal/payments/webhook` nằm trên cổng admin `:8081` của payment-service (không qua gateway/Traefik), ký `X-Signature: t=<unix>,v1=HMAC_SHA256(PAYMENT_WEBHOOK_SECRET, t + "." + body)`, lệch giờ > 5 phút bị 401.
 
@@ -220,7 +220,7 @@ Webhook mô phỏng `POST /internal/payments/webhook` nằm trên cổng admin `
 |---|---|---|
 | GET `/seller/products` | S | như `/search` nhưng **mọi trạng thái** của store trong token (`seller_id` query bị bỏ qua) |
 | POST `/seller/products/:id/inventory/adjust` | S | `{delta (≠0, \|delta\|≤1.000.000), reason (1–200, bắt buộc)}` → `{message,success,inventory}`; ledger `restock` (delta>0) hoặc `adjust`; tồn không được âm (422) |
-| GET `/seller/products/:id/inventory/ledger?page=&page_size=` | S | `{entries:[{id,product_id,delta,reason,ref_type,ref_id,balance_after,at}]}` mới nhất trước; `reason` ∈ `initial, reserve, release, sale, restock, adjust, update` |
+| GET `/seller/products/:id/inventory/ledger?page=&page_size=` | S | `{entries:[{id,product_id,delta,reason,ref_type,ref_id,balance_after,at}]}` mới nhất trước; `reason` ∈ `initial, reserve, release, sale, return, restock, adjust, update` |
 | GET `/seller/inventory/low-stock?threshold=` | S | `{products[]}` (≤200) của sản phẩm `active/hidden` có tồn ≤ ngưỡng riêng hoặc `threshold` (mặc định 5), từ **Postgres** |
 | Đơn hàng | S | §6.2 |
 | GET `/seller/analytics/{summary,timeseries,top-products,funnel,low-stock}` | S | §9 (scope = store của token) |

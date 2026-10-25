@@ -6,14 +6,14 @@ Trạng thái chi tiết từng hạng mục (xong / một phần / chưa làm) 
 Vòng đời đơn đầy đủ (`PAID → SHIPPED → DELIVERED`, `REFUNDED`, lịch sử trạng thái, ai được chuyển gì) · giữ hàng có hạn (đơn chưa trả tiền hết hạn) · idempotency key cho `POST /orders` · thanh toán (mô phỏng, webhook, hoàn tiền) · giỏ hàng + checkout nhiều store (tách đơn theo store, địa chỉ, phí ship) · công cụ seller (hộp thư đơn, tồn kho, thống kê) · tìm kiếm/ lọc (Postgres full-text không dấu) · graceful shutdown + readiness + metrics · giới hạn body · user-service có test (địa chỉ).
 
 ## Nợ kỹ thuật
-- Module dùng chung cho protobuf + `kafkaimpl` + `ops` + `events` (ADR-8; hiện là bản sao giống hệt ở 7 service); `buf` registry thay cho các điểm copy `buf.gen.yaml`.
+- ✅ `kafkaimpl` + `ops` + `events` đã dùng chung (`shared/`, ADR-33); còn `.pb.go` sao chép và `ops` của gateway/product; `buf` registry thay cho các điểm copy `buf.gen.yaml`.
 - ~~Migration có version~~ ✅ đã dùng goose (ADR-26). Còn lại: `accounts.username` UNIQUE toàn cục dù login theo (username, role); bảng thừa `create_seller_kafka_events` ở user-service (giữ trong baseline).
-- Tách outbox `domain_events` theo service (hiện một bảng vật lý chung – ADR-23) và có "dead letter" cho dòng độc thay vì chặn đầu hàng.
+- Tách outbox `domain_events` theo service (hiện một bảng vật lý chung – ADR-23). (Dead-letter và lỗi theo từng dòng đã xong, R2.)
 - Tiền: `double` trên REST/gRPC (ADR-7); event đã dùng `*_minor`.
 - Observability còn thiếu: tracing OpenTelemetry, request-id trong Kafka / outbox, log JSON thống nhất. Đã có (🟡): request-id, log tập trung Vector → Loki. Đã thêm (chưa chạy stack thật): metric nghiệp vụ `mm_orders_*`/`mm_payments_*`/`mm_inventory_*`/`mm_grpc_client_*`, dashboard Payments/Business/Kafka lag/Outbox/ClickHouse server; lag consumer dùng `kafka_consumergroup_lag` của kafka-exporter.
 - gRPC deadline/retry/circuit breaker từ gateway và order-service; TLS cho gRPC/Postgres; token trong cookie httpOnly.
-- Kafka: 3 broker, RF 3, DLQ thay vì "log và bỏ qua", schema registry; consumer `AddChaPwdVerToRedis`/`UpdateStoreIDFromKafka` nên bỏ JSON hỏng thay vì thử 5 lần.
-- Swagger (`services/api-gateway/docs`) **đã cũ** – chỉ mô tả auth/products/users/orders cũ; cần `swag init` lại và chú thích handler mới ([04_API_REFERENCE.md](../design/04_API_REFERENCE.md) là bản đầy đủ).
+- Kafka: ✅ 3 broker, RF 3, min ISR 2 trong `infra.yml` (ADR-32); ✅ `createTopic` dùng RF `min(3, số broker)` (`shared/`); còn lại: DLQ thay vì "log và bỏ qua", schema registry; consumer `AddChaPwdVerToRedis`/`UpdateStoreIDFromKafka` nên bỏ JSON hỏng thay vì thử 5 lần.
+- Swagger (`services/api-gateway/docs`) đã cập nhật **viết tay** đủ 90 route (không phải kết quả `swag init`; handler chưa có chú thích swag, `/swagger` chưa được đăng ký). Nếu muốn sinh tự động: chú thích handler rồi `swag init` ([04_API_REFERENCE.md](../design/04_API_REFERENCE.md) là bản đầy đủ).
 - e2e `scripts/e2e` đã viết lại cho checkout/payment/cart/analytics (xem [04_TESTING.md](../instruction/04_TESTING.md) §5) nhưng **chưa chạy thật** trên stack; cần chạy lần đầu và chỉnh chỗ lệch.
 - Sửa các phát hiện trong "Giới hạn đã biết" của [09_ROADMAP_STATUS.md](../design/platform/09_ROADMAP_STATUS.md).
 

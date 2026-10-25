@@ -97,7 +97,7 @@ flowchart TD
 | `system_metrics` | 🆕 `GET /admin/system/metrics` | proxy Prometheus **có danh sách PromQL cho phép**, không để LLM viết PromQL tự do |
 | `outbox_status` | 🆕 `GET /admin/system/outbox` | `mm_outbox_pending`, tuổi dòng cũ nhất, dòng `FAILED` (nay phải vào DB / metric tay) |
 | `kafka_lag` | 🆕 `GET /admin/system/kafka` | lag theo consumer group (kafka-exporter đã có số liệu) |
-| `log_search` | 🆕 **chưa có kho log** | hiện chỉ có `docker service logs`; cần Loki hoặc tương đương nếu muốn agent đọc log |
+| `log_search` | 🆕 chưa có REST | kho log **đã có** (Vector → Loki, log JSON có `service`, `level`, `request_id`; xem ADR-28 và runbook §2); còn thiếu endpoint admin truy vấn Loki có whitelist cho agent |
 | `runbook_search` | 🆕 RAG trên [../instruction/03_RUNBOOK.md](../instruction/03_RUNBOOK.md) + ADR | tài liệu đã có, cần lập chỉ mục |
 | `analytics_data_health` | ✅ `GET /admin/analytics/data-health` | độ trễ pipeline, hàng bị rớt |
 | Xử lý (requeue outbox, bật/tắt tính năng) | 🆕 + **Xác nhận** | API requeue chưa có; mọi thao tác ghi cần audit |

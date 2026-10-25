@@ -84,7 +84,7 @@ flowchart LR
 |---|---|---|---|---|
 | R1 | **Chưa chạy thật** (e2e mới đã viết, chưa chạy) | không biết nền có đứng vững không | Swarm / Traefik / ClickHouse / Grafana chưa từng chạy thật; `scripts/e2e` đã viết lại cho API hiện tại (11 kịch bản) cùng `resilience.sh` A..I và `scripts/load`, chưa chạy lần nào (xem §7) | S–M |
 | R2 | **Kiểm thử tải** (load / soak) | biết giới hạn trước khi thêm tải AI | 🟡 `scripts/load/load.mjs` đã viết (RPS cố định, p50/p95/p99), mới thử với mock HTTP, chưa chạy vào stack thật | S |
-| R3 | **Kafka 1 broker, RF 1, không DLQ, không schema registry** | mất broker là mất bus; message độc bị bỏ sau 5 lần thử | `infra.yml`: một node KRaft | M |
+| R3 | **Kafka 3 broker (RF 3, min ISR 2, topic của service cũng RF 3); không schema registry** (DLQ đã có) | chưa có schema registry | `infra.yml`: 3 node KRaft; `kafkaimpl/kafka_client.go` `ReplicationFactor: 1` | S |
 | R4 | **Outbox dùng chung một bảng, dòng độc chặn đầu hàng** | event cho ML đứng im | ADR-23; chưa có dead-letter | M |
 | R5 | **Postgres / ClickHouse / Redis đơn node, backup thủ công** | mất dữ liệu nguồn sự thật | runbook chỉ có hướng dẫn `pg_dump` tay; chưa có lịch / kiểm thử khôi phục | M |
 | R6 | **Mỗi service Go 1 replica**, chưa kiểm chứng chạy nhiều replica | điểm nghẽn đơn; cập nhật gây gián đoạn | chỉ gateway 2 replica; 🟡 `update_config: start-first` / rollback đã viết, chưa thử trên Swarm thật; chưa kiểm chứng nhiều replica | M |
@@ -102,8 +102,8 @@ flowchart LR
 | I3 | **Hàng đợi tác vụ dài** (OCR, huấn luyện, nhúng hàng loạt) | không chặn request đồng bộ | chỉ có Kafka outbox cho event nghiệp vụ; chưa có mẫu job + trạng thái + retry | M |
 | I4 | **Định danh dịch vụ nội bộ & token giới hạn quyền cho job nền** | job chỉ-đọc không nên dùng JWT người dùng | gRPC plaintext, không mTLS; chưa có service token scope hẹp | M |
 | I5 | **Route streaming qua gateway/Traefik** (SSE) | trả kết quả từng phần | chưa có route streaming, chưa thử `X-Accel-Buffering` / nén | S–M |
-| I6 | **OpenAPI hiện hành** | sinh schema tool từ API, tài liệu cho client | Swagger `services/api-gateway/docs` **đã cũ** | S–M |
-| I7 | **Shared Go module** (proto, kafkaimpl, ops, events) | thêm service mới không sao chép 7 lần | ADR-8: bản sao giống hệt ở 7 service | M |
+| I6 | **OpenAPI hiện hành** | sinh schema tool từ API, tài liệu cho client | Swagger `services/api-gateway/docs` viết tay, chưa sinh từ chú thích | S–M |
+| I7 | **Shared Go module** (proto, kafkaimpl, ops, events) | thêm service mới không sao chép 7 lần | ✅ phần lớn xong (ADR-33); còn `.pb.go` | M |
 | I8 | **Rate limit + quota theo tính năng / người dùng** cho dịch vụ đắt | chặn lạm dụng | rate limit theo IP, theo nhóm route; chưa theo người dùng / tính năng | S |
 
 ## 5. Bảo mật, quyền riêng tư, quy trình

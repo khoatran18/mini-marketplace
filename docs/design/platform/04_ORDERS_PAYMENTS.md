@@ -49,7 +49,7 @@ Sơ đồ khớp bảng `transitions` trong `order-service/internal/repository/s
 | `REFUND_REQUESTED → REFUNDED` | seller, admin | online ⇒ `order.refund_requested` (`order:<id>:return`, toàn bộ `total_price` gồm ship); `payment_status=REFUNDED` |
 | `REFUND_REQUESTED → DELIVERED` | seller, admin (từ chối, kèm lý do) | đánh dấu `return_rejected`; không yêu cầu lại được |
 
-Khác thiết kế: không có bước "seller xác nhận"; không có `canceled` bởi hệ thống ngoài `EXPIRED/FAILED`; **không** nhập lại kho khi `REFUNDED`; COD khi duyệt trả hàng chỉ đổi nhãn `payment_status`. Địa chỉ giao hàng là snapshot JSON trong `orders.shipping_address` (bắt buộc `receiver_name, phone, line1, city`).
+Khác thiết kế: không có bước "seller xác nhận"; không có `canceled` bởi hệ thống ngoài `EXPIRED/FAILED`; khi `REFUNDED` hàng được nhập lại kho (ledger `return`, đúng một lần); COD khi duyệt trả hàng chỉ đổi nhãn `payment_status` (tiền mặt trả ngoài hệ thống). Địa chỉ giao hàng là snapshot JSON trong `orders.shipping_address` (bắt buộc `receiver_name, phone, line1, city`).
 
 ## 2. Tồn kho & giữ chỗ
 Chi tiết ở [02_DATA_MODEL.md](../02_DATA_MODEL.md) §2 và ADR-21. Tóm tắt:
@@ -62,7 +62,7 @@ stateDiagram-v2
     sold --> [*]
 ```
 
-`available` = `products.inventory`; tồn vật lý = `available + reserved`. Đơn đã `SHIPPED` thì không nhả kho nữa; `REFUNDED` cũng không nhập lại kho.
+`available` = `products.inventory`; tồn vật lý = `available + reserved`. Đơn đã `SHIPPED` thì không nhả kho nữa; khi đơn `REFUNDED` (trả hàng được duyệt) hàng quay lại `available` (`sold` giảm, ledger `return`).
 
 - `products.inventory` = **còn bán được**; `reserved` = đang giữ; `sold` = đã xuất kho. Tồn vật lý = `inventory + reserved`.
 - Đặt hàng → `order.create_order` → **giữ hàng all-or-nothing** cho cả đơn (`inventory−q`, `reserved+q`, ledger `reserve`); `SHIPPED` → `reserved−q`, `sold+q` (ledger `sale`, đúng một lần); `CANCELED/EXPIRED` → `order.cancel_order` → `inventory+q`, `reserved−q` (ledger `release`, đúng một lần; bỏ qua nếu đã xuất kho).
@@ -165,7 +165,7 @@ stateDiagram-v2
 - **Số tiền**: payment dùng `amount_minor` từ `payment.requested`; order-service so với tổng đơn khi nhận `payment.succeeded` (khác thiết kế: không có metric `mm_payment_amount_mismatch_total`).
 - **Chữ ký webhook**: `X-Signature: t=<unix>,v1=HMAC_SHA256(PAYMENT_WEBHOOK_SECRET, t + "." + body)`; lệch giờ > 5 phút ⇒ 401; sai chữ ký ⇒ 401. Secret < 16 ký tự ⇒ service không khởi động.
 - **Hoàn tiền**: tự động khi huỷ đơn đã trả online / duyệt trả hàng / tiền về cho đơn không còn thanh toán được; thủ công `POST /admin/payments/:id/refund {amount_minor, reason}`. Hoàn một phần được (`PARTIALLY_REFUNDED`), tổng hoàn ≤ đã thu (`exceeds_paid_amount` ⇒ dòng refund `FAILED`). Hoàn tiền mô phỏng thành công ngay.
-- **Trạng thái payment**: `REQUIRES_ACTION → PROCESSING → SUCCEEDED | FAILED | CANCELED | EXPIRED`; `SUCCEEDED → PARTIALLY_REFUNDED → REFUNDED`. `CANCELED` chỉ khi chưa gửi (`POST /payments/:id/cancel`); `EXPIRED` (worker 1 s) chỉ với `REQUIRES_ACTION` quá `expires_at`, **không phát event**; `PROCESSING` không tự hết hạn.
+- **Trạng thái payment**: `REQUIRES_ACTION → PROCESSING → SUCCEEDED | FAILED | CANCELED | EXPIRED`; `SUCCEEDED → PARTIALLY_REFUNDED → REFUNDED`. `CANCELED` chỉ khi chưa gửi (`POST /payments/:id/cancel`); `EXPIRED` (worker 1 s) chỉ với `REQUIRES_ACTION` quá `expires_at`, **không phát event**; `PROCESSING` quá `expires_at` + 1 giờ (`ProcessingGrace`, provider không trả lời) cũng thành `EXPIRED`; webhook thành công về muộn vẫn được nhận (tiền là tiền) và order-service hoàn phần không đơn nào cần. Hoàn tiền thủ công của admin cho cả payment phát `payment.refunded` (`order_id=0`, `payment_status=REFUNDED`) ⇒ order-service đặt `payment_status=REFUNDED` cho các đơn `PAID` của checkout; hoàn một phần không quy được cho đơn nào.
 - **Tiền về muộn**: webhook đến sau khi payment `EXPIRED/CANCELED` vẫn đặt `SUCCEEDED` (tiền là tiền) → order-service hoàn phần không còn đơn nào cần.
 - **Mở rộng**: provider là code trong `service` (chưa có interface `Provider`); thêm provider thật = tách interface (`Charge/Refund/VerifyWebhook`).
 

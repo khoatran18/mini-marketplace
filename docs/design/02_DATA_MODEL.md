@@ -67,7 +67,7 @@ erDiagram
 
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|
-| `accounts` | `id, username UNIQUE, password (bcrypt), role, pwd_version, store_id, deleted_at` | `role` ∈ `buyer, seller_admin, seller_employee, admin`; `store_id` = id store (0 đến khi tạo store, gán qua event `user.create_seller`); `username` UNIQUE toàn cục dù login theo (username, role) |
+| `accounts` | `id, username UNIQUE, password (bcrypt), role, pwd_version, store_id, deleted_at` | `role` ∈ `buyer, seller_admin, seller_employee, admin`; `store_id` = id store (0 đến khi tạo store, gán qua event `user.create_seller`); UNIQUE `(username, role)` (migration `00002`): cùng username được phép ở role khác, vì login/register/refresh đều tra theo cặp này |
 | `pwd_version_events` | `user_id PK, pwd_version, status, created_at` | outbox cũ cho `auth.change_password` (PENDING/FAILED/SUCCESS) |
 *Chưa có*: `status/failed_logins/locked_until`, `email`, `audit_log` (khoá đăng nhập & audit: chưa làm).
 
@@ -109,7 +109,7 @@ erDiagram
 | `buyers` | `user_id PK, name, gender, date_of_birth, phone, address, deleted_at` | |
 | `sellers` | `id PK, name, bank_account, tax_code, description, date_of_birth, phone, address, deleted_at` | một seller = một store |
 | `addresses` | `id, user_id (index), label, receiver_name, phone, line1, ward, district, city, is_default, created_at, updated_at` | ≤ 10/user, đúng một mặc định; đơn lưu **bản sao** nên sửa/xoá không ảnh hưởng đơn cũ |
-| `create_seller_events` | `seller_id PK, user_id, status, created_at` | outbox cũ cho `user.create_seller` (AutoMigrate còn tạo thêm bảng thừa `create_seller_kafka_events`) |
+| `create_seller_events` | `seller_id PK, user_id, status, created_at` | outbox cũ cho `user.create_seller` (bảng thừa `create_seller_kafka_events` đã bị xoá ở migration `00002`) |
 
 ### product-service
 
@@ -158,7 +158,7 @@ Danh mục là cây ≤ 3 cấp (`parent_id`); sổ cái tồn kho chỉ thêm, 
 | `products` | `id, name, price NUMERIC(18,2), seller_id, inventory, reserved, sold, attributes JSONB, sku, description, category_id, brand, tags JSONB, image_urls JSONB, status, low_stock_threshold, weight_g, version, created_at, updated_at, deleted_at` | UNIQUE `(seller_id, sku)` khi `sku<>''`; GIN index full-text `to_tsvector('simple', mm_unaccent(name‖brand‖sku‖description))` |
 | `categories` | `id, parent_id, name, slug UNIQUE, sort, active, created_at, updated_at` | cây ≤ 3 cấp; seed mặc định 7 danh mục gốc + con (`SEED_DEFAULT_CATEGORIES!=false`, chỉ khi bảng rỗng) |
 | `inventory_ledgers` | `id, product_id, delta, reason, ref_type, ref_id, balance_after, at` | sổ cái **chỉ thêm**; index `(product_id, at)` |
-| `validate_order_events` | `order_id PK, success, status, processed, restored, shipped, created_at` | kết quả giữ hàng **và** outbox cũ; `restored` = đã trả hàng (đúng một lần), `shipped` = đã xuất kho (đúng một lần) |
+| `validate_order_events` | `order_id PK, success, status, processed, restored, shipped, created_at` | kết quả giữ hàng **và** outbox cũ; `restored` = đã trả hàng (đúng một lần), `shipped` = đã xuất kho (đúng một lần), `returned` = hàng của đơn bị trả (`REFUNDED`) đã nhập lại kho (đúng một lần, migration `00003`) |
 | `domain_events` | xem §1.5 | outbox chung cho `product.changed`, `inventory.changed` |
 Hàm SQL `mm_unaccent(text)` (IMMUTABLE, thuần SQL, bỏ dấu tiếng Việt + lower) được tạo khi migrate.
 
@@ -289,13 +289,14 @@ flowchart LR
   E --> W["Worker events.Run, 2 s/lần, lô 100"]
   W -->|"acks=all, theo thứ tự id"| K["Kafka"]
   W -->|"thành công"| S["status SUCCESS"]
-  W -->|"lỗi đầu tiên"| F["status FAILED, thử lại vòng sau"]
+  W -->|"lỗi từng dòng"| F["FAILED, attempts+1, backoff next_attempt_at"]
+  F -->|"quá OUTBOX_MAX_ATTEMPTS"| D["DEAD (dead-letter, requeue tay)"]
 ```
 
 Ghi nghiệp vụ và dòng outbox cùng transaction nên không mất event; worker xuất bản at-least-once, consumer phải idempotent.
 
 > **Lưu ý**: vì mọi service dùng chung một database Postgres (`POSTGRES_DB`) và bảng có cùng tên, `domain_events` thực tế là **MỘT bảng vật lý dùng chung** của product/order/payment. Worker của bất kỳ service/replica nào cũng có thể xuất bản dòng của service khác (hợp lệ: dòng mang sẵn `topic`, `key`, `payload`), và gauge `mm_outbox_pending` của mỗi service đếm **toàn bộ** backlog chứ không riêng service đó. Muốn biết dòng của ai, nhìn `topic`.
-`id, topic, key, payload JSONB, status (PENDING|FAILED|SUCCESS), attempts, created_at, published_at`; index `(status, id)`. Ghi bằng `events.Emit(tx, topic, key, payload)` **trong cùng transaction** với thay đổi nghiệp vụ; worker `events.Run` (2 s/lần, lô 100, `FOR UPDATE SKIP LOCKED`, `acks=all`) xuất bản theo thứ tự `id`, dừng lô ở lỗi đầu tiên (đánh `FAILED`, `attempts+1`, thử lại vòng sau). Xem [03_EVENTS_KAFKA.md](03_EVENTS_KAFKA.md). auth-service và user-service **vẫn dùng bảng outbox riêng** như trước.
+`id, topic, key, payload JSONB, status (PENDING|FAILED|SUCCESS|DEAD), attempts, created_at, published_at, next_attempt_at, last_error, dead_at`; index một phần trên các dòng chưa gửi `(id)` và `(key, id)`, và trên `DEAD`. Ghi bằng `events.Emit(tx, topic, key, payload)` **trong cùng transaction** với thay đổi nghiệp vụ; worker `events.Run` (2 s/lần, lô 100, `FOR UPDATE SKIP LOCKED`, `acks=all`) xuất bản theo thứ tự `id`; lỗi xử lý **theo từng dòng** (`FAILED`, `attempts+1`, `last_error`, backoff mũ vào `next_attempt_at`; quá `OUTBOX_MAX_ATTEMPTS` = 10 thì `DEAD`, không tự thử lại). Dòng đang chờ thử lại chỉ chặn các dòng sau cùng `key`; `DEAD` không chặn. Requeue: runbook §5. Xem [03_EVENTS_KAFKA.md](03_EVENTS_KAFKA.md). auth-service và user-service **vẫn dùng bảng outbox riêng** như trước.
 
 ## 2. Ngữ nghĩa
 ### Tồn kho (product-service)
@@ -316,6 +317,7 @@ Mọi thay đổi gọi `applyStock` (một câu `UPDATE … WHERE inventory + �
 | giữ hàng cho đơn (`order.create_order`) | −q | +q | – | `reserve` (all-or-nothing; thiếu → `validate_order_events.success=false`, đơn `FAILED`) |
 | trả hàng (đơn CANCELED/EXPIRED → `order.cancel_order`) | +q | −q | – | `release` (đúng một lần: `restored`; bỏ qua nếu đã `shipped`) |
 | xuất kho (`order.status_changed` = SHIPPED) | 0 | −q | +q | `sale` (đúng một lần: `shipped`) |
+| trả hàng được duyệt (`order.status_changed` = REFUNDED, đã `shipped`) | +q | 0 | −q | `return` (đúng một lần: `returned`) |
 | seller điều chỉnh | ±Δ | – | – | `restock` (Δ>0) / `adjust` |
 | sửa `inventory` qua `PUT /products/:id` | Δ | – | – | `update` |
 Đơn `REFUNDED` (trả hàng) **không** tự nhập lại kho; seller dùng `inventory/adjust`.
