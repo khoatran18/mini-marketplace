@@ -145,6 +145,7 @@ func New(opts Options) *Server {
 	s.grpcLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "mm_grpc_server_handling_seconds", Help: "gRPC handling time.", ConstLabels: constLabels, Buckets: latencyBuckets}, []string{"grpc_method"})
 	s.httpTotal = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "mm_http_requests_total", Help: "HTTP requests handled.", ConstLabels: constLabels}, []string{"method", "route", "status"})
 	s.httpLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "mm_http_request_duration_seconds", Help: "HTTP request time.", ConstLabels: constLabels, Buckets: latencyBuckets}, []string{"method", "route"})
+	registerDomain(prometheus.WrapRegistererWith(constLabels, s.registry), s.registry)
 	s.registry.MustRegister(buildInfo, s.readyGauge, s.grpcHandled, s.grpcLatency, s.httpTotal, s.httpLatency)
 	return s
 }

@@ -40,7 +40,7 @@ func resolveViewer(c *gin.Context, auth *authclient.AuthClient) (Viewer, error) 
 	_, role, _ := currentUser(c)
 	v.UserID, v.Role = id, role
 	if v.IsSeller() && auth != nil {
-		storeID, _, err := auth.GetStoreID(id)
+		storeID, _, err := auth.GetStoreID(c.Request.Context(), id)
 		if err != nil {
 			return v, err
 		}
@@ -53,15 +53,15 @@ func resolveViewer(c *gin.Context, auth *authclient.AuthClient) (Viewer, error) 
 func requireSellerStore(c *gin.Context, auth *authclient.AuthClient) (Viewer, bool) {
 	v, err := resolveViewer(c, auth)
 	if err != nil {
-		c.JSON(httpStatusFromError(err), dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(httpStatusFromError(err), dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return v, false
 	}
 	if !v.IsSeller() {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only sellers can do this"})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only sellers can do this", RequestID: requestIDOf(c)})
 		return v, false
 	}
 	if v.StoreID == 0 {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Create a store first"})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Create a store first", RequestID: requestIDOf(c)})
 		return v, false
 	}
 	return v, true

@@ -467,7 +467,7 @@ func (h *CatalogHandler) Stock(c *gin.Context) {
 	res, err := pc.GetProductByID(ctx, &productpb.GetProductByIDRequest{Id: id})
 	if err != nil || res.GetProduct().GetStatus() != "active" {
 		if err == nil {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "Product not found"})
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "Product not found", RequestID: requestIDOf(c)})
 			return
 		}
 		respondError(c, h.Logger, "CatalogHandler: Stock", err)

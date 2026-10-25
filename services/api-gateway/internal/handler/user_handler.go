@@ -32,7 +32,7 @@ func (h *UserHandler) ownsStore(c *gin.Context, sellerID uint64) bool {
 	if !ok {
 		return false
 	}
-	storeID, _, err := h.Auth.GetStoreID(userID)
+	storeID, _, err := h.Auth.GetStoreID(c.Request.Context(), userID)
 	return err == nil && storeID != 0 && storeID == sellerID
 }
 
@@ -41,16 +41,16 @@ func (h *UserHandler) ownsStore(c *gin.Context, sellerID uint64) bool {
 func (h *UserHandler) requireOwnStore(c *gin.Context, sellerID uint64) (uint64, bool) {
 	userID, ok := currentUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return 0, false
 	}
-	storeID, _, err := h.Auth.GetStoreID(userID)
+	storeID, _, err := h.Auth.GetStoreID(c.Request.Context(), userID)
 	if err != nil {
 		respondError(c, h.Logger, "UserHandler: resolve store failed", err)
 		return 0, false
 	}
 	if storeID == 0 || storeID != sellerID {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "You can only manage your own store"})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "You can only manage your own store", RequestID: requestIDOf(c)})
 		return 0, false
 	}
 	return userID, true
@@ -75,13 +75,13 @@ func (h *UserHandler) CreateBuyer(c *gin.Context) {
 	var req dto.CreateBuyerInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
 	userID, ok := currentUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return
 	}
 	if req.Buyer == nil {
@@ -91,7 +91,7 @@ func (h *UserHandler) CreateBuyer(c *gin.Context) {
 	req.Buyer.UserID = userID
 
 	// Get response and parse to json
-	res, err := h.Service.CreateBuyer(&req)
+	res, err := h.Service.CreateBuyer(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "UserHandler: CreateBuyer warn", err)
 		return
@@ -127,22 +127,22 @@ func (h *UserHandler) GetBuyerByUserID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	userID, ok := currentUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return
 	}
 	if idUint != userID {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "You can only access your own profile"})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "You can only access your own profile", RequestID: requestIDOf(c)})
 		return
 	}
 	req.UserID = idUint
 
 	// Get response and parse to json
-	res, err := h.Service.GetBuyerByUserID(&req)
+	res, err := h.Service.GetBuyerByUserID(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "UserHandler: GetBuyerByUserID warn", err)
 		return
@@ -170,7 +170,7 @@ func (h *UserHandler) UpdateBuyerByUserID(c *gin.Context) {
 	var req dto.UpdBuyByUseIDInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
@@ -179,16 +179,16 @@ func (h *UserHandler) UpdateBuyerByUserID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	userID, ok := currentUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return
 	}
 	if idUint != userID {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "You can only access your own profile"})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "You can only access your own profile", RequestID: requestIDOf(c)})
 		return
 	}
 	if req.Buyer == nil {
@@ -198,7 +198,7 @@ func (h *UserHandler) UpdateBuyerByUserID(c *gin.Context) {
 	req.Buyer.UserID = idUint
 
 	// Get response and parse to json
-	res, err := h.Service.UpdateBuyerByUserID(&req)
+	res, err := h.Service.UpdateBuyerByUserID(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "UserHandler: UpdateBuyerByUserID warn", err)
 		return
@@ -234,22 +234,22 @@ func (h *UserHandler) DelBuyerByUserID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	userID, ok := currentUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return
 	}
 	if idUint != userID {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "You can only access your own profile"})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "You can only access your own profile", RequestID: requestIDOf(c)})
 		return
 	}
 	req.UserID = idUint
 
 	// Get response and parse to json
-	res, err := h.Service.DelBuyerByUserID(&req)
+	res, err := h.Service.DelBuyerByUserID(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "UserHandler: DelBuyerByUserID warn", err)
 		return
@@ -276,13 +276,13 @@ func (h *UserHandler) CreateSeller(c *gin.Context) {
 	var req dto.CreateSellerInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
 	userID, ok := currentUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return
 	}
 	if req.Seller == nil {
@@ -293,7 +293,7 @@ func (h *UserHandler) CreateSeller(c *gin.Context) {
 	req.Seller.ID = 0
 
 	// Get response and parse to json
-	res, err := h.Service.CreateSeller(&req)
+	res, err := h.Service.CreateSeller(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "UserHandler: CreateSeller warn", err)
 		return
@@ -329,13 +329,13 @@ func (h *UserHandler) GetSellerByID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	req.UserID = idUint
 
 	// Get response and parse to json
-	res, err := h.Service.GetSellerByID(&req)
+	res, err := h.Service.GetSellerByID(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "UserHandler: GetSellerByID warn", err)
 		return
@@ -367,7 +367,7 @@ func (h *UserHandler) UpdateSellerByID(c *gin.Context) {
 	var req dto.UpdSelByIDInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
@@ -376,7 +376,7 @@ func (h *UserHandler) UpdateSellerByID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	userID, ok := h.requireOwnStore(c, idUint)
@@ -391,7 +391,7 @@ func (h *UserHandler) UpdateSellerByID(c *gin.Context) {
 	req.Seller.ID = idUint
 
 	// Get response and parse to json
-	res, err := h.Service.UpdateSellerByID(&req)
+	res, err := h.Service.UpdateSellerByID(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "UserHandler: UpdateSellerByID warn", err)
 		return
@@ -427,7 +427,7 @@ func (h *UserHandler) DelSellerByID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("UserHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	if _, ok := h.requireOwnStore(c, idUint); !ok {
@@ -436,7 +436,7 @@ func (h *UserHandler) DelSellerByID(c *gin.Context) {
 	req.UserID = idUint
 
 	// Get response and parse to json
-	res, err := h.Service.DelSellerByID(&req)
+	res, err := h.Service.DelSellerByID(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "UserHandler: DelSellerByID warn", err)
 		return

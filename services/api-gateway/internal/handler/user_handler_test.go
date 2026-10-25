@@ -3,10 +3,12 @@ package handler
 import (
 	"api-gateway/internal/client/authclient"
 	"api-gateway/internal/client/userclient"
+	"api-gateway/internal/requestid"
 	userpb "api-gateway/pkg/pb/userservice"
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -204,5 +206,21 @@ func TestSellerSensitiveFieldsAreOwnerOnly(t *testing.T) {
 		if v, ok := public[field]; ok && v != "" {
 			t.Errorf("public view leaks %s=%v", field, v)
 		}
+	}
+}
+
+func TestDirectErrorBodiesCarryRequestID(t *testing.T) {
+	r, _ := userRouter(0)
+	req, _ := http.NewRequest("GET", "/users/buyers/43", nil) // caller is 42 -> 403
+	req = req.WithContext(requestid.NewContext(req.Context(), "req-abcdef123"))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("status %d, want 403", w.Code)
+	}
+	var body map[string]any
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	if body["request_id"] != "req-abcdef123" {
+		t.Errorf("error body = %v, want request_id req-abcdef123", body)
 	}
 }

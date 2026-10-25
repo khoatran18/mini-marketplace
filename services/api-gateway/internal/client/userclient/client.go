@@ -31,7 +31,7 @@ func NewUserClient(client userpb.UserServiceClient, clientManager *client.Client
 
 // For buyer
 
-func (s *UserClient) CreateBuyer(input *dto.CreateBuyerInput) (*dto.CreateBuyerOutput, error) {
+func (s *UserClient) CreateBuyer(ctx context.Context, input *dto.CreateBuyerInput) (*dto.CreateBuyerOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -48,7 +48,7 @@ func (s *UserClient) CreateBuyer(input *dto.CreateBuyerInput) (*dto.CreateBuyerO
 		s.Logger.Warn("UserServer: invalid request for CreateBuyer", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.CreateBuyer(ctx, req)
 
@@ -71,7 +71,7 @@ func (s *UserClient) CreateBuyer(input *dto.CreateBuyerInput) (*dto.CreateBuyerO
 	return output, nil
 }
 
-func (s *UserClient) GetBuyerByUserID(input *dto.GetBuyByUseIDInput) (*dto.GetBuyByUseIDOutput, error) {
+func (s *UserClient) GetBuyerByUserID(ctx context.Context, input *dto.GetBuyByUseIDInput) (*dto.GetBuyByUseIDOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -88,7 +88,7 @@ func (s *UserClient) GetBuyerByUserID(input *dto.GetBuyByUseIDInput) (*dto.GetBu
 		s.Logger.Warn("UserServer: invalid request for GetBuyerByUserID", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.GetBuyerByUserID(ctx, req)
 
@@ -112,7 +112,7 @@ func (s *UserClient) GetBuyerByUserID(input *dto.GetBuyByUseIDInput) (*dto.GetBu
 
 }
 
-func (s *UserClient) UpdateBuyerByUserID(input *dto.UpdBuyByUseIDInput) (*dto.UpdBuyByUseIDOutput, error) {
+func (s *UserClient) UpdateBuyerByUserID(ctx context.Context, input *dto.UpdBuyByUseIDInput) (*dto.UpdBuyByUseIDOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -129,7 +129,7 @@ func (s *UserClient) UpdateBuyerByUserID(input *dto.UpdBuyByUseIDInput) (*dto.Up
 		s.Logger.Warn("UserServer: invalid request for UpdateBuyerByUserID", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.UpdateBuyerByUserID(ctx, req)
 
@@ -152,7 +152,7 @@ func (s *UserClient) UpdateBuyerByUserID(input *dto.UpdBuyByUseIDInput) (*dto.Up
 	return output, nil
 }
 
-func (s *UserClient) DelBuyerByUserID(input *dto.DelBuyByUseIDInput) (*dto.DelBuyByUseIDOutput, error) {
+func (s *UserClient) DelBuyerByUserID(ctx context.Context, input *dto.DelBuyByUseIDInput) (*dto.DelBuyByUseIDOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -169,7 +169,7 @@ func (s *UserClient) DelBuyerByUserID(input *dto.DelBuyByUseIDInput) (*dto.DelBu
 		s.Logger.Warn("UserServer: invalid request for DelBuyerByUserID", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.DelBuyerByUserID(ctx, req)
 
@@ -194,7 +194,7 @@ func (s *UserClient) DelBuyerByUserID(input *dto.DelBuyByUseIDInput) (*dto.DelBu
 
 // For Seller
 
-func (s *UserClient) CreateSeller(input *dto.CreateSellerInput) (*dto.CreateSellerOutput, error) {
+func (s *UserClient) CreateSeller(ctx context.Context, input *dto.CreateSellerInput) (*dto.CreateSellerOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -211,7 +211,7 @@ func (s *UserClient) CreateSeller(input *dto.CreateSellerInput) (*dto.CreateSell
 		s.Logger.Warn("UserServer: invalid request for CreateSeller", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.CreateSeller(ctx, req)
 
@@ -234,7 +234,7 @@ func (s *UserClient) CreateSeller(input *dto.CreateSellerInput) (*dto.CreateSell
 	return output, nil
 }
 
-func (s *UserClient) GetSellerByID(input *dto.GetSelByIDInput) (*dto.GetSelByIDOutput, error) {
+func (s *UserClient) GetSellerByID(ctx context.Context, input *dto.GetSelByIDInput) (*dto.GetSelByIDOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -251,7 +251,7 @@ func (s *UserClient) GetSellerByID(input *dto.GetSelByIDInput) (*dto.GetSelByIDO
 		s.Logger.Warn("UserServer: invalid request for GetSellerByUserID", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.GetSellerByID(ctx, req)
 
@@ -275,7 +275,7 @@ func (s *UserClient) GetSellerByID(input *dto.GetSelByIDInput) (*dto.GetSelByIDO
 
 }
 
-func (s *UserClient) UpdateSellerByID(input *dto.UpdSelByIDInput) (*dto.UpdSelByIDOutput, error) {
+func (s *UserClient) UpdateSellerByID(ctx context.Context, input *dto.UpdSelByIDInput) (*dto.UpdSelByIDOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -292,7 +292,7 @@ func (s *UserClient) UpdateSellerByID(input *dto.UpdSelByIDInput) (*dto.UpdSelBy
 		s.Logger.Warn("UserServer: invalid request for UpdateSellerByID", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.UpdateSellerByID(ctx, req)
 
@@ -315,7 +315,7 @@ func (s *UserClient) UpdateSellerByID(input *dto.UpdSelByIDInput) (*dto.UpdSelBy
 	return output, nil
 }
 
-func (s *UserClient) DelSellerByID(input *dto.DelSelByIDInput) (*dto.DelSelByIDOutput, error) {
+func (s *UserClient) DelSellerByID(ctx context.Context, input *dto.DelSelByIDInput) (*dto.DelSelByIDOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -332,7 +332,7 @@ func (s *UserClient) DelSellerByID(input *dto.DelSelByIDInput) (*dto.DelSelByIDO
 		s.Logger.Warn("UserServer: invalid request for DelSellerByID", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.DelSellerByID(ctx, req)
 

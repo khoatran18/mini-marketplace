@@ -29,7 +29,7 @@ func NewProductClient(client productpb.ProductServiceClient, clientManager *clie
 	}
 }
 
-func (s *ProductClient) CreateProduct(input *dto.CreateProductInput) (*dto.CreateProductOutput, error) {
+func (s *ProductClient) CreateProduct(ctx context.Context, input *dto.CreateProductInput) (*dto.CreateProductOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -46,7 +46,7 @@ func (s *ProductClient) CreateProduct(input *dto.CreateProductInput) (*dto.Creat
 		s.Logger.Warn("ProductClient: invalid request for CreateProduct", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.CreateProduct(ctx, req)
 
@@ -69,7 +69,7 @@ func (s *ProductClient) CreateProduct(input *dto.CreateProductInput) (*dto.Creat
 	return output, nil
 }
 
-func (s *ProductClient) UpdateProduct(input *dto.UpdateProductInput) (*dto.UpdateProductOutput, error) {
+func (s *ProductClient) UpdateProduct(ctx context.Context, input *dto.UpdateProductInput) (*dto.UpdateProductOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -86,7 +86,7 @@ func (s *ProductClient) UpdateProduct(input *dto.UpdateProductInput) (*dto.Updat
 		s.Logger.Warn("ProductClient: invalid request for UpdateProduct", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.UpdateProduct(ctx, req)
 
@@ -109,7 +109,7 @@ func (s *ProductClient) UpdateProduct(input *dto.UpdateProductInput) (*dto.Updat
 	return output, nil
 }
 
-func (s *ProductClient) GetProductByID(input *dto.GetProductByIDInput) (*dto.GetProductByIDOutput, error) {
+func (s *ProductClient) GetProductByID(ctx context.Context, input *dto.GetProductByIDInput) (*dto.GetProductByIDOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -126,7 +126,7 @@ func (s *ProductClient) GetProductByID(input *dto.GetProductByIDInput) (*dto.Get
 		s.Logger.Warn("ProductClient: invalid request for GetProductByID", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.GetProductByID(ctx, req)
 
@@ -149,7 +149,7 @@ func (s *ProductClient) GetProductByID(input *dto.GetProductByIDInput) (*dto.Get
 	return output, nil
 }
 
-func (s *ProductClient) GetProductsBySellerID(input *dto.GetProductsBySellerIDInput) (*dto.GetProductsBySellerIDOutput, error) {
+func (s *ProductClient) GetProductsBySellerID(ctx context.Context, input *dto.GetProductsBySellerIDInput) (*dto.GetProductsBySellerIDOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -166,7 +166,7 @@ func (s *ProductClient) GetProductsBySellerID(input *dto.GetProductsBySellerIDIn
 		s.Logger.Warn("ProductClient: invalid request for GetProductsBySellerID", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.GetProductsBySellerID(ctx, req)
 
@@ -189,7 +189,7 @@ func (s *ProductClient) GetProductsBySellerID(input *dto.GetProductsBySellerIDIn
 	return output, nil
 }
 
-func (s *ProductClient) GetProducts(input *dto.GetProductsInput) (*dto.GetProductsOutput, error) {
+func (s *ProductClient) GetProducts(ctx context.Context, input *dto.GetProductsInput) (*dto.GetProductsOutput, error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return nil, err
@@ -206,7 +206,7 @@ func (s *ProductClient) GetProducts(input *dto.GetProductsInput) (*dto.GetProduc
 		s.Logger.Warn("ProductClient: invalid request for GetProducts", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.GetProducts(ctx, req)
 

@@ -32,16 +32,16 @@ const maxPageSize = 100
 func (h *ProductHandler) callerStoreID(c *gin.Context) (uint64, bool) {
 	userID, ok := currentUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return 0, false
 	}
-	storeID, _, err := h.Auth.GetStoreID(userID)
+	storeID, _, err := h.Auth.GetStoreID(c.Request.Context(), userID)
 	if err != nil {
 		respondError(c, h.Logger, "ProductHandler: resolve store failed", err)
 		return 0, false
 	}
 	if storeID == 0 {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Create a store before managing products"})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Create a store before managing products", RequestID: requestIDOf(c)})
 		return 0, false
 	}
 	return storeID, true
@@ -66,7 +66,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	var req dto.CreateProductInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
@@ -82,7 +82,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	}
 
 	// Get response and parse to json
-	res, err := h.Service.CreateProduct(&req)
+	res, err := h.Service.CreateProduct(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "ProductHandler: CreateProduct warn", err)
 		return
@@ -110,7 +110,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	var req dto.UpdateProductInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
@@ -119,7 +119,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	if req.Product == nil {
@@ -142,7 +142,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	req.Product.SellerID = storeID
 
 	// Get response and parse to json
-	res, err := h.Service.UpdateProduct(&req)
+	res, err := h.Service.UpdateProduct(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "ProductHandler: UpdateProduct warn", err)
 		return
@@ -178,13 +178,13 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	idUint, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	req.ProductID = idUint
 
 	// Get response and parse to json
-	res, err := h.Service.GetProductByID(&req)
+	res, err := h.Service.GetProductByID(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "ProductHandler: GetProductByID warn", err)
 		return
@@ -196,7 +196,7 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	}
 	// Drafts, hidden and banned products exist only for their owner (and admins)
 	if res.Product != nil && res.Product.Status != "active" && !v.Owns(res.Product.SellerID) {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "Product not found"})
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "Product not found", RequestID: requestIDOf(c)})
 		return
 	}
 	maskProduct(res.Product, v)
@@ -231,7 +231,7 @@ func (h *ProductHandler) GetProductsBySellerID(c *gin.Context) {
 	sellerIdUint, err := strconv.ParseUint(sellerIdStr, 10, 64)
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	req.SellerID = sellerIdUint
@@ -244,7 +244,7 @@ func (h *ProductHandler) GetProductsBySellerID(c *gin.Context) {
 	req.OnlyActive = !v.Owns(sellerIdUint)
 
 	// Get response and parse to json
-	res, err := h.Service.GetProductsBySellerID(&req)
+	res, err := h.Service.GetProductsBySellerID(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "ProductHandler: GetProductsBySellerID warn", err)
 		return
@@ -283,13 +283,13 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 	page, err := getQueryInt(c, "page", 1)
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	pageSize, err := getQueryInt(c, "page_size", 10)
 	if err != nil {
 		h.Logger.Warn("ProductHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	if page < 1 {
@@ -306,7 +306,7 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 	req.OnlyActive = true // the public listing never shows drafts, hidden or banned products
 
 	// Get response and parse to json
-	res, err := h.Service.GetProducts(&req)
+	res, err := h.Service.GetProducts(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "ProductHandler: GetProducts warn", err)
 		return

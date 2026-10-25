@@ -30,7 +30,7 @@ func NewAuthClient(client authpb.AuthServiceClient, clientManager *client.Client
 }
 
 // Login handle request from AuthHandler to AuthClient
-func (s *AuthClient) Login(input *dto.LoginInput) (*dto.LoginOutput, error) {
+func (s *AuthClient) Login(ctx context.Context, input *dto.LoginInput) (*dto.LoginOutput, error) {
 
 	// Check if AuthClient is not connected
 	if s.Client == nil {
@@ -49,7 +49,7 @@ func (s *AuthClient) Login(input *dto.LoginInput) (*dto.LoginOutput, error) {
 		s.Logger.Warn("AuthServer: invalid request for Login", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.Login(ctx, req)
 
@@ -73,7 +73,7 @@ func (s *AuthClient) Login(input *dto.LoginInput) (*dto.LoginOutput, error) {
 }
 
 // Register handle request from AuthHandler to AuthClient
-func (s *AuthClient) Register(input *dto.RegisterInput) (*dto.RegisterOutput, error) {
+func (s *AuthClient) Register(ctx context.Context, input *dto.RegisterInput) (*dto.RegisterOutput, error) {
 
 	// Check if AuthClient is not connected
 	if s.Client == nil {
@@ -92,7 +92,7 @@ func (s *AuthClient) Register(input *dto.RegisterInput) (*dto.RegisterOutput, er
 		s.Logger.Warn("AuthServer: invalid request for Register", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.Register(ctx, req)
 
@@ -116,7 +116,7 @@ func (s *AuthClient) Register(input *dto.RegisterInput) (*dto.RegisterOutput, er
 }
 
 // ChangePassword handle request from AuthHandler to AuthClient
-func (s *AuthClient) ChangePassword(input *dto.ChangePasswordInput) (*dto.ChangePasswordOutput, error) {
+func (s *AuthClient) ChangePassword(ctx context.Context, input *dto.ChangePasswordInput) (*dto.ChangePasswordOutput, error) {
 
 	// Check if AuthClient is not connected
 	if s.Client == nil {
@@ -135,7 +135,7 @@ func (s *AuthClient) ChangePassword(input *dto.ChangePasswordInput) (*dto.Change
 		s.Logger.Warn("AuthServer: invalid request for ChangePassword", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.ChangePassword(ctx, req)
 
@@ -159,7 +159,7 @@ func (s *AuthClient) ChangePassword(input *dto.ChangePasswordInput) (*dto.Change
 }
 
 // RefreshToken handle request from AuthHandler to AuthClient
-func (s *AuthClient) RefreshToken(input *dto.RefreshTokenInput) (*dto.RefreshTokenOutput, error) {
+func (s *AuthClient) RefreshToken(ctx context.Context, input *dto.RefreshTokenInput) (*dto.RefreshTokenOutput, error) {
 
 	// Check if AuthClient is not connected
 	if s.Client == nil {
@@ -178,7 +178,7 @@ func (s *AuthClient) RefreshToken(input *dto.RefreshTokenInput) (*dto.RefreshTok
 		s.Logger.Warn("AuthServer: invalid request for Register", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.RefreshToken(ctx, req)
 
@@ -202,7 +202,7 @@ func (s *AuthClient) RefreshToken(input *dto.RefreshTokenInput) (*dto.RefreshTok
 }
 
 // RegisterSellerRoles handle request from AuthHandler to RegisterSellerRoles
-func (s *AuthClient) RegisterSellerRoles(input *dto.RegisterSellerRolesInput) (*dto.RegisterSellerRolesOutput, error) {
+func (s *AuthClient) RegisterSellerRoles(ctx context.Context, input *dto.RegisterSellerRolesInput) (*dto.RegisterSellerRolesOutput, error) {
 
 	// Check if AuthClient is not connected
 	if s.Client == nil {
@@ -221,7 +221,7 @@ func (s *AuthClient) RegisterSellerRoles(input *dto.RegisterSellerRolesInput) (*
 		s.Logger.Warn("AuthServer: invalid request for RegisterSellerRoles", zap.Error(err))
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	res, err := s.Client.RegisterSellerRoles(ctx, req)
 
@@ -263,13 +263,13 @@ func (s *AuthClient) validateClient() error {
 
 // GetStoreID resolves the store (seller) ID and role of an account.
 // A zero store ID means the account has no store yet.
-func (s *AuthClient) GetStoreID(userID uint64) (storeID uint64, role string, err error) {
+func (s *AuthClient) GetStoreID(ctx context.Context, userID uint64) (storeID uint64, role string, err error) {
 	if s.Client == nil {
 		if err := s.validateClient(); err != nil {
 			return 0, "", err
 		}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	res, err := s.Client.GetStoreIDRoleById(ctx, &authpb.GetStoreIDRoleByIDRequest{ID: userID})
 	if err != nil {

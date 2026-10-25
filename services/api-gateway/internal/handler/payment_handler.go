@@ -96,7 +96,7 @@ func (h *PaymentHandler) Methods(c *gin.Context) {
 func (h *PaymentHandler) Get(c *gin.Context) {
 	v, err := resolveViewer(c, nil)
 	if err != nil || !v.Authenticated() {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return
 	}
 	id, ok := parseUintParam(c, "id")
@@ -128,7 +128,7 @@ type confirmBody struct {
 func (h *PaymentHandler) Confirm(c *gin.Context) {
 	v, err := resolveViewer(c, nil)
 	if err != nil || !v.Authenticated() {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return
 	}
 	id, ok := parseUintParam(c, "id")
@@ -159,7 +159,7 @@ func (h *PaymentHandler) Confirm(c *gin.Context) {
 func (h *PaymentHandler) Cancel(c *gin.Context) {
 	v, err := resolveViewer(c, nil)
 	if err != nil || !v.Authenticated() {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return
 	}
 	id, ok := parseUintParam(c, "id")

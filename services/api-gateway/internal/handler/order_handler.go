@@ -50,11 +50,11 @@ func (h *OrderHandler) order(c *gin.Context) (orderpb.OrderServiceClient, contex
 func (h *OrderHandler) buyerID(c *gin.Context) (uint64, bool) {
 	v, err := resolveViewer(c, nil)
 	if err != nil || !v.Authenticated() {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in context", RequestID: requestIDOf(c)})
 		return 0, false
 	}
 	if v.Role != "buyer" {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only buyers can do this"})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only buyers can do this", RequestID: requestIDOf(c)})
 		return 0, false
 	}
 	return v.UserID, true
@@ -348,19 +348,19 @@ func (h *OrderHandler) scope(c *gin.Context, kind string) (buyer, store uint64, 
 	switch kind {
 	case "buyer":
 		if v.Role != "buyer" {
-			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only buyers can do this"})
+			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only buyers can do this", RequestID: requestIDOf(c)})
 			return 0, 0, false, false
 		}
 		return v.UserID, 0, false, true
 	case "seller":
 		if !v.IsSeller() || v.StoreID == 0 {
-			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only sellers with a store can do this"})
+			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only sellers with a store can do this", RequestID: requestIDOf(c)})
 			return 0, 0, false, false
 		}
 		return 0, v.StoreID, false, true
 	default:
 		if !v.IsAdmin() {
-			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only administrators can do this"})
+			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only administrators can do this", RequestID: requestIDOf(c)})
 			return 0, 0, false, false
 		}
 		return 0, 0, true, true
@@ -463,19 +463,19 @@ func (h *OrderHandler) act(kind, action string) gin.HandlerFunc {
 		switch kind {
 		case "buyer":
 			if v.Role != "buyer" {
-				c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only buyers can do this"})
+				c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only buyers can do this", RequestID: requestIDOf(c)})
 				return
 			}
 			req.ActorType = "buyer"
 		case "seller":
 			if !v.IsSeller() || v.StoreID == 0 {
-				c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only sellers with a store can do this"})
+				c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only sellers with a store can do this", RequestID: requestIDOf(c)})
 				return
 			}
 			req.ActorType, req.StoreId = "seller", v.StoreID
 		default:
 			if !v.IsAdmin() {
-				c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only administrators can do this"})
+				c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "Only administrators can do this", RequestID: requestIDOf(c)})
 				return
 			}
 			req.ActorType = "admin"

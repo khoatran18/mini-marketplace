@@ -41,12 +41,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
 	// Get response and parse to json
-	res, err := h.Service.Login(&req)
+	res, err := h.Service.Login(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "AuthHandler: Login warn", err)
 		return
@@ -72,7 +72,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
@@ -82,7 +82,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	// Get response and parse to json
-	res, err := h.Service.Register(&req)
+	res, err := h.Service.Register(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "AuthHandler Register warn", err)
 		return
@@ -109,14 +109,14 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	var req dto.ChangePasswordInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
 	// The account being changed is always the authenticated one
 	username, role, ok := currentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized", RequestID: requestIDOf(c)})
 		return
 	}
 	if len(req.NewPassword) < 8 {
@@ -127,7 +127,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	req.Role = role
 
 	// Get response and parse to json
-	res, err := h.Service.ChangePassword(&req)
+	res, err := h.Service.ChangePassword(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "AuthHandler Change Password warn", err)
 		return
@@ -153,12 +153,12 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req dto.RefreshTokenInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 
 	// Get response and parse to json
-	res, err := h.Service.RefreshToken(&req)
+	res, err := h.Service.RefreshToken(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "AuthHandler Refresh Token warn", err)
 		return
@@ -184,24 +184,24 @@ func (h *AuthHandler) RegisterSellerRoles(c *gin.Context) {
 	var req dto.RegisterSellerRolesInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.Warn("AuthHandler invalid request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error())})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: requestIDOf(c)})
 		return
 	}
 	id, ok := c.Get("userID")
 	if !ok {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString("not valid user_id")})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString("not valid user_id"), RequestID: requestIDOf(c)})
 		return
 	}
 	adminID, ok := id.(uint64)
 	if !ok {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString("not valid user_id")})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: GetErrorString("not valid user_id"), RequestID: requestIDOf(c)})
 		return
 	}
 	req.SellerAdminID = adminID
 	req.Role = "seller_employee"
 
 	// Get response and parse to json
-	res, err := h.Service.RegisterSellerRoles(&req)
+	res, err := h.Service.RegisterSellerRoles(c.Request.Context(), &req)
 	if err != nil {
 		respondError(c, h.Logger, "AuthHandler RegisterSellerRoles warn", err)
 		return

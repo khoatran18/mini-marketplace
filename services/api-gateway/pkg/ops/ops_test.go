@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func newTestServer(checks ...Check) *Server {
@@ -246,5 +248,30 @@ func TestMountAddsServiceRoutes(t *testing.T) {
 	s.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/internal/ping", nil))
 	if rec.Code != http.StatusAccepted {
 		t.Fatalf("mounted route: %d", rec.Code)
+	}
+}
+
+func TestGatewayMetrics(t *testing.T) {
+	s := newTestServer()
+	IncRateLimited("auth")
+	IncRateLimited("10.0.0.1") // collapses to default
+	inv := ClientInterceptor("order")
+	_ = inv(context.Background(), "/order.OrderService/GetOrder", nil, nil, nil,
+		func(context.Context, string, any, any, *grpc.ClientConn, ...grpc.CallOption) error {
+			return status.Error(codes.NotFound, "x")
+		})
+	_, _, body := get(t, s.Handler(), "/metrics")
+	for _, want := range []string{
+		`mm_rate_limited_total{group="auth",service="test-service"} 1`,
+		`mm_rate_limited_total{group="default",service="test-service"} 1`,
+		`mm_grpc_client_requests_total{code="NotFound",method="/order.OrderService/GetOrder",`,
+		`mm_grpc_client_duration_seconds_count{`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %s", want)
+		}
+	}
+	if strings.Contains(body, "10.0.0.1") {
+		t.Error("IP leaked into labels")
 	}
 }

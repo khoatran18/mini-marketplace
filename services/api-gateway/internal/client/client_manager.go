@@ -2,7 +2,9 @@ package client
 
 import (
 	"api-gateway/internal/config"
+	"api-gateway/internal/requestid"
 	"api-gateway/pkg/clientname"
+	"api-gateway/pkg/ops"
 	analyticspb "api-gateway/pkg/pb/analyticsservice"
 	"api-gateway/pkg/pb/authservice"
 	orderpb "api-gateway/pkg/pb/orderservice"
@@ -25,7 +27,7 @@ type ServiceClient struct {
 }
 
 // newServiceClient create client for each gRPC client
-func newServiceClient[T any](addr string, createClient func(conn *grpc.ClientConn) T) (*ServiceClient, error) {
+func newServiceClient[T any](name, addr string, createClient func(conn *grpc.ClientConn) T) (*ServiceClient, error) {
 
 	// Test
 	//interceptor := func(
@@ -43,7 +45,13 @@ func newServiceClient[T any](addr string, createClient func(conn *grpc.ClientCon
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
-		//grpc.WithUnaryInterceptor(interceptor),
+		// Thứ tự: requestid -> deadline -> retry -> metrics (mỗi lần thử đều được đếm trong mm_grpc_client_*).
+		grpc.WithChainUnaryInterceptor(
+			requestid.UnaryClientInterceptor(),
+			DeadlineInterceptor(loadCallPolicy()),
+			RetryInterceptor(name, loadCallPolicy()),
+			ops.ClientInterceptor(name),
+		),
 	)
 	if err != nil {
 		return nil, err
@@ -157,7 +165,7 @@ func (cm *ClientManager) GetOrCreateServiceClient(serviceName string) (any, erro
 		return nil, errors.New(fmt.Sprintf("addr for %v (GRPCConfig) is empty", serviceName))
 	}
 
-	newClient, err := newServiceClient(addr, cm.ClientConstructors[serviceName])
+	newClient, err := newServiceClient(serviceName, addr, cm.ClientConstructors[serviceName])
 	if err != nil {
 		return nil, fmt.Errorf("AuthClient not existed but init failed %v", err)
 	}

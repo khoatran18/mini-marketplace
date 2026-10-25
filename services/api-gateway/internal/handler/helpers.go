@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"api-gateway/internal/requestid"
 	"api-gateway/pkg/dto"
 	"buf.build/go/protovalidate"
 	"errors"
@@ -55,7 +56,9 @@ func httpStatusFromError(err error) int {
 		return http.StatusConflict
 	case codes.FailedPrecondition:
 		return http.StatusUnprocessableEntity
-	case codes.Unavailable, codes.DeadlineExceeded:
+	case codes.DeadlineExceeded:
+		return http.StatusGatewayTimeout
+	case codes.Unavailable:
 		return http.StatusServiceUnavailable
 	default:
 		return http.StatusInternalServerError
@@ -64,10 +67,24 @@ func httpStatusFromError(err error) int {
 
 // respondError logs err and writes a JSON error with a status derived from the gRPC code.
 func respondError(c *gin.Context, logger *zap.Logger, msg string, err error) {
-	logger.Warn(msg, zap.Error(err))
-	c.JSON(httpStatusFromError(err), dto.ErrorResponse{Error: GetErrorString(err.Error())})
+	rid := requestIDOf(c)
+	logger.Warn(msg, zap.Error(err), zap.String("request_id", rid))
+	c.JSON(httpStatusFromError(err), dto.ErrorResponse{Error: GetErrorString(err.Error()), RequestID: rid})
 }
 
 func badRequest(c *gin.Context, msg string) {
-	c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: msg})
+	c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: msg, RequestID: requestIDOf(c)})
+}
+
+// requestIDOf trả request id do RequestIDMiddleware đặt ("" nếu middleware không chạy, vd. test handler đơn lẻ).
+func requestIDOf(c *gin.Context) string {
+	if v, ok := c.Get("requestID"); ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	if c.Request != nil {
+		return requestid.FromContext(c.Request.Context())
+	}
+	return ""
 }

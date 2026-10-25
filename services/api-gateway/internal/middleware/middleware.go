@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"api-gateway/pkg/ops"
 	"context"
 	"fmt"
 	"net/http"
@@ -43,6 +44,9 @@ func RequestLoggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
 			zap.Int("status", statusCode),
 			zap.Any("userID", userID),
 		}
+		if rid, ok := c.Get("requestID"); ok {
+			logFields = append(logFields, zap.Any("request_id", rid))
+		}
 
 		if statusCode >= 500 {
 			logger.Error("Error request failed with sever error", logFields...)
@@ -84,6 +88,11 @@ func RateLimitingMiddleware(scope string, limit int, period time.Duration, logge
 				zap.Int("limit", limit),
 				zap.Int64("count", count),
 			)
+			group := scope
+			if group == "global" {
+				group = "default"
+			}
+			ops.IncRateLimited(group)
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many requests"})
 			c.Abort()
 			return
