@@ -1,6 +1,6 @@
 // Địa chỉ, giỏ hàng, preview, POST /orders (Idempotency-Key), tách đơn theo store, tồn kho bị giữ đúng 1 lần.
 import { get, post, put, del } from '../lib/client.mjs';
-import { createProduct, registerBuyer, placeOrder, idemKey, inventoryOf, waitOrder, ADDRESS } from '../lib/fixtures.mjs';
+import { createProduct, registerBuyer, placeOrder, idemKey, inventoryOf, inventoryEventually, waitOrder, ADDRESS } from '../lib/fixtures.mjs';
 
 export default {
   id: '03', title: 'Địa chỉ, giỏ hàng, checkout & idempotency',
@@ -75,7 +75,7 @@ export default {
     t.status('gửi lại cùng key → 200', o2, 200);
     t.eq('replayed=true', o2.body?.replayed, true);
     t.eq('cùng checkout_id', o2.body?.checkout_id, o1.body?.checkout_id);
-    t.eq('tồn chỉ bị giữ một lần (30 → 28)', await inventoryOf(sellerA, pa.id), 28);
+    t.eq('tồn chỉ bị giữ một lần (30 → 28)', await inventoryEventually(sellerA, pa.id, 28), 28);
     t.eq('giỏ đã được xoá các dòng đã đặt', (await get('/cart', { token: buyer.token })).body?.lines?.length ?? 0, 0);
     const co = await get(`/checkouts/${o1.body?.checkout_id}`, { token: buyer.token });
     t.status('GET /checkouts/:id', co, 200);

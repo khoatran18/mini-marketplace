@@ -1,0 +1,20 @@
+# Override cho máy yếu: Kafka chỉ 1 broker (RF=1, min ISR=1); broker2/broker3 để 0 replica (không chạy).
+# Dùng: LITE=true ./scripts/deploy.sh   (deploy.sh gộp: -f infra.yml -f infra.lite.yml và đặt KAFKA_BROKERS_ADDR=broker1:9092 cho services)
+# Hoặc thủ công: docker compose --env-file deploy/.env -f deploy/infra.yml -f deploy/infra.lite.yml config
+# Lưu ý: chuyển giữa lite và đầy đủ trên cùng volume kafka-data-1 KHÔNG an toàn (metadata quorum khác nhau);
+# đổi chế độ thì teardown --volumes (hoặc xóa kafka-data-*) trước.
+services:
+  broker1:
+    environment:
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker1:9093
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  broker2:
+    deploy:
+      replicas: 0
+  broker3:
+    deploy:
+      replicas: 0

@@ -73,6 +73,16 @@ export async function createProduct(seller, { name, price = 100000, inventory = 
 
 export const getProduct = async (token, id) => (await get(`/products/${id}`, { token })).body?.product;
 export const inventoryOf = async (seller, id) => (await getProduct(seller.token, id))?.inventory;
+// Tồn kho đổi bất đồng bộ (order -> Kafka -> product): chờ tới khi đạt giá trị mong đợi (hoặc hết giờ) rồi trả giá trị cuối.
+export async function inventoryEventually(seller, id, want, ms = 15000) {
+  let v;
+  for (const t0 = Date.now(); Date.now() - t0 < ms; ) {
+    v = await inventoryOf(seller, id);
+    if (v === want) return v;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return v;
+}
 
 // ---------------------------------------------------------------- địa chỉ / giỏ / đặt hàng
 export async function ensureAddress(buyer) {

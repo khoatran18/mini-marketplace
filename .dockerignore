@@ -1,0 +1,14 @@
+# Root build context for services/*/Dockerfile (see ADR-33): keep it small and free of secrets.
+.git
+.github
+.idea
+.claude
+apps
+docs
+deploy
+scripts
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+**/*.test

@@ -1,0 +1,17 @@
+<!-- S5: the ClickHouse user may only connect from loopback and private (RFC 1918) addresses, i.e. from inside the
+     overlay network / the container itself (healthcheck). The official image otherwise allows ::/0. Ports are never
+     published either way. Password is CLICKHOUSE_PASSWORD (required, no empty default). Loaded via Swarm `configs`
+     to users.d/zz-networks.xml so it merges after the image-generated default-user.xml. -->
+<clickhouse>
+    <users>
+        <default>
+            <networks replace="replace">
+                <ip>127.0.0.1</ip>
+                <ip>::1</ip>
+                <ip>10.0.0.0/8</ip>
+                <ip>172.16.0.0/12</ip>
+                <ip>192.168.0.0/16</ip>
+            </networks>
+        </default>
+    </users>
+</clickhouse>

@@ -10,7 +10,12 @@ scrape_configs:
       - targets: ['localhost:9090']
 
   # Our Go services: admin port :8081/metrics (gateway, auth, user, product, order, payment, analytics)
+  # METRICS_TOKEN (optional bearer token on /metrics): observability.yml writes it to /tmp/metrics_token at container
+  # start. Empty token = empty file = services are open and ignore the header (see docs/design/05_SECURITY.md).
   - job_name: mm-services
+    authorization:
+      type: Bearer
+      credentials_file: /tmp/metrics_token
     dns_sd_configs:
       - names:
           - tasks.api-gateway

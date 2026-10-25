@@ -3,19 +3,26 @@
 # hệ thống suy giảm đúng cách và tự hồi phục. Cần deploy trước (scripts/deploy.sh), image marketplace/frontend:latest (có node)
 # và ADMIN_BOOTSTRAP_* (để kiểm /admin/system/health; không có thì bỏ qua phần đó).
 #
-# Usage: scripts/e2e/resilience.sh [A B C ...]      (mặc định chạy tất cả; mỗi chữ là một kịch bản)
-#   A ClickHouse down   B Kafka down   C payment-service down   D product-service down
+# Usage: scripts/e2e/resilience.sh [A B C ... J]      (mặc định chạy tất cả; mỗi chữ là một kịch bản)
+#   A ClickHouse down   B Kafka down (cả 3 broker)   C payment-service down   D product-service down
 #   E Redis down        F Postgres down (/ready 503)           G order-service down sau khi nhận đơn
-#   H rolling restart   I Postgres restart
+#   H rolling restart   I Postgres restart   J một broker Kafka down (cụm 3 broker)
 # Biến: PUBLIC_HOST, ADMIN_USERNAME/ADMIN_PASSWORD, STACK_INFRA (marketplace-infra), STACK_APP (marketplace)
 set -uo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 host="${PUBLIC_HOST:-marketplace.swarm.localhost}"
+scheme="${PUBLIC_SCHEME:-$(grep -E '^PUBLIC_SCHEME=' "$root/deploy/.env" 2>/dev/null | tail -1 | cut -d= -f2 | sed 's/[[:space:]#].*//')}"; scheme="${scheme:-http}"
+ca=(); [ "$scheme" = https ] && ca=(-v "$root/deploy/traefik/certs/local.crt:/ca.crt:ro" -e NODE_EXTRA_CA_CERTS=/ca.crt)
 INFRA="${STACK_INFRA:-marketplace-infra}"
 APP="${STACK_APP:-marketplace}"
 state="$(mktemp -d)"
 fails=0
-want=" ${*:-A B C D E F G H I} "
+want=" ${*:-A B C D E F G H I J} "
+
+# Tài khoản admin (cho /admin/system/health): lấy từ biến môi trường, không có thì đọc ADMIN_BOOTSTRAP_* trong deploy/.env
+envval() { [ -f "$root/deploy/.env" ] && grep -E "^$1=" "$root/deploy/.env" | tail -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' || true; }
+ADMIN_USERNAME="${ADMIN_USERNAME:-${ADMIN_BOOTSTRAP_USERNAME:-$(envval ADMIN_BOOTSTRAP_USERNAME)}}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-${ADMIN_BOOTSTRAP_PASSWORD:-$(envval ADMIN_BOOTSTRAP_PASSWORD)}}"
 
 cid=$(docker ps -q -f name="${APP}_traefik" | head -1)
 [ -n "$cid" ] || { echo "không tìm thấy container traefik của stack $APP (đã deploy chưa?)"; exit 1; }
@@ -25,8 +32,8 @@ vip=$(docker inspect "$cid" --format '{{(index .NetworkSettings.Networks "market
 step() {
   local s="$1"; shift
   docker run --rm --user root --network marketplace-net --add-host "api.$host:$vip" \
-    -v "$root/scripts/e2e:/e2e:ro" -v "$root/deploy/traefik/certs/local.crt:/ca.crt:ro" -v "$state:/state" \
-    -e NODE_EXTRA_CA_CERTS=/ca.crt -e API_URL="https://api.$host" -e STEP="$s" -e STATE_FILE=/state/state.json \
+    -v "$root/scripts/e2e:/e2e:ro" "${ca[@]+"${ca[@]}"}" -v "$state:/state" \
+    -e API_URL="$scheme://api.$host" -e STEP="$s" -e STATE_FILE=/state/state.json \
     -e ADMIN_USERNAME="${ADMIN_USERNAME:-${ADMIN_BOOTSTRAP_USERNAME:-}}" -e ADMIN_PASSWORD="${ADMIN_PASSWORD:-${ADMIN_BOOTSTRAP_PASSWORD:-}}" "$@" \
     --entrypoint node marketplace/frontend:latest /e2e/resilience.mjs 2>&1 | tail -1
 }
@@ -84,14 +91,16 @@ echo "[A] ClickHouse down: analytics 503, nhưng đặt hàng + POST /events v�
 fi
 
 if [[ "$want" == *" B "* ]]; then
-echo "[B] Kafka down: đơn vẫn được nhận (outbox), xử lý xong khi Kafka quay lại"
-  stop "${INFRA}_broker1"
+echo "[B] Kafka down (dừng CẢ 3 broker): đơn vẫn được nhận (outbox), xử lý xong khi Kafka quay lại"
+  for b in 1 2 3; do scale "${INFRA}_broker$b" 0; done
+  for b in 1 2 3; do wait_down "${INFRA}_broker$b"; done; sleep 5
   r=$(step order); echo "  order: $r"
   expect "đặt đơn COD nhận 201 khi Kafka down" "$(eq "$(j "$r" http)" 201; echo $?)"
   sleep 5; st=$(step status); echo "  $st"
   expect "đơn còn PENDING khi Kafka down" "$([ "$(count "$st" PENDING)" -ge 1 ] 2>/dev/null; echo $?)"
-  start "${INFRA}_broker1" 10
-  st=$(step wait -e WAIT_MS=150000); echo "  $st"
+  for b in 1 2 3; do scale "${INFRA}_broker$b" 1; done
+  for b in 1 2 3; do wait_up "${INFRA}_broker$b" 120; done; sleep 15
+  st=$(step wait -e WAIT_MS=180000); echo "  $st"
   expect "không còn đơn PENDING sau khi Kafka trở lại" "$(eq "$(j "$st" timed_out)" False; echo $?)"
 fi
 
@@ -176,6 +185,20 @@ echo "[I] Postgres restart (force update): service tự kết nối lại"
   wait_step order http 201 step order; expect "đặt đơn lại được sau khi Postgres restart" "$?"
   st=$(step wait -e WAIT_MS=120000); echo "  $st"
   expect "không còn đơn PENDING" "$(eq "$(j "$st" timed_out)" False; echo $?)"
+fi
+
+if [[ "$want" == *" J "* ]]; then
+echo "[J] Một broker Kafka down (cụm 3 broker, RF=3, min ISR=2): đơn vẫn 201 và được xử lý, không còn PENDING"
+  stop "${INFRA}_broker3" 10
+  r=$(step order); echo "  order: $r"
+  expect "đặt đơn COD vẫn 201 khi 1/3 broker down" "$(eq "$(j "$r" http)" 201; echo $?)"
+  r=$(step order); expect "đặt thêm đơn vẫn 201" "$(eq "$(j "$r" http)" 201; echo $?)"
+  st=$(step wait -e WAIT_MS=120000); echo "  $st"
+  expect "không còn đơn PENDING khi 1 broker down (xử lý qua 2 broker còn lại)" "$(eq "$(j "$st" timed_out)" False; echo $?)"
+  start "${INFRA}_broker3" 15
+  r=$(step order); expect "đặt đơn bình thường sau khi broker3 trở lại" "$(eq "$(j "$r" http)" 201; echo $?)"
+  st=$(step wait -e WAIT_MS=120000); echo "  $st"
+  expect "không còn đơn PENDING sau khi broker3 trở lại" "$(eq "$(j "$st" timed_out)" False; echo $?)"
 fi
 
 if [ "$has_admin" = 1 ]; then

@@ -15,6 +15,8 @@ envfile="$root/deploy/.env"
 envval() { [ -f "$envfile" ] && grep -E "^$1=" "$envfile" | tail -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' || true; }
 
 host="${PUBLIC_HOST:-$(envval PUBLIC_HOST)}"; host="${host:-marketplace.swarm.localhost}"
+scheme="${PUBLIC_SCHEME:-$(envval PUBLIC_SCHEME)}"; scheme="${scheme:-http}"
+ca=(); [ "$scheme" = https ] && ca=(-v "$root/deploy/traefik/certs/local.crt:/ca.crt:ro" -e NODE_EXTRA_CA_CERTS=/ca.crt)
 admin_user="${ADMIN_USERNAME:-$(envval ADMIN_BOOTSTRAP_USERNAME)}"
 admin_pass="${ADMIN_PASSWORD:-$(envval ADMIN_BOOTSTRAP_PASSWORD)}"
 wh_secret="${PAYMENT_WEBHOOK_SECRET:-$(envval PAYMENT_WEBHOOK_SECRET)}"
@@ -27,8 +29,8 @@ vip=$(docker inspect "$cid" --format '{{(index .NetworkSettings.Networks "market
 
 docker run --rm --network marketplace-net \
   --add-host "$host:$vip" --add-host "api.$host:$vip" \
-  -v "$root/scripts/e2e:/e2e:ro" -v "$root/deploy/traefik/certs/local.crt:/ca.crt:ro" \
-  -e NODE_EXTRA_CA_CERTS=/ca.crt -e API_URL="https://api.$host" \
+  -v "$root/scripts/e2e:/e2e:ro" "${ca[@]+"${ca[@]}"}" \
+  -e API_URL="$scheme://api.$host" \
   -e ADMIN_USERNAME="$admin_user" -e ADMIN_PASSWORD="$admin_pass" \
   -e PAYMENT_WEBHOOK_URL="${wh_secret:+http://payment-service:8081/internal/payments/webhook}" -e PAYMENT_WEBHOOK_SECRET="$wh_secret" \
   -e E2E_DEV_MODE="${E2E_DEV_MODE:-0}" -e E2E_EXPIRY_TTL_MIN="${E2E_EXPIRY_TTL_MIN:-0}" -e RATE_LIMIT_TEST="${RATE_LIMIT_TEST:-0}" \

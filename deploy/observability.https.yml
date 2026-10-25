@@ -1,0 +1,9 @@
+# Override HTTPS cho Grafana (PUBLIC_SCHEME=https); deploy.sh tự gộp. Xem services.https.yml.
+services:
+  grafana:
+    environment:
+      GF_SERVER_ROOT_URL: https://grafana.${PUBLIC_HOST:-marketplace.swarm.localhost}
+    deploy:
+      labels:
+        - traefik.http.routers.grafana.entrypoints=websecure
+        - traefik.http.routers.grafana.tls=true

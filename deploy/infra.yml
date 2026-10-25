@@ -1,9 +1,46 @@
-# Infrastructure stack: Postgres, Redis, Kafka (single broker, dev/small deployments).
+# Infrastructure stack: Postgres, Redis, Kafka (cụm 3 broker KRaft; lite: 1 broker).
 # Deploy: docker stack deploy -c <(docker compose --env-file deploy/.env -f deploy/infra.yml config) marketplace-infra
 x-logging: &logging
   # Giới hạn log Docker (json-file): tối đa 3 file x 10MB mỗi container, tránh đầy đĩa. Vector đọc log từ đây.
   driver: json-file
   options: {max-size: "10m", max-file: "3"}
+
+x-kafka-env: &kafka-env
+  KAFKA_PROCESS_ROLES: broker,controller
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+  KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+  KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+  KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker1:9093,2@broker2:9093,3@broker3:9093
+  # Mặc định cho topic tự tạo + topic nội bộ: RF 3, min ISR 2
+  KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+  KAFKA_MIN_INSYNC_REPLICAS: 2
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+  KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+  KAFKA_NUM_PARTITIONS: 3
+  # Services create topics on first use; set to "false" once topics are provisioned explicitly.
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+  KAFKA_LOG_RETENTION_HOURS: 168
+  KAFKA_LOG_DIRS: /var/lib/kafka/data
+  # Giới hạn heap JVM (máy dev một node): 3 broker ~ 1.5GB heap tối đa
+  KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
+  CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+x-kafka-broker: &kafka-broker
+  logging: *logging
+  image: apache/kafka:3.9.0
+  # KHÔNG đặt healthcheck: Swarm chỉ đưa task healthy vào DNS, mà 3 broker phải phân giải được nhau để bầu quorum
+  # (có healthcheck => cả 3 chờ nhau, không bao giờ healthy, thoát mã 1 sau 60 s). Kiểm tra bằng kafka-exporter / /ready TCP.
+  networks:
+    - marketplace
+  deploy:
+    restart_policy:
+      condition: on-failure
+      delay: 2s
+    resources:
+      limits: {memory: 768M}
 
 services:
 
@@ -64,6 +101,9 @@ services:
     configs:
       - source: clickhouse-prometheus
         target: /etc/clickhouse-server/config.d/prometheus.xml
+      # S5: user limited to loopback + private ranges (overlay); password stays required (CLICKHOUSE_PASSWORD)
+      - source: clickhouse-users-networks
+        target: /etc/clickhouse-server/users.d/zz-networks.xml
     ulimits:
       nofile: {soft: 262144, hard: 262144}
     healthcheck:
@@ -81,51 +121,50 @@ services:
       resources:
         limits: {memory: 2G}
 
+  # Kafka: cụm 3 broker KRaft (mỗi node vừa broker vừa controller, quorum 3 voter). RF=3, min.insync.replicas=2:
+  # mất 1 broker vẫn ghi/đọc bình thường. Máy yếu: LITE=true gộp infra.lite.yml (1 broker, RF=1).
   broker1:
-    logging: *logging
-    image: apache/kafka:3.9.0
+    <<: *kafka-broker
     hostname: broker1
     environment:
+      <<: *kafka-env
       KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker1:9092
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker1:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_NUM_PARTITIONS: 3
-      # Services create topics on first use; set to "false" once topics are provisioned explicitly.
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_LOG_RETENTION_HOURS: 168
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
-      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
     volumes:
-      - kafka-data:/var/lib/kafka/data
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
-      interval: 10s
-      timeout: 10s
-      retries: 12
-    networks:
-      - marketplace
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 2s
+      - kafka-data-1:/var/lib/kafka/data
+
+  broker2:
+    <<: *kafka-broker
+    hostname: broker2
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: 2
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker2:9092
+    volumes:
+      - kafka-data-2:/var/lib/kafka/data
+
+  broker3:
+    <<: *kafka-broker
+    hostname: broker3
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: 3
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker3:9092
+    volumes:
+      - kafka-data-3:/var/lib/kafka/data
 
 configs:
   clickhouse-prometheus:
     file: ./clickhouse/prometheus.xml
+  clickhouse-users-networks:
+    file: ./clickhouse/users-networks.xml
 
 volumes:
   postgres-data:
   redis-data:
-  kafka-data:
+  kafka-data-1:
+  kafka-data-2:
+  kafka-data-3:
   clickhouse-data:
 
 networks:
