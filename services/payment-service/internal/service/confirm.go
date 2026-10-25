@@ -14,7 +14,7 @@ import (
 )
 
 // The simulated cards. Their outcome is fixed so tests and demos are repeatable (documented in
-// .claude/docs/platform/04-orders-payments.md). Card numbers are never stored: only the last four digits.
+// docs/design/platform/04_ORDERS_PAYMENTS.md). Card numbers are never stored: only the last four digits.
 const (
 	CardSuccess            = "4242424242424242" // paid immediately
 	CardDeclined           = "4000000000000002" // card_declined

@@ -1,5 +1,5 @@
 // Fixed-locale formatting: Vietnamese, VND and the Asia/Ho_Chi_Minh time zone (UTC+7, no DST). There is deliberately
-// no time zone picker (docs/platform/07-ui-design.md). Never use the browser's local zone for business dates.
+// no time zone picker (docs/design/platform/07_UI_DESIGN.md). Never use the browser's local zone for business dates.
 
 export const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 export const LOCALE = 'vi-VN';

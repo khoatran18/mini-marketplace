@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-/** The four data states of a region (07-ui-design.md §1): loading, empty, error, stale. */
+/** The four data states of a region (07_UI_DESIGN.md §1): loading, empty, error, stale. */
 export function LoadingBlock({ label = 'Đang tải…' }: { label?: string }) {
   return (
     <p role="status" aria-live="polite" className="card text-sm text-muted">

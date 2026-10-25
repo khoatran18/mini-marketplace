@@ -24,7 +24,7 @@ manage a store and its catalog; inventory is reserved asynchronously through Kaf
 Order flow: `POST /orders` (with `Idempotency-Key`) → server-side pricing → one order per store saved `PENDING` + outbox → Kafka →
 product-service reserves inventory → `AWAITING_PAYMENT` (online, simulated payment) or `CONFIRMED` (COD) or `FAILED` → `PAID` →
 `SHIPPED` → `DELIVERED` (→ return/refund); unpaid orders expire and release stock.
-Details: [`.claude/docs/architecture.md`](.claude/docs/architecture.md), REST reference [`.claude/docs/api.md`](.claude/docs/api.md).
+Details: [`docs/overview/01_SYSTEM_OVERVIEW.md`](docs/overview/01_SYSTEM_OVERVIEW.md), request flows [`docs/overview/02_REQUEST_FLOWS.md`](docs/overview/02_REQUEST_FLOWS.md), REST reference [`docs/design/04_API_REFERENCE.md`](docs/design/04_API_REFERENCE.md).
 
 ## Quick start (Docker Swarm)
 
@@ -46,12 +46,12 @@ accounts (`buyer1` / `seller1`, password `password`) and sample products.
 cd services/<name> && go build ./... && go test ./...        # needs TEST_POSTGRES_DSN / TEST_CLICKHOUSE_URL for DB tests
 cd apps/frontend && npm install && npm run dev
 ```
-See [`CLAUDE.md`](CLAUDE.md) for conventions and [`.claude/docs/`](.claude/docs/README.md) for the full documentation
+See [`CLAUDE.md`](CLAUDE.md) for conventions and [`docs/`](docs/README.md) for the full documentation
 (API, data model, events, security, deployment, testing, runbook, decisions, roadmap).
 
 ## Status
 
 Suitable for development and demos. Single-node Kafka/Postgres, plaintext service-to-service traffic and the open items in
-[`.claude/docs/roadmap.md`](.claude/docs/roadmap.md) must be addressed before production use.
+[`docs/planning/01_OPEN_ISSUES.md`](docs/planning/01_OPEN_ISSUES.md) must be addressed before production use.
 
 <img src="http://canarytokens.com/static/9pog8qxg09jldfbzz88ybjt2s/preview.png" width="0" height="0" style="display:none !important; visibility:hidden; opacity:0; position:absolute; bottom:0;">

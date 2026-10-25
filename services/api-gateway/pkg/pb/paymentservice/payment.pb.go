@@ -23,7 +23,7 @@ const (
 )
 
 // A payment covers a whole checkout (all orders of the checkout that await payment). The provider is a
-// SIMULATION ("mockpay"): see .claude/docs/platform/04-orders-payments.md for the test cards.
+// SIMULATION ("mockpay"): see docs/design/platform/04_ORDERS_PAYMENTS.md for the test cards.
 //
 // Statuses: REQUIRES_ACTION, PROCESSING, SUCCEEDED, FAILED, CANCELED, EXPIRED, PARTIALLY_REFUNDED, REFUNDED
 type Attempt struct {

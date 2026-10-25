@@ -483,7 +483,7 @@ type QueryResponse struct {
 	AsOf          string                 `protobuf:"bytes,1,opt,name=as_of,json=asOf,proto3" json:"as_of,omitempty"` // RFC 3339 time the numbers were computed
 	Source        string                 `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`         // "clickhouse"
 	Cached        bool                   `protobuf:"varint,3,opt,name=cached,proto3" json:"cached,omitempty"`
-	DataJson      string                 `protobuf:"bytes,4,opt,name=data_json,json=dataJson,proto3" json:"data_json,omitempty"` // the report payload (JSON), shape per report in docs/platform/06-api-contracts.md
+	DataJson      string                 `protobuf:"bytes,4,opt,name=data_json,json=dataJson,proto3" json:"data_json,omitempty"` // the report payload (JSON), shape per report in docs/design/platform/06_API_CONTRACTS.md
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

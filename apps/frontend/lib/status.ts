@@ -87,7 +87,7 @@ export const productStatusMeta = (status?: string | null) => lookup(productStatu
 export const paymentMethodLabel = (code?: string | null) => (code ? paymentMethods[code] ?? code : '–');
 export const failureCodeLabel = (code?: string | null) => (code ? failureCodes[code] ?? code : '');
 
-/** Order lifecycle steps of the happy path, used by the timeline (04-orders-payments.md §1). */
+/** Order lifecycle steps of the happy path, used by the timeline (04_ORDERS_PAYMENTS.md §1). */
 export const orderStepsOnline = ['AWAITING_PAYMENT', 'PAID', 'SHIPPED', 'DELIVERED'] as const;
 export const orderStepsCod = ['CONFIRMED', 'SHIPPED', 'DELIVERED'] as const;
 export const terminalStatuses = ['FAILED', 'EXPIRED', 'CANCELED', 'REFUNDED', 'DELIVERED'];

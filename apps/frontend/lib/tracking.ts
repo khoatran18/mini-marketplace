@@ -1,4 +1,4 @@
-// Tracking SDK (docs/platform/07-ui-design.md §5, 03-data-model.md §2, 05-analytics-monitoring.md).
+// Tracking SDK (docs/design/platform/07_UI_DESIGN.md §5, 03_DATA_MODEL.md §2, 05_ANALYTICS_MONITORING.md).
 //
 //   track(type, props?, ctx?)  queue an event (never throws, never blocks the UI)
 //   identify(userId)           link the anonymous id to the signed-in user (POST /events/identify)

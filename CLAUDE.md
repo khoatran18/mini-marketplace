@@ -1,7 +1,7 @@
 # Mini Marketplace – working notes
 
 Event-driven marketplace: Go microservices behind a gin API gateway, a Next.js frontend, Postgres/Redis/Kafka,
-deployed with Docker Swarm + Traefik. Full documentation lives in [`.claude/docs/`](.claude/docs/README.md) (REST reference: `api.md`; status of what is built vs not: `platform/09-roadmap.md`).
+deployed with Docker Swarm + Traefik. Full documentation lives in [`docs/`](docs/README.md) (start there; REST reference: `docs/design/04_API_REFERENCE.md`; built vs not: `docs/process/01_IMPLEMENTATION_STATUS.md`; open issues: `docs/planning/01_OPEN_ISSUES.md`; AI plans and datasets: `docs/ai/`, `docs/dataset/`).
 
 ## Layout
 ```
@@ -28,7 +28,7 @@ go build ./... && go vet ./... && go test ./...
 # tests that need Postgres / ClickHouse are skipped unless these are set (a throw-away DB is created per test)
 export TEST_POSTGRES_DSN="host=localhost port=5432 user=postgres password=postgres sslmode=disable"
 export TEST_CLICKHOUSE_URL="http://127.0.0.1:8123"     # CI uses ClickHouse 24.8; without Docker: pip install chdb && python3 scripts/dev/chdb_server.py --port 8123
-scripts/protogen/gen.sh payment-service                # regenerate .pb.go offline (see .claude/docs/protobuf.md)
+scripts/protogen/gen.sh payment-service                # regenerate .pb.go offline (see docs/design/06_PROTOBUF.md)
 
 # local infra + all services (needs deploy/.env; see deploy/.env.example)
 cp deploy/.env.example deploy/.env && ./scripts/gen-dev-certs.sh && ./scripts/build-images.sh
@@ -47,5 +47,5 @@ cd apps/frontend && npm install && npm run dev
 - Auth middleware is attached **per route/group**, never with `router.Use` (a global one made public routes 401). New route ⇒ add it to the table in `api-gateway/internal/router/router_test.go`.
 - Money is `NUMERIC(18,2)` in Postgres, `float64` (VND) on the REST/gRPC wire, integer cents in arithmetic (`order-service/internal/service/money.go`); Kafka events carry integer `*_minor` (1/100 VND). Platform timezone is fixed `Asia/Ho_Chi_Minh`.
 - Payments are SIMULATED only (never store card data). Analytics revenue = subtotal of orders PAID (online) / DELIVERED (COD) minus refunds.
-- Add tests with every behavior change (see `.claude/docs/testing.md`).
+- Add tests with every behavior change (see `docs/instruction/04_TESTING.md`).
 - Demo data only with `SEED_DEMO_DATA=true` (never in production).

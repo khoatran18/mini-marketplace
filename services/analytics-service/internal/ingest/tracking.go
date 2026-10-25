@@ -12,7 +12,7 @@ import (
 	"analytics-service/internal/store"
 )
 
-// ClientEventTypes are the event types a browser may send (docs/platform/03-data-model.md §2.2). Everything
+// ClientEventTypes are the event types a browser may send (docs/design/platform/03_DATA_MODEL.md §2.2). Everything
 // else — notably order_placed / payment_succeeded, which come from the business outbox — is rejected.
 var ClientEventTypes = map[string]bool{
 	"page_view": true, "impression": true, "product_click": true, "product_view": true, "dwell": true,

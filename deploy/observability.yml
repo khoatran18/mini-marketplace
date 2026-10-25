@@ -1,5 +1,5 @@
 # Monitoring stack: Prometheus + Grafana + cAdvisor + node-exporter + Postgres/Redis/Kafka exporters.
-# View-only: there is deliberately NO alerting (no Alertmanager) – see .claude/docs/platform/05-analytics-monitoring.md.
+# View-only: there is deliberately NO alerting (no Alertmanager) – see docs/design/platform/05_ANALYTICS_MONITORING.md.
 # Requires infra.yml (shared external network). Deploy with: scripts/deploy.sh observability
 # Config files are bind-mounted from this directory (single-node swarm; on a multi-node swarm pin Prometheus/Grafana to the node that has the repo).
 services:

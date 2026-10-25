@@ -6,7 +6,7 @@ import type { Payment, PaymentMethodInfo } from '../../lib/types';
 import { failureCodeLabel } from '../../lib/status';
 import { Notice, SimulatedBadge } from '../ui/StateBlock';
 
-// Documented test cards (04-orders-payments.md §3.2); the live list comes from GET /payments/methods.
+// Documented test cards (04_ORDERS_PAYMENTS.md §3.2); the live list comes from GET /payments/methods.
 export const defaultTestCards = [
   { number: '4242 4242 4242 4242', result: 'Thành công ngay' },
   { number: '4000 0000 0000 0002', result: 'Bị từ chối (card_declined)' },

@@ -63,7 +63,7 @@ message QueryResponse {
   string as_of = 1;     // RFC 3339 time the numbers were computed
   string source = 2;    // "clickhouse"
   bool cached = 3;
-  string data_json = 4; // the report payload (JSON), shape per report in docs/platform/06-api-contracts.md
+  string data_json = 4; // the report payload (JSON), shape per report in docs/design/platform/06_API_CONTRACTS.md
 }
 
 service AnalyticsService {

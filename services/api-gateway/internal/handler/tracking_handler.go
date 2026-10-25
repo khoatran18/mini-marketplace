@@ -20,7 +20,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Limits of POST /events (docs/platform/03-data-model.md §2.4).
+// Limits of POST /events (docs/design/platform/03_DATA_MODEL.md §2.4).
 const (
 	maxEventsPerBatch = 50
 	maxEventsBody     = 64 << 10
