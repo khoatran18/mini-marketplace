@@ -17,6 +17,8 @@
 
 ## 2. Còn thiếu, theo mức chặn
 
+Danh sách đầy đủ phần hạ tầng (không gồm tầng LLM): [../planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md](../planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md).
+
 ### Chặn một scope cụ thể
 | Thiếu | Chặn | Làm gì |
 |---|---|---|
@@ -31,7 +33,7 @@
 | **Hệ thống cảnh báo** (cố ý chưa có, ADR-12) | 14 (giải thích cảnh báo) | chỉ làm khi cần; có thể bắt đầu từ truy vấn metric chủ động |
 | Retention `events_raw` 13 tháng; ClickHouse chỉ dựng lại được ≤ 7 ngày từ Kafka | huấn luyện lịch sử | cân nhắc xuất snapshot định kỳ |
 
-### Chặn mọi scope LLM
+### Tầng LLM (chủ dự án tự xây sau; liệt kê để không quên)
 | Thiếu | Làm gì |
 |---|---|
 | `ai-service` (Python: FastAPI + gRPC), proto, route gateway `/ai/*`, rate limit AI riêng | dựng khung với bản mock trước (echo, trending) |

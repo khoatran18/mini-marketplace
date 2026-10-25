@@ -11,6 +11,7 @@
 | Cài gì, chạy lệnh gì, mở giao diện ở địa chỉ nào, đăng nhập bằng gì? | [instruction/01_QUICKSTART.md](instruction/01_QUICKSTART.md) |
 | Đã làm được những gì? | [process/01_IMPLEMENTATION_STATUS.md](process/01_IMPLEMENTATION_STATUS.md) |
 | Còn tồn đọng vấn đề gì? | [planning/01_OPEN_ISSUES.md](planning/01_OPEN_ISSUES.md) |
+| Hạ tầng còn thiếu gì để làm dự án AI lớn? | [planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md](planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md) |
 | Gọi API nào? Event Kafka nào? Bảng DB nào? | [design/](design/README.md) (`04_API_REFERENCE`, `03_EVENTS_KAFKA`, `02_DATA_MODEL`) |
 | Sự cố (đơn kẹt, Kafka lag, ClickHouse…) xử lý sao? | [instruction/03_RUNBOOK.md](instruction/03_RUNBOOK.md) |
 | Vì sao quyết định như vậy? | [decisions/01_ADR_LOG.md](decisions/01_ADR_LOG.md) |
