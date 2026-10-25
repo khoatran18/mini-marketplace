@@ -3,7 +3,13 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
+  workflow_dispatch:
+
+# Quyền mặc định tối thiểu; job push image tự nâng lên packages: write
+permissions:
+  contents: read
 
 jobs:
   go:
@@ -60,6 +66,25 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run build
 
+  # Kiểm tra cú pháp compose + shellcheck (không cần Docker daemon/Swarm)
+  compose-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose config (3 file deploy)
+        run: |
+          # env giả lấy từ .env.example (không có secret thật)
+          cp deploy/.env.example /tmp/ci.env
+          # biến bắt buộc (:?) mà .env.example để trống -> điền giá trị giả cho CI
+          printf '%s\n' 'TRAEFIK_DASHBOARD_USERS=admin:$$apr1$$fake$$fake' 'JWT_SECRET=ci-fake-secret' >> /tmp/ci.env
+          for f in infra observability services; do
+            docker compose --env-file /tmp/ci.env -f "deploy/$f.yml" config -q
+          done
+      - name: shellcheck scripts
+        run: |
+          # shellcheck có sẵn trên ubuntu-latest
+          shellcheck -S warning scripts/*.sh scripts/protogen/*.sh
+
   docker:
     runs-on: ubuntu-latest
     needs: [go]
@@ -74,5 +99,54 @@ jobs:
         with:
           context: ${{ matrix.context }}
           push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Đẩy image lên GHCR: chỉ khi push lên main hoặc tag v* (không chạy cho PR)
+  push-images:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    needs: [go, frontend, docker, compose-validate]
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: api-gateway, context: services/api-gateway}
+          - {name: auth-service, context: services/auth-service}
+          - {name: user-service, context: services/user-service}
+          - {name: product-service, context: services/product-service}
+          - {name: order-service, context: services/order-service}
+          - {name: payment-service, context: services/payment-service}
+          - {name: analytics-service, context: services/analytics-service}
+          - {name: frontend, context: apps/frontend}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # GHCR yêu cầu tên viết thường
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}
+          tags: |
+            type=sha,format=short,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
