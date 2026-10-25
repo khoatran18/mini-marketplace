@@ -1,8 +1,37 @@
 # Application stack. Requires infra.yml to be deployed first (shared external network).
 # Build images first: scripts/build-images.sh
+#
+# Rolling update: start-first (task mới lên và qua healthcheck rồi mới tắt task cũ => không gián đoạn);
+# lỗi trong cửa sổ `monitor` => tự rollback. Service có worker/consumer đơn (payment, analytics) dùng
+# stop-first để không có hai instance cùng chạy outbox worker / Kafka consumer / buffer ClickHouse.
+# Profile máy yếu: xem services.lite.yml (scripts/deploy.sh tự gộp khi LITE=true).
+x-update-start-first: &update_start_first
+  parallelism: 1
+  delay: 10s
+  order: start-first
+  failure_action: rollback
+  monitor: 30s
+x-update-stop-first: &update_stop_first
+  parallelism: 1
+  delay: 10s
+  order: stop-first
+  failure_action: rollback
+  monitor: 30s
+x-rollback: &rollback
+  parallelism: 1
+  delay: 5s
+  order: stop-first
+  monitor: 15s
+
+x-logging: &logging
+  # Giới hạn log Docker (json-file): tối đa 3 file x 10MB mỗi container, tránh đầy đĩa. Vector đọc log từ đây.
+  driver: json-file
+  options: {max-size: "10m", max-file: "3"}
+
 services:
 
   traefik:
+    logging: *logging
     image: traefik:v3.6
     networks: [marketplace]
     ports:
@@ -36,6 +65,8 @@ services:
       timeout: 5s
       retries: 3
     deploy:
+      update_config: *update_start_first
+      rollback_config: *rollback
       placement:
         constraints: [node.role == manager]
       labels:
@@ -49,6 +80,7 @@ services:
         - traefik.http.services.traefik.loadbalancer.server.port=8080
 
   frontend:
+    logging: *logging
     image: marketplace/frontend:latest
     hostname: frontend
     networks: [marketplace]
@@ -58,6 +90,8 @@ services:
       timeout: 5s
       retries: 5
     deploy:
+      update_config: *update_start_first
+      rollback_config: *rollback
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
       labels:
@@ -68,6 +102,7 @@ services:
         - traefik.http.services.frontend.loadbalancer.server.port=3000
 
   api-gateway:
+    logging: *logging
     image: marketplace/api-gateway:latest
     hostname: api-gateway
     networks: [marketplace]
@@ -88,6 +123,9 @@ services:
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
       MAX_BODY_BYTES: ${MAX_BODY_BYTES:-1048576}
       EVENTS_RATE_LIMIT_PER_MINUTE: ${EVENTS_RATE_LIMIT_PER_MINUTE:-120}
+      GRPC_TIMEOUT_READ_MS: ${GRPC_TIMEOUT_READ_MS:-3000}
+      GRPC_TIMEOUT_WRITE_MS: ${GRPC_TIMEOUT_WRITE_MS:-10000}
+      GRPC_RETRY_MAX_ATTEMPTS: ${GRPC_RETRY_MAX_ATTEMPTS:-3}
       IP_HASH_SECRET: ${IP_HASH_SECRET:-}
       # business rules read by order-service / payment-service (shared anchor, no secrets here)
       ENV: ${ENV:-prod}
@@ -96,6 +134,13 @@ services:
       AUTO_DELIVER_DAYS: ${AUTO_DELIVER_DAYS:-7}
       SHIPPING_FLAT_FEE: ${SHIPPING_FLAT_FEE:-30000}
       FREE_SHIP_OVER: ${FREE_SHIP_OVER:-500000}
+      # địa chỉ gRPC giữa các service (gateway và order-service đọc, anchor nên mọi service Go cũng nhận; mặc định = tên service trong mạng overlay)
+      AUTH_SERVICE_ADDR: ${AUTH_SERVICE_ADDR:-auth-service:50051}
+      ORDER_SERVICE_ADDR: ${ORDER_SERVICE_ADDR:-order-service:50052}
+      PRODUCT_SERVICE_ADDR: ${PRODUCT_SERVICE_ADDR:-product-service:50053}
+      USER_SERVICE_ADDR: ${USER_SERVICE_ADDR:-user-service:50054}
+      ANALYTICS_SERVICE_ADDR: ${ANALYTICS_SERVICE_ADDR:-analytics-service:50055}
+      PAYMENT_SERVICE_ADDR: ${PAYMENT_SERVICE_ADDR:-payment-service:50057}
     # liveness only (never depends on other services); readiness (/ready) is used by Traefik below
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
@@ -105,6 +150,8 @@ services:
       start_period: 20s
     stop_grace_period: 30s
     deploy:
+      update_config: *update_start_first
+      rollback_config: *rollback
       replicas: 2
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
@@ -127,6 +174,7 @@ services:
         - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
 
   auth-service:
+    logging: *logging
     image: marketplace/auth-service:latest
     hostname: auth-service
     networks: [marketplace]
@@ -143,12 +191,15 @@ services:
       start_period: 20s
     stop_grace_period: 30s
     deploy:
+      update_config: *update_start_first
+      rollback_config: *rollback
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
         limits: {memory: 256M}
 
   user-service:
+    logging: *logging
     image: marketplace/user-service:latest
     hostname: user-service
     networks: [marketplace]
@@ -161,12 +212,15 @@ services:
       start_period: 20s
     stop_grace_period: 30s
     deploy:
+      update_config: *update_start_first
+      rollback_config: *rollback
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
         limits: {memory: 256M}
 
   product-service:
+    logging: *logging
     image: marketplace/product-service:latest
     hostname: product-service
     networks: [marketplace]
@@ -179,12 +233,15 @@ services:
       start_period: 20s
     stop_grace_period: 30s
     deploy:
+      update_config: *update_start_first
+      rollback_config: *rollback
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
         limits: {memory: 256M}
 
   order-service:
+    logging: *logging
     image: marketplace/order-service:latest
     hostname: order-service
     networks: [marketplace]
@@ -197,6 +254,8 @@ services:
       start_period: 20s
     stop_grace_period: 30s
     deploy:
+      update_config: *update_start_first
+      rollback_config: *rollback
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
@@ -204,6 +263,7 @@ services:
 
   # SIMULATED payment provider (no real payment network is ever contacted)
   payment-service:
+    logging: *logging
     image: marketplace/payment-service:latest
     hostname: payment-service
     networks: [marketplace]
@@ -223,6 +283,8 @@ services:
       start_period: 20s
     stop_grace_period: 30s
     deploy:
+      update_config: *update_stop_first
+      rollback_config: *rollback
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
@@ -230,6 +292,7 @@ services:
 
   # Analytics: Kafka domain events + browser tracking -> ClickHouse; answers the seller/admin dashboards
   analytics-service:
+    logging: *logging
     image: marketplace/analytics-service:latest
     hostname: analytics-service
     networks: [marketplace]
@@ -254,6 +317,8 @@ services:
       start_period: 30s
     stop_grace_period: 30s
     deploy:
+      update_config: *update_stop_first
+      rollback_config: *rollback
       replicas: 1
       restart_policy: {condition: on-failure, delay: 10s}
       resources:

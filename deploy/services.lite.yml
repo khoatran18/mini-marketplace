@@ -1,0 +1,34 @@
+# Override cho máy yếu (laptop 8GB): 1 replica gateway, giới hạn memory thấp hơn.
+# Dùng: LITE=true ./scripts/deploy.sh   (deploy.sh tự gộp file này: -f services.yml -f services.lite.yml)
+# Hoặc thủ công: docker compose --env-file deploy/.env -f deploy/services.yml -f deploy/services.lite.yml config
+# Lưu ý: observability.yml (Prometheus/Grafana) chưa có bản lite; nếu cần, bỏ qua bằng `scripts/deploy.sh infra` + `services`.
+services:
+  api-gateway:
+    deploy:
+      replicas: 1
+      resources:
+        limits: {memory: 192M}
+  auth-service:
+    deploy:
+      resources:
+        limits: {memory: 128M}
+  user-service:
+    deploy:
+      resources:
+        limits: {memory: 128M}
+  product-service:
+    deploy:
+      resources:
+        limits: {memory: 160M}
+  order-service:
+    deploy:
+      resources:
+        limits: {memory: 160M}
+  payment-service:
+    deploy:
+      resources:
+        limits: {memory: 128M}
+  analytics-service:
+    deploy:
+      resources:
+        limits: {memory: 192M}
