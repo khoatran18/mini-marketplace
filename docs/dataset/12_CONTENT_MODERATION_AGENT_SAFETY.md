@@ -65,7 +65,7 @@
 
 ### (a) Tiếng Việt / Việt Nam
 
-**UIT-ViHSD** — https://huggingface.co/datasets/sonlam1102/vihsd , https://github.com/sonlam1102/vihsd ; paper https://arxiv.org/pdf/2103.11528 (UIT, ISHSD/Luu et al. 2021).
+**UIT-ViHSD** — https://huggingface.co/datasets/sonlam1102/vihsd , https://github.com/sonlam1102/vihsd ; paper https://arxiv.org/pdf/2103.11528 (Luu, Nguyen, Nguyen 2021).
 - ~33,400 comment mạng xã hội, nhãn CLEAN/OFFENSIVE/HATE; mất cân bằng nặng (CLEAN 82.71%), đồng thuận người gắn nhãn thấp (Cohen's kappa 0.52 theo benchmark khác).
 - Có train/validation/test; HF ghi MIT, GitHub bảo liên hệ email nhóm (mâu thuẫn, kiểm tra trước khi dùng).
 - Dùng: nền cho classifier độc hại review/bình luận. Hạn chế: miền Facebook/YouTube, chưa phải ngôn ngữ review TMĐT; teencode. ★5.

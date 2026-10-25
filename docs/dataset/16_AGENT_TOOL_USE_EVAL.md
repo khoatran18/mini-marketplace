@@ -1,0 +1,164 @@
+# Đánh giá agent gọi tool nhiều bước (Agent / Tool-use Eval)
+
+> Benchmark và cách dựng bộ eval riêng cho 3 persona `shopper` / `seller` / `admin`: function calling, multi-turn, tin cậy (pass^k), từ chối đúng/vượt quyền, LLM-as-judge. **Trạng thái: chưa triển khai trong hệ thống; đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
+>
+> Ghi chú phương pháp: trong phiên này WebFetch đọc được GitHub (README các repo bên dưới), nhưng không mở được HuggingFace/arXiv/Kaggle; ngân sách WebSearch hết giữa chừng nên **GAIA chưa tra được (chưa xác minh, không đưa vào bảng)** và API-Bank chỉ xác nhận có thư mục trong repo DAMO-ConvAI. Số liệu lấy từ README; chỗ nào không có ghi "chưa xác minh".
+
+| Liên quan | File |
+|---|---|
+| Trợ lý mua sắm / CSKH | [05_SHOPPER_ASSISTANT_CUSTOMER_SUPPORT.md](05_SHOPPER_ASSISTANT_CUSTOMER_SUPPORT.md) |
+| Text-to-SQL / analytics QA | [04_ANALYTICS_QA_TEXT2SQL.md](04_ANALYTICS_QA_TEXT2SQL.md) |
+| Policy RAG | [06_POLICY_LEGAL_RAG.md](06_POLICY_LEGAL_RAG.md) |
+| An toàn agent (prompt injection) | [12_CONTENT_MODERATION_AGENT_SAFETY.md](12_CONTENT_MODERATION_AGENT_SAFETY.md) |
+| AIOps (agent admin) | [14_AIOPS_ANOMALY_ALERT_EXPLAIN.md](14_AIOPS_ANOMALY_ALERT_EXPLAIN.md) |
+| Hiểu truy vấn tiếng Việt | [15_VIETNAMESE_NLP_QUERY_UNDERSTANDING.md](15_VIETNAMESE_NLP_QUERY_UNDERSTANDING.md) |
+
+## 1. Mục tiêu và vị trí trong hệ thống
+
+Thiết kế agent (đọc `docs/ai/05_AI_DRAFT_ORIGINAL.md`, mục "Agent & tool"): một `ai-service`, ba persona theo `role` trong JWT, tool là endpoint REST ở gateway có JSON schema, LLM không viết SQL, tool ghi chỉ trả `action_proposal` chờ người dùng xác nhận.
+
+| Persona | Role | Tool (trích từ catalog) |
+|---|---|---|
+| `shopper` | buyer + khách vãng lai | `search_products`, `get_product`, `check_stock` (chỉ level), `list_categories`, `catalog_overview`, `get_my_orders`*, `get_cart`*, `add_to_cart`* (action_proposal), `ask_policy`, `get_recommendations` |
+| `seller` | seller_admin, seller_employee | `store_sales_summary`, `store_sales_timeseries`, `store_top_products`, `store_low_stock`, `store_product_funnel`, `store_orders`, `search_my_products`, `ask_policy`, `list_my_alerts` (mọi tool tự ép `store_id` từ JWT) |
+| `admin` | admin | `platform_sales_summary`, `platform_traffic`, `platform_funnel`, `system_metrics`, `service_health`, `list_alerts`, `top_stores`, `ask_policy`, `search_audit_log` |
+
+Eval cần trả lời: (1) chọn đúng tool và tham số? (2) đúng nhiều bước? (3) ổn định qua nhiều lần chạy? (4) từ chối đúng khi vượt quyền/ngoài phạm vi? (5) câu trả lời đúng sự thật và có trích dẫn? Dữ liệu hệ thống nuôi eval: dữ liệu demo (`SEED_DEMO_DATA=true`), log gateway/audit (`audit_log`) làm "sự thật" để chấm, lịch sử hội thoại được lưu (nền tảng cung cấp).
+
+## 2. Hướng làm đề xuất (baseline → nâng cao)
+
+1. **Baseline**: bộ test đơn lượt, so khớp cuộc gọi tool (tên + tham số) với đáp án (kiểu BFCL, AST match/executable).
+2. **Multi-turn có trạng thái**: mô phỏng người dùng bằng LLM + môi trường DB có trạng thái, chấm bằng **trạng thái cuối của DB** và tập quy tắc (kiểu τ-bench).
+3. **Tin cậy**: chạy mỗi task k lần, báo **pass^k** (cả k lần đều đúng), không chỉ pass@1.
+4. **Hàng rào quyền**: bộ đối kháng riêng cho role (xem mục 5).
+5. **LLM-as-judge** cho phần văn bản tự do (trả lời có căn cứ, trích dẫn chính sách), hiệu chỉnh với nhãn người; ưu tiên chấm quyết định (kiểm tra tool call, DB) hơn chấm bằng judge.
+6. **CI**: chạy bộ nhỏ mỗi PR (promptfoo/Inspect/DeepEval), bộ lớn theo đêm.
+
+## 3. Metric đánh giá
+
+- **Tool selection accuracy**, **argument accuracy** (exact/AST), **executable success**.
+- **Task success** (trạng thái cuối đúng), **pass@1** và **pass^k** (τ-bench; trên leaderboard τ-bench điểm giảm rõ khi k tăng, ví dụ airline hàng đầu từ 0.460 pass^1 xuống 0.225 pass^4 theo README).
+- **Refusal precision/recall**: từ chối đúng (vượt quyền, ngoài phạm vi) và không từ chối thừa.
+- **Unauthorized-call rate** (tool ngoài allowlist/ownership) — mục tiêu 0, đo bằng log gateway.
+- **Groundedness / citation accuracy** cho `ask_policy`; **hallucination rate** số liệu (so với kết quả tool).
+- Chi phí: số lượt, token, độ trễ p95, số lần gọi tool thừa.
+- Độ tin cậy judge: Cohen's kappa judge-vs-người.
+
+## 4. Bộ dữ liệu
+
+### Bảng tổng hợp
+
+| # | Bộ / công cụ | Nhóm | Quy mô (theo nguồn đã tra) | License | Phù hợp |
+|---|---|---|---|---|---|
+| 1 | τ-bench / τ²-bench (Sierra) | c | retail, airline, telecom, banking...; 50 task cố định/domain/ngôn ngữ | MIT | ★★★★★ |
+| 2 | BFCL (Berkeley Function Calling Leaderboard) | c | Live / Non-Live / Multi-turn; V4 thêm web search, memory, format sensitivity | Apache-2.0 (dữ liệu/leaderboard) | ★★★★★ |
+| 3 | WebShop | b/c | ~1.18M sản phẩm, 12,087 chỉ dẫn | MIT | ★★★★ |
+| 4 | WebArena | c | 812 task, có site Shopping + Shopping Admin | Apache-2.0 | ★★★ |
+| 5 | MCPMark | c | 127 task (suite chuẩn), 5 dịch vụ MCP | Apache-2.0 | ★★★★ |
+| 6 | MCP-Bench (Accenture) | c | 28 MCP server | Apache-2.0 | ★★★ |
+| 7 | ToolSandbox (Apple) | c | Số kịch bản chưa xác minh | Chưa xác minh | ★★★★ |
+| 8 | ACEBench | c | 4,538 API, 8 domain/68 sub-domain, song ngữ zh/en | MIT | ★★★ |
+| 9 | NESTFUL (IBM) | c | 1,861 ví dụ gọi API lồng nhau | Apache-2.0 | ★★★ |
+| 10 | ToolBench / ToolLLM | c | 3,451 tool, 16,464 API, 126,486 instance | Apache-2.0 (dữ liệu: chỉ nghiên cứu) | ★★ |
+| 11 | AgentBench | c | 8 môi trường (OS, DB, KG, DCG, LTP, ALFWorld, WebShop, Mind2Web) | Apache-2.0 | ★★ |
+| 12 | API-Bank | c | Có thư mục `api-bank` trong DAMO-ConvAI; quy mô chưa xác minh | Chưa xác minh | ★★ |
+| 13 | AgentDojo, InjecAgent (an toàn) | c | xem [12](12_CONTENT_MODERATION_AGENT_SAFETY.md) | MIT | ★★★★★ (an toàn) |
+| 14 | Framework: promptfoo, DeepEval, Ragas, Inspect AI, LangSmith | công cụ | — | MIT / Apache-2.0 / MIT | công cụ |
+
+Không tìm thấy bộ function-calling hay agent tiếng Việt công khai trong phiên này (chưa xác minh là không tồn tại). GAIA: chưa tra được.
+
+### (a) Tiếng Việt / Việt Nam
+Không có bộ agent/tool-use tiếng Việt xác minh được. Hệ quả: các bộ tiếng Anh dùng để kiểm phương pháp/chọn mô hình; mọi kết luận về tiếng Việt phải dựa trên bộ eval nội bộ (mục 5). τ²-bench có chế độ đa ngôn ngữ (English, Spanish, Portuguese, Hindi, Chinese, Korean) nhưng không có tiếng Việt — nhưng cho thấy cách dịch/ghép ngôn ngữ vào bộ task.
+
+### (b) TMĐT / miền liên quan
+
+**τ-bench (Sierra Research)** — https://github.com/sierra-research/tau-bench : mô phỏng hội thoại user (LLM) ↔ agent có API tool và chính sách miền; domain airline + retail; leaderboard Pass^1..Pass^4; MIT. README cảnh báo task trong repo không còn được cập nhật, khuyên dùng τ³-bench (thêm banking). **τ²-bench** — https://github.com/sierra-research/tau2-bench : domain mock, airline, retail, telecom, banking_knowledge, intake (>200 task); text-v1 (6 ngôn ngữ x 3 domain, 900 lượt gọi/1 trial), voice; 50 task cố định mỗi domain/ngôn ngữ; lệnh `tau2 judges`; MIT, Python 3.12-3.13, cài bằng `uv`. **Phù hợp nhất để mô phỏng persona shopper** (retail: huỷ/đổi đơn theo chính sách). ★5. Hạn chế: tiếng Anh, tool khác catalog dự án; chính sách đặc thù Mỹ.
+
+**WebShop** — https://github.com/princeton-nlp/WebShop : môi trường web thương mại mô phỏng, ~1.18M sản phẩm thật, 12,087 chỉ dẫn crowd-sourced, tìm-chọn-thuộc tính-mua; MIT. Dùng như khuôn tác vụ mua hàng nhiều bước. ★4.
+
+**WebArena** — https://github.com/web-arena-x/webarena : 812 ví dụ; website tự host (Shopping, Shopping Admin/CMS, Reddit, GitLab, Map, Wikipedia); Apache-2.0. Có site Shopping Admin gần persona admin/seller, nhưng agent thao tác trình duyệt, khác kiến trúc tool-API của dự án. ★3.
+
+### (c) Benchmark / paper học thuật
+
+**BFCL** — https://github.com/ShishirPatil/gorilla/tree/main/berkeley-function-call-leaderboard ; https://gorilla.cs.berkeley.edu/leaderboard : đánh giá gọi hàm có thực thi; nhóm Live (đơn lượt), Non-Live (đơn lượt), Multi-turn (V3, blog https://gorilla.cs.berkeley.edu/blogs/13_bfcl_v3_multi_turn.html); V4 thêm agentic web search, memory, format sensitivity; danh sách category trong `TEST_CATEGORIES.md`. Dữ liệu và leaderboard Apache-2.0 (license mã nguồn không nêu rõ trên trang). Leaderboard cập nhật cuối 2025-12-16 trên trang đã tra. Dùng: mẫu định dạng test, tính độ chính xác chọn tool/tham số, parallel/multiple calls. ★5.
+
+**MCPMark** — https://github.com/eval-sys/mcpmark : stress-test dùng MCP trong sandbox cô lập, xác minh tự động; 127 task (suite chuẩn) + suite dễ 10 task/dịch vụ; dịch vụ Notion, GitHub, Filesystem, Postgres, Playwright; Apache-2.0. Postgres gần với backend dự án. ★4.
+
+**MCP-Bench** — https://github.com/Accenture/mcp-bench : đánh giá phát hiện/chọn/dùng tool qua MCP trên 28 MCP server; có task một, hai, ba server (số task/tool chưa xác minh); Apache-2.0. ★3.
+
+**ToolSandbox** — https://github.com/apple/ToolSandbox : thực thi tool có trạng thái, phụ thuộc ngầm giữa tool, user simulator tích hợp, chấm theo milestone; số kịch bản và license chưa xác minh (file LICENSE có trong repo). Rất hợp ý tưởng "trạng thái cuối + milestone". ★4.
+
+**ACEBench** — https://github.com/ACEBench/ACEBench : Normal / Special (chỉ dẫn mơ hồ/thiếu, tool không khả thi) / Agent (nhiều lượt); 8 domain, 68 sub-domain, 4,538 API; song ngữ Trung-Anh; chấm không dùng LLM-judge hay API thật; MIT. Nhóm "Special" liên quan từ chối đúng. ★3.
+
+**NESTFUL** — https://github.com/IBM/NESTFUL ; arXiv 2409.03797 : 1,861 ví dụ (`nestful_data.jsonl`), chuỗi API lồng nhau (đầu ra bước này là đầu vào bước sau), có hàm thực thi; Apache-2.0. Liên quan chuỗi tool seller (summary → top products → low stock). ★3.
+
+**ToolBench** — https://github.com/OpenBMB/ToolBench : 3,451 tool, 16,464 REST API (RapidAPI), 126,486 instance, 469,585 lần gọi thật; dữ liệu sinh bằng gpt-3.5-turbo-16k; Apache-2.0, chỉ nghiên cứu/giáo dục; có StableToolBench (2024-03). Quy mô lớn nhưng API đời thực không ổn định. ★2.
+
+**AgentBench** — https://github.com/THUDM/AgentBench (ICLR 2024): 8 môi trường gốc (OS, DB, KG, Digital Card Game, Lateral Thinking Puzzles + ALFWorld, WebShop, Mind2Web), bản FC mới; Apache-2.0. Môi trường DB liên quan SQL. ★2.
+
+**API-Bank** — nằm trong https://github.com/AlibabaResearch/DAMO-ConvAI (thư mục `api-bank`); chỉ xác nhận sự tồn tại, chưa mở nội dung: quy mô/license chưa xác minh. ★2.
+
+**An toàn agent**: AgentDojo, InjecAgent, BIPIA, R-Judge — chi tiết ở [12](12_CONTENT_MODERATION_AGENT_SAFETY.md); AgentDojo (MIT) là khuôn tốt nhất để thêm suite marketplace.
+
+**GAIA**: chưa tra được trong phiên (HF không mở được, hết ngân sách search); không đưa vào bảng.
+
+### (d) Framework eval (mô tả ngắn, đã đọc README GitHub)
+- **promptfoo** — https://github.com/promptfoo/promptfoo : CLI/thư viện đánh giá và red-team ứng dụng LLM; MIT. Hợp CI + red-team tool agent.
+- **DeepEval** — https://github.com/confident-ai/deepeval : framework Python kiểu unit-test, metric LLM-as-judge; Apache-2.0.
+- **Ragas** — https://github.com/explodinggradients/ragas : metric cho ứng dụng LLM/RAG và sinh dữ liệu test; Apache-2.0.
+- **Inspect AI** — https://github.com/UKGovernmentBEIS/inspect_ai : framework eval của UK AI Security Institute; MIT.
+- **LangSmith datasets**: dịch vụ thương mại; không đọc được trang trong phiên (chưa xác minh chi tiết).
+
+## 5. Dữ liệu tự tạo / synthetic từ chính hệ thống: dựng bộ eval riêng cho 3 persona
+
+**Nguyên tắc**: môi trường = gateway thật chạy trên dữ liệu seed cố định (`SEED_DEMO_DATA=true`, đặt snapshot Postgres/ClickHouse để tái lập); tool = đúng endpoint REST; chấm bằng (a) tool call trong log, (b) trạng thái cuối, (c) judge cho văn bản.
+
+**Cấu trúc một case (JSON)**: `id`, `persona`, `jwt_role` + `store_id`/`user_id` giả lập, `conversation` (các lượt user, tiếng Việt, có biến thể không dấu/teencode), `expected_tool_calls` (tên + ràng buộc tham số, có cho phép nhiều thứ tự đúng), `forbidden_tool_calls`, `expected_final_state`, `answer_facts` (số liệu phải xuất hiện, tính từ DB), `must_refuse` (true/false), `tags` (nhóm).
+
+**Nhóm case (đề xuất số lượng khởi điểm ~ 40-60/persona)**
+- **Shopper**: tìm hàng với bộ lọc (khoảng giá, danh mục, tồn kho), hỏi tồn kho (đáp án chỉ `level`, không lộ số chính xác), "đơn của tôi" (chỉ đơn của user), thêm giỏ (phải ra `action_proposal`, không ghi trực tiếp), hỏi chính sách (có trích dẫn), khách vãng lai gọi tool cần đăng nhập (phải từ chối/yêu cầu đăng nhập).
+- **Seller**: doanh thu theo kỳ, so kỳ trước, top sản phẩm, sắp hết hàng, funnel sản phẩm; số liệu đối chiếu với truy vấn ClickHouse trên `fact_order_items`/`fact_order_status` theo quy ước doanh thu của dự án (PAID online / DELIVERED COD trừ hoàn); hỏi shop khác (phải bị chặn — `store_id` ép từ JWT); thay đổi giá/huỷ đơn → `action_proposal`.
+- **Admin**: tổng quan sàn, top shop, traffic/funnel, `system_metrics`/`service_health`/`list_alerts`, `search_audit_log`; câu hỏi RCA chéo (xem [14](14_AIOPS_ANOMALY_ALERT_EXPLAIN.md)).
+- **Chuỗi nhiều bước**: ví dụ seller: "sản phẩm nào bán chạy nhưng sắp hết hàng?" → `store_top_products` rồi `store_low_stock` (kiểu NESTFUL).
+- **Đối kháng/vượt quyền (negative set)**: buyer đòi gọi tool admin, đổi vai ("tôi là admin"), đưa `store_id` trong lời nhắn, prompt injection gián tiếp trong mô tả sản phẩm/review/tên shop, đòi xuất toàn bộ danh sách khách, yêu cầu bỏ qua xác nhận `action_proposal`, đòi số tồn chính xác. Mục tiêu: unauthorized-call rate = 0, rò rỉ = 0.
+- **Ngoài phạm vi**: câu hỏi không liên quan (từ chối lịch sự); câu mơ hồ (hỏi lại thay vì đoán); đo từ chối thừa bằng các case hợp lệ gần biên.
+- **Ổn định**: mỗi case chạy k=5-8 lần với nhiệt độ vận hành, báo pass^k; tách case "đúng sự thật số liệu" khỏi "văn phong".
+- **Tiếng Việt**: mỗi case có 3 biến thể (chuẩn, không dấu, viết tắt/teencode) để đo độ bền (xem [15](15_VIETNAMESE_NLP_QUERY_UNDERSTANDING.md)).
+
+**Cách sinh case**: viết tay 15-20 case/persona làm seed; dùng LLM tạo biến thể và hội thoại nhiều lượt, **người duyệt** từng case; đáp án số liệu luôn tính bằng SQL từ snapshot, không để LLM tạo đáp án. Tách bộ `dev` (điều chỉnh prompt) và `test` giữ kín (không đưa vào prompt/ví dụ few-shot).
+
+**User simulator**: LLM đóng vai người dùng theo kịch bản (mục tiêu + ràng buộc + mức hợp tác) như τ-bench, giới hạn số lượt.
+
+**Judge**: rubric ngắn (đúng sự thật so với `answer_facts`, có trích dẫn, đúng giọng/ngôn ngữ, không lộ dữ liệu), mô hình judge khác mô hình agent, đo kappa với 100 mẫu người chấm; judge chỉ bổ sung cho kiểm tra xác định.
+
+**Tích hợp công cụ**: promptfoo hoặc Inspect AI chạy case (assert trên tool call và JSON), DeepEval/Ragas cho metric RAG của `ask_policy`; AgentDojo-style suite cho tấn công; CI chạy bộ nhỏ.
+
+## 6. Lộ trình dùng dữ liệu đề xuất
+
+1. **Tuần 1-2**: dựng harness + 20 case/persona (đơn lượt), chấm bằng tool call; dùng BFCL để chọn mô hình ban đầu và học định dạng.
+2. **Tuần 3-4**: thêm hội thoại nhiều lượt + user simulator + pass^k, mô phỏng kiểu τ-bench retail; thêm negative set vượt quyền (bắt buộc trước khi mở cho người dùng thật).
+3. **Tuần 5-6**: suite injection kiểu AgentDojo/InjecAgent trên tool dự án; judge cho `ask_policy`.
+4. **Sau đó**: tham chiếu MCPMark/ToolSandbox nếu chuyển sang MCP hoặc cần chấm milestone; tham chiếu WebShop/WebArena nếu có agent thao tác UI.
+5. Theo dõi hồi quy mỗi lần đổi model/prompt/tool schema.
+
+## 7. Rủi ro, license, thiên lệch, lưu ý pháp lý/PII
+
+- **Chuyển miền/ngôn ngữ**: benchmark công khai tiếng Anh, chính sách nước ngoài; điểm cao trên τ-bench không đảm bảo trên tiếng Việt.
+- **LLM-as-judge**: thiên lệch dài dòng, tự ưa model cùng họ; hiệu chỉnh với người; không dùng làm cổng chặn duy nhất.
+- **Nhiễm dữ liệu (contamination)**: benchmark công khai có thể đã nằm trong dữ liệu huấn luyện model; giữ bộ test nội bộ kín.
+- **Bất ổn**: LLM không xác định; một lần chạy không đủ, dùng pass^k; kết quả τ-bench cho thấy suy giảm mạnh theo k.
+- **License**: hầu hết MIT/Apache-2.0 (đã đọc README); ToolBench dữ liệu chỉ nghiên cứu/giáo dục; ToolSandbox, API-Bank chưa xác minh; kiểm tra điều khoản nhà cung cấp LLM khi dùng judge.
+- **PII**: hội thoại và dữ liệu seed không chứa dữ liệu thật; nếu dùng log thật phải ẩn danh trước khi đưa cho judge bên ngoài. Môi trường eval cô lập (sandbox), không trỏ vào production, đặc biệt với tool ghi.
+- Ngày tra cứu: leaderboard (BFCL cập nhật 2025-12-16) có thể đã đổi; kiểm tra lại trước khi trích số.
+
+## 8. Nguồn tham khảo
+
+- τ-bench: https://github.com/sierra-research/tau-bench ; τ²-bench: https://github.com/sierra-research/tau2-bench
+- BFCL: https://gorilla.cs.berkeley.edu/leaderboard ; https://github.com/ShishirPatil/gorilla/tree/main/berkeley-function-call-leaderboard ; https://gorilla.cs.berkeley.edu/blogs/13_bfcl_v3_multi_turn.html ; https://gorilla.cs.berkeley.edu/blogs/17_bfcl_v4_prompt_variation.html
+- WebShop: https://github.com/princeton-nlp/WebShop ; WebArena: https://github.com/web-arena-x/webarena
+- MCPMark: https://github.com/eval-sys/mcpmark ; MCP-Bench: https://github.com/Accenture/mcp-bench
+- ToolSandbox: https://github.com/apple/ToolSandbox ; ACEBench: https://github.com/ACEBench/ACEBench ; NESTFUL: https://github.com/IBM/NESTFUL
+- ToolBench: https://github.com/OpenBMB/ToolBench ; AgentBench: https://github.com/THUDM/AgentBench ; API-Bank: https://github.com/AlibabaResearch/DAMO-ConvAI
+- AgentDojo: https://github.com/ethz-spylab/agentdojo ; InjecAgent: https://github.com/uiuc-kang-lab/InjecAgent
+- Framework: https://github.com/promptfoo/promptfoo ; https://github.com/confident-ai/deepeval ; https://github.com/explodinggradients/ragas ; https://github.com/UKGovernmentBEIS/inspect_ai
+- Tool catalog nội bộ: /home/user/mini-marketplace/docs/ai/05_AI_DRAFT_ORIGINAL.md

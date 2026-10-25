@@ -91,7 +91,7 @@ Chưa có bộ công khai đáng tin cho ảnh sản phẩm VN. Dùng các bộ 
 
 **DeepFashion (Consumer-to-Shop)**: 33,881 item, 239,557 ảnh, 195,540 cặp (con số cặp khác nhau giữa nguồn). Trang: https://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/Consumer2ShopRetrieval.html . Chỉ dùng học thuật, cấm thương mại. Cảnh báo nhãn trùng: cùng sản phẩm bị gán nhiều ID. ★3.
 
-**Street2Shop (Kiapour 2015, "Where to Buy It")**: 404,683 ảnh shop từ 25 retailer, 20,357 ảnh street, 39,479 cặp khớp. Paper: https://openaccess.thecvf.com/content_iccv_2015/papers/Kiapour_Where_to_Buy_ICCV_2015_paper.pdf . Tình trạng tải/license chưa xác minh (bộ này nổi tiếng một số link ảnh đã chết, chưa xác minh). Dùng: ảnh người dùng chụp → ảnh shop. ★3.
+**Street2Shop (Kiapour 2015, "Where to Buy It")**: 404,683 ảnh shop từ 25 retailer, 20,357 ảnh street, 39,479 cặp khớp. Paper: https://openaccess.thecvf.com/content_iccv_2015/papers/Kiapour_Where_to_Buy_ICCV_2015_paper.pdf . Tình trạng tải/license chưa xác minh. Dùng: ảnh người dùng chụp → ảnh shop. ★3.
 
 **Fashion IQ**: truy hồi ảnh có chỉnh sửa bằng lời. Repo https://github.com/XiaoxiaoGuo/fashion-iq (CDLA; ảnh ở repo metadata riêng; tình trạng tải chưa xác minh). Dùng: composed retrieval. ★3.
 
