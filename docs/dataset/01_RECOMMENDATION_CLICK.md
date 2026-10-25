@@ -100,11 +100,11 @@
 - Ánh xạ: rating/review→tín hiệu ngầm; metadata→`products`. ★3. Hạn chế: rating/review chứ không phải click; tiếng Anh; không session.
 
 **H&M Personalized Fashion Recommendations** — Kaggle (cuộc thi 2022).
-- 31.788.324 giao dịch, ~1,37M khách, 105.542 article, ~2 năm (2018-09 → 2020-09), kèm ảnh (nguồn thứ cấp). Metric cuộc thi MAP@12. License = điều khoản cuộc thi, **chưa xác minh**.
+- 31.788.324 giao dịch, ~1,37M khách, 105.542 article, ~2 năm (2018-09 → 2020-09), kèm ảnh (nguồn thứ cấp). Metric cuộc thi MAP@12. Đã xác minh (WebSearch): ~2 năm giao dịch, ~1,3M khách, >100K item, ~32M giao dịch, cuộc thi H&M trên Kaggle 2022. License = điều khoản cuộc thi, **chưa xác minh** (không thấy văn bản license).
 - Ánh xạ: transactions→`fact_order_items`; articles→`dim_products`. ★3. Hạn chế: chỉ mua, không click, thời trang châu Âu.
 
 **Instacart Market Basket Analysis** — Kaggle 2017.
-- >3M đơn, >200K user, ẩn danh (nguồn thứ cấp). License: một thư viện ghi "competition-specific (research use)" (không chính thức).
+- Đã xác minh (nguồn: WebSearch, trang BigML): 3.346.083 đơn, 206.209 user, 49.685 sản phẩm; ẩn danh. License: một thư viện ghi "competition-specific (research use)" (không chính thức).
 - Dùng cho "mua kèm"/reorder, cart-completion. ★3. Hạn chế: tạp hoá, không click.
 
 **Dunnhumby — The Complete Journey** — https://dunnhumby.com/sourcefiles
@@ -123,7 +123,7 @@
 
 **Yambda (Yandex)** — arXiv 2505.22238 ; Hugging Face (theo bài báo). ~5B event (cũng có bản 500M, 50M), ~1M user, ~9,4M track, flag `is_organic`, Parquet, chia theo thời gian toàn cục (GTS). Đã xác minh (nguồn: WebSearch, tin tức): ~4,79 tỷ tương tác ẩn danh trong 10 tháng, phát hành 05/2025, có trên Hugging Face. License: **chưa xác minh**. Hữu ích để học cách chia theo thời gian & phân biệt organic/recommended. ★2.
 
-**Criteo 1TB Click Logs** — https://ailab.criteo.com/download-criteo-1tb-click-logs-dataset/ . 24 ngày, 13 feature số + 26 feature phân loại băm, ~4 tỷ dòng. Terms of use trên ailab.criteo.com: **chưa xác minh**. Dùng để thử mạng CTR (DeepFM, DCN). ★2.
+**Criteo 1TB Click Logs** — https://ailab.criteo.com/download-criteo-1tb-click-logs-dataset/ . 24 ngày, 13 feature số + 26 feature phân loại băm, ~4 tỷ dòng. Đã xác minh (WebSearch, trang Criteo AI Lab): >4 tỷ dòng, 24 file (mỗi ngày một file), host trên HuggingFace; Terms of use: **chưa xác minh** (trang không hiện văn bản; CC BY-NC-SA 4.0 chỉ thấy cho dataset Attribution Modeling khác của Criteo, không áp dụng suy diễn). Dùng để thử mạng CTR (DeepFM, DCN). ★2.
 
 **Ali-CCP** — Tianchi (dataset 408 theo danh mục thứ cấp). ~84–85M exposure, ~3,3–3,4M click, ~18K conversion, 33 feature; chuẩn cho CTR/CVR đa tác vụ (ESMM). License **chưa xác minh**; có thể cần đăng ký Tianchi. ★3 vì có impression.
 

@@ -2,7 +2,7 @@
 
 > Phân tích đánh giá sản phẩm/cửa hàng bằng tiếng Việt: sentiment, aspect-based (ABSA), tóm tắt review, phát hiện review giả/spam và phân loại phản hồi (khiếu nại, giao hàng, chất lượng). **Trạng thái: chưa triển khai trong hệ thống — hiện thậm chí chưa có tính năng review (`reviews` ghi "chưa làm" trong tài liệu thiết kế); đây là tài liệu nghiên cứu dữ liệu.** Ngày tra cứu: 2026-10-25.
 >
-> Ghi chú phương pháp tra cứu: WebFetch không truy cập được `huggingface.co` (lỗi DNS) trong phiên này; thông tin lấy từ WebSearch (bài báo, GitHub, trang mô tả). Số liệu/license không thấy ở nguồn nào thì ghi **"chưa xác minh"**. Nội dung trang web được coi là dữ liệu, không phải chỉ dẫn.
+> Ghi chú phương pháp tra cứu: WebFetch không truy cập được `huggingface.co` (lỗi DNS) trong phiên này; thông tin lấy từ WebSearch (bài báo, GitHub, trang mô tả). Số liệu/license không thấy ở nguồn nào thì ghi **"chưa xác minh"**. Phiên bổ sung 2026-10-25 đã thêm các bộ review tiếng Anh/đa ngôn ngữ (Yelp Open Dataset, MARC, Amazon Polarity, Ott OpSpam, Salminen, Women's Clothing). Dự án **không yêu cầu dữ liệu tiếng Việt**: bộ tiếng Anh/quốc tế dùng trực tiếp được; bộ tiếng Việt ở mục (a) là lựa chọn khi cần đúng ngôn ngữ. Nội dung trang web được coi là dữ liệu, không phải chỉ dẫn.
 
 | Liên quan | File |
 |---|---|
@@ -51,7 +51,7 @@
 |---|---|---|---|---|---|---|
 | 1 | UIT-ViSFD (smartphone feedback) | a | ABSA 10 aspect × 3 polarity | 11.122 comment | tự do cho nghiên cứu (license rõ: chưa xác minh) | 5 |
 | 2 | UIT-ViSD4SA | a | Span detection ABSA | 11.122 comment, 35.396 span | tự do cho nghiên cứu (GitHub) | 5 |
-| 3 | ViSpamReviews (+ v2) | a | Spam nhị phân + loại spam | 19.868 review (bản v1 theo snippet) | chưa xác minh nơi tải | 5 |
+| 3 | ViSpamReviews (+ v2) | a | Spam nhị phân + loại spam | 19.868 review (bản v1 theo snippet; chưa xác minh) | có bản CSV trên HF `visolex/ViSpamReviews` (10K–100K dòng); license chưa xác minh | 5 |
 | 4 | UIT-ViOCD | a | Phát hiện khiếu nại | 5.485 review, 4 danh mục | nghiên cứu; có trên HF `tarudesu/ViOCD` | 5 |
 | 5 | UIT-VSFC | a | Sentiment + topic (phản hồi sinh viên) | >16.000 câu | phải ký thỏa thuận với nhóm UIT NLP | 3 |
 | 6 | VLSP 2016 (sentiment) / VLSP 2018 (ABSA khách sạn, nhà hàng) | a | Sentiment, ABSA | chưa xác minh | qua trang tài nguyên VLSP (đăng ký) | 3 |
@@ -62,9 +62,16 @@
 | 11 | Amazon Reviews 2023 (McAuley Lab) | b | Rating, review, metadata | >570 triệu review, 48 triệu item, 33 danh mục | CC BY 4.0 (theo bản arXiv); xem điều khoản | 4 |
 | 12 | Yelp (YelpChi, YelpNYC, YelpZip; Rayana & Akoglu) | b | Review spam có nhãn filter | YelpChi 67.395 review (13,23% giả); NYC ~359K; Zip ~608K | gửi email tác giả (ODDS) | 4 |
 | 13 | Olist Brazilian E-Commerce | b | Review + đơn + giao hàng | ~100K đơn 2016–2018 | CC BY-NC-SA 4.0 (chưa xác minh) | 3 |
-| 14 | Dữ liệu review LLM-sinh (MAiDE-up, Ghostwriters, Salminen GPT-2, FraudSquad) | c | Phát hiện review máy sinh | MAiDE-up 10K thật + 10K giả, 10 ngôn ngữ | từng bộ; chưa xác minh | 3 |
+| 14 | Dữ liệu review LLM-sinh (MAiDE-up, Ghostwriters, Salminen GPT-2, FraudSquad) | c | Phát hiện review máy sinh | MAiDE-up 10K thật + 10K giả, 10 ngôn ngữ; Salminen ~40.433 (20.238 CG / 20.216 OR) | từng bộ; chưa xác minh | 4 |
 | 15 | SemEval-2016 Task 5 (ABSA) | c | ABSA đa ngôn ngữ | nhà hàng 6 ngôn ngữ, laptop en | trang task; license chưa xác minh | 3 |
 | 16 | Opinosis / SPACE / FewSum (Yelp, Amazon) | c | Tóm tắt review | Opinosis 51 chủ đề; SPACE 50 khách sạn có tóm tắt | từng bộ; chưa xác minh | 3 |
+| 17 | Yelp Open Dataset | b | Review, business, rating | 6.990.280 review, 150.346 business, 11 vùng đô thị, 200.100 ảnh; tar 4,35 GB (8,65 GB giải nén) | mục đích giáo dục/nghiên cứu; điều khoản hiện hành chưa xác minh | 4 |
+| 18 | Multilingual Amazon Reviews Corpus (MARC) | b | Rating 1–5 đa ngôn ngữ | 6 ngôn ngữ × (200K train + 5K dev + 5K test), 2015–2019, cân bằng 20% mỗi sao | chỉ học thuật theo điều khoản Amazon (AWS Open Data) | 4 |
+| 19 | Amazon Polarity (Zhang et al., bản HF) | b | Sentiment nhị phân | 3,6 triệu train + 0,4 triệu test; review đến 3/2013; bỏ sao 3 | Apache-2.0 (nhãn của gói HF; nguồn gốc có thể có điều khoản khác) | 3 |
+| 20 | Ott et al. – Deceptive Opinion Spam (OpSpam) | c | Review giả viết thuê | 400 thật + 400 giả (hotel Chicago) bản gốc 2011; mở rộng đến 1.280 giả (hotel + nhà hàng) | chưa xác minh | 3 |
+| 21 | Salminen et al. – Fake reviews (GPT-2) | c | Review máy sinh vs thật | ~40.433 review, 10 danh mục Amazon | chưa xác minh | 4 |
+| 22 | Women's E-Commerce Clothing Reviews (Kaggle) | b | Rating, recommend, text | 23.486 dòng, 10 cột; tên retailer đã thay | CC0 (theo mirror Kaggle-metadata/OpenML) | 3 |
+| 23 | Amazon Fine Food Reviews (Kaggle) | b | Rating + text | 568.454 review (đến 10/2012) | các mirror ghi non-commercial; chưa xác minh trên Kaggle | 2 |
 
 ### (a) Tiếng Việt / Việt Nam
 
@@ -81,7 +88,7 @@
 **3. ViSpamReviews (và v2)**
 - Link: [arXiv 2207.14636](https://arxiv.org/abs/2207.14636) (ACIIDS 2022), [v2 arXiv 2405.13292](https://arxiv.org/abs/2405.13292v2). Nhóm: Co Van Dinh, Son T. Luu, Anh Gia-Tuan Nguyen.
 - Review thu từ các sàn TMĐT VN, 19.868 review (số theo snippet bản v1); hai tác vụ: spam hay không (nhị phân) và loại spam (đa lớp); gán nhãn theo khung MATTER. PhoBERT: 86,89% / 72,17% macro-F1. Bản v2 thêm metadata/mô tả sản phẩm: PhoBERT + mô tả sản phẩm đạt 87,22% macro-F1; kết luận chỉ comment là chưa đủ.
-- Nơi tải/license: abstract trỏ tới link, **chưa xác minh** link và license.
+- Nơi tải/license: abstract trỏ tới link; có bản CSV trên HF [`visolex/ViSpamReviews`](https://huggingface.co/datasets/visolex/ViSpamReviews/blob/main/ViSpamReviews.csv) (kết quả WebSearch; phân loại Text Classification, 10K–100K dòng). Số 19.868 và license của dataset: **chưa xác minh** (thẻ Apache-2.0 trong kết quả là của mô hình `visolex/bilstm-spam-binary`, không phải dữ liệu).
 - Ánh xạ: nhãn spam cho mô hình trên `reviews.text` + ngữ cảnh sản phẩm (`products.description`, `name`). Loại spam có thể thành lý do trong hàng đợi admin.
 - ★5. Hạn chế: nguồn sàn không công bố; thời điểm thu thập cũ; spam do người viết, chưa có LLM-sinh.
 
@@ -106,17 +113,27 @@
 
 **11. Amazon Reviews 2023.** Hou et al., [arXiv 2403.03952](https://arxiv.org/html/2403.03952v1) (CC BY 4.0 theo trang arXiv); trang dữ liệu amazon-reviews-2023.github.io, mã `hyp1231/AmazonReviews2023`; nhiều bản sao HF lỗi loading script — dùng nguồn chính thức. >570 triệu review, 48 triệu item, 33 danh mục, có rating/văn bản/helpful vote/ảnh/metadata/đồ thị. Dùng: pretrain/đối chứng sentiment, tóm tắt, helpful-vote -> nhãn chất lượng review; metadata cho scope 10. ★4. Hạn chế: tiếng Anh; mốc 9/2023; có review khuyến mãi.
 
-**12. Yelp spam sets (YelpChi, YelpNYC, YelpZip).** Rayana & Akoglu, KDD 2015 — mô tả tại [ODDS Stony Brook](https://odds.cs.stonybrook.edu/?p=562). Nhãn lấy từ bộ lọc của Yelp (filtered = giả, recommended = thật) nên là "gần sự thật"; YelpChi 67.395 review (13,23% giả); YelpNYC ~359.052 (10,27%); YelpZip ~608.598 (13,22%). Truy cập: email tác giả. Yelp Open Dataset gốc: license chưa xác minh. Dùng: thử mô hình đồ thị + hành vi người dùng–sản phẩm. ★4. Hạn chế: nhãn nhiễu; nhà hàng; tiếng Anh. Ott et al. (OpSpam, review giả viết thuê về khách sạn Chicago): chỉ được nhắc, chưa mở trang.
+**12. Yelp spam sets (YelpChi, YelpNYC, YelpZip).** Rayana & Akoglu, KDD 2015 — mô tả tại [ODDS Stony Brook](https://odds.cs.stonybrook.edu/?p=562). Nhãn lấy từ bộ lọc của Yelp (filtered = giả, recommended = thật) nên là "gần sự thật"; YelpChi 67.395 review (13,23% giả); YelpNYC ~359.052 (10,27%); YelpZip ~608.598 (13,22%). Truy cập: email tác giả. Yelp Open Dataset gốc: license chưa xác minh. Dùng: thử mô hình đồ thị + hành vi người dùng–sản phẩm. ★4. Hạn chế: nhãn nhiễu; nhà hàng; tiếng Anh. Ott et al. (OpSpam): xem mục 20.
 
-**13. Olist.** Kaggle [`olistbr/brazilian-ecommerce`](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce): ~100K đơn 2016–2018 với review text (bồ đào nha), tham chiếu công ty được thay bằng tên nhà trong Game of Thrones. License nhớ là CC BY-NC-SA 4.0 nhưng **chưa xác minh** trong phiên. Dùng: dựng pipeline end-to-end review gắn đơn/giao hàng (review_score vs. giao trễ). ★3. Hạn chế: tiếng Bồ Đào Nha; phi thương mại.
+**17. Yelp Open Dataset.** [trang Yelp](https://www.yelp.com/dataset). Đã xác minh qua WebSearch: 6.990.280 review, 150.346 business, 11 vùng đô thị, 200.100 ảnh; tar 4,35 GB, giải nén 8,65 GB gồm 1 PDF + 5 file JSON; mô tả là bộ con dành cho mục đích giáo dục/học thuật (bài cũ nói thêm có cuộc thi dataset challenge chỉ cho sinh viên). Một bài arXiv ghi 8.021.122 review/209.393 business — đó là phiên bản cũ. License hiện hành: **chưa xác minh** (đọc file license trong tar). Dùng: sentiment, ABSA, nền cho phát hiện spam (khác với YelpChi/NYC/Zip đã gán nhãn filter ở mục 12). ★4. Hạn chế: nhà hàng/dịch vụ, tiếng Anh, không có nhãn spam.
+
+**18. Multilingual Amazon Reviews Corpus (MARC).** [arXiv 2010.02573](https://arxiv.org/pdf/2010.02573), [AWS Open Data](https://docs.opendata.aws/amazon-reviews-ml/readme.html) (Keung, Lu, Szarvas, Smith, EMNLP 2020). Đã xác minh qua WebSearch: 6 ngôn ngữ (Anh, Nhật, Đức, Pháp, Tây Ban Nha, Trung), mỗi ngôn ngữ 200.000 train + 5.000 dev + 5.000 test, thu thập 2015–2019, cân bằng 20% mỗi mức sao, tối đa 20 review/người và 20 review/sản phẩm. Điều khoản: dùng cho mục đích học thuật/phi thương mại theo Conditions of Use của Amazon (đọc README để xác nhận trước khi dùng rộng hơn). Dùng: huấn luyện/kiểm thử sentiment-rating đa ngôn ngữ, thử chuyển giao zero-shot sang ngôn ngữ khác. ★4. Hạn chế: không có tiếng Việt; phi thương mại.
+
+**19. Amazon Polarity.** [Bản HF (qua kết quả TFDS community catalog)](https://www.tensorflow.org/datasets/community_catalog/huggingface/amazon_polarity). Đã xác minh qua WebSearch: 3,6 triệu train + 0,4 triệu test; nhãn nhị phân (sao 1–2 âm, 4–5 dương, bỏ sao 3); ~35 triệu review đến 3/2013 (Xiang Zhang); gói HF ghi Apache-2.0, nhưng văn bản gốc đến từ McAuley & Leskovec nên điều khoản có thể khác. Dùng: baseline sentiment nhanh, pretrain. ★3. Hạn chế: cũ (2013), nhãn nhị phân.
+
+**20. Ott et al. (OpSpam).** [Ott, Choi, Cardie, Hancock, ACL 2011](https://ar5iv.arxiv.org/html/1107.4557). Đã xác minh qua WebSearch: 400 review giả (crowd viết cho 20 hotel Chicago) đối chiếu 400 review thật (tổng 800); người đánh giá không hơn ngẫu nhiên, bộ phân loại ~90% accuracy; luận án của Ott mở rộng lên 1.280 review giả (hotel + nhà hàng). Trang tải/license: **chưa xác minh**. Dùng: baseline review giả "viết thuê" (n-gram, LIWC). ★3. Hạn chế: nhỏ, miền hotel, nhãn giả do crowd nên khác review spam thực.
+
+**22–23. Kaggle review thuần (Women's Clothing, Fine Food).** Women's E-Commerce Clothing Reviews: 23.486 dòng, 10 cột, tên retailer được thay bằng "retailer", CC0 theo mirror metadata Kaggle/OpenML (chưa mở trang Kaggle). Amazon Fine Food Reviews: 568.454 review đến 10/2012; các mirror (hyper.ai) ghi license non-commercial, chưa xác minh trên Kaggle. Dùng: thử nhanh sentiment/recommend, ABSA mức thô. ★3 và ★2.
+
+**13. Olist.** Kaggle [`olistbr/brazilian-ecommerce`](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce): ~100K đơn 2016–2018 với review text (bồ đào nha), tham chiếu công ty được thay bằng tên nhà trong Game of Thrones. License CC BY-NC-SA 4.0 vẫn **chưa xác minh** (tìm lại không thấy trường license; xác nhận ~100K đơn 2016–2018, 9 file CSV, customer_id ẩn danh theo đơn, khoá khách lặp là `customer_unique_id`). Dùng: dựng pipeline end-to-end review gắn đơn/giao hàng (review_score vs. giao trễ). ★3. Hạn chế: tiếng Bồ Đào Nha; phi thương mại.
 
 ### (c) Benchmark / bài báo học thuật
 
-**14. Review do máy sinh.** [MAiDE-up (arXiv 2404.12938)](https://arxiv.org/pdf/2404.12938v1): 10.000 review thật + 10.000 giả của khách sạn, 10 ngôn ngữ cân bằng (mã trên GitHub); [Ghostwriters of the Marketplace (ICWSM 2026)](https://ojs.aaai.org/index.php/ICWSM/article/view/42791): review Google do máy sinh, RoBERTa F1 99,98% trên tập đã thấy nhưng tụt trên RAID; [FraudSquad arXiv 2510.01801](https://arxiv.org/html/2510.01801v1): ba tập spam do LLM sinh; Salminen et al. 2021 (~40.433 review Amazon CG/OR, repo `joolsa/FakeReviews`, chưa xác minh bản gốc). Dùng: test chống review do LLM sinh (tiếng Việt chưa có). ★3. Hạn chế: miền/ngôn ngữ khác; nguy cơ detector overfit generator.
+**14. Review do máy sinh.** [MAiDE-up (arXiv 2404.12938)](https://arxiv.org/pdf/2404.12938v1): 10.000 review thật + 10.000 giả của khách sạn, 10 ngôn ngữ cân bằng (mã trên GitHub); [Ghostwriters of the Marketplace (ICWSM 2026)](https://ojs.aaai.org/index.php/ICWSM/article/view/42791): review Google do máy sinh, RoBERTa F1 99,98% trên tập đã thấy nhưng tụt trên RAID; [FraudSquad arXiv 2510.01801](https://arxiv.org/html/2510.01801v1): ba tập spam do LLM sinh; Salminen et al. 2021 (~40.433 review Amazon CG/OR, repo `joolsa/FakeReviews`, chưa xác minh bản gốc). Dùng: test chống review do LLM sinh (các bộ hiện có là tiếng Anh/đa ngôn ngữ; ghi chú: chưa thấy bộ tiếng Việt). Salminen: đã xác minh qua WebSearch ~40.433 review (20.238 CG, 20.216 OR) trên 10 danh mục Amazon, bài *Journal of Retailing and Consumer Services* 64 (2022), doi 10.1016/j.jretconser.2021.102771; một repo GitHub mô tả bản 40.000 review cân bằng; license/trang Kaggle gốc chưa xác minh. ★4 (cho miền tiếng Anh). Hạn chế: miền/ngôn ngữ khác; nguy cơ detector overfit generator.
 
 **15. SemEval-2016 Task 5.** [trang task](https://alt.qcri.org/semeval2016/task5/): nhà hàng (en, nl, fr, ru, es, tr), laptop (en), khách sạn; nhãn entity#attribute + polarity, F1 aspect + accuracy polarity. Dùng: định dạng chuẩn để quy đổi nhãn ABSA của ta; kiểm chứng cross-lingual. ★3.
 
-**16. Tóm tắt review: Opinosis, SPACE, FewSum.** Opinosis (51 chủ đề, ~100 câu/chủ đề, có tóm tắt tham chiếu; [tác giả](https://kavita-ganesan.com/?p=59)); SPACE (TripAdvisor, 50 khách sạn, tóm tắt tổng quát + 6 aspect; ~100 review/entity; giới thiệu trong [arXiv 2012.04443](https://arxiv.org/pdf/2012.04443)); FewSum (Amazon+Yelp, 3 tóm tắt/entity Amazon; Chu & Liu 2019 cho Yelp 200 entity). Các bài kết hợp chúng trong đánh giá, số liệu khác nhau theo bài. Dùng: đo ROUGE/faithfulness ngoài miền trước khi có tóm tắt tiếng Việt. ★3. **Chưa có bộ tóm tắt review tiếng Việt công khai nào được xác nhận trong phiên.**
+**16. Tóm tắt review: Opinosis, SPACE, FewSum.** Opinosis (51 chủ đề, ~100 câu/chủ đề, có tóm tắt tham chiếu; [tác giả](https://kavita-ganesan.com/?p=59)); SPACE (TripAdvisor, 50 khách sạn, tóm tắt tổng quát + 6 aspect; ~100 review/entity; giới thiệu trong [arXiv 2012.04443](https://arxiv.org/pdf/2012.04443)); FewSum (Amazon+Yelp, 3 tóm tắt/entity Amazon; Chu & Liu 2019 cho Yelp 200 entity). Các bài kết hợp chúng trong đánh giá, số liệu khác nhau theo bài. Dùng: đo ROUGE/faithfulness ngoài miền trước khi có tóm tắt tiếng Việt. ★3. Ghi chú: các bộ trên đều tiếng Anh; chưa xác nhận bộ tóm tắt review tiếng Việt nào.
 
 ### (d) Blog / cuộc thi công ty
 
