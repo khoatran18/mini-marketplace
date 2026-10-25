@@ -4,12 +4,46 @@
 
 ## 1. Analytics (analytics-service + ClickHouse)
 ### 1.1 Pipeline thực tế
+
+```mermaid
+flowchart LR
+  BR["Trình duyệt"] -->|"POST /events"| GW["api-gateway: rate limit, gắn user, role, store, ip-hash, tối đa 50 event 64 KB"]
+  GW -->|"gRPC IngestEvents"| AN["analytics-service"]
+  subgraph SRC["Dữ liệu nghiệp vụ"]
+    OP["order, payment, product-service"] -->|"outbox"| KF["Kafka, 6 topic"]
+  end
+  KF -->|"consumer analytics-service-topic"| AN
+  AN --> SK["Sink: bộ đệm RAM"]
+  SK -->|"lô 2 s hoặc 5000 dòng"| CH[("ClickHouse")]
 ```
-Trình duyệt ─ POST /events ─▶ gateway (gắn user/role/store/ip-hash, ≤50 event/64 KB) ─ gRPC IngestEvents ─▶ analytics-service ─┐
-order · payment · product ─ outbox ─ Kafka (6 topic) ─▶ consumer `analytics-service-<topic>` ───────────────────────────────────┤
-                                                                                       bộ đệm RAM (Sink) ─ lô 2 s / 5000 dòng ─▶ ClickHouse
-gateway ─ gRPC Query (scope từ JWT) ─▶ analytics-service ─ SQL trên bảng fact (FINAL) + cache Redis 30 s ─▶ JSON
+
+Hai nguồn cùng đổ vào một bộ đệm: tracking đi gRPC rồi thành `events_raw`, còn dữ liệu đơn, thanh toán, sản phẩm đi Kafka rồi thành các bảng `fact_*` và `dim_products`.
+
+Đường đọc báo cáo:
+
+```mermaid
+sequenceDiagram
+  participant C as Trình duyệt
+  participant G as api-gateway
+  participant A as analytics-service
+  participant R as Redis
+  participant H as ClickHouse
+  C->>G: GET /seller/analytics/summary
+  G->>A: gRPC Query với scope role và store_id lấy từ JWT
+  A->>R: GET analytics:v1:key
+  alt có cache
+    R-->>A: JSON đã lưu
+  else chưa có
+    A->>H: SQL trên bảng fact với FINAL
+    H-->>A: kết quả
+    A->>R: SET với TTL 30 s, trừ data_health
+  end
+  A-->>G: as_of, source, cached, data
+  G-->>C: JSON
 ```
+
+Scope không do client gửi nên seller không thể mở rộng sang store khác; Redis hỏng thì báo cáo vẫn chạy (chỉ tính lại).
+
 - **Tracking đi gRPC, không qua Kafka** (`tracking.events` không tồn tại – ADR-13).
 - Bộ đệm `Sink`: gom theo bảng, insert `JSONEachRow` mỗi `ANALYTICS_FLUSH_INTERVAL_MS` (2000) hoặc khi đủ `ANALYTICS_FLUSH_ROWS` (5000); lỗi thì giữ lại thử vòng sau; vượt `ANALYTICS_BUFFER_MAX_ROWS` (100000) thì **rớt dòng cũ nhất** và đếm. Dòng idempotent nên retry vô hại. Consumer Kafka commit khi dòng đã vào đệm.
 - Consumer idempotent nhờ `ReplacingMergeTree` khoá theo id tự nhiên (ADR-14). Bảng: `events_raw`, `fact_order_status` (một dòng cho mỗi **(đơn, trạng thái)**), `fact_order_items`, `fact_payment_events`, `fact_refunds`, `dim_products`, `fact_inventory` ([02_DATA_MODEL.md](../02_DATA_MODEL.md) §3). **Không có materialized view**: mọi báo cáo gom bảng fact lúc truy vấn với `FINAL`.
@@ -48,6 +82,29 @@ Khác thiết kế: không có `stockout-forecast`/`payments-breakdown`/`export.
 Metric (cổng :8081): `mm_ch_buffer_rows`, `mm_ch_insert_lag_seconds`, `mm_ch_rows_inserted_total`, `mm_ch_insert_failures_total`, `mm_ch_rows_dropped_total`, `mm_events_accepted_total`, `mm_events_rejected_total` (đăng ký dạng gauge nhưng giá trị là bộ đếm tăng dần – dùng `rate()/increase()`). Readiness: `clickhouse` critical; `insert_pipeline` non-critical (có hàng đợi mà > 1 phút không insert được). Dashboard **Analytics pipeline**.
 
 ## 2. Giám sát hệ thống (CPU, RAM…)
+```mermaid
+flowchart LR
+  subgraph APP["7 service Go, cổng admin 8081"]
+    M1["/metrics"]
+  end
+  CA["cAdvisor, global"]
+  NE["node-exporter, global"]
+  EX["postgres, redis, kafka exporter"]
+  TR["Traefik, entrypoint metrics 8082"]
+  PR["Prometheus"]
+  GF["Grafana, 5 dashboard"]
+  OPS["Người vận hành"]
+  M1 --> PR
+  CA --> PR
+  NE --> PR
+  EX --> PR
+  TR --> PR
+  PR --> GF
+  OPS -->|"https grafana.PUBLIC_HOST qua Traefik"| GF
+```
+
+Prometheus kéo (scrape) chứ service không đẩy; với service Go dùng DNS service discovery `tasks.<service>:8081` nên thêm replica không cần sửa cấu hình. Grafana là điểm duy nhất ra ngoài, đăng nhập bằng tài khoản Grafana.
+
 - Nguồn: cAdvisor (CPU/RAM/mạng theo container, nhãn swarm service), node-exporter (máy), metric ứng dụng (`mm_*`, [02 §8](02_HEALTH_READY_METRICS.md)), postgres/redis/kafka-exporter, Traefik. **Chưa có** exporter/metric riêng cho ClickHouse server, MinIO (chưa có).
 - Trong app: `GET /admin/system/health` (bảng service × `ready/degraded/not_ready/unreachable` × version × uptime) ✅. `GET /admin/system/metrics`, `/admin/system/outbox`, requeue ❌ chưa làm.
 - Giới hạn bộ nhớ (`resources.limits.memory`) đã đặt cho service Go (256–384 MB), ClickHouse (2 GB) và container giám sát ⇒ panel "Memory % of limit" có nghĩa.

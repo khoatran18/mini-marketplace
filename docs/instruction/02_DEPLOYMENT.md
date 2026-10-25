@@ -7,9 +7,74 @@ Ba file compose nhắm tới Docker Swarm (cũng chạy được bằng `docker 
 | `marketplace-infra` | `deploy/infra.yml` | `postgres:16-alpine`, `redis:8.2.1-alpine` (AOF), **`clickhouse/clickhouse-server:24.8`**, Kafka `apache/kafka:3.9.0` một node KRaft (`broker1`, 3 partition mặc định, retention 168 h); volume `postgres-data redis-data kafka-data clickhouse-data`; healthcheck đủ cả bốn |
 | `marketplace-obs` | `deploy/observability.yml` | Prometheus v2.55.1, Grafana 11.3.0, cAdvisor (global), node-exporter (global), postgres/redis/kafka-exporter; volume `prometheus-data grafana-data` |
 | `marketplace` | `deploy/services.yml` | Traefik v3.6, frontend, `api-gateway` (2 replica), `auth/user/product/order-service`, **`payment-service`**, **`analytics-service`** (mỗi cái 1 replica) |
+
+Ba stack, mạng chung và thứ tự `deploy.sh` triển khai:
+
+```mermaid
+flowchart LR
+  subgraph INFRA["marketplace-infra (1, tạo mạng)"]
+    PG[("postgres")]
+    RD[("redis")]
+    CH[("clickhouse")]
+    KF[("broker1 - Kafka")]
+  end
+  NET{{"overlay marketplace-net"}}
+  subgraph OBS["marketplace-obs (2)"]
+    PROM["prometheus"]
+    GRAF["grafana"]
+    EXP["cadvisor, node-exporter, postgres / redis / kafka-exporter"]
+  end
+  subgraph APP["marketplace (3)"]
+    TR["traefik"]
+    FE["frontend"]
+    SVC["api-gateway x2, auth, user, product, order, payment, analytics"]
+  end
+  INFRA --> NET
+  NET -->|"external"| OBS
+  NET -->|"external"| APP
+```
+
+`infra.yml` tạo mạng `marketplace-net`, hai stack còn lại chỉ gắn vào (`external`) nên **phải deploy infra trước**.
+
+Phụ thuộc lúc chạy (không phải thứ tự khởi động):
+
+```mermaid
+flowchart LR
+  U(["Trình duyệt"]) --> TR["traefik"]
+  TR --> FE["frontend"]
+  TR --> GW["api-gateway"]
+  GW -->|"gRPC"| SVC["các service Go"]
+  SVC --> PG[("postgres")]
+  SVC --> RD[("redis")]
+  SVC <--> KF[("Kafka")]
+  SVC -->|"analytics-service"| CH[("clickhouse")]
+  PROM["prometheus"] -.->|"scrape"| SVC
+  PROM -.-> EXP["exporters"]
+  GRAF["grafana"] --> PROM
+```
+
+Mọi request đi qua Traefik; các service Go dùng chung Postgres, Redis, Kafka, còn ClickHouse chỉ analytics-service ghi/đọc. Prometheus kéo metrics (nét đứt), Grafana chỉ đọc Prometheus.
+
 Env lấy từ shell/`deploy/.env` qua nội suy compose; **không `.env` nào được nhúng vào image**. Image build bằng `scripts/build-images.sh` (7 service Go + frontend; truyền `SERVICE_VERSION`, `GIT_COMMIT`, `BUILD_TIME` để `/version` đúng).
 
 ## 1. Checklist lần deploy đầu
+
+```mermaid
+flowchart TD
+  A["1. cp deploy/.env.example deploy/.env, điền biến bắt buộc"] --> B["2. ./scripts/gen-dev-certs.sh, hoặc đặt cert thật vào deploy/traefik/certs"]
+  B --> C["3. API_BASE_URL=... ./scripts/build-images.sh"]
+  C --> D["4. docker swarm init"]
+  D --> E["5. ./scripts/deploy.sh: infra, rồi observability, rồi services"]
+  E --> F["6. Thêm 4 host vào /etc/hosts"]
+  F --> G["7. Kiểm tra"]
+  G --> H{"Stack N/N, /ready ready, Targets UP, dashboard có số liệu?"}
+  H -->|"đạt"| OK["Xong"]
+  H -->|"chưa"| L["docker service logs từng service, xem runbook"]
+  L --> G
+```
+
+Bảy bước theo thứ tự; bước 7 lặp lại cho tới khi đạt. Chi tiết và lệnh từng bước ở danh sách dưới.
+
 1. `cp deploy/.env.example deploy/.env`, đặt tối thiểu: `POSTGRES_PASSWORD`, `JWT_SECRET` (≥16 ký tự), `TRAEFIK_DASHBOARD_USERS` (htpasswd, `$`→`$$`), `GRAFANA_ADMIN_PASSWORD`, **`CLICKHOUSE_PASSWORD`**, **`PAYMENT_WEBHOOK_SECRET`** (≥16 ký tự – thiếu thì payment-service không khởi động), `IP_HASH_SECRET` (khuyến nghị đặt để hash IP khớp giữa các replica), `ADMIN_BOOTSTRAP_USERNAME/PASSWORD` nếu cần admin. Giữ `ENV=prod` và `SEED_DEMO_DATA=false` ở môi trường thật.
 2. `./scripts/gen-dev-certs.sh` (hoặc đặt cert thật vào `deploy/traefik/certs/{local.crt,local.key}`).
 3. `API_BASE_URL=https://api.marketplace.swarm.localhost ./scripts/build-images.sh` (frontend nướng URL API lúc build).
@@ -17,7 +82,7 @@ Env lấy từ shell/`deploy/.env` qua nội suy compose; **không `.env` nào �
 5. `./scripts/deploy.sh` (= `infra` → `observability` → `services`; chạy riêng: `deploy.sh infra|observability|services`). Script render compose bằng `docker compose config`, bỏ `name:` và ép cổng số vì `docker stack deploy` không hiểu.
 6. Thêm `/etc/hosts`: `marketplace.swarm.localhost`, `api.marketplace.swarm.localhost`, `dashboard.marketplace.swarm.localhost`, `grafana.marketplace.swarm.localhost`.
 7. Kiểm tra: `docker stack services marketplace-infra` / `marketplace-obs` / `marketplace` đều `N/N`; `docker exec` một container trong mạng và `wget -qO- http://<service>:8081/ready` (mọi service `ready`); đăng nhập admin → `/admin/system` (hoặc `GET /admin/system/health`) toàn `ready`; Prometheus → Status → Targets mọi job `UP` (service Go qua DNS `tasks.<service>:8081`); mở Grafana, 5 dashboard trong thư mục *Marketplace* có số liệu ([03_RUNBOOK.md](03_RUNBOOK.md) §Grafana).
-8. Thứ tự khởi động không bắt buộc (service tự chờ/ thử lại): analytics-service **chờ ClickHouse tối đa ~2 phút** (60 lần × 2 s) rồi mới migrate schema và mở cổng; nếu quá hạn nó thoát và Swarm khởi động lại.
+8. Thứ tự khởi động không bắt buộc (service tự chờ/ thử lại): analytics-service **chờ ClickHouse tối đa ~2 phút** (60 lần × 2 s) rồi mới migrate schema và mở cổng; nếu quá hạn nó thoát và Swarm khởi động lại (sơ đồ ở §2).
 > **Chưa được kiểm chứng**: toàn bộ các bước Docker/Swarm/Traefik/ClickHouse/Grafana ở trên chưa từng chạy trong sandbox soạn tài liệu (xem [09_ROADMAP_STATUS.md](../design/platform/09_ROADMAP_STATUS.md), "Giới hạn đã biết"). Lần deploy đầu hãy theo dõi `docker service logs` từng service.
 
 Host: UI `https://marketplace.swarm.localhost`, API `https://api.<host>`, Traefik dashboard `https://dashboard.<host>` (basic auth), Grafana `https://grafana.<host>`.
@@ -28,6 +93,22 @@ Host: UI `https://marketplace.swarm.localhost`, API `https://api.<host>`, Traefi
 - Tiêu thụ 6 topic Kafka (`order.status_changed`, `payment.{succeeded,failed,refunded}`, `product.changed`, `inventory.changed`) và nhận tracking qua gRPC `IngestEvents` từ gateway. Ghi vào ClickHouse theo lô trong bộ đệm bộ nhớ (`ANALYTICS_FLUSH_INTERVAL_MS` 2000, `ANALYTICS_FLUSH_ROWS` 5000); ClickHouse down ⇒ giữ lại tới `ANALYTICS_BUFFER_MAX_ROWS` (100000) rồi **rớt dòng cũ nhất** (đếm ở `mm_ch_rows_dropped_total`).
 - **ClickHouse là phần phụ**: gateway coi payment/analytics là non-critical; ClickHouse hay analytics-service down thì dashboard analytics trả **503** nhưng cửa hàng (xem, đặt hàng, thanh toán) và `POST /events` (vẫn 202) chạy bình thường.
 - Lần đầu chạy trên dữ liệu đã có sẵn: ClickHouse **không** được backfill từ Postgres (chưa làm); chỉ có event còn nằm trong Kafka (retention 7 ngày): group mới (`analytics-service-<topic>`) đọc từ offset đầu tiên còn giữ (mặc định `FirstOffset` của kafka-go), nên dựng lại được tối đa ~7 ngày gần nhất bằng cách xoá bảng/ đổi group.
+
+### Khởi động analytics-service (chờ ClickHouse)
+
+```mermaid
+flowchart TD
+  S["analytics-service khởi động"] --> P{"ClickHouse ping và migrate OK?"}
+  P -->|"có"| M["Mở sink, consumer Kafka, gRPC, cổng 8081 báo started"]
+  P -->|"không"| I{"Đã thử quá 60 lần?"}
+  I -->|"chưa"| W["Log waiting for ClickHouse, ngủ 2 s"]
+  W --> P
+  I -->|"rồi"| X["log.Fatalf, thoát"]
+  X --> R["Swarm restart_policy khởi động lại task"]
+  R --> S
+```
+
+ClickHouse chạy song song trong stack nên thường chưa sẵn lúc analytics-service lên: service tự chờ tối đa ~2 phút thay vì dựa vào thứ tự khởi động.
 
 ## 3. Biến môi trường
 (`deploy/.env.example` là mẫu; `services.yml` truyền xuống container.)
@@ -58,6 +139,7 @@ Host: UI `https://marketplace.swarm.localhost`, API `https://api.<host>`, Traefi
 | `SEED_DEMO_DATA` | auth, product | `true`: `buyer1`/`seller1` (mật khẩu `password`, **không** tạo store) + ~100 sản phẩm demo gán `seller_id=2` vào catalog rỗng. Không bao giờ bật ở production |
 | `SEED_DEFAULT_CATEGORIES` | product | `false` để không seed 7 danh mục mặc định |
 | `ADMIN_PORT` (8081), `DRAIN_SECONDS` (10), `READY_CACHE_SECONDS` (3), `READY_CHECK_TIMEOUT_MS` (1000), `PPROF_ENABLED` | mọi service Go | chuẩn vận hành; `SERVICE_VERSION/GIT_COMMIT/BUILD_TIME` do build-arg |
+
 Địa chỉ gRPC giữa service (`auth-service:50051`, `order-service:50052`, `product-service:50053`, `user-service:50054`, `analytics-service:50055`, `payment-service:50057`) **cứng trong code** (`internal/config/grpc_config.go`), không có biến `*_SERVICE_ADDR`.
 
 ## 4. Chạy cục bộ không cần Swarm

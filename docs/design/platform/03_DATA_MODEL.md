@@ -65,6 +65,47 @@
 ```
 **Server gắn thêm** (client không có trường này): `user_id, role, store_id` (JWT), `ts_server`, `ip_hash` (HMAC + ngày UTC, xoay hằng ngày, không lưu IP thô), `ua_family` (chrome/firefox/safari/edge/bot/other), `country` (header `CF-IPCountry` nếu có). (`device.viewport` trong thiết kế **không** được lưu.)
 
+Envelope trở thành một dòng `events_raw` như sau:
+
+```mermaid
+flowchart LR
+  subgraph CL["Do trình duyệt gửi, trong envelope"]
+    C1["event_id, event_type, anonymous_id, session_id, surface, app_version"]
+    C2["ts_client"]
+    C3["page.path, page.referrer"]
+    C4["item.product_id, item.position"]
+    C5["props"]
+    C6["device.type, device.os"]
+    C7["consent.analytics"]
+  end
+  subgraph SV["Do gateway gắn thêm"]
+    S1["user_id, role, store_id từ JWT"]
+    S2["ip_hash, ua_family, country"]
+  end
+  subgraph ER["events_raw"]
+    R1["event_id, event_type, anonymous_id, session_id, surface, app_version"]
+    R2["ts, ts_server"]
+    R3["path, referrer"]
+    R4["product_id, position"]
+    R5["props"]
+    R6["device_type, os"]
+    R7["analytics_consent"]
+    R8["user_id, role, store_id"]
+    R9["ip_hash, ua_family, country"]
+  end
+  C1 --> R1
+  C2 -->|"chỉ tin trong ±24 h, ngoài đó dùng giờ server"| R2
+  C3 -->|"bỏ query và fragment"| R3
+  C4 --> R4
+  C5 -->|"che email, SĐT"| R5
+  C6 --> R6
+  C7 --> R7
+  S1 --> R8
+  S2 --> R9
+```
+
+Cột `ts_server` do analytics-service đặt lúc nhận và là cột phiên bản của `ReplacingMergeTree`; không có consent thì định danh (`anonymous_id`, `session_id`, `user_id`, `ip_hash`, `product_id`, `props`) bị xoá trước khi ghi.
+
 ### 2.2 Loại event
 Client được gửi: `page_view, impression, product_click, product_view, dwell, search, search_click, filter_apply, sort_change, add_to_cart, remove_from_cart, cart_update, wishlist_add, wishlist_remove, checkout_start, checkout_submit, payment_page_view, error_client`; `identify` chỉ từ `POST /events/identify`. **Event nghiệp vụ** (`order_placed`, `order_status_changed`, `payment_succeeded`…) **không** là event tracking: bị loại nếu client gửi, còn dữ liệu đơn/ thanh toán đi Kafka → bảng fact. `props` quy ước: `search` có `q`, `result_count` (dùng bởi báo cáo `search_terms`).
 `surface`: `home_trending, home_new, category_page, search_results, pdp, cart, checkout, orders, seller_console, admin_console`.
