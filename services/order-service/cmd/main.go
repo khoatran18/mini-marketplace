@@ -132,8 +132,8 @@ func main() {
 		adm.AttachDB(sqlDB)
 	}
 	metrics.Register(adm.Registry(), "order-service")
-	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": "domain_events"}, func() float64 { n, _ := orderRepo.Backlog(); return float64(n) })
-	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": "domain_events"}, func() float64 { _, a := orderRepo.Backlog(); return a })
+	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": events.Table()}, func() float64 { n, _ := orderRepo.Backlog(); return float64(n) })
+	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": events.Table()}, func() float64 { _, a := orderRepo.Backlog(); return a })
 	events.Register(adm.Registry(), "order-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
 	adm.GaugeFunc("mm_worker_last_tick_timestamp_seconds", "Unix time of the last timers round.", map[string]string{"worker": "order_timers"}, func() float64 { return float64(lastTick.Load()) })
 

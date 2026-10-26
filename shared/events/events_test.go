@@ -228,3 +228,36 @@ func TestBackoffAndOptionsFromEnv(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 }
+
+func TestSetTableValidatesAndSeparatesOutboxes(t *testing.T) {
+	defer SetTable(DefaultTable)
+	for _, bad := range []string{"", "x; DROP TABLE y", "Upper", "a-b", "1abc"} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("SetTable(%q) did not panic", bad)
+				}
+			}()
+			SetTable(bad)
+		}()
+	}
+	db := testDB(t)
+	if err := db.Exec(`CREATE TABLE order_domain_events (LIKE domain_events INCLUDING ALL)`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO domain_events (topic, key, payload) VALUES ('t', 'legacy', '{}')`).Error; err != nil {
+		t.Fatal(err)
+	}
+	SetTable("order_domain_events")
+	if Table() != "order_domain_events" {
+		t.Fatalf("Table() = %s", Table())
+	}
+	emit(t, db, "mine")
+	if n, _, _ := Backlog(db); n != 1 {
+		t.Errorf("backlog of own table = %d, want 1 (legacy row must not count)", n)
+	}
+	var tried []string
+	if sent, err := PublishBatch(context.Background(), db, failFor(nil, &tried), 10, time.Second); sent != 1 || err != nil || len(tried) != 1 || tried[0] != "mine" {
+		t.Errorf("sent=%d err=%v tried=%v", sent, err, tried)
+	}
+}

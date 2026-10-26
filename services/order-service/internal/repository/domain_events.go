@@ -106,6 +106,8 @@ func itemEvents(items []*model.OrderItem) []ItemEvent {
 	return out
 }
 
+func init() { events.SetTable("order_domain_events") } // own outbox table (ADR-34, migrations/00003)
+
 func stockItems(items []*model.OrderItem) []StockItem {
 	out := make([]StockItem, 0, len(items))
 	for _, it := range items {

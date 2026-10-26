@@ -221,7 +221,7 @@ func TestCardDataIsNeverStored(t *testing.T) {
 		t.Fatal(err)
 	}
 	var hits int64
-	for _, table := range []string{"payments", "attempts", "refunds", "webhook_deliveries", "domain_events"} {
+	for _, table := range []string{"payments", "attempts", "refunds", "webhook_deliveries", "payment_domain_events"} {
 		var n int64
 		h.DB.Raw("SELECT count(*) FROM "+table+" t WHERE t::text LIKE ? OR t::text LIKE ?", "%"+CardDeclined+"%", "%987%").Scan(&n)
 		hits += n

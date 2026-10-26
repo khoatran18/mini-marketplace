@@ -100,11 +100,11 @@ func main() {
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
 		adm.AttachDB(sqlDB)
 	}
-	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": "domain_events"}, func() float64 {
+	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": events.Table()}, func() float64 {
 		n, _, _ := events.Backlog(serviceConfig.PostgresDB)
 		return float64(n)
 	})
-	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": "domain_events"}, func() float64 {
+	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": events.Table()}, func() float64 {
 		_, age, _ := events.Backlog(serviceConfig.PostgresDB)
 		return age
 	})

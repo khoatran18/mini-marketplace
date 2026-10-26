@@ -71,7 +71,7 @@ func TestRunOnEmptyDBAndTwice(t *testing.T) {
 	db := newDB(t)
 	run(t, db)
 	run(t, db) // lần hai: không làm gì
-	for _, tb := range []string{"orders", "order_items", "order_status_histories", "checkouts", "cart_items", "create_order_events", "cancel_order_events", "domain_events", migrate.VersionTable} {
+	for _, tb := range []string{"orders", "order_items", "order_status_histories", "checkouts", "cart_items", "create_order_events", "cancel_order_events", "domain_events", "order_domain_events", migrate.VersionTable} {
 		if !db.Migrator().HasTable(tb) {
 			t.Errorf("missing table %s", tb)
 		}

@@ -49,7 +49,7 @@ func count(t *testing.T, db *sql.DB, q string) int {
 
 func checkSchema(t *testing.T, db *sql.DB) {
 	t.Helper()
-	for _, tb := range []string{"products", "categories", "inventory_ledgers", "validate_order_events", "domain_events", VersionTable} {
+	for _, tb := range []string{"products", "categories", "inventory_ledgers", "validate_order_events", "domain_events", "product_domain_events", VersionTable} {
 		if count(t, db, "SELECT count(*) FROM information_schema.tables WHERE table_name='"+tb+"'") != 1 {
 			t.Errorf("thiếu bảng %s", tb)
 		}

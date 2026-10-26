@@ -54,12 +54,12 @@ func TestRunOnEmptyDBIsIdempotent(t *testing.T) {
 			t.Fatalf("run %d: %v", i, err)
 		}
 	}
-	for _, tbl := range []string{"payments", "attempts", "refunds", "webhook_deliveries", "processed_events", "domain_events"} {
+	for _, tbl := range []string{"payments", "attempts", "refunds", "webhook_deliveries", "processed_events", "domain_events", "payment_domain_events"} {
 		if n := count(t, db, "SELECT count(*) FROM information_schema.tables WHERE table_name='"+tbl+"'"); n != 1 {
 			t.Errorf("thiếu bảng %s", tbl)
 		}
 	}
-	if n := count(t, db, "SELECT count(*) FROM "+VersionTable); n != 3 { // bản ghi 0 + baseline + outbox_dead_letter
+	if n := count(t, db, "SELECT count(*) FROM "+VersionTable); n != 4 { // bản ghi 0 + baseline + outbox_dead_letter + own_outbox
 		t.Errorf("version rows = %d", n)
 	}
 }
@@ -80,5 +80,39 @@ func TestRunOnLegacyDBKeepsData(t *testing.T) {
 	}
 	if n := count(t, db, "SELECT count(*) FROM domain_events"); n != 0 {
 		t.Errorf("domain_events phải được tạo")
+	}
+}
+
+// 00003: unsent / dead rows of payment-service topics move to payment_domain_events (ids keep their order);
+// SUCCESS history and other services' rows stay in the legacy table.
+func TestOwnOutboxMigrationMovesOnlyOwnUnsentRows(t *testing.T) {
+	db := tempDB(t)
+	if err := Run(context.Background(), db); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO domain_events (topic, key, payload, status, created_at) VALUES
+		('payment.succeeded', 'p1', '{}', 'PENDING', now()),
+		('payment.failed',    'p2', '{}', 'DEAD',    now()),
+		('payment.refunded',  'p3', '{}', 'SUCCESS', now()),
+		('order.create_order','o1', '{}', 'PENDING', now()),
+		('payment.refunded',  'p4', '{}', 'FAILED',  now())`); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile("../../migrations/00003_own_outbox.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(string(body)); err != nil { // goose markers are SQL comments; Down is SELECT 1
+		t.Fatal(err)
+	}
+	if n := count(t, db, "SELECT count(*) FROM payment_domain_events"); n != 3 {
+		t.Errorf("moved = %d, want 3 (PENDING, DEAD, FAILED of payment topics)", n)
+	}
+	var first string
+	if err := db.QueryRow("SELECT key FROM payment_domain_events ORDER BY id LIMIT 1").Scan(&first); err != nil || first != "p1" {
+		t.Errorf("order not kept: %q %v", first, err)
+	}
+	if n := count(t, db, "SELECT count(*) FROM domain_events"); n != 2 {
+		t.Errorf("legacy table keeps %d rows, want 2 (SUCCESS history + order-service row)", n)
 	}
 }

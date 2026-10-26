@@ -7,8 +7,11 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+	"regexp"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -27,7 +30,36 @@ const (
 	StatusDead = "DEAD"
 )
 
-// Event is one outbox row (table domain_events).
+// DefaultTable is the legacy shared outbox table (product, order and payment all wrote to it, ADR-23).
+// Every service now sets its own table with SetTable (ADR-34); the default only serves tests and old callers.
+const DefaultTable = "domain_events"
+
+var (
+	tableMu sync.RWMutex
+	table   = DefaultTable
+	tableRe = regexp.MustCompile(`^[a-z_][a-z0-9_]{0,62}$`)
+)
+
+// SetTable chooses the outbox table this process emits to and publishes from (for example
+// "order_domain_events"). Call it once at start-up, before Emit / Run / Backlog; the name is spliced into SQL,
+// so anything that is not a plain lower-case identifier panics.
+func SetTable(name string) {
+	if !tableRe.MatchString(name) {
+		panic(fmt.Sprintf("events: invalid outbox table name %q", name))
+	}
+	tableMu.Lock()
+	table = name
+	tableMu.Unlock()
+}
+
+// Table returns the outbox table currently in use.
+func Table() string {
+	tableMu.RLock()
+	defer tableMu.RUnlock()
+	return table
+}
+
+// Event is one outbox row (table Table(), one per service).
 type Event struct {
 	ID          uint64         `gorm:"primaryKey;autoIncrement"`
 	Topic       string         `gorm:"not null"`
@@ -43,8 +75,8 @@ type Event struct {
 	DeadAt        *time.Time
 }
 
-// TableName keeps the table name stable.
-func (Event) TableName() string { return "domain_events" }
+// TableName is the service's own outbox table (see SetTable).
+func (Event) TableName() string { return Table() }
 
 // Emit stores an event in the caller's transaction (pass the *gorm.DB of the transaction).
 // payload is JSON-encoded; a "v" (version) field is advisable in payload types.
@@ -53,7 +85,7 @@ func Emit(tx *gorm.DB, topic, key string, payload any) error {
 	if err != nil {
 		return err
 	}
-	return tx.Create(&Event{Topic: topic, Key: key, Payload: b, Status: StatusPending, NextAttemptAt: time.Now()}).Error
+	return tx.Table(Table()).Create(&Event{Topic: topic, Key: key, Payload: b, Status: StatusPending, NextAttemptAt: time.Now()}).Error
 }
 
 // Options tunes the failure handling of PublishBatch.
@@ -142,11 +174,12 @@ func PublishBatchOpts(ctx context.Context, db *gorm.DB, publish PublishFunc, lim
 	var firstErr error
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := time.Now()
+		tbl := Table()
 		unpublished := []string{StatusPending, StatusFailed}
 		var rows []Event
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
+		if err := tx.Table(tbl).Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
 			Where("status IN ? AND next_attempt_at <= ?", unpublished, now).
-			Where("NOT EXISTS (SELECT 1 FROM domain_events p WHERE p.key = domain_events.key AND p.id < domain_events.id AND p.status IN ? AND p.next_attempt_at > ?)", unpublished, now).
+			Where("NOT EXISTS (SELECT 1 FROM "+tbl+" p WHERE p.key = "+tbl+".key AND p.id < "+tbl+".id AND p.status IN ? AND p.next_attempt_at > ?)", unpublished, now).
 			Order("id ASC").Limit(limit).Find(&rows).Error; err != nil {
 			return err
 		}
@@ -175,7 +208,7 @@ func PublishBatchOpts(ctx context.Context, db *gorm.DB, publish PublishFunc, lim
 				failed = append(failed, failure{e, err})
 				continue
 			}
-			if err := tx.Model(e).Updates(map[string]any{"status": StatusDone, "published_at": time.Now(), "last_error": nil}).Error; err != nil {
+			if err := tx.Table(tbl).Model(e).Updates(map[string]any{"status": StatusDone, "published_at": time.Now(), "last_error": nil}).Error; err != nil {
 				return err
 			}
 			sent++
@@ -194,7 +227,7 @@ func PublishBatchOpts(ctx context.Context, db *gorm.DB, publish PublishFunc, lim
 				upd["dead_at"] = now
 				deadMarked.Add(1)
 			}
-			if err := tx.Model(f.e).Updates(upd).Error; err != nil {
+			if err := tx.Table(tbl).Model(f.e).Updates(upd).Error; err != nil {
 				return err
 			}
 		}
@@ -231,7 +264,7 @@ func Run(ctx context.Context, db *gorm.DB, publish PublishFunc, interval time.Du
 // mm_outbox_published_total, mm_outbox_publish_failures_total, mm_outbox_dead_total (since process start)
 // and mm_outbox_dead, the number of DEAD rows in the table (needs attention, see the runbook).
 func Register(reg prometheus.Registerer, service string, db *gorm.DB) {
-	l := prometheus.Labels{"service": service, "table": "domain_events"}
+	l := prometheus.Labels{"service": service, "table": Table()}
 	reg.MustRegister(
 		prometheus.NewCounterFunc(prometheus.CounterOpts{Name: "mm_outbox_published_total", Help: "Outbox rows published to Kafka by this process.", ConstLabels: l}, func() float64 { return float64(published.Load()) }),
 		prometheus.NewCounterFunc(prometheus.CounterOpts{Name: "mm_outbox_publish_failures_total", Help: "Failed outbox publish attempts by this process.", ConstLabels: l}, func() float64 { return float64(publishFailures.Load()) }),
@@ -246,7 +279,7 @@ func Register(reg prometheus.Registerer, service string, db *gorm.DB) {
 // DeadCount returns the number of dead-lettered rows.
 func DeadCount(db *gorm.DB) (int64, error) {
 	var n int64
-	err := db.Model(&Event{}).Where("status = ?", StatusDead).Count(&n).Error
+	err := db.Table(Table()).Model(&Event{}).Where("status = ?", StatusDead).Count(&n).Error
 	return n, err
 }
 
@@ -256,7 +289,7 @@ func Backlog(db *gorm.DB) (pending int64, oldestSeconds float64, err error) {
 		N      int64
 		Oldest *time.Time
 	}
-	err = db.Model(&Event{}).Select("count(*) AS n, min(created_at) AS oldest").
+	err = db.Table(Table()).Model(&Event{}).Select("count(*) AS n, min(created_at) AS oldest").
 		Where("status IN ?", []string{StatusPending, StatusFailed}).Scan(&row).Error
 	if err != nil || row.Oldest == nil {
 		return row.N, 0, err

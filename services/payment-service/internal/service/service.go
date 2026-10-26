@@ -40,6 +40,8 @@ const (
 	TopicRefunded         = "payment.refunded"
 )
 
+func init() { events.SetTable("payment_domain_events") } // own outbox table (ADR-34, migrations/00003)
+
 // Config holds the simulation settings (environment variables, see deploy/.env.example).
 type Config struct {
 	WebhookURL     string        // PAYMENT_WEBHOOK_URL: where simulated provider notifications are POSTed (our own admin port)

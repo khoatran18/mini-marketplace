@@ -449,7 +449,7 @@ func TestDomainEventsAreEmittedAndPublished(t *testing.T) {
 	if n, _ := events.PublishBatch(ctx, s.ProductRepo.DB, pub, 100, time.Second); n != 0 {
 		t.Errorf("row retried before its backoff: %d", n)
 	}
-	s.ProductRepo.DB.Exec("UPDATE domain_events SET next_attempt_at = now() - interval '1 second' WHERE status = 'FAILED'")
+	s.ProductRepo.DB.Exec("UPDATE product_domain_events SET next_attempt_at = now() - interval '1 second' WHERE status = 'FAILED'")
 	if n, err := events.PublishBatch(ctx, s.ProductRepo.DB, pub, 100, time.Second); err != nil || n != 1 {
 		t.Errorf("retry: %d %v", n, err)
 	}

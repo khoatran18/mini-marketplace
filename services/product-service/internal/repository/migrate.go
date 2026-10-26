@@ -5,6 +5,8 @@ import (
 	"product-service/internal/migrate"
 	"product-service/pkg/model"
 
+	"mini-marketplace/shared/events"
+
 	"gorm.io/gorm"
 )
 
@@ -13,6 +15,8 @@ const (
 	TopicProductChanged   = "product.changed"
 	TopicInventoryChanged = "inventory.changed"
 )
+
+func init() { events.SetTable("product_domain_events") } // own outbox table (ADR-34, migrations/00004)
 
 // Migrate áp dụng các migration goose (migrations/*.sql: bảng, hàm mm_unaccent, index GIN tìm kiếm).
 // Idempotent; dùng bởi main và test.

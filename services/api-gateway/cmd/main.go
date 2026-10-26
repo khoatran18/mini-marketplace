@@ -19,14 +19,12 @@ import (
 	"github.com/lpernett/godotenv"
 )
 
-// @title           Swagger Example API
-// @version         1.0
-// @description     My API-Gateway server celler server.
-// @termsOfService  http://swagger.io/terms/
+// NOTE: docs/ (swagger.json|yaml, docs.go) is hand-written from internal/router/router.go;
+// running `swag init` would overwrite it with a much smaller spec. Keep this header in sync.
 
-// @contact.name   API Support
-// @contact.url    http://www.swagger.io/support
-// @contact.email  support@swagger.io
+// @title           Mini Marketplace API Gateway
+// @version         1.0
+// @description     REST API of the api-gateway. Money is VND (float); ids come from the JWT; payments are SIMULATED.
 
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
