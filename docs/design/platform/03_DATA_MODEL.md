@@ -29,7 +29,7 @@
 | `categories(id, parent_id, name, slug UNIQUE, sort, active)` cây ≤ 3 cấp | ✅ |
 | `inventory_ledgers` (`reason`: `initial, reserve, release, sale, restock, adjust, update`) | ✅ (bảng tên GORM `inventory_ledgers`; `return` không dùng) |
 | `reviews`, `wishlists` | ❌ chưa làm |
-| outbox `product.changed`, `inventory.changed` | ✅ trong `domain_events` |
+| outbox `product.changed`, `inventory.changed` | ✅ trong `product_domain_events` |
 
 ### order-service
 
@@ -45,7 +45,7 @@
 | `payment_status` `PENDING/FAILED/PARTIAL_REFUND` | ❌ (trạng thái chi tiết ở `payments.status`) |
 
 ### payment-service
-`payments`, `attempts`, `refunds`, `webhook_deliveries`, `processed_events`, `domain_events` – ✅ ([02_DATA_MODEL.md](../02_DATA_MODEL.md)). Khác thiết kế: `payments` khoá theo **`checkout_id` UNIQUE** (một payment cho cả checkout) thay vì `order_id`; không có `idempotency_key` riêng (idempotency theo `checkout_id`/`provider_event_id`/`refund_key`); số tiền là `amount_minor` (BIGINT).
+`payments`, `attempts`, `refunds`, `webhook_deliveries`, `processed_events`, `payment_domain_events` – ✅ ([02_DATA_MODEL.md](../02_DATA_MODEL.md)). Khác thiết kế: `payments` khoá theo **`checkout_id` UNIQUE** (một payment cho cả checkout) thay vì `order_id`; không có `idempotency_key` riêng (idempotency theo `checkout_id`/`provider_event_id`/`refund_key`); số tiền là `amount_minor` (BIGINT).
 
 ### gateway / chung
 `identity_links`, `consents`, `feature_flags` – ❌ **chưa làm** (identify chỉ ghi event `identify` vào `events_raw`; consent đi kèm từng event).

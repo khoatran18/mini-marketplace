@@ -18,7 +18,7 @@
   "panels": [
     {
       "type": "row",
-      "title": "Outbox (domain_events)",
+      "title": "Outbox (<service>_domain_events)",
       "collapsed": false,
       "id": 1,
       "gridPos": {
@@ -32,7 +32,7 @@
     {
       "type": "stat",
       "title": "Tổng outbox chờ gửi",
-      "description": "Số dòng domain_events chưa publish lên Kafka (product/order/payment)",
+      "description": "Số dòng outbox chưa publish lên Kafka (product/order/payment)",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -187,7 +187,7 @@
     {
       "type": "stat",
       "title": "Outbox DEAD (dead-letter)",
-      "description": "Dòng domain_events đã hết số lần thử, cần xử lý tay (runbook mục 5)",
+      "description": "Dòng outbox đã hết số lần thử, cần xử lý tay (runbook mục 5)",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

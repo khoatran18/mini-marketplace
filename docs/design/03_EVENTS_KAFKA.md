@@ -9,13 +9,13 @@ Bản đồ topic (mũi tên: producer → topic → consumer; nhãn trong ngo�
 ```mermaid
 flowchart LR
     subgraph ORD["order-service"]
-        O1["outbox domain_events"]
+        O1["outbox order_domain_events"]
     end
     subgraph PRD["product-service"]
-        P1["outbox domain_events + validate_order_events"]
+        P1["outbox product_domain_events + validate_order_events"]
     end
     subgraph PAY["payment-service"]
-        Y1["outbox domain_events"]
+        Y1["outbox payment_domain_events"]
     end
     O1 --> T1["order.create_order"]
     O1 --> T2["order.cancel_order"]
@@ -59,17 +59,17 @@ Bảng tra cứu đầy đủ:
 
 | Topic | Producer (nguồn) | Consumer → group | Key |
 |---|---|---|---|
-| `order.create_order` | order-service (`domain_events`) | product-service → `product-service-validate-order` | `order_id` |
+| `order.create_order` | order-service (`order_domain_events`) | product-service → `product-service-validate-order` | `order_id` |
 | `product.validate_order` | product-service (`validate_order_events`) | order-service → `order-service-validate-result` | `order_id` |
-| `order.cancel_order` | order-service (`domain_events`) | product-service → `product-service-cancel-order` | `order_id` |
-| `order.status_changed` | order-service (`domain_events`) | product-service → `product-service-ship-order`; analytics-service → `analytics-service-order.status_changed` | `order_id` |
-| `payment.requested` | order-service (`domain_events`) | payment-service → `payment-service-create` | `checkout_id` |
-| `order.refund_requested` | order-service (`domain_events`) | payment-service → `payment-service-refund` | `checkout_id` |
-| `payment.succeeded` | payment-service (`domain_events`) | order-service → `order-service-payment-succeeded`; analytics → `analytics-service-payment.succeeded` | `payment_id` |
+| `order.cancel_order` | order-service (`order_domain_events`) | product-service → `product-service-cancel-order` | `order_id` |
+| `order.status_changed` | order-service (`order_domain_events`) | product-service → `product-service-ship-order`; analytics-service → `analytics-service-order.status_changed` | `order_id` |
+| `payment.requested` | order-service (`order_domain_events`) | payment-service → `payment-service-create` | `checkout_id` |
+| `order.refund_requested` | order-service (`order_domain_events`) | payment-service → `payment-service-refund` | `checkout_id` |
+| `payment.succeeded` | payment-service (`payment_domain_events`) | order-service → `order-service-payment-succeeded`; analytics → `analytics-service-payment.succeeded` | `payment_id` |
 | `payment.failed` | payment-service | analytics → `analytics-service-payment.failed` (order-service **không** tiêu thụ) | `payment_id` |
 | `payment.refunded` | payment-service | order-service → `order-service-payment-refunded`; analytics → `analytics-service-payment.refunded` | `payment_id` |
-| `product.changed` | product-service (`domain_events`) | analytics → `analytics-service-product.changed` | `product_id` |
-| `inventory.changed` | product-service (`domain_events`) | analytics → `analytics-service-inventory.changed` | `product_id` |
+| `product.changed` | product-service (`product_domain_events`) | analytics → `analytics-service-product.changed` | `product_id` |
+| `inventory.changed` | product-service (`product_domain_events`) | analytics → `analytics-service-inventory.changed` | `product_id` |
 | `auth.change_password` | auth-service (`pwd_version_events`) | api-gateway → `api-gateway-group-3` | `user_id` |
 | `user.create_seller` | user-service (`create_seller_events`) | auth-service → `auth-service` | `seller_id` |
 
@@ -103,7 +103,7 @@ sequenceDiagram
     participant W as Worker outbox
     participant K as Kafka
     participant C as Consumer
-    S->>DB: 1 transaction: đổi dữ liệu + ghi dòng domain_events
+    S->>DB: 1 transaction: đổi dữ liệu + ghi dòng outbox
     loop mỗi 2 s, lô 100, SKIP LOCKED
         W->>DB: đọc dòng chưa gửi theo id
         W->>K: publish acks=all
@@ -116,7 +116,7 @@ sequenceDiagram
 
 Worker chết giữa lúc publish và đánh dấu thì gửi lại, nên consumer phải khử trùng (§4). Lỗi publish: dòng `FAILED` (`attempts+1`) và được thử lại vòng sau.
 
-- **Producer = outbox giao dịch.** Dòng outbox được ghi cùng transaction với thay đổi nghiệp vụ. product/order/payment dùng bảng chung `domain_events` (`pkg/events`, bản sao giống hệt nhau – ADR-8/23; cùng database nên là **một bảng vật lý dùng chung**, xem [02_DATA_MODEL.md](02_DATA_MODEL.md) §1.5): worker 2 s/lần, lô 100, `ORDER BY id`, `FOR UPDATE SKIP LOCKED` (nhiều replica chạy song song được), publish `acks=all`, đánh `SUCCESS` + `published_at`; lỗi đầu tiên dừng lô, dòng đó `FAILED` (`attempts+1`) và được thử lại vòng sau. Chết giữa "đã publish" và "đã đánh dấu" ⇒ gửi lại ⇒ **at-least-once**. product còn xả `validate_order_events` (3 s), auth/user giữ bảng outbox riêng của mình (3 s); order-service vẫn xả `create_order_events`/`cancel_order_events` cũ để không mất đơn khi nâng cấp.
+- **Producer = outbox giao dịch.** Dòng outbox được ghi cùng transaction với thay đổi nghiệp vụ. product/order/payment dùng outbox chung mã nguồn (`shared/events`, ADR-33) nhưng **mỗi service một bảng** `<service>_domain_events` (ADR-34, xem [02_DATA_MODEL.md](02_DATA_MODEL.md) §1.5): worker 2 s/lần, lô 100, `ORDER BY id`, `FOR UPDATE SKIP LOCKED` (nhiều replica chạy song song được), publish `acks=all`, đánh `SUCCESS` + `published_at`; lỗi đầu tiên dừng lô, dòng đó `FAILED` (`attempts+1`) và được thử lại vòng sau. Chết giữa "đã publish" và "đã đánh dấu" ⇒ gửi lại ⇒ **at-least-once**. product còn xả `validate_order_events` (3 s), auth/user giữ bảng outbox riêng của mình (3 s); order-service vẫn xả `create_order_events`/`cancel_order_events` cũ để không mất đơn khi nâng cấp.
 - **Consumer** (`kafkaimpl.KafkaConsumer`, dùng chung, `shared/messagequeue/kafkaimpl`): chỉ commit offset **sau khi** handler thành công; lỗi thì thử lại tối đa **5 lần** (backoff `KAFKA_CONSUMER_BACKOFF` ms × số lần thử), rồi ghi log `giving up on message … offset N` và **bỏ qua** để một message độc không chặn partition. JSON hỏng: hầu hết handler `return nil` ngay (bỏ). Ngoại lệ: handler `AddChaPwdVerToRedis` (gateway) và `UpdateStoreIDFromKafka` (auth) trả lỗi nên bị thử đủ 5 lần rồi bỏ.
 - **Thứ tự**: cùng key ⇒ cùng partition ⇒ giữ thứ tự (các event của một đơn/ một user). Khác topic không có thứ tự tương đối; thiết kế tránh phụ thuộc vào đó (trạng thái đi qua `UPDATE … WHERE status IN (…)`).
 

@@ -71,7 +71,7 @@ Ghi chú:
 
 | Thành phần | Image / stack | Replica | Vai trò |
 |---|---|---|---|
-| Postgres | `postgres:16-alpine` (`marketplace-infra`) | 1 | Một database chung, mỗi service sở hữu bảng riêng (không join chéo); bảng outbox `domain_events` dùng chung |
+| Postgres | `postgres:16-alpine` (`marketplace-infra`) | 1 | Một database chung, mỗi service sở hữu bảng riêng (không join chéo); mỗi service một bảng outbox `<service>_domain_events` (ADR-34) |
 | Redis | `redis:8.2.1-alpine` (AOF) | 1 | Rate limit, `pwd_version`, cache báo cáo `analytics:v1:*` |
 | Kafka | `apache/kafka:3.9.0`, KRaft, 3 broker (`broker1..3`; lite: 1) | 3 | Bus sự kiện; 3 partition / topic, retention 7 ngày |
 | ClickHouse | `clickhouse/clickhouse-server:24.8` | 1 (RAM 2 GB) | Kho phân tích (dẫn xuất): `events_raw`, bảng `fact_*`, `dim_products` |

@@ -58,7 +58,7 @@ Phụ thuộc gRPC thực tế: gateway → cả 6 service; order → product (g
 
 ## 4. Nguyên tắc (kế thừa + thực tế)
 - Gateway là cổng công khai duy nhất; danh tính chỉ từ JWT (ADR-3). Route công khai (`/search`, `/categories`, `/products*`, `/payments/methods`, `/events`) có xác thực **gắn theo route** (ADR-19); `/events` rate-limit riêng.
-- Mọi hiệu ứng liên service qua **outbox** + consumer idempotent (ADR-6). product/order/payment dùng bảng chung `domain_events`; auth/user giữ outbox cũ. **Topic `*.dlq`: ❌ chưa có** – consumer thử 5 lần rồi ghi log và bỏ qua.
+- Mọi hiệu ứng liên service qua **outbox** + consumer idempotent (ADR-6). product/order/payment dùng bảng outbox riêng `<service>_domain_events` (ADR-34); auth/user giữ outbox cũ. **Topic `*.dlq`: ❌ chưa có** – consumer thử 5 lần rồi ghi log và bỏ qua.
 - **Mỗi service/container Go có health/ready/metrics** theo chuẩn 02.
 - Tiền: `NUMERIC(18,2)` trong Postgres, cent nguyên khi tính (ADR-7). Thiết kế "API mới dùng `{amount, currency}` chuỗi" **không** áp dụng: REST/gRPC trả VND dạng số thực (+ `amount_minor` ở payment), event Kafka dùng `*_minor` (ADR-18).
 - ClickHouse là nơi *phân tích*, không phải nguồn sự thật tiền; dựng lại một phần từ Kafka (retention 7 ngày); backfill từ Postgres ❌.

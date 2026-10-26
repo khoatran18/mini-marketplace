@@ -8,7 +8,7 @@ Vòng đời đơn đầy đủ (`PAID → SHIPPED → DELIVERED`, `REFUNDED`, l
 ## Nợ kỹ thuật
 - ✅ `kafkaimpl` + `ops` + `events` đã dùng chung (`shared/`, ADR-33); còn `.pb.go` sao chép và `ops` của gateway/product; `buf` registry thay cho các điểm copy `buf.gen.yaml`.
 - ~~Migration có version~~ ✅ đã dùng goose (ADR-26). Còn lại: `accounts.username` UNIQUE toàn cục dù login theo (username, role); bảng thừa `create_seller_kafka_events` ở user-service (giữ trong baseline).
-- Tách outbox `domain_events` theo service (hiện một bảng vật lý chung – ADR-23). (Dead-letter và lỗi theo từng dòng đã xong, R2.)
+- ~~Tách outbox `domain_events` theo service~~ ✅ ADR-34 (mỗi service một bảng). Còn lại: database Postgres riêng cho từng service; `DROP` bảng cũ `domain_events` sau khi cả ba service lên bản mới.
 - Tiền: `double` trên REST/gRPC (ADR-7); event đã dùng `*_minor`.
 - Observability còn thiếu: tracing OpenTelemetry, request-id trong Kafka / outbox, log JSON thống nhất. Đã có (🟡): request-id, log tập trung Vector → Loki. Đã thêm (chưa chạy stack thật): metric nghiệp vụ `mm_orders_*`/`mm_payments_*`/`mm_inventory_*`/`mm_grpc_client_*`, dashboard Payments/Business/Kafka lag/Outbox/ClickHouse server; lag consumer dùng `kafka_consumergroup_lag` của kafka-exporter.
 - gRPC deadline/retry/circuit breaker từ gateway và order-service; TLS cho gRPC/Postgres; token trong cookie httpOnly.

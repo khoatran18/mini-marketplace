@@ -197,7 +197,7 @@ Thư viện: `prometheus/client_golang`, registry riêng trong `pkg/ops`; collec
 
 | Metric | Service | Ghi chú |
 |---|---|---|
-| `mm_outbox_pending{table="domain_events"}`, `mm_outbox_oldest_age_seconds` | product, order, payment | đếm **cả bảng chung** `domain_events` (xem data-model §1.5) |
+| `mm_outbox_pending{table="<service>_domain_events"}`, `mm_outbox_oldest_age_seconds` | product, order, payment | đếm bảng outbox của chính service (ADR-34, data-model §1.5) |
 | `mm_worker_last_tick_timestamp_seconds{worker}` | order (`order_timers`), payment (`payment_workers`) | |
 | `mm_ch_buffer_rows`, `mm_ch_insert_lag_seconds`, `mm_ch_rows_inserted_total`, `mm_ch_insert_failures_total`, `mm_ch_rows_dropped_total`, `mm_events_accepted_total`, `mm_events_rejected_total` | analytics | đăng ký là gauge (giá trị tăng dần) |
 

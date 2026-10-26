@@ -78,7 +78,7 @@ Chú thích: ✅ xong · 🟡 một phần · ❌ chưa làm.
 - `scripts/e2e` đã viết lại cho API mới (11 kịch bản, cart/checkout/payment/analytics, `resilience.sh` A..I, `scripts/load`) nhưng **chưa chạy lần nào trên stack thật**; contract với gateway có thể lệch ở vài chỗ nhỏ (xem `04_TESTING.md` §5).
 - Swagger (`services/api-gateway/docs`) đã cũ.
 - Tracking đi qua gRPC: analytics-service down/restart thì **mất** event tracking đang đệm (ADR-13); ClickHouse down lâu hơn `ANALYTICS_BUFFER_MAX_ROWS` thì rớt dòng.
-- `domain_events` là một bảng vật lý chung của product/order/payment (ADR-23): backlog không tách theo service, một dòng độc chặn đầu hàng.
+- Outbox: mỗi service một bảng `<service>_domain_events` (ADR-34); dòng lỗi xử lý theo từng dòng + dead-letter (R2).
 - Hoàn tiền thủ công của admin không cập nhật `orders.payment_status`; đơn `REFUNDED` không tự nhập lại kho; hoàn tiền đơn COD khi duyệt trả hàng chỉ đổi nhãn `payment_status` (không có dòng tiền); payment `PROCESSING` không tự hết hạn.
 - `fact_order_status` giữ dòng có `at` mới nhất cho mỗi (đơn, trạng thái): đơn bị từ chối trả hàng (`DELIVERED` lần hai) làm dịch ngày ghi nhận doanh thu COD.
 - Migration Postgres đã chuyển sang goose có version (5 service, ADR-26); `accounts.username` vẫn unique toàn cục.

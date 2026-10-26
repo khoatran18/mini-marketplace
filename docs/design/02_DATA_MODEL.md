@@ -159,7 +159,7 @@ Danh mục là cây ≤ 3 cấp (`parent_id`); sổ cái tồn kho chỉ thêm, 
 | `categories` | `id, parent_id, name, slug UNIQUE, sort, active, created_at, updated_at` | cây ≤ 3 cấp; seed mặc định 7 danh mục gốc + con (`SEED_DEFAULT_CATEGORIES!=false`, chỉ khi bảng rỗng) |
 | `inventory_ledgers` | `id, product_id, delta, reason, ref_type, ref_id, balance_after, at` | sổ cái **chỉ thêm**; index `(product_id, at)` |
 | `validate_order_events` | `order_id PK, success, status, processed, restored, shipped, created_at` | kết quả giữ hàng **và** outbox cũ; `restored` = đã trả hàng (đúng một lần), `shipped` = đã xuất kho (đúng một lần), `returned` = hàng của đơn bị trả (`REFUNDED`) đã nhập lại kho (đúng một lần, migration `00003`) |
-| `domain_events` | xem §1.5 | outbox chung cho `product.changed`, `inventory.changed` |
+| `product_domain_events` | xem §1.5 | outbox của product-service: `product.changed`, `inventory.changed` |
 Hàm SQL `mm_unaccent(text)` (IMMUTABLE, thuần SQL, bỏ dấu tiếng Việt + lower) được tạo khi migrate.
 
 ### order-service
@@ -216,7 +216,7 @@ Một `checkout` sinh **một đơn cho mỗi store**; mỗi đơn có nhiều d
 | `order_items` | `id, order_id, product_id, quantity, price (đơn giá snapshot), line_total, product_name, sku, image_url, store_id, category_id, status ACTIVE\|CANCELED` | snapshot tại thời điểm đặt |
 | `order_status_histories` | `id, order_id, from_status, to_status, actor_type, actor_id, reason, at` | mỗi lần chuyển trạng thái (timeline); `actor_type` ∈ `system\|buyer\|seller\|admin\|payment` |
 | `cart_items` | `(user_id, product_id) PK, quantity (1–99), added_at, updated_at` | giỏ trên server; ≤ 50 dòng/user; giá/tồn đọc sống từ catalog |
-| `domain_events` | §1.5 | outbox chung: `order.create_order`, `order.cancel_order`, `order.status_changed`, `order.refund_requested`, `payment.requested` |
+| `order_domain_events` | §1.5 | outbox của order-service: `order.create_order`, `order.cancel_order`, `order.status_changed`, `order.refund_requested`, `payment.requested` |
 | `create_order_events`, `cancel_order_events` | `order_id PK, items JSON, status` | outbox **cũ** – chỉ còn được *xả* cho dữ liệu của bản cũ khi nâng cấp |
 Migrate đổi trạng thái cũ `SUCCESS` → `CONFIRMED`.
 
@@ -272,18 +272,18 @@ Một `payment` cho cả checkout; mọi bảng con trỏ về `payments.id` (kh
 | `refunds` | `id, payment_id, order_id (0 = cấp checkout), refund_key UNIQUE, amount_minor, reason, status, at` | `refund_key` làm yêu cầu hoàn tiền idempotent |
 | `webhook_deliveries` | `id, payment_id, provider_event_id, type, payload, deliver_at, attempts, status (PENDING\|DELIVERED\|GAVE_UP), last_code, delivered_at` | thông báo "nhà cung cấp" giả gửi tới webhook của chính service; retry mũ, bỏ cuộc sau 6 lần |
 | `processed_events` | `provider_event_id PK, at` | khử trùng webhook (at-least-once) |
-| `domain_events` | §1.5 | outbox: `payment.succeeded`, `payment.failed`, `payment.refunded` |
+| `payment_domain_events` | §1.5 | outbox của payment-service: `payment.succeeded`, `payment.failed`, `payment.refunded` |
 
 ### api-gateway, analytics-service
 Không có bảng Postgres. Gateway dùng Redis (`rate_limit:<scope>:<ip>`, `<userId>:pwd_version`). analytics-service dùng ClickHouse (§3) và Redis (cache báo cáo `analytics:v1:*`).
 
-### 1.5 Outbox chung `domain_events` (product, order, payment)
+### 1.5 Outbox riêng của từng service (`product_domain_events`, `order_domain_events`, `payment_domain_events`)
 
 ```mermaid
 flowchart LR
   subgraph TX["Một transaction Postgres"]
     B["Thay đổi nghiệp vụ"]
-    E["INSERT domain_events PENDING"]
+    E["INSERT outbox PENDING"]
   end
   B --> E
   E --> W["Worker events.Run, 2 s/lần, lô 100"]
@@ -295,7 +295,7 @@ flowchart LR
 
 Ghi nghiệp vụ và dòng outbox cùng transaction nên không mất event; worker xuất bản at-least-once, consumer phải idempotent.
 
-> **Lưu ý**: vì mọi service dùng chung một database Postgres (`POSTGRES_DB`) và bảng có cùng tên, `domain_events` thực tế là **MỘT bảng vật lý dùng chung** của product/order/payment. Worker của bất kỳ service/replica nào cũng có thể xuất bản dòng của service khác (hợp lệ: dòng mang sẵn `topic`, `key`, `payload`), và gauge `mm_outbox_pending` của mỗi service đếm **toàn bộ** backlog chứ không riêng service đó. Muốn biết dòng của ai, nhìn `topic`.
+> **Lưu ý**: ba service dùng chung một database Postgres nhưng **mỗi service có bảng outbox riêng** (ADR-34, cấu trúc giống hệt nhau): worker và gauge `mm_outbox_pending` của service nào chỉ thấy bảng của service đó. Bảng cũ `domain_events` còn tồn tại (baseline tạo) nhưng không ai ghi; migration `00003`/`00004` đã chuyển các dòng chưa gửi và DEAD sang bảng mới.
 `id, topic, key, payload JSONB, status (PENDING|FAILED|SUCCESS|DEAD), attempts, created_at, published_at, next_attempt_at, last_error, dead_at`; index một phần trên các dòng chưa gửi `(id)` và `(key, id)`, và trên `DEAD`. Ghi bằng `events.Emit(tx, topic, key, payload)` **trong cùng transaction** với thay đổi nghiệp vụ; worker `events.Run` (2 s/lần, lô 100, `FOR UPDATE SKIP LOCKED`, `acks=all`) xuất bản theo thứ tự `id`; lỗi xử lý **theo từng dòng** (`FAILED`, `attempts+1`, `last_error`, backoff mũ vào `next_attempt_at`; quá `OUTBOX_MAX_ATTEMPTS` = 10 thì `DEAD`, không tự thử lại). Dòng đang chờ thử lại chỉ chặn các dòng sau cùng `key`; `DEAD` không chặn. Requeue: runbook §5. Xem [03_EVENTS_KAFKA.md](03_EVENTS_KAFKA.md). auth-service và user-service **vẫn dùng bảng outbox riêng** như trước.
 
 ## 2. Ngữ nghĩa
@@ -353,7 +353,7 @@ Postgres `NUMERIC(18,2)` (orders, items, products); wire gRPC/JSON `double` (VND
 
 ```mermaid
 flowchart LR
-  subgraph PG["Postgres, bảng domain_events dùng chung"]
+  subgraph PG["Postgres, mỗi service một bảng outbox"]
     OS["order-service"]
     PS["payment-service"]
     PR["product-service"]

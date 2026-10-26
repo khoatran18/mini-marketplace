@@ -137,7 +137,7 @@ Payment được tạo bất đồng bộ, nên trước hết phải biết nó
 - Payment kẹt `PROCESSING` (ví/chuyển khoản/thẻ timeout): kết quả đến từ webhook giả. `SELECT status, count(*), max(attempts), max(last_code) FROM webhook_deliveries GROUP BY 1;` – `GAVE_UP` (6 lần) hay `last_code=0` (không gọi được `PAYMENT_WEBHOOK_URL`, thường do đổi `ADMIN_PORT`). Phát lại: `UPDATE webhook_deliveries SET status='PENDING', attempts=0, deliver_at=now() WHERE status='GAVE_UP' AND payment_id=<id>;`. Payment `PROCESSING` **không** tự hết hạn. Môi trường dev: `POST /admin/dev/payments/:id/force`.
 - Hoàn tiền không thấy: `SELECT * FROM refunds WHERE payment_id=<id>;` (`status=FAILED, reason=exceeds_paid_amount` ⇒ vượt số đã thu; không có dòng ⇒ payment chưa `SUCCEEDED` hoặc yêu cầu bị bỏ qua – xem log "refund ignored"). Lưu ý: hoàn tiền thủ công của admin (`POST /admin/payments/:id/refund`) không gắn với đơn, nên `orders.payment_status` **không** tự đổi thành `REFUNDED`.
 
-## 5. Outbox (`domain_events`) – backlog và phát lại
+## 5. Outbox (`<service>_domain_events`) – backlog và phát lại
 
 ```mermaid
 flowchart TD
@@ -155,24 +155,27 @@ Worker gửi mỗi 2 s, lô 100. Lỗi được xử lý **theo từng dòng**: 
 **Lệnh và chi tiết**
 
 ```sql
--- bảng dùng chung của order/product/payment (một database Postgres, một bảng `domain_events`):
-SELECT topic, status, count(*), min(created_at) FROM domain_events WHERE status <> 'SUCCESS' GROUP BY 1,2;
-SELECT id, topic, key, attempts, next_attempt_at, last_error FROM domain_events WHERE status='FAILED' ORDER BY id LIMIT 5;
+-- mỗi service một bảng (ADR-34): product_domain_events, order_domain_events, payment_domain_events
+-- (thay <svc> bên dưới; bảng `domain_events` cũ không còn được ghi)
+SELECT topic, status, count(*), min(created_at) FROM order_domain_events WHERE status <> 'SUCCESS' GROUP BY 1,2;
+SELECT id, topic, key, attempts, next_attempt_at, last_error FROM order_domain_events WHERE status='FAILED' ORDER BY id LIMIT 5;
 -- dead-letter (DEAD): xem trước khi requeue
-SELECT id, topic, key, attempts, dead_at, left(last_error, 200) AS last_error FROM domain_events WHERE status='DEAD' ORDER BY id;
+SELECT id, topic, key, attempts, dead_at, left(last_error, 200) AS last_error FROM order_domain_events WHERE status='DEAD' ORDER BY id;
+-- dòng còn sót ở bảng cũ (replica bản cũ ghi sau migration) phải được xử lý tay:
+SELECT topic, status, count(*) FROM domain_events WHERE status <> 'SUCCESS' GROUP BY 1,2;
 ```
 
 **Requeue dòng DEAD** (sau khi đã sửa nguyên nhân; consumer idempotent nên phát lại an toàn). Một dòng, hoặc cả một topic:
 
 ```sql
-UPDATE domain_events SET status='PENDING', attempts=0, next_attempt_at=now(), dead_at=NULL
+UPDATE order_domain_events SET status='PENDING', attempts=0, next_attempt_at=now(), dead_at=NULL
  WHERE status='DEAD' AND id = <id>;          -- hoặc: AND topic = '<topic>'
 ```
 
 Không đặt `SUCCESS` để "bỏ qua" nếu chưa chắc: event đó sẽ mất vĩnh viễn. Cấu hình: `OUTBOX_MAX_ATTEMPTS` (10), `OUTBOX_BACKOFF_BASE` (5s), `OUTBOX_BACKOFF_MAX` (15m) trong `deploy/.env`.
 
-Metric: gauge `mm_outbox_pending{table="domain_events"}`, `mm_outbox_oldest_age_seconds`, `mm_outbox_dead` (số dòng `DEAD`, cần xử lý khi > 0) và counter `mm_outbox_published_total`, `mm_outbox_publish_failures_total`, `mm_outbox_dead_total` (từ lúc process khởi động) ở `:8081/metrics` của order/product/payment (gauge đếm **toàn bộ** bảng chung, nên giá trị gần như trùng nhau). Hai nguyên nhân thường gặp: (a) Kafka không tới được → mọi dòng `FAILED`/`PENDING` tăng, tự hết khi Kafka về (không bị `DEAD`); (b) một dòng "độc" (publish luôn lỗi, vd. payload quá lớn) → thử lại theo backoff rồi vào `DEAD`; các dòng key khác không bị chặn, chỉ các dòng sau cùng key chờ.
-Phát lại một event đã `SUCCESS`: `UPDATE domain_events SET status='PENDING' WHERE id=<id>;` (consumer idempotent). Outbox **cũ** vẫn còn ở auth (`pwd_version_events`), user (`create_seller_events`), product (`validate_order_events`), order (`create_order_events`, `cancel_order_events`): đặt cột `status` về `'PENDING'` theo khoá chính của bảng đó.
+Metric: gauge `mm_outbox_pending{table="<svc>_domain_events"}`, `mm_outbox_oldest_age_seconds`, `mm_outbox_dead` (số dòng `DEAD`, cần xử lý khi > 0) và counter `mm_outbox_published_total`, `mm_outbox_publish_failures_total`, `mm_outbox_dead_total` (từ lúc process khởi động) ở `:8081/metrics` của order/product/payment (mỗi service chỉ đếm bảng của chính nó). Hai nguyên nhân thường gặp: (a) Kafka không tới được → mọi dòng `FAILED`/`PENDING` tăng, tự hết khi Kafka về (không bị `DEAD`); (b) một dòng "độc" (publish luôn lỗi, vd. payload quá lớn) → thử lại theo backoff rồi vào `DEAD`; các dòng key khác không bị chặn, chỉ các dòng sau cùng key chờ.
+Phát lại một event đã `SUCCESS`: `UPDATE <svc>_domain_events SET status='PENDING' WHERE id=<id>;` (consumer idempotent). Outbox **cũ** vẫn còn ở auth (`pwd_version_events`), user (`create_seller_events`), product (`validate_order_events`), order (`create_order_events`, `cancel_order_events`): đặt cột `status` về `'PENDING'` theo khoá chính của bảng đó.
 Chưa có API requeue (`/admin/system/outbox*` chưa làm): requeue bằng SQL ở trên.
 
 ## 6. Kafka lag / consumer đứng im
