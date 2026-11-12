@@ -1,0 +1,63 @@
+id: outbox-stuck
+title: Outbox có hàng DEAD hoặc event chờ gửi quá lâu
+triggers:
+  alerts: [OutboxDeadRows, OutboxBacklogOld]
+runbook: "§5 outbox, §6 Kafka"
+diagnose:
+  - id: outbox-metrics
+    tool: prometheus
+    query: 'mm_outbox_pending, mm_outbox_oldest_age_seconds, mm_outbox_dead'
+    read_only: true
+    interpret: "nhãn table = <svc>_domain_events (order, product, payment). pending/oldest tăng = chưa gửi được; dead > 0 = dòng độc"
+  - id: dead-list
+    tool: http
+    query: "GET http://<order-service|product-service|payment-service>:8081/internal/outbox/dead   (Authorization: Bearer $METRICS_TOKEN nếu có)"
+    read_only: true
+    interpret: "liệt kê DEAD (không có payload): id, topic, attempts, last_error, request_id"
+  - id: last-errors
+    tool: sql
+    query: "SELECT id, topic, key, attempts, next_attempt_at, left(last_error,200) FROM <svc>_domain_events WHERE status IN ('FAILED','DEAD') ORDER BY id LIMIT 10"
+    read_only: true
+    interpret: "last_error cho biết nguyên nhân (Kafka không tới được hay payload hỏng)"
+  - id: kafka-reachable
+    tool: prometheus
+    query: 'mm_ready, và /ready của service có check kafka'
+    read_only: true
+    interpret: "check kafka chỉ là dial TCP tới broker"
+  - id: trace-by-request
+    tool: loki
+    query: '{service=~".+"} | json | request_id="<request_id của hàng DEAD>"'
+    read_only: true
+    interpret: "thấy chuỗi gateway -> service để biết event sinh ra từ yêu cầu nào"
+causes:
+  - id: kafka-down
+    when: "pending/oldest tăng, không có DEAD, last_error là lỗi kết nối Kafka (worker không chuyển DEAD khi cả lô lỗi)"
+    fix: [restore-kafka]
+  - id: poison-row
+    when: "có DEAD, last_error cùng một lỗi (vd payload quá lớn); hàng key khác vẫn đi"
+    fix: [inspect-then-requeue]
+  - id: worker-stalled
+    when: "pending tăng, Kafka ổn, log worker không có hoạt động"
+    fix: [force-restart-owner]
+actions:
+  - id: restore-kafka
+    risk: low
+    approval: confirm
+    command: "docker service scale marketplace-infra_broker<1|2|3>=1  (broker nào đang 0/1)"
+    verify: "mm_outbox_pending về 0 trong vài phút"
+    rollback: "không cần"
+  - id: force-restart-owner
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace_<order|product|payment>-service"
+    verify: "mm_outbox_oldest_age_seconds giảm"
+    rollback: "không cần"
+  - id: inspect-then-requeue
+    risk: high
+    approval: required
+    command: "POST http://<svc>:8081/internal/outbox/requeue?id=<id>&id=<id>   (hoặc ?limit=N cho tất cả DEAD)"
+    precondition: "đã đọc last_error và sửa nguyên nhân; nếu không hàng sẽ chết lại sau OUTBOX_MAX_ATTEMPTS (10). Consumer idempotent nên phát lại an toàn"
+    verify: "mm_outbox_dead về 0, mm_outbox_published_total tăng"
+    rollback: "không có; không đặt SUCCESS để bỏ qua nếu chưa chắc (event mất vĩnh viễn)"
+escalate: "DEAD lặp lại sau requeue, last_error là lỗi dữ liệu thật, hoặc hàng ở outbox cũ (auth pwd_version_events, user create_seller_events, ...) cần SQL tay."
+ground_truth: [B, J]

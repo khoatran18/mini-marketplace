@@ -30,7 +30,7 @@ not_converged() {
 }
 
 # service Go có admin port :8081 và /ready (đặt trong stack marketplace)
-go_services=(api-gateway auth-service user-service product-service order-service payment-service analytics-service)
+go_services=(api-gateway auth-service user-service product-service order-service payment-service analytics-service ops-service)
 not_ready() {
   local svc
   for svc in "${go_services[@]}"; do

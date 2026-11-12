@@ -62,8 +62,43 @@ wait_up() { # wait_up <service> [giây]: đợi đủ replica
   done; return 1
 }
 wait_down() { for _ in $(seq 1 60); do [ "$(running "$1")" = "0" ] && return 0; sleep 1; done; return 1; }
-stop()  { scale "$1" 0; wait_down "$1"; sleep "${2:-5}"; }
-start() { scale "$1" 1; wait_up "$1" 120; sleep "${2:-8}"; }
+stop()  { gt_log fault_start "$1"; scale "$1" 0; wait_down "$1"; sleep "${2:-5}"; [ -n "${GT_HOLD:-}" ] && sleep "$GT_HOLD"; return 0; }
+# hold_traffic <giây>: giữ lỗi thêm một lúc VÀ vẫn gửi request đặt hàng đều đặn (cảnh báo như CircuitBreakerOpen chỉ bắn khi có lưu lượng)
+hold_traffic() { local end=$((SECONDS+$1)); while [ $SECONDS -lt $end ]; do step order >/dev/null; sleep 4; done; }
+start() { scale "$1" 1; wait_up "$1" 120; gt_log fault_end "$1"; sleep "${2:-8}"; }
+
+# --- ground truth (đáp án đúng cho agent chẩn đoán): mỗi lần tiêm lỗi ghi 1 dòng JSON "fault_start" / "fault_end" vào
+# $GROUND_TRUTH_FILE (mặc định ~/mm-ground-truth/resilience.jsonl). Đây là NHÃN do script biết chắc (lỗi do chính nó gây ra), không phải
+# dữ liệu ngoài. `expected_alerts` là phân tích: chỉ bắn nếu lỗi kéo dài hơn `for:` của luật; dùng GT_HOLD=<giây> để giữ lỗi đủ lâu.
+# Kiểm đáp án thật so với cảnh báo thực tế: scripts/e2e/ground_truth_check.sh
+GT_FILE="${GROUND_TRUTH_FILE:-$HOME/mm-ground-truth/resilience.jsonl}"
+GT_RUN="$(date +%Y%m%d-%H%M%S)-$$"
+SCEN=""
+gt_meta() { # gt_meta <scenario> -> "fault|playbook|alerts(,)|signals"
+  case "$1" in
+    A) echo "clickhouse_down|analytics-data,service-unavailable|ServiceNotReady:analytics-service|analytics /ready 503 (check clickhouse); /admin/analytics 503; POST /events vẫn 202" ;;
+    B) echo "kafka_all_brokers_down|outbox-stuck|OutboxBacklogOld|mm_outbox_pending tăng; /ready degraded (check kafka); POST /orders vẫn 201" ;;
+    C) echo "payment_service_down|service-unavailable|ServiceDown/ServiceMissing:payment-service|đơn online chờ payment; COD không ảnh hưởng; CircuitBreakerOpen tới PaymentClient nếu có lời gọi" ;;
+    D) echo "product_service_down|service-unavailable|CircuitBreakerOpen:ProductClient|POST /orders 503 Product service is unavailable; order-service degraded; log i/o timeout tới IP lạ nếu DNS nhà mạng hijack" ;;
+    E) echo "redis_down|service-unavailable||/ready degraded (check redis); rate limit fail-open; không cảnh báo" ;;
+    F) echo "postgres_down|service-unavailable|ServiceNotReady:auth+user+product+order+payment|/ready 503 not_ready (check postgres), /healthz vẫn 200" ;;
+    G) echo "order_service_down|service-unavailable|ServiceDown/ServiceMissing:order-service|đơn đã nhận vẫn được xử lý khi order-service lên lại" ;;
+    H) echo "rolling_restart|service-unavailable||thoáng qua; không cảnh báo" ;;
+    I) echo "postgres_restart|service-unavailable||thoáng qua; không cảnh báo" ;;
+    J) echo "one_kafka_broker_down|kafka-consumer-dlq||RF=3 min ISR=2 vẫn ghi được; không cảnh báo" ;;
+  esac
+}
+gt_log() { # gt_log <phase> <component>
+  [ -n "$SCEN" ] || return 0
+  local m fault pb al sig; m="$(gt_meta "$SCEN")"; IFS='|' read -r fault pb al sig <<<"$m"
+  mkdir -p "$(dirname "$GT_FILE")" 2>/dev/null || return 0
+  python3 -c "
+import json,sys,datetime
+a=sys.argv
+print(json.dumps({'run':a[1],'ts':datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),'phase':a[2],'scenario':a[3],'component':a[4],'fault':a[5],
+ 'playbooks':[x for x in a[6].split(',') if x],'expected_alerts':[x for x in a[7].split(',') if x],'expected_signals':a[8]},ensure_ascii=False))" \
+    "$GT_RUN" "$1" "$SCEN" "$2" "$fault" "$pb" "$al" "$sig" >> "$GT_FILE" 2>/dev/null || true
+}
 
 probe() { step probe -e PROBE_URL="$1"; }
 # wait_code <url> <mã mong đợi> [giây]: chờ endpoint nội bộ trả đúng mã
@@ -77,6 +112,7 @@ echo "[setup]"; s=$(step setup); echo "  $s"
 has_admin=0; [ -n "${ADMIN_USERNAME:-${ADMIN_BOOTSTRAP_USERNAME:-}}" ] && has_admin=1
 
 if [[ "$want" == *" A "* ]]; then
+SCEN=A
 echo "[A] ClickHouse down: analytics 503, nhưng đặt hàng + POST /events vẫn OK; hồi phục sau khi bật lại"
   stop "${INFRA}_clickhouse"
   r=$(step analytics); echo "  analytics: $r"
@@ -91,20 +127,24 @@ echo "[A] ClickHouse down: analytics 503, nhưng đặt hàng + POST /events v�
 fi
 
 if [[ "$want" == *" B "* ]]; then
+SCEN=B
 echo "[B] Kafka down (dừng CẢ 3 broker): đơn vẫn được nhận (outbox), xử lý xong khi Kafka quay lại"
   for b in 1 2 3; do scale "${INFRA}_broker$b" 0; done
-  for b in 1 2 3; do wait_down "${INFRA}_broker$b"; done; sleep 5
+  for b in 1 2 3; do wait_down "${INFRA}_broker$b"; done; gt_log fault_start kafka_brokers; sleep 5
   r=$(step order); echo "  order: $r"
   expect "đặt đơn COD nhận 201 khi Kafka down" "$(eq "$(j "$r" http)" 201; echo $?)"
   sleep 5; st=$(step status); echo "  $st"
   expect "đơn còn PENDING khi Kafka down" "$([ "$(count "$st" PENDING)" -ge 1 ] 2>/dev/null; echo $?)"
+  # OutboxBacklogOld cần hàng cũ > 300s kéo dài 5 phút: giữ GT_HOLD + 300s
+  [ -n "${GT_HOLD:-}" ] && sleep $((GT_HOLD+300))
   for b in 1 2 3; do scale "${INFRA}_broker$b" 1; done
-  for b in 1 2 3; do wait_up "${INFRA}_broker$b" 120; done; sleep 15
+  for b in 1 2 3; do wait_up "${INFRA}_broker$b" 120; done; gt_log fault_end kafka_brokers; sleep 15
   st=$(step wait -e WAIT_MS=180000); echo "  $st"
   expect "không còn đơn PENDING sau khi Kafka trở lại" "$(eq "$(j "$st" timed_out)" False; echo $?)"
 fi
 
 if [[ "$want" == *" C "* ]]; then
+SCEN=C
 echo "[C] payment-service down: COD không ảnh hưởng; đơn online chờ payment, thanh toán được sau khi hồi phục"
   stop "${APP}_payment-service"
   r=$(step order); expect "COD vẫn đặt được (201)" "$(eq "$(j "$r" http)" 201; echo $?)"
@@ -118,15 +158,21 @@ echo "[C] payment-service down: COD không ảnh hưởng; đơn online chờ pa
 fi
 
 if [[ "$want" == *" D "* ]]; then
+SCEN=D
 echo "[D] product-service down: đặt hàng bị từ chối nhanh (503), không treo"
-  stop "${APP}_product-service"
+  GT_HOLD= stop "${APP}_product-service"
   r=$(step order); echo "  order: $r"
   expect "POST /orders trả 503" "$(eq "$(j "$r" http)" 503; echo $?)"
+  [ -n "${GT_HOLD:-}" ] && hold_traffic 120   # breaker phải mở liên tục > 30s: cần lưu lượng trong lúc lỗi
   start "${APP}_product-service" 12
-  r=$(step order); echo "  order sau hồi phục: $r"; expect "đặt hàng lại bình thường sau khi hồi phục" "$(eq "$(j "$r" http)" 201; echo $?)"
+  # đo thời gian hồi phục: lỗi kéo dài thì kênh gRPC (backoff) có thể cần vài chục giây đến vài phút mới nối lại
+  t0=$SECONDS; wait_step order http 201 step order; rc=$?
+  echo "  hồi phục đặt hàng sau $((SECONDS-t0))s kể từ lúc product-service sẵn sàng"
+  expect "đặt hàng lại bình thường sau khi hồi phục (trong ~2 phút)" "$rc"
 fi
 
 if [[ "$want" == *" E "* ]]; then
+SCEN=E
 echo "[E] Redis down: gateway không sập (rate limit fail-open), hồi phục sau khi bật lại"
   stop "${INFRA}_redis"
   r=$(step catalog); echo "  catalog: $r"
@@ -134,14 +180,16 @@ echo "[E] Redis down: gateway không sập (rate limit fail-open), hồi phục 
   r=$(step events); echo "  events: $r"
   expect "POST /events vẫn 202" "$(eq "$(j "$r" http)" 202; echo $?)"
   r=$(probe "http://api-gateway:8081/healthz"); expect "gateway /healthz (liveness) vẫn 200" "$(eq "$(j "$r" http)" 200; echo $?)"
-  # token / cache dùng Redis: ghi nhận hành vi (không khẳng định cứng)
-  r=$(step order); echo "  (thông tin) đặt đơn khi Redis down -> $r"
+  # Redis chỉ là đường nhanh kiểm phiên bản mật khẩu của JWT; Redis chết thì gateway hỏi DB (auth-service), nên request có đăng nhập vẫn chạy
+  r=$(step order); echo "  đặt đơn khi Redis down: $r"
+  expect "đặt đơn có đăng nhập vẫn 201 khi Redis down (gateway hỏi DB)" "$(eq "$(j "$r" http)" 201; echo $?)"
   start "${INFRA}_redis" 10
   wait_code "http://api-gateway:8081/ready" 200 60; expect "gateway /ready trở lại 200" "$?"
   r=$(step order); expect "đặt đơn bình thường sau khi Redis trở lại" "$(eq "$(j "$r" http)" 201; echo $?)"
 fi
 
 if [[ "$want" == *" F "* ]]; then
+SCEN=F
 echo "[F] Postgres down: các service giữ dữ liệu báo /ready 503, hồi phục tự động"
   stop "${INFRA}_postgres" 10
   for svc in order-service product-service auth-service user-service payment-service; do
@@ -157,6 +205,7 @@ echo "[F] Postgres down: các service giữ dữ liệu báo /ready 503, hồi p
 fi
 
 if [[ "$want" == *" G "* ]]; then
+SCEN=G
 echo "[G] order-service down sau khi nhận đơn: kết quả xử lý được áp dụng khi khởi động lại"
   r=$(step order); echo "  $r"
   stop "${APP}_order-service" 12
@@ -166,28 +215,33 @@ echo "[G] order-service down sau khi nhận đơn: kết quả xử lý được
 fi
 
 if [[ "$want" == *" H "* ]]; then
+SCEN=H
 echo "[H] Rolling restart mọi service ứng dụng: dữ liệu và token không mất"
   before=$(step status)
+  gt_log fault_start "${APP}_all"
   for s in api-gateway auth-service user-service product-service order-service payment-service analytics-service; do
     docker service update --force --detach=true "${APP}_$s" >/dev/null 2>&1
   done
   sleep 30; for s in api-gateway auth-service user-service product-service order-service payment-service analytics-service; do wait_up "${APP}_$s" 120; done
-  sleep 10
+  gt_log fault_end "${APP}_all"; sleep 10
   after=$(step status); echo "  trước: $before"; echo "  sau:   $after"
   expect "số đơn & tồn kho giữ nguyên qua rolling restart" "$(eq "$(j "$before" counts)" "$(j "$after" counts)"; echo $?)"
   r=$(step order); expect "đặt đơn bình thường sau restart" "$(eq "$(j "$r" http)" 201; echo $?)"
 fi
 
 if [[ "$want" == *" I "* ]]; then
+SCEN=I
 echo "[I] Postgres restart (force update): service tự kết nối lại"
+  gt_log fault_start "${INFRA}_postgres"
   docker service update --force --detach=true "${INFRA}_postgres" >/dev/null 2>&1
-  sleep 25; wait_up "${INFRA}_postgres" 120; sleep 15
+  sleep 25; wait_up "${INFRA}_postgres" 120; gt_log fault_end "${INFRA}_postgres"; sleep 15
   wait_step order http 201 step order; expect "đặt đơn lại được sau khi Postgres restart" "$?"
   st=$(step wait -e WAIT_MS=120000); echo "  $st"
   expect "không còn đơn PENDING" "$(eq "$(j "$st" timed_out)" False; echo $?)"
 fi
 
 if [[ "$want" == *" J "* ]]; then
+SCEN=J
 echo "[J] Một broker Kafka down (cụm 3 broker, RF=3, min ISR=2): đơn vẫn 201 và được xử lý, không còn PENDING"
   stop "${INFRA}_broker3" 10
   r=$(step order); echo "  order: $r"

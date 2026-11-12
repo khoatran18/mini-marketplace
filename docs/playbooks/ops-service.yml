@@ -1,0 +1,51 @@
+id: ops-service
+title: ops-service ngừng ghi sự cố, hoặc đề xuất chờ duyệt quá lâu
+triggers:
+  alerts: [OpsPollerStale, OpsProposalsWaiting]
+runbook: "§14"
+diagnose:
+  - id: poll-age
+    tool: prometheus
+    query: 'time() - mm_ops_poll_last_success_timestamp_seconds, mm_ops_poll_failures'
+    read_only: true
+    interpret: "tuổi > 300 s = poller không đọc được Prometheus; failures tăng liên tục = lỗi mạng/DNS tới prometheus:9090"
+  - id: ops-ready
+    tool: prometheus
+    query: 'up{job="mm-services",swarm_service="ops-service"}, mm_ready{service="ops-service"}'
+    read_only: true
+    interpret: "up=0 hoặc mất = service chết (dùng playbook service-unavailable); ready=0 = Postgres hỏng (check postgres)"
+  - id: ops-logs
+    tool: loki
+    query: '{service="ops-service",level=~"error|warn"}'
+    read_only: true
+    interpret: "tìm 'ops poll' lỗi: connection refused / i/o timeout tới prometheus (DNS nhà mạng trả IP giả, V6)"
+  - id: pending-proposals
+    tool: http
+    query: "GET /admin/ops/proposals?state=pending"
+    read_only: true
+    interpret: "liệt kê đề xuất chờ; không có ai trong ca trực thì cân nhắc kênh thông báo OPS_NOTIFY_WEBHOOK_URL"
+causes:
+  - id: prometheus-unreachable
+    when: "poll-age tăng, failures tăng, log ops-service báo không tới prometheus:9090, Prometheus vẫn scrape bình thường"
+    fix: [restart-ops]
+  - id: ops-stuck
+    when: "poll-age tăng nhưng không có failures mới (tiến trình treo)"
+    fix: [restart-ops]
+  - id: unreviewed
+    when: "OpsProposalsWaiting: đề xuất PENDING chưa ai xem"
+    fix: [notify-human]
+actions:
+  - id: restart-ops
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace_ops-service"
+    verify: "mm_ops_poll_last_success_timestamp_seconds mới trong vòng 1 phút"
+    rollback: "không cần (sự cố đã lưu trong Postgres)"
+  - id: notify-human
+    risk: observe
+    approval: none
+    command: "escalate_to_human"
+    verify: "đề xuất được duyệt hoặc từ chối"
+    rollback: "không cần"
+escalate: "Prometheus chết hẳn (cảnh báo không bắn được: đây là điểm mù, cần người kiểm tra tay), hoặc Postgres hỏng (xem playbook service-unavailable)."
+ground_truth: []

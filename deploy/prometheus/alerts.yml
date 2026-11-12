@@ -13,6 +13,25 @@ groups:
           runbook: "§1 readiness, §10"
           action: low
 
+      # V7: service về 0 replica mà DNS trả NXDOMAIN thì target biến mất khỏi service discovery, `up == 0` không bao giờ đúng.
+      # (Trên máy có DNS nhà mạng trả IP giả thì ServiceDown bắn thay; cả hai cùng bắn là bình thường.)
+      - alert: ServiceMissing
+        expr: |
+          label_replace(absent(up{job="mm-services",swarm_service="api-gateway"}), "swarm_service", "api-gateway", "", "") or
+          label_replace(absent(up{job="mm-services",swarm_service="auth-service"}), "swarm_service", "auth-service", "", "") or
+          label_replace(absent(up{job="mm-services",swarm_service="user-service"}), "swarm_service", "user-service", "", "") or
+          label_replace(absent(up{job="mm-services",swarm_service="product-service"}), "swarm_service", "product-service", "", "") or
+          label_replace(absent(up{job="mm-services",swarm_service="order-service"}), "swarm_service", "order-service", "", "") or
+          label_replace(absent(up{job="mm-services",swarm_service="payment-service"}), "swarm_service", "payment-service", "", "") or
+          label_replace(absent(up{job="mm-services",swarm_service="analytics-service"}), "swarm_service", "analytics-service", "", "") or
+          label_replace(absent(up{job="mm-services",swarm_service="ops-service"}), "swarm_service", "ops-service", "", "")
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.swarm_service }} không còn target nào (0 replica hoặc không resolve được)"
+          runbook: "§1 readiness, §10"
+          action: low
+
       - alert: ServiceNotReady
         expr: mm_ready == 0
         for: 1m
@@ -104,3 +123,21 @@ groups:
           summary: "{{ $labels.container_label_com_docker_swarm_service_name }} dùng hơn 90% giới hạn bộ nhớ"
           runbook: "§10"
           action: low
+
+      - alert: OpsPollerStale
+        expr: time() - mm_ops_poll_last_success_timestamp_seconds > 300
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "ops-service không đọc được cảnh báo từ Prometheus quá 5 phút: sự cố mới sẽ không được ghi"
+          runbook: "§14"
+          action: low
+
+      - alert: OpsProposalsWaiting
+        expr: mm_ops_proposals{state="PENDING"} > 0
+        for: 1h
+        labels: {severity: warning}
+        annotations:
+          summary: "Có đề xuất xử lý sự cố chờ duyệt hơn 1 giờ"
+          runbook: "§14"
+          action: observe

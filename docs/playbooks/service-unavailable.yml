@@ -1,0 +1,89 @@
+id: service-unavailable
+title: Service không sẵn sàng, mạch mở, hoặc gateway trả nhiều 5xx
+triggers:
+  alerts: [ServiceDown, ServiceMissing, ServiceNotReady, CircuitBreakerOpen, GatewayServerErrors]
+runbook: "§1 readiness, §10"
+diagnose:
+  - id: alerts-now
+    tool: http
+    query: "GET http://prometheus:9090/api/v1/alerts"
+    read_only: true
+    interpret: "cảnh báo nào đang bắn, nhãn swarm_service / service cho biết thành phần"
+  - id: replicas
+    tool: shell
+    query: "docker service ls --format '{{.Name}} {{.Replicas}}'"
+    read_only: true
+    interpret: "0/1 = đã bị scale về 0 hoặc không lên được; 1/1 nhưng ServiceDown = process treo"
+  - id: ready-checks
+    tool: http
+    query: "GET http://<service>:8081/ready  (gateway: http://api-gateway:8081/ready)"
+    read_only: true
+    interpret: "JSON `checks` chỉ ra check nào hỏng (postgres, clickhouse, timers_worker, workers, *Client). 503 not_ready + /healthz 200 = phụ thuộc hỏng, KHÔNG restart"
+  - id: admin-health
+    tool: http
+    query: "GET /admin/system/health (JWT admin, qua gateway)"
+    read_only: true
+    interpret: "bảng tổng hợp mọi service"
+  - id: circuit
+    tool: prometheus
+    query: 'mm_circuit_state == 1  hoặc  increase(mm_circuit_rejected_total[5m])'
+    read_only: true
+    interpret: "service nhãn `service` (vd ProductClient) là nơi gateway đã ngừng gọi; nguyên nhân nằm ở service đích"
+  - id: error-logs
+    tool: loki
+    query: '{service="<service>"} |= "error" | json'
+    read_only: true
+    interpret: "lỗi gần nhất của service; lấy request_id rồi tra {service=~\".+\"} | json | request_id=\"<id>\""
+  - id: slow-or-5xx
+    tool: prometheus
+    query: 'sum(rate(mm_http_requests_total{service="api-gateway",status=~"5.."}[5m])) by (route)'
+    read_only: true
+    interpret: "route nào trả 5xx; 503 = Unavailable, 504 = DeadlineExceeded (RUNBOOK §10)"
+causes:
+  - id: scaled-to-zero
+    when: "replicas = 0/1 (do người hoặc kịch bản scale về 0)"
+    fix: [scale-up]
+  - id: postgres-down
+    when: "ready-checks có postgres hỏng ở auth/user/product/order/payment, hoặc marketplace-infra_postgres 0/1"
+    fix: [scale-up-infra, wait-ready]
+  - id: clickhouse-down
+    when: "chỉ analytics-service not_ready (check clickhouse); cửa hàng vẫn chạy"
+    fix: [scale-up-infra]
+  - id: dependency-degraded
+    when: "service chỉ `degraded` (kafka, redis, hoặc service đồng cấp); không cần hành động ngoài khôi phục thành phần đó"
+    fix: [scale-up, scale-up-infra]
+  - id: stuck-process
+    when: "ServiceDown nhưng replica 1/1 và /healthz không trả lời"
+    fix: [force-restart]
+  - id: isp-dns-hijack
+    when: "log có `dial tcp <IP công khai lạ>:<port>: i/o timeout` giữa hai service, đặc biệt khi service đích 0/1. Máy local có DNS nhà mạng trả IP quảng cáo thay vì NXDOMAIN; không phải lỗi code"
+    fix: [scale-up]
+actions:
+  - id: scale-up
+    risk: low
+    approval: confirm
+    command: "docker service scale marketplace_<service>=<số replica cũ>"
+    precondition: "chắc chắn service bị scale về 0 có chủ ý khác (không phải bảo trì đang diễn ra)"
+    verify: "docker service ls thấy n/n và /ready 200"
+    rollback: "docker service scale marketplace_<service>=0"
+  - id: scale-up-infra
+    risk: low
+    approval: confirm
+    command: "docker service scale marketplace-infra_<postgres|redis|clickhouse|broker1|broker2|broker3>=1"
+    precondition: "xem docker service ps để biết vì sao nó dừng (OOM, đầy đĩa)"
+    verify: "n/n, sau đó các service phụ thuộc /ready 200 trong vài chục giây"
+    rollback: "không cần"
+  - id: force-restart
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace_<service>"
+    precondition: "service không trạng thái (mọi service Go/gateway/frontend); KHÔNG dùng cho postgres/kafka"
+    verify: "task mới Running, /ready 200"
+    rollback: "không cần"
+  - id: wait-ready
+    risk: observe
+    approval: none
+    command: "poll GET http://<service>:8081/ready tới 200 (tối đa ~2 phút)"
+    verify: "mm_ready == 1"
+escalate: "Postgres không lên sau khi scale, đầy đĩa, OOM lặp lại, hoặc nghi mất dữ liệu: dừng, báo người; không restore backup tự động (RUNBOOK §11, risk high)."
+ground_truth: [A, B, C, D, E, F, G, H, I, J]

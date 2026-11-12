@@ -1,0 +1,122 @@
+# Kiểm luật cảnh báo: docker run --rm -v "$PWD/deploy/prometheus:/p" --entrypoint promtool prom/prometheus:v2.55.1 test rules /p/alerts_test.yml
+rule_files: [alerts.yml]
+evaluation_interval: 15s
+tests:
+  # payment-service có target 10 phút rồi biến mất (DNS trả NXDOMAIN): ServiceMissing phải bắn, ServiceDown thì không
+  - interval: 15s
+    input_series:
+      - series: 'up{job="mm-services",swarm_service="api-gateway",instance="10.0.0.10:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="auth-service",instance="10.0.0.11:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="user-service",instance="10.0.0.12:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="product-service",instance="10.0.0.13:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="order-service",instance="10.0.0.14:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="payment-service",instance="10.0.0.15:8081"}'
+        values: '1x40 stale _x79'
+      - series: 'up{job="mm-services",swarm_service="analytics-service",instance="10.0.0.16:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="ops-service",instance="10.0.0.17:8081"}'
+        values: '1x120'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ServiceMissing
+        exp_alerts: []
+      - eval_time: 14m
+        alertname: ServiceMissing
+        exp_alerts:
+          - exp_labels: {severity: critical, job: mm-services, swarm_service: payment-service}
+            exp_annotations:
+              summary: "payment-service không còn target nào (0 replica hoặc không resolve được)"
+              runbook: "§1 readiness, §10"
+              action: low
+      - eval_time: 14m
+        alertname: ServiceDown
+        exp_alerts: []
+  # target có nhưng up == 0 (DNS nhà mạng trả IP giả): ServiceDown bắn, ServiceMissing không
+  - interval: 15s
+    input_series:
+      - series: 'up{job="mm-services",swarm_service="api-gateway",instance="10.0.0.10:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="auth-service",instance="10.0.0.11:8081"}'
+        values: '0x120'
+      - series: 'up{job="mm-services",swarm_service="user-service",instance="10.0.0.12:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="product-service",instance="10.0.0.13:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="order-service",instance="10.0.0.14:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="payment-service",instance="10.0.0.15:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="analytics-service",instance="10.0.0.16:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="ops-service",instance="10.0.0.17:8081"}'
+        values: '1x120'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ServiceDown
+        exp_alerts:
+          - exp_labels: {severity: critical, job: mm-services, swarm_service: auth-service, instance: "10.0.0.11:8081"}
+            exp_annotations:
+              summary: "auth-service (10.0.0.11:8081) không scrape được"
+              runbook: "§1 readiness, §10"
+              action: low
+      - eval_time: 3m
+        alertname: ServiceMissing
+        exp_alerts: []
+  # mọi service đều có target: không cảnh báo nào
+  - interval: 15s
+    input_series:
+      - series: 'up{job="mm-services",swarm_service="api-gateway",instance="10.0.0.10:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="auth-service",instance="10.0.0.11:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="user-service",instance="10.0.0.12:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="product-service",instance="10.0.0.13:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="order-service",instance="10.0.0.14:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="payment-service",instance="10.0.0.15:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="analytics-service",instance="10.0.0.16:8081"}'
+        values: '1x120'
+      - series: 'up{job="mm-services",swarm_service="ops-service",instance="10.0.0.17:8081"}'
+        values: '1x120'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ServiceMissing
+        exp_alerts: []
+  # ops-service: poller dừng đọc 10 phút -> OpsPollerStale; đề xuất PENDING quá 1 giờ -> OpsProposalsWaiting
+  - interval: 1m
+    input_series:
+      - series: 'mm_ops_poll_last_success_timestamp_seconds{job="mm-services",swarm_service="ops-service"}'
+        values: '0+60x5 300x200'
+      - series: 'mm_ops_proposals{job="mm-services",state="PENDING"}'
+        values: '0x20 1x200'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: OpsPollerStale
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: OpsPollerStale
+        exp_alerts:
+          - exp_labels: {severity: warning, job: mm-services, swarm_service: ops-service}
+            exp_annotations:
+              summary: "ops-service không đọc được cảnh báo từ Prometheus quá 5 phút: sự cố mới sẽ không được ghi"
+              runbook: "§14"
+              action: low
+      - eval_time: 50m
+        alertname: OpsProposalsWaiting
+        exp_alerts: []
+      - eval_time: 100m
+        alertname: OpsProposalsWaiting
+        exp_alerts:
+          - exp_labels: {severity: warning, job: mm-services, state: PENDING}
+            exp_annotations:
+              summary: "Có đề xuất xử lý sự cố chờ duyệt hơn 1 giờ"
+              runbook: "§14"
+              action: observe

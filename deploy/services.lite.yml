@@ -28,6 +28,10 @@ services:
     deploy:
       resources:
         limits: {memory: 128M}
+  ops-service:
+    deploy:
+      resources:
+        limits: {memory: 64M}
   analytics-service:
     deploy:
       resources:

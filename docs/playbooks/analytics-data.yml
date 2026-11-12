@@ -1,0 +1,77 @@
+id: analytics-data
+title: Analytics mất dòng, ClickHouse lệch Postgres, hoặc đối soát không chạy
+triggers:
+  alerts: [AnalyticsRowsDropped, ReconcileDrift, ReconcileStale]
+runbook: "§8 ClickHouse, §12 đối soát"
+diagnose:
+  - id: buffer-metrics
+    tool: prometheus
+    query: 'mm_ch_buffer_rows, mm_ch_insert_failures_total, mm_ch_rows_dropped_total, mm_ch_rows_spooled_total, mm_ch_spool_bytes, mm_ch_insert_lag_seconds'
+    read_only: true
+    interpret: "buffer tăng + insert_failures tăng = ClickHouse không nhận; dropped > 0 = đã mất dòng; spool_bytes > 0 kéo dài = replay lỗi"
+  - id: clickhouse-up
+    tool: shell
+    query: "docker service ls --filter name=marketplace-infra_clickhouse --format '{{.Replicas}}'"
+    read_only: true
+    interpret: "0/1 là nguyên nhân phổ biến; xem docker service ps về OOM / đầy đĩa (volume clickhouse-data)"
+  - id: data-health
+    tool: http
+    query: "GET /admin/analytics/data-health (JWT admin)"
+    read_only: true
+    interpret: "reconcile.mismatches, ratio, thời điểm cuối; mismatches > 0 sau khi hết lag = lệch thật"
+  - id: reconcile-metrics
+    tool: prometheus
+    query: 'mm_reconcile_diff_ratio, mm_reconcile_mismatches, time() - mm_reconcile_last_success_timestamp_seconds'
+    read_only: true
+    interpret: "ratio > 0.02 kéo dài = ReconcileDrift; last_success quá 3600 s = ReconcileStale (xem log analytics, RECONCILE_PG_DSN)"
+  - id: spool-log
+    tool: loki
+    query: '{service="analytics-service"} |= "analytics spool:"'
+    read_only: true
+    interpret: "lỗi replay spool"
+causes:
+  - id: clickhouse-down
+    when: "clickhouse 0/1 hoặc insert_failures tăng"
+    fix: [scale-up-clickhouse]
+  - id: buffer-overflow
+    when: "dropped > 0 (down lâu, vượt ANALYTICS_BUFFER_MAX_ROWS=100000, spool đầy)"
+    fix: [replay-kafka-events]
+  - id: drift
+    when: "mismatches > 0 kéo dài khi lag đã hết"
+    fix: [reconcile-detail, backfill]
+  - id: reconcile-not-running
+    when: "last_success quá cũ: monitor lỗi kết nối Postgres hoặc analytics-service chết"
+    fix: [restart-analytics]
+actions:
+  - id: scale-up-clickhouse
+    risk: low
+    approval: confirm
+    command: "docker service scale marketplace-infra_clickhouse=1"
+    verify: "buffer_rows về 0, insert tiếp tục (idempotent)"
+    rollback: "không cần"
+  - id: restart-analytics
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace_analytics-service"
+    verify: "mm_reconcile_last_success_timestamp_seconds cập nhật trong 10 phút"
+  - id: reconcile-detail
+    risk: observe
+    approval: none
+    command: "cd services/analytics-service && go run ./cmd/backfill reconcile --from <YYYY-MM-DD> --to <YYYY-MM-DD>   (chỉ đọc)"
+    verify: "danh sách ngày/chỉ số lệch"
+  - id: replay-kafka-events
+    risk: high
+    approval: required
+    command: "scale analytics-service về 0, kafka-consumer-groups.sh --reset-offsets --to-earliest cho group analytics-service-<topic>, scale lại 1 (RUNBOOK §6)"
+    precondition: "trong 7 ngày giữ của Kafka; event tracking qua gRPC thì không dựng lại được"
+    verify: "reconcile hết lệch"
+    rollback: "không có"
+  - id: backfill
+    risk: high
+    approval: required
+    command: "go run ./cmd/backfill backfill --from <ngày> --to <ngày>"
+    precondition: "ghi đè ClickHouse; đã chạy reconcile-detail và có lý do"
+    verify: "reconcile mismatches = 0"
+    rollback: "chạy lại backfill"
+escalate: "Lệch lớn mà Postgres cũng nghi sai: dừng, báo người; Postgres là nguồn sự thật."
+ground_truth: [A]

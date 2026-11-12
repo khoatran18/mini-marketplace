@@ -1,0 +1,62 @@
+id: resource-pressure
+title: Container gần hết bộ nhớ (hoặc đĩa)
+triggers:
+  alerts: [ContainerNearMemoryLimit]
+runbook: "§10"
+diagnose:
+  - id: memory-ratio
+    tool: prometheus
+    query: 'container_memory_working_set_bytes{container_label_com_docker_swarm_service_name!=""} / (container_spec_memory_limit_bytes{container_label_com_docker_swarm_service_name!=""} > 0)'
+    read_only: true
+    interpret: "service nào > 0.9; nhãn container_label_com_docker_swarm_service_name"
+  - id: memory-trend
+    tool: prometheus
+    query: 'deriv(container_memory_working_set_bytes{container_label_com_docker_swarm_service_name="<service>"}[30m])'
+    read_only: true
+    interpret: "dương và ổn định = rò rỉ hoặc tải; phẳng sát trần = đặt giới hạn quá thấp"
+  - id: oom-history
+    tool: shell
+    query: "docker service ps marketplace_<service> --no-trunc"
+    read_only: true
+    interpret: "nhiều task Failed/`OOM` = đã bị kill vì hết bộ nhớ"
+  - id: disk
+    tool: prometheus
+    query: '1 - node_filesystem_avail_bytes{mountpoint=~"/|/host"} / node_filesystem_size_bytes{mountpoint=~"/|/host"}'
+    read_only: true
+    interpret: "> 0.85 là nguy hiểm cho Postgres/ClickHouse/Kafka"
+  - id: kafka-memory-note
+    tool: shell
+    query: "docker stats --no-stream --format '{{.Name}} {{.MemUsage}}' | grep broker"
+    read_only: true
+    interpret: "broker Kafka thường dùng nhiều RAM; theo dõi riêng"
+causes:
+  - id: limit-too-low
+    when: "bộ nhớ phẳng sát trần, không tăng theo thời gian"
+    fix: [raise-limit]
+  - id: leak-or-load
+    when: "deriv > 0 liên tục hoặc tăng theo tải"
+    fix: [force-restart, escalate-to-dev]
+  - id: disk-full
+    when: "disk > 0.85"
+    fix: [escalate-to-dev]
+actions:
+  - id: force-restart
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace_<service>"
+    precondition: "service không trạng thái; KHÔNG dùng cho postgres/clickhouse/kafka"
+    verify: "bộ nhớ về mức thấp, không còn cảnh báo"
+    rollback: "không cần"
+  - id: raise-limit
+    risk: high
+    approval: required
+    command: "sửa deploy.resources.limits.memory trong deploy/*.yml rồi ./scripts/deploy.sh"
+    precondition: "máy đủ RAM; là thay đổi cấu hình, cần review"
+    verify: "tỉ lệ dưới 0.9"
+    rollback: "hoàn lại giá trị cũ và deploy lại"
+  - id: escalate-to-dev
+    risk: observe
+    approval: none
+    command: "tạo ghi chú sự cố kèm biểu đồ bộ nhớ và log"
+escalate: "Đĩa gần đầy hoặc OOM lặp lại: báo người; không tự xoá dữ liệu."
+ground_truth: []

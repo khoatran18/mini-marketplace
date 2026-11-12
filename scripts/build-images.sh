@@ -24,7 +24,7 @@ else
   tag="${IMAGE_TAG:-latest}"
 fi
 
-all_services=(api-gateway auth-service user-service product-service order-service payment-service analytics-service)
+all_services=(api-gateway auth-service user-service product-service order-service payment-service analytics-service ops-service)
 want=("$@"); [ ${#want[@]} -gt 0 ] || want=("${all_services[@]}" frontend)
 for w in "${want[@]}"; do
   case " ${all_services[*]} frontend " in *" $w "*) ;; *) echo "service không hợp lệ: $w (hợp lệ: ${all_services[*]} frontend)"; exit 1 ;; esac

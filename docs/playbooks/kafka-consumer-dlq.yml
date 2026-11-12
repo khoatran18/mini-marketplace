@@ -1,0 +1,63 @@
+id: kafka-consumer-dlq
+title: Message vào DLQ của consumer Kafka, hoặc consumer đứng im
+triggers:
+  alerts: [ConsumerDLQGrowing]
+runbook: "§6 Kafka lag / DLQ"
+diagnose:
+  - id: dlq-metric
+    tool: prometheus
+    query: 'increase(mm_kafka_dlq_total[15m]) by (topic)'
+    read_only: true
+    interpret: "topic nào đang đẩy message vào <topic>.dlq"
+  - id: dlq-content
+    tool: shell
+    query: "docker exec $(docker ps -qf name=marketplace-infra_broker1) kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic <topic>.dlq --from-beginning --timeout-ms 5000 --property print.key=true --property print.headers=true --property print.offset=true"
+    read_only: true
+    interpret: "header dlq.error là nguyên nhân; dlq.source_topic/offset là message gốc; dlq.failed_at để tra log"
+  - id: group-lag
+    tool: shell
+    query: "docker exec $(docker ps -qf name=marketplace-infra_broker1) kafka-consumer-groups.sh --bootstrap-server broker1:9092 --describe --group <group>"
+    read_only: true
+    interpret: "LAG theo partition; lag tăng + service sống = handler lỗi liên tục; partition đứng im = publish DLQ lỗi"
+  - id: handler-errors
+    tool: loki
+    query: '{service="<service>"} |= "Consumer handler error" or |= "Consumer DLQ publish failed"'
+    read_only: true
+    interpret: "lỗi handler attempt n/5; DLQ publish failed nghĩa là chưa commit, partition kẹt"
+causes:
+  - id: bad-message
+    when: "dlq.error là lỗi dữ liệu (JSON hỏng, thiếu trường); chỉ vài message"
+    fix: [record-and-skip]
+  - id: downstream-down
+    when: "dlq.error là lỗi kết nối Postgres/ClickHouse của service đó"
+    fix: [restore-dependency, replay]
+  - id: topic-missing
+    when: "log báo topic không tồn tại"
+    fix: [restart-consumer-service]
+actions:
+  - id: restore-dependency
+    risk: low
+    approval: confirm
+    command: "xem playbook service-unavailable (scale-up-infra)"
+    verify: "handler hết lỗi, lag giảm"
+  - id: restart-consumer-service
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace_<service>"
+    precondition: "service tự tạo topic lúc khởi động"
+    verify: "topic xuất hiện, lag giảm"
+  - id: replay
+    risk: high
+    approval: required
+    command: "publish lại value+key của message DLQ vào topic gốc (kafka-console-producer.sh --property parse.key=true --property key.separator=:)"
+    precondition: "đã sửa nguyên nhân hoặc triển khai bản vá; handler idempotent nên an toàn"
+    verify: "lag về 0, mm_kafka_dlq_total không tăng nữa"
+    rollback: "không có"
+  - id: record-and-skip
+    risk: high
+    approval: required
+    command: "ghi nhận message, không phát lại"
+    precondition: "dữ liệu sai thật, đã ghi lý do"
+    verify: "-"
+escalate: "Reset offset toàn group (scale 0, --reset-offsets --to-earliest) luôn là high; dừng và hỏi người. Kafka chỉ giữ 7 ngày."
+ground_truth: [B, J]

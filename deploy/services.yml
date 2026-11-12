@@ -142,6 +142,9 @@ services:
       USER_SERVICE_ADDR: ${USER_SERVICE_ADDR:-user-service:50054}
       ANALYTICS_SERVICE_ADDR: ${ANALYTICS_SERVICE_ADDR:-analytics-service:50055}
       PAYMENT_SERVICE_ADDR: ${PAYMENT_SERVICE_ADDR:-payment-service:50057}
+      # ADR-38: /admin/ops/* được gateway chuyển tới ops-service bằng token này (trống = các route trả 503)
+      OPS_SERVICE_URL: ${OPS_SERVICE_URL:-http://ops-service:8080}
+      OPS_API_TOKEN: ${OPS_API_TOKEN:-}
     # liveness only (never depends on other services); readiness (/ready) is used by Traefik below
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
@@ -290,6 +293,46 @@ services:
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
         limits: {memory: 256M}
+
+  # ADR-38: incidents từ cảnh báo Prometheus + nhật ký bất biến; chỉ gateway gọi (cổng 8080, không publish ra ngoài)
+  ops-service:
+    logging: *logging
+    image: marketplace/ops-service:latest
+    hostname: ops-service
+    networks: [marketplace]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT-http://tempo:4318}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
+      POSTGRES_DSN: host=postgres user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD} dbname=${POSTGRES_DB:-postgres} port=5432 sslmode=disable
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      PROMETHEUS_URL: ${PROMETHEUS_URL:-http://prometheus:9090}
+      OPS_POLL_INTERVAL_SEC: ${OPS_POLL_INTERVAL_SEC:-30}
+      # đề xuất: hạn chờ duyệt (phút), hạn mã duyệt (phút), số đề xuất PENDING tối đa cho một sự cố
+      OPS_PROPOSAL_TTL_MIN: ${OPS_PROPOSAL_TTL_MIN:-1440}
+      OPS_APPROVAL_TTL_MIN: ${OPS_APPROVAL_TTL_MIN:-5}
+      OPS_MAX_PENDING_PER_INCIDENT: ${OPS_MAX_PENDING_PER_INCIDENT:-5}
+      # bí mật dùng chung với gateway; để trống thì API của ops-service từ chối mọi yêu cầu (poller vẫn chạy)
+      OPS_API_TOKEN: ${OPS_API_TOKEN:-}
+      LOKI_URL: ${LOKI_URL:-http://loki:3100}
+      OPS_NOTIFY_WEBHOOK_URL: ${OPS_NOTIFY_WEBHOOK_URL:-}
+      OPS_ACTIONS_ENABLED: ${OPS_ACTIONS_ENABLED:-false}
+      OPS_MAX_EXEC_PER_HOUR: ${OPS_MAX_EXEC_PER_HOUR:-5}
+      OPS_EXEC_COOLDOWN_MIN: ${OPS_EXEC_COOLDOWN_MIN:-5}
+      OPS_EXEC_WINDOW_MIN: ${OPS_EXEC_WINDOW_MIN:-60}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
+    deploy:
+      update_config: *update_stop_first
+      rollback_config: *rollback
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+      resources:
+        limits: {memory: 96M}
 
   # Analytics: Kafka domain events + browser tracking -> ClickHouse; answers the seller/admin dashboards
   analytics-service:

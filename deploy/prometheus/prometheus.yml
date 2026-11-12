@@ -28,6 +28,7 @@ scrape_configs:
           - tasks.order-service
           - tasks.payment-service
           - tasks.analytics-service
+          - tasks.ops-service
         type: A
         port: 8081
         refresh_interval: 15s

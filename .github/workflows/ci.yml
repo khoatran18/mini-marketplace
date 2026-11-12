@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [api-gateway, auth-service, user-service, product-service, order-service, payment-service, analytics-service]
+        service: [api-gateway, auth-service, user-service, product-service, order-service, payment-service, analytics-service, ops-service]
     services:
       postgres:
         image: postgres:16-alpine
@@ -127,6 +127,7 @@ jobs:
           - {context: ., file: services/order-service/Dockerfile}
           - {context: ., file: services/payment-service/Dockerfile}
           - {context: ., file: services/analytics-service/Dockerfile}
+          - {context: ., file: services/ops-service/Dockerfile}
           - {context: apps/frontend, file: apps/frontend/Dockerfile}
     steps:
       - uses: actions/checkout@v4
@@ -158,6 +159,7 @@ jobs:
           - {name: order-service, context: ., file: services/order-service/Dockerfile}
           - {name: payment-service, context: ., file: services/payment-service/Dockerfile}
           - {name: analytics-service, context: ., file: services/analytics-service/Dockerfile}
+          - {name: ops-service, context: ., file: services/ops-service/Dockerfile}
           - {name: frontend, context: apps/frontend, file: apps/frontend/Dockerfile}
     steps:
       - uses: actions/checkout@v4

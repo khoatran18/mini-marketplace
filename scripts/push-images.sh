@@ -13,7 +13,7 @@ if [ -z "$registry" ]; then
 fi
 tag="${IMAGE_TAG:-$(git -C "$root" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 
-for s in api-gateway auth-service user-service product-service order-service payment-service analytics-service frontend; do
+for s in api-gateway auth-service user-service product-service order-service payment-service analytics-service ops-service frontend; do
   docker push "$registry/$s:$tag"
   for extra in ${EXTRA_TAGS:-}; do
     docker tag "$registry/$s:$tag" "$registry/$s:$extra"
