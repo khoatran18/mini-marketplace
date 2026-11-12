@@ -302,3 +302,22 @@ func TestMetricsTokenEmptyKeepsEndpointsOpenAndMountUngated(t *testing.T) {
 		t.Fatalf("mounted route must not be gated by METRICS_TOKEN, got %d", rec.Code)
 	}
 }
+
+// A dead address fails inside the check budget even though the check makes two attempts.
+func TestGRPCHealthCheckUnreachableFailsWithinBudget(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := lis.Addr().String()
+	lis.Close() // nothing listens any more
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	start := time.Now()
+	if err := GRPCHealthCheck("dead", addr, true).Fn(ctx); err == nil {
+		t.Fatal("expected an error for an unreachable address")
+	}
+	if d := time.Since(start); d > 1500*time.Millisecond {
+		t.Errorf("took %v, want within the 1s budget", d)
+	}
+}
