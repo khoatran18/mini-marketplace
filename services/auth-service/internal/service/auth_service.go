@@ -235,3 +235,17 @@ func (s *AuthService) GetStoreIDRoleById(ctx context.Context, input *dto.GetStor
 	}, nil
 
 }
+
+// GetPwdVersion returns the account's current password version from the database. It is the source of truth that the
+// gateway falls back to when Redis (the fast path of access-token revocation) is unavailable or may have lost data.
+func (s *AuthService) GetPwdVersion(ctx context.Context, userID uint64) (int64, error) {
+	acc, err := s.AccountRepo.GetAccountById(ctx, userID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, status.Error(codes.NotFound, "account not found")
+	}
+	if err != nil {
+		s.ZapLogger.Warn("AuthService: GetPwdVersion error", zap.Error(err))
+		return 0, status.Error(codes.Internal, "internal error")
+	}
+	return acc.PwdVersion, nil
+}

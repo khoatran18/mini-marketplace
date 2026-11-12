@@ -15,6 +15,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -218,5 +220,29 @@ func TestRegisterSellerRolesOnlyCreatesEmployeesForTheAdminsStore(t *testing.T) 
 	carol, _ := s.AccountRepo.GetAccountByUsernameRole(ctx, "carol", "buyer")
 	if _, err := s.RegisterSellerRoles(ctx, &dto.RegisterSellerRolesInput{SellerAdminID: carol.ID, Username: "x", Password: "password123", Role: "seller_employee"}); err == nil {
 		t.Error("buyer created an employee account")
+	}
+}
+
+func TestGetPwdVersionReadsTheDatabase(t *testing.T) {
+	s := testService(t)
+	ctx := context.Background()
+	if err := register(t, s, "alice", "password123", "buyer"); err != nil {
+		t.Fatal(err)
+	}
+	acc, err := s.AccountRepo.GetAccountByUsernameRole(ctx, "alice", "buyer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v, err := s.GetPwdVersion(ctx, acc.ID); err != nil || v != 0 {
+		t.Fatalf("new account: v=%d err=%v", v, err)
+	}
+	if _, err := s.ChangePassword(ctx, &dto.ChangePasswordInput{Username: "alice", Role: "buyer", OldPassword: "password123", NewPassword: "newpassword1"}); err != nil {
+		t.Fatal(err)
+	}
+	if v, err := s.GetPwdVersion(ctx, acc.ID); err != nil || v != 1 {
+		t.Fatalf("after change: v=%d err=%v", v, err)
+	}
+	if _, err := s.GetPwdVersion(ctx, 999999); status.Code(err) != codes.NotFound {
+		t.Fatalf("unknown id must be NotFound, got %v", err)
 	}
 }

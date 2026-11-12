@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"api-gateway/pkg/ops"
-	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -105,7 +105,11 @@ func RateLimitingMiddleware(scope string, limit int, period time.Duration, logge
 }
 
 // AuthMiddleware solve problem about jwt
-func AuthMiddleware(logger *zap.Logger, redisClient *redis.Client, jwtSecret string) gin.HandlerFunc {
+func AuthMiddleware(logger *zap.Logger, redisClient *redis.Client, jwtSecret string, opts ...AuthOption) gin.HandlerFunc {
+	checker := &pwdChecker{rdb: redisClient, now: time.Now, logger: logger}
+	for _, o := range opts {
+		o(checker)
+	}
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -152,32 +156,17 @@ func AuthMiddleware(logger *zap.Logger, redisClient *redis.Client, jwtSecret str
 			c.Set("userRole", claims.Role)
 			c.Set("username", claims.Username)
 
-			// Check logic for change password
-			keyPwdVersion := fmt.Sprintf("%d:pwd_version", claims.UserID)
-			exist, err := redisClient.Exists(context.Background(), keyPwdVersion).Result()
-			if err != nil {
-				logger.Warn("Middleware: error checking existence of pwdVersion")
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Error checking existence of pwdVersion"})
-				c.Abort()
-				return
-			}
-			if exist > 0 {
-				valueStr := redisClient.Get(context.Background(), keyPwdVersion).Val()
-				value, err := strconv.Atoi(valueStr)
-				if err != nil {
-					logger.Warn("Middleware: warn invalid or expired pwd version", zap.Error(err))
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired pwd version"})
-					c.Abort()
-					return
-				}
-				if value != int(claims.PwdVersion) {
+			// Revocation after a password change (Redis fast path, database as source of truth; see pwdversion.go)
+			if err := checker.verify(c.Request.Context(), claims.UserID, int64(claims.PwdVersion)); err != nil {
+				if errors.Is(err, errPwdChanged) {
 					logger.Warn("Middleware: warn invalid or expired pwd version")
 					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired pwd version"})
-					c.Abort()
-					return
+				} else {
+					logger.Error("Middleware: cannot verify pwd version (Redis and database both unavailable)")
+					c.JSON(http.StatusServiceUnavailable, gin.H{"error": "cannot verify credentials right now, retry"})
 				}
-
-				logger.Info(fmt.Sprintf("Middleware: auth success with userID %v, pwdVersion %d", claims.UserID, claims.PwdVersion))
+				c.Abort()
+				return
 			}
 
 			c.Next()

@@ -25,6 +25,9 @@ type EnvConfig struct {
 	EventsRateLimit int
 	// IPHashSecret keys the daily-rotating HMAC of client IPs stored with tracking events (raw IPs are never kept).
 	IPHashSecret string
+	// OpsServiceURL and OpsAPIToken: where /admin/ops/* is proxied (ops-service). An empty token disables the routes (503).
+	OpsServiceURL string
+	OpsAPIToken   string
 }
 
 // InitJWTSecret load env about jwt
@@ -37,6 +40,13 @@ func InitJWTSecret() (string, error) {
 		return "", errors.New("JWT secret is too short (min 16 characters)")
 	}
 	return jwtSecret, nil
+}
+
+func envStr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }
 
 func envInt(key string, def int) int {
@@ -92,6 +102,8 @@ func NewEnvConfig() (*EnvConfig, error) {
 		MaxBodyBytes:    int64(envInt("MAX_BODY_BYTES", 1<<20)),
 		EventsRateLimit: envInt("EVENTS_RATE_LIMIT_PER_MINUTE", 120),
 		IPHashSecret:    os.Getenv("IP_HASH_SECRET"),
+		OpsServiceURL:   envStr("OPS_SERVICE_URL", "http://ops-service:8080"),
+		OpsAPIToken:     os.Getenv("OPS_API_TOKEN"),
 		SystemTargets: envPairs("SYSTEM_HEALTH_TARGETS", map[string]string{
 			"api-gateway":       "http://localhost:8081", // this replica only
 			"auth-service":      "http://auth-service:8081",
@@ -100,6 +112,7 @@ func NewEnvConfig() (*EnvConfig, error) {
 			"order-service":     "http://order-service:8081",
 			"payment-service":   "http://payment-service:8081",
 			"analytics-service": "http://analytics-service:8081",
+			"ops-service":       "http://ops-service:8081",
 		}),
 	}, nil
 }

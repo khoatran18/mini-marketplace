@@ -379,3 +379,19 @@ func TestGRPCHealthCheckToleratesSingleTimeout(t *testing.T) {
 		t.Fatal("two timeouts in a row must fail the check")
 	}
 }
+
+func TestKeepReadyFreshSetsGaugeWithoutReadyRequests(t *testing.T) {
+	s := newTestServer()
+	s.MarkStarted()
+	_, _, before := get(t, s.Handler(), "/metrics")
+	if !strings.Contains(before, `mm_ready{service="test-service"} 0`) {
+		t.Fatalf("trước khi làm mới mm_ready phải là 0:\n%s", before)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.KeepReadyFresh(ctx)
+	_, _, after := get(t, s.Handler(), "/metrics")
+	if !strings.Contains(after, "mm_ready{service=\"test-service\"} 1") {
+		t.Fatalf("sau KeepReadyFresh mm_ready phải là 1 dù không ai gọi /ready:\n%s", after)
+	}
+}

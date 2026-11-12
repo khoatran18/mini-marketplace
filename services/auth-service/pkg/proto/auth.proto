@@ -83,6 +83,14 @@ message GetStoreIDRoleByIDResponse {
   uint64 store_id = 4;
 }
 
+// Get the current password version of an account. The database is the source of truth for revoking access tokens after a
+// password change; the gateway asks for it when Redis (its fast path) is unavailable or may have lost data.
+message GetPwdVersionRequest {
+  uint64 user_id = 1;
+}
+message GetPwdVersionResponse {
+  int64 pwd_version = 1;
+}
 
 // Service
 service AuthService {
@@ -92,6 +100,7 @@ service AuthService {
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
   rpc RegisterSellerRoles(RegisterSellerRolesRequest) returns (RegisterSellerRolesResponse);
   rpc GetStoreIDRoleById(GetStoreIDRoleByIDRequest) returns (GetStoreIDRoleByIDResponse);
+  rpc GetPwdVersion(GetPwdVersionRequest) returns (GetPwdVersionResponse);
 }
 
 

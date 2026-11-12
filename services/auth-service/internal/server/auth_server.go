@@ -9,6 +9,7 @@ import (
 	"buf.build/go/protovalidate"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // AuthServer is responsible for handle gRPC request
@@ -232,4 +233,16 @@ func (s *AuthServer) GetStoreIDRoleById(ctx context.Context, req *authpb.GetStor
 
 	// Return valid response
 	return res, nil
+}
+
+// GetPwdVersion returns the current password version of an account (database, not cache).
+func (s *AuthServer) GetPwdVersion(ctx context.Context, req *authpb.GetPwdVersionRequest) (*authpb.GetPwdVersionResponse, error) {
+	if req.GetUserId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	v, err := s.AuthService.GetPwdVersion(ctx, req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	return &authpb.GetPwdVersionResponse{PwdVersion: v}, nil
 }

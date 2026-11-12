@@ -800,6 +800,96 @@ func (x *GetStoreIDRoleByIDResponse) GetStoreId() uint64 {
 	return 0
 }
 
+// Get the current password version of an account. The database is the source of truth for revoking access tokens after a
+// password change; the gateway asks for it when Redis (its fast path) is unavailable or may have lost data.
+type GetPwdVersionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPwdVersionRequest) Reset() {
+	*x = GetPwdVersionRequest{}
+	mi := &file_auth_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPwdVersionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPwdVersionRequest) ProtoMessage() {}
+
+func (x *GetPwdVersionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPwdVersionRequest.ProtoReflect.Descriptor instead.
+func (*GetPwdVersionRequest) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GetPwdVersionRequest) GetUserId() uint64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+type GetPwdVersionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PwdVersion    int64                  `protobuf:"varint,1,opt,name=pwd_version,json=pwdVersion,proto3" json:"pwd_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPwdVersionResponse) Reset() {
+	*x = GetPwdVersionResponse{}
+	mi := &file_auth_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPwdVersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPwdVersionResponse) ProtoMessage() {}
+
+func (x *GetPwdVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPwdVersionResponse.ProtoReflect.Descriptor instead.
+func (*GetPwdVersionResponse) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GetPwdVersionResponse) GetPwdVersion() int64 {
+	if x != nil {
+		return x.PwdVersion
+	}
+	return 0
+}
+
 var File_auth_proto protoreflect.FileDescriptor
 
 const file_auth_proto_rawDesc = "" +
@@ -856,14 +946,20 @@ const file_auth_proto_rawDesc = "" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x12\n" +
 	"\x04role\x18\x03 \x01(\tR\x04role\x12\x19\n" +
-	"\bstore_id\x18\x04 \x01(\x04R\astoreId2\xf7\x04\n" +
+	"\bstore_id\x18\x04 \x01(\x04R\astoreId\"/\n" +
+	"\x14GetPwdVersionRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x04R\x06userId\"8\n" +
+	"\x15GetPwdVersionResponse\x12\x1f\n" +
+	"\vpwd_version\x18\x01 \x01(\x03R\n" +
+	"pwdVersion2\xdf\x05\n" +
 	"\vAuthService\x12N\n" +
 	"\x05Login\x12!.auth_service.pkb.pb.LoginRequest\x1a\".auth_service.pkb.pb.LoginResponse\x12W\n" +
 	"\bRegister\x12$.auth_service.pkb.pb.RegisterRequest\x1a%.auth_service.pkb.pb.RegisterResponse\x12c\n" +
 	"\fRefreshToken\x12(.auth_service.pkb.pb.RefreshTokenRequest\x1a).auth_service.pkb.pb.RefreshTokenResponse\x12i\n" +
 	"\x0eChangePassword\x12*.auth_service.pkb.pb.ChangePasswordRequest\x1a+.auth_service.pkb.pb.ChangePasswordResponse\x12x\n" +
 	"\x13RegisterSellerRoles\x12/.auth_service.pkb.pb.RegisterSellerRolesRequest\x1a0.auth_service.pkb.pb.RegisterSellerRolesResponse\x12u\n" +
-	"\x12GetStoreIDRoleById\x12..auth_service.pkb.pb.GetStoreIDRoleByIDRequest\x1a/.auth_service.pkb.pb.GetStoreIDRoleByIDResponseB\x15Z\x13auth-service/authpbb\x06proto3"
+	"\x12GetStoreIDRoleById\x12..auth_service.pkb.pb.GetStoreIDRoleByIDRequest\x1a/.auth_service.pkb.pb.GetStoreIDRoleByIDResponse\x12f\n" +
+	"\rGetPwdVersion\x12).auth_service.pkb.pb.GetPwdVersionRequest\x1a*.auth_service.pkb.pb.GetPwdVersionResponseB\x15Z\x13auth-service/authpbb\x06proto3"
 
 var (
 	file_auth_proto_rawDescOnce sync.Once
@@ -877,7 +973,7 @@ func file_auth_proto_rawDescGZIP() []byte {
 	return file_auth_proto_rawDescData
 }
 
-var file_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_auth_proto_goTypes = []any{
 	(*Account)(nil),                     // 0: auth_service.pkb.pb.Account
 	(*LoginRequest)(nil),                // 1: auth_service.pkb.pb.LoginRequest
@@ -892,6 +988,8 @@ var file_auth_proto_goTypes = []any{
 	(*RegisterSellerRolesResponse)(nil), // 10: auth_service.pkb.pb.RegisterSellerRolesResponse
 	(*GetStoreIDRoleByIDRequest)(nil),   // 11: auth_service.pkb.pb.GetStoreIDRoleByIDRequest
 	(*GetStoreIDRoleByIDResponse)(nil),  // 12: auth_service.pkb.pb.GetStoreIDRoleByIDResponse
+	(*GetPwdVersionRequest)(nil),        // 13: auth_service.pkb.pb.GetPwdVersionRequest
+	(*GetPwdVersionResponse)(nil),       // 14: auth_service.pkb.pb.GetPwdVersionResponse
 }
 var file_auth_proto_depIdxs = []int32{
 	1,  // 0: auth_service.pkb.pb.AuthService.Login:input_type -> auth_service.pkb.pb.LoginRequest
@@ -900,14 +998,16 @@ var file_auth_proto_depIdxs = []int32{
 	7,  // 3: auth_service.pkb.pb.AuthService.ChangePassword:input_type -> auth_service.pkb.pb.ChangePasswordRequest
 	9,  // 4: auth_service.pkb.pb.AuthService.RegisterSellerRoles:input_type -> auth_service.pkb.pb.RegisterSellerRolesRequest
 	11, // 5: auth_service.pkb.pb.AuthService.GetStoreIDRoleById:input_type -> auth_service.pkb.pb.GetStoreIDRoleByIDRequest
-	2,  // 6: auth_service.pkb.pb.AuthService.Login:output_type -> auth_service.pkb.pb.LoginResponse
-	4,  // 7: auth_service.pkb.pb.AuthService.Register:output_type -> auth_service.pkb.pb.RegisterResponse
-	6,  // 8: auth_service.pkb.pb.AuthService.RefreshToken:output_type -> auth_service.pkb.pb.RefreshTokenResponse
-	8,  // 9: auth_service.pkb.pb.AuthService.ChangePassword:output_type -> auth_service.pkb.pb.ChangePasswordResponse
-	10, // 10: auth_service.pkb.pb.AuthService.RegisterSellerRoles:output_type -> auth_service.pkb.pb.RegisterSellerRolesResponse
-	12, // 11: auth_service.pkb.pb.AuthService.GetStoreIDRoleById:output_type -> auth_service.pkb.pb.GetStoreIDRoleByIDResponse
-	6,  // [6:12] is the sub-list for method output_type
-	0,  // [0:6] is the sub-list for method input_type
+	13, // 6: auth_service.pkb.pb.AuthService.GetPwdVersion:input_type -> auth_service.pkb.pb.GetPwdVersionRequest
+	2,  // 7: auth_service.pkb.pb.AuthService.Login:output_type -> auth_service.pkb.pb.LoginResponse
+	4,  // 8: auth_service.pkb.pb.AuthService.Register:output_type -> auth_service.pkb.pb.RegisterResponse
+	6,  // 9: auth_service.pkb.pb.AuthService.RefreshToken:output_type -> auth_service.pkb.pb.RefreshTokenResponse
+	8,  // 10: auth_service.pkb.pb.AuthService.ChangePassword:output_type -> auth_service.pkb.pb.ChangePasswordResponse
+	10, // 11: auth_service.pkb.pb.AuthService.RegisterSellerRoles:output_type -> auth_service.pkb.pb.RegisterSellerRolesResponse
+	12, // 12: auth_service.pkb.pb.AuthService.GetStoreIDRoleById:output_type -> auth_service.pkb.pb.GetStoreIDRoleByIDResponse
+	14, // 13: auth_service.pkb.pb.AuthService.GetPwdVersion:output_type -> auth_service.pkb.pb.GetPwdVersionResponse
+	7,  // [7:14] is the sub-list for method output_type
+	0,  // [0:7] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
@@ -924,7 +1024,7 @@ func file_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_proto_rawDesc), len(file_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

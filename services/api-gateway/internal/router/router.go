@@ -36,7 +36,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	router.GET("/health", liveness)
 	router.GET("/healthz", liveness)
 
-	authenticated := middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret)
+	authenticated := middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret, middleware.WithPwdVersionFallback(h.AuthHandler.Service, envConfig.JWTExpireTime+time.Minute))
 
 	authRoute := router.Group("/auth")
 	if envConfig.AuthRateLimit > 0 {
@@ -48,7 +48,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		authRoute.POST("/register", h.AuthHandler.Register)
 		authRoute.POST("/change-password", authenticated, h.AuthHandler.ChangePassword)
 		authRoute.POST("/refresh-token", h.AuthHandler.RefreshToken)
-		authRoute.POST("/register-seller-roles", middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret),
+		authRoute.POST("/register-seller-roles", middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret, middleware.WithPwdVersionFallback(h.AuthHandler.Service, envConfig.JWTExpireTime+time.Minute)),
 			middleware.AuthorizationMiddleware([]string{"seller_admin"}, serviceConfig.ZapLogger),
 			h.AuthHandler.RegisterSellerRoles)
 	}
@@ -57,7 +57,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	// /payments/methods and /events stay reachable without a token.
 	userRoute := router.Group("/users", authenticated)
 	{
-		//userRoute.Use(middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret))
+		//userRoute.Use(middleware.AuthMiddleware(serviceConfig.ZapLogger, serviceConfig.RedisClient, envConfig.JWTSecret, middleware.WithPwdVersionFallback(h.AuthHandler.Service, envConfig.JWTExpireTime+time.Minute)))
 		buyerRoute := userRoute.Group("/buyers")
 		{
 			buyerRoute.Use(middleware.AuthorizationMiddleware([]string{"buyer"}, serviceConfig.ZapLogger))
@@ -122,6 +122,22 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	systemHandler := handler.NewSystemHandler(systemTargets, serviceConfig.ZapLogger)
 	adminRoute := router.Group("/admin", authenticated, middleware.AuthorizationMiddleware([]string{"admin"}, serviceConfig.ZapLogger))
 	{
+		// Incidents / audit trail of ops-service (ADR-38); the gateway has already checked JWT + admin role
+		opsHandler := handler.NewOpsHandler(envConfig.OpsServiceURL, envConfig.OpsAPIToken, serviceConfig.ZapLogger)
+		adminRoute.GET("/ops/incidents", opsHandler.Proxy("/incidents"))
+		adminRoute.GET("/ops/incidents/:id", opsHandler.Proxy("/incidents/:id"))
+		adminRoute.POST("/ops/incidents/:id/investigate", opsHandler.Proxy("/incidents/:id/investigate"))
+		adminRoute.GET("/ops/audit", opsHandler.Proxy("/audit"))
+		adminRoute.GET("/ops/actions", opsHandler.Proxy("/actions"))
+		adminRoute.GET("/ops/queries", opsHandler.Proxy("/queries"))
+		adminRoute.POST("/ops/queries/:name", opsHandler.Proxy("/queries/:name"))
+		adminRoute.GET("/ops/proposals", opsHandler.Proxy("/proposals"))
+		adminRoute.POST("/ops/proposals", opsHandler.Proxy("/proposals"))
+		adminRoute.GET("/ops/proposals/:id", opsHandler.Proxy("/proposals/:id"))
+		adminRoute.POST("/ops/proposals/:id/review", opsHandler.Proxy("/proposals/:id/review"))
+		adminRoute.POST("/ops/proposals/:id/decision", opsHandler.Proxy("/proposals/:id/decision"))
+		adminRoute.POST("/ops/proposals/:id/execute", opsHandler.Proxy("/proposals/:id/execute"))
+		adminRoute.POST("/ops/proposals/:id/executed", opsHandler.Proxy("/proposals/:id/executed"))
 		adminRoute.GET("/system/health", systemHandler.Health)
 		for _, r := range []string{"summary", "timeseries", "top-products", "funnel", "low-stock", "traffic", "payments", "search-terms", "data-health"} {
 			adminRoute.GET("/analytics/"+r, h.AnalyticsHandler.Admin(r))

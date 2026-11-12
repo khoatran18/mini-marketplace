@@ -25,6 +25,7 @@ const (
 	AuthService_ChangePassword_FullMethodName      = "/auth_service.pkb.pb.AuthService/ChangePassword"
 	AuthService_RegisterSellerRoles_FullMethodName = "/auth_service.pkb.pb.AuthService/RegisterSellerRoles"
 	AuthService_GetStoreIDRoleById_FullMethodName  = "/auth_service.pkb.pb.AuthService/GetStoreIDRoleById"
+	AuthService_GetPwdVersion_FullMethodName       = "/auth_service.pkb.pb.AuthService/GetPwdVersion"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -39,6 +40,7 @@ type AuthServiceClient interface {
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
 	RegisterSellerRoles(ctx context.Context, in *RegisterSellerRolesRequest, opts ...grpc.CallOption) (*RegisterSellerRolesResponse, error)
 	GetStoreIDRoleById(ctx context.Context, in *GetStoreIDRoleByIDRequest, opts ...grpc.CallOption) (*GetStoreIDRoleByIDResponse, error)
+	GetPwdVersion(ctx context.Context, in *GetPwdVersionRequest, opts ...grpc.CallOption) (*GetPwdVersionResponse, error)
 }
 
 type authServiceClient struct {
@@ -109,6 +111,16 @@ func (c *authServiceClient) GetStoreIDRoleById(ctx context.Context, in *GetStore
 	return out, nil
 }
 
+func (c *authServiceClient) GetPwdVersion(ctx context.Context, in *GetPwdVersionRequest, opts ...grpc.CallOption) (*GetPwdVersionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPwdVersionResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetPwdVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -121,6 +133,7 @@ type AuthServiceServer interface {
 	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
 	RegisterSellerRoles(context.Context, *RegisterSellerRolesRequest) (*RegisterSellerRolesResponse, error)
 	GetStoreIDRoleById(context.Context, *GetStoreIDRoleByIDRequest) (*GetStoreIDRoleByIDResponse, error)
+	GetPwdVersion(context.Context, *GetPwdVersionRequest) (*GetPwdVersionResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -148,6 +161,9 @@ func (UnimplementedAuthServiceServer) RegisterSellerRoles(context.Context, *Regi
 }
 func (UnimplementedAuthServiceServer) GetStoreIDRoleById(context.Context, *GetStoreIDRoleByIDRequest) (*GetStoreIDRoleByIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStoreIDRoleById not implemented")
+}
+func (UnimplementedAuthServiceServer) GetPwdVersion(context.Context, *GetPwdVersionRequest) (*GetPwdVersionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPwdVersion not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -278,6 +294,24 @@ func _AuthService_GetStoreIDRoleById_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_GetPwdVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPwdVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetPwdVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetPwdVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetPwdVersion(ctx, req.(*GetPwdVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -308,6 +342,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetStoreIDRoleById",
 			Handler:    _AuthService_GetStoreIDRoleById_Handler,
+		},
+		{
+			MethodName: "GetPwdVersion",
+			Handler:    _AuthService_GetPwdVersion_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

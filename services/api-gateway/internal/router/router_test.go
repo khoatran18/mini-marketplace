@@ -6,6 +6,7 @@ import (
 	"api-gateway/internal/handler"
 	"api-gateway/internal/middleware"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,6 +32,8 @@ func newEngineEnv(t *testing.T, mutate func(*config.EnvConfig)) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	mr := miniredis.RunT(t)
+	// Redis "đã chạy đủ lâu" (cửa sổ an toàn của middleware đã qua) nên đường nhanh được tin; không có auth-service trong test
+	_ = mr.Set("pwd_version:safe_after", "1")
 	logger := zap.NewNop()
 	serviceConfig := &config.ServiceConfig{ZapLogger: logger, RedisClient: redis.NewClient(&redis.Options{Addr: mr.Addr()})}
 	envConfig := &config.EnvConfig{JWTSecret: secret, AllowedOrigins: []string{"https://shop.example.com"}, RateLimit: 1000, AuthRateLimit: 1000}
@@ -304,5 +307,67 @@ func TestPublicRoutesNeedNoToken(t *testing.T) {
 		if w := request(e, "GET", path, ""); w.Code != http.StatusUnauthorized {
 			t.Errorf("GET %s anonymous: %d, want 401", path, w.Code)
 		}
+	}
+}
+
+func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
+	var gotAuth, gotActor, gotPath string
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth, gotActor, gotPath = r.Header.Get("Authorization"), r.Header.Get("X-Actor"), r.URL.RequestURI()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"incidents":[]}`))
+	}))
+	defer up.Close()
+	e := newEngineEnv(t, func(c *config.EnvConfig) { c.OpsServiceURL, c.OpsAPIToken = up.URL, "ops-secret" })
+	for _, route := range []struct{ method, path string }{
+		{"GET", "/admin/ops/incidents"}, {"GET", "/admin/ops/incidents/1"}, {"POST", "/admin/ops/incidents/1/investigate"}, {"GET", "/admin/ops/audit"},
+		{"GET", "/admin/ops/actions"}, {"GET", "/admin/ops/proposals"}, {"POST", "/admin/ops/proposals"}, {"GET", "/admin/ops/proposals/1"},
+		{"POST", "/admin/ops/proposals/1/review"}, {"POST", "/admin/ops/proposals/1/decision"},
+		{"POST", "/admin/ops/proposals/1/execute"}, {"POST", "/admin/ops/proposals/1/executed"}, {"GET", "/admin/ops/queries"}, {"POST", "/admin/ops/queries/service_up"},
+	} {
+		if w := request(e, route.method, route.path, ""); w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s anonymous: %d, want 401", route.method, route.path, w.Code)
+		}
+		for _, role := range []string{"buyer", "seller_admin", "seller_employee"} {
+			if w := request(e, route.method, route.path, token(t, role)); w.Code != http.StatusForbidden {
+				t.Errorf("%s %s as %s: %d, want 403", route.method, route.path, role, w.Code)
+			}
+		}
+	}
+	if w := request(e, "GET", "/admin/ops/incidents?state=open", token(t, "admin")); w.Code != 200 || gotPath != "/incidents?state=open" || gotAuth != "Bearer ops-secret" || !strings.HasPrefix(gotActor, "admin:") {
+		t.Fatalf("proxy: %d path=%q auth=%q actor=%q", w.Code, gotPath, gotAuth, gotActor)
+	}
+	// POST body is forwarded as JSON
+	var gotBody, gotCT string
+	up2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		gotBody, gotCT = string(b), r.Header.Get("Content-Type")
+		w.WriteHeader(201)
+		_, _ = w.Write([]byte(`{"proposal":{}}`))
+	}))
+	defer up2.Close()
+	e3 := newEngineEnv(t, func(c *config.EnvConfig) { c.OpsServiceURL, c.OpsAPIToken = up2.URL, "ops-secret" })
+	req := httptest.NewRequest("POST", "/admin/ops/proposals/5/decision", strings.NewReader(`{"decision":"accept"}`))
+	req.Header.Set("Authorization", "Bearer "+token(t, "admin"))
+	rec := httptest.NewRecorder()
+	e3.ServeHTTP(rec, req)
+	if rec.Code != 201 || gotBody != `{"decision":"accept"}` || gotCT != "application/json" {
+		t.Errorf("body forward: %d body=%q ct=%q", rec.Code, gotBody, gotCT)
+	}
+	big := httptest.NewRequest("POST", "/admin/ops/proposals", strings.NewReader(strings.Repeat("x", 70<<10)))
+	big.Header.Set("Authorization", "Bearer "+token(t, "admin"))
+	rec = httptest.NewRecorder()
+	e3.ServeHTTP(rec, big)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("oversize body: %d, want 413", rec.Code)
+	}
+	if w := request(e, "GET", "/admin/ops/incidents/abc", token(t, "admin")); w.Code != http.StatusBadRequest {
+		t.Errorf("non numeric id: %d, want 400", w.Code)
+	}
+	// without a token the proxy is off: the upstream is never called
+	e2 := newEngineEnv(t, func(c *config.EnvConfig) { c.OpsServiceURL, c.OpsAPIToken = up.URL, "" })
+	gotPath = ""
+	if w := request(e2, "GET", "/admin/ops/incidents", token(t, "admin")); w.Code != http.StatusServiceUnavailable || gotPath != "" {
+		t.Errorf("disabled proxy: %d path=%q", w.Code, gotPath)
 	}
 }

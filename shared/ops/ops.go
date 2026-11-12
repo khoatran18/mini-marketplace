@@ -349,6 +349,25 @@ func (s *Server) handleSignals(stop func()) {
 	s.Shutdown(ctx)
 }
 
+// KeepReadyFresh re-evaluates readiness every few seconds so mm_ready is current even when nobody calls /ready.
+// gRPC services get this from RegisterGRPC; HTTP-only services (ops-service) must call it, otherwise mm_ready stays 0
+// until the first /ready request and ServiceNotReady fires falsely.
+func (s *Server) KeepReadyFresh(ctx context.Context) {
+	s.evaluate(ctx)
+	go func() {
+		t := time.NewTicker(grpcHealthRefreshGap)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				s.evaluate(ctx)
+			}
+		}
+	}()
+}
+
 // RegisterGRPC registers grpc.health.v1 on g and keeps its status in sync with readiness.
 func (s *Server) RegisterGRPC(g *grpc.Server) {
 	s.grpcHealth = health.NewServer()

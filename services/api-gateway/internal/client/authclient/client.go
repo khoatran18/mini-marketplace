@@ -278,3 +278,20 @@ func (s *AuthClient) GetStoreID(ctx context.Context, userID uint64) (storeID uin
 	}
 	return res.GetStoreId(), res.GetRole(), nil
 }
+
+// GetPwdVersion returns the account's current password version from auth-service (database). The auth middleware uses it
+// when Redis cannot be trusted. Reads are retried by the gateway interceptors (method name starts with "Get").
+func (s *AuthClient) GetPwdVersion(ctx context.Context, userID uint64) (int64, error) {
+	if s.Client == nil {
+		if err := s.validateClient(); err != nil {
+			return 0, err
+		}
+	}
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	res, err := s.Client.GetPwdVersion(ctx, &authpb.GetPwdVersionRequest{UserId: userID})
+	if err != nil {
+		return 0, err
+	}
+	return res.GetPwdVersion(), nil
+}
