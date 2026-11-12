@@ -40,6 +40,20 @@ Ký hiệu cột **Ai**: 🌐 công khai · 👁 token tuỳ chọn (có token n
 |---|---|---|
 | GET `/health`, `/healthz` | 🌐 | liveness của gateway `{"status":"ok"}` |
 | GET `/admin/system/health` | A | gom `/ready` của mọi service (`SYSTEM_HEALTH_TARGETS`, mặc định 7 service): `{as_of, status, services:[{name,status,latency_ms,version,uptime_s,checks}]}`; `status` = tệ nhất của `ready<degraded<not_ready<unreachable`. Mỗi probe timeout 2 s |
+| GET `/admin/ops/incidents?state=&limit=` | A | sự cố từ cảnh báo Prometheus (ADR-38): `{incidents:[{id,dedupe_key,alert_name,severity,component,labels,summary,runbook,action,state,fire_count,first_seen,last_seen,resolved_at?}]}`; `state` = open\|investigating\|resolved; 400 `state` sai; 503 khi `OPS_API_TOKEN` chưa cấu hình |
+| GET `/admin/ops/incidents/{id}` | A | `{incident, audit:[…]}` (nhật ký của sự cố); 404 |
+| POST `/admin/ops/incidents/{id}/investigate` | A | open sang investigating, ghi nhật ký với `actor=admin:<id>`; 409 nếu không đang open, 404 |
+| GET `/admin/ops/audit?subject_type=&subject_id=&limit=` | A | nhật ký bất biến mới nhất trước (`subject_type` và `subject_id` đi cùng nhau) |
+| GET `/admin/ops/actions` | A | sổ hành động cho phép: `{actions:[{id,title,risk,mode,params:[{name,type,required,enum?,min?,max?}],playbook?}]}` |
+| POST `/admin/ops/proposals` | A | tạo đề xuất `{incident_id?, action_id, params, evidence:[≤20 chuỗi], rationale, supersedes_id?}` → **201** `{proposal}` (`risk` do máy chủ gán, `state=PENDING`). 400 hành động ngoài sổ / tham số sai / trường lạ; 404 sự cố hoặc đề xuất thay thế không có; 409 trùng nội dung đang chờ hoặc `supersedes_id` không ở `NEEDS_REVIEW`; 429 quá 5 đề xuất chờ cho sự cố |
+| GET `/admin/ops/proposals?state=&incident_id=&limit=` | A | danh sách; `state` (không phân biệt hoa thường) = PENDING\|ACCEPTED\|REJECTED\|NEEDS_REVIEW\|ALTERNATIVE\|EXPIRED |
+| GET `/admin/ops/proposals/{id}` | A | `{proposal, audit:[…]}` |
+| POST `/admin/ops/proposals/{id}/review` | A | ghi "đã xem" và cấp `approval_token` (HMAC, gắn đề xuất + băm + người xem, hiệu lực `expires_in_sec` = 300) → `{proposal, approval_token, expires_in_sec}`; 409 nếu không còn PENDING / hết hạn |
+| POST `/admin/ops/proposals/{id}/decision` | A | `{decision: accept\|reject\|needs_review\|alternative, reason, approval_token, alternative?:{action_id, params}}`. 403 mã sai / hết hạn / không phải người đã xem, hoặc người tạo tự quyết; 400 thiếu `reason` (bắt buộc trừ accept hành động không phải high), alternative sai hoặc giống gốc; 409 không còn PENDING hoặc hết hạn |
+| POST `/admin/ops/proposals/{id}/execute` | A | tự chạy hành động đã duyệt (chỉ mode `http`, hiện là `requeue_outbox`). 403 khi `OPS_ACTIONS_ENABLED=false` hoặc người gọi là người tạo; 409 chưa duyệt / đã thực thi / duyệt quá `OPS_EXEC_WINDOW_MIN` / hành động không tự chạy; 429 quá hạn mức hoặc cooldown; 422 chạy lỗi (tiền điều kiện hỏng…). → `{exec_state: EXECUTED\|FAILED, result}` |
+| POST `/admin/ops/proposals/{id}/executed` | A | người ghi kết quả sau khi tự chạy lệnh (mode `command`/`manual`): `{outcome: success\|failed, note ≤2000}`; người tạo không được ghi. `GET /proposals/{id}` trả thêm `command` (lệnh để chạy) khi đã ACCEPTED/ALTERNATIVE |
+| GET `/admin/ops/queries` | A | catalog truy vấn đọc có tên (Prometheus/Loki), mỗi truy vấn kèm tham số (enum hoặc regex) |
+| POST `/admin/ops/queries/{name}` | A | `{params:{…}}` → `{query, params, backend, expr, series\|lines, total, truncated, untrusted?}`. 400 tên/tham số sai (thông báo liệt kê giá trị hợp lệ); kết quả cắt 50 chuỗi / 100 dòng; log luôn `untrusted: true`; mỗi lần chạy ghi audit `query.run` |
 | GET `/ready`, `/readyz`, `/metrics`, `/version` | nội bộ `:8081` | **không** nằm trên cổng công khai 8080 (xem [platform/02](platform/02_HEALTH_READY_METRICS.md)) |
 
 ## 2. Xác thực & tài khoản

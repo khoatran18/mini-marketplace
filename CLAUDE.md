@@ -1,7 +1,7 @@
 # Mini Marketplace – working notes
 
 Event-driven marketplace: Go microservices behind a gin API gateway, a Next.js frontend, Postgres/Redis/Kafka,
-deployed with Docker Swarm + Traefik. Full documentation lives in [`docs/`](docs/README.md) (start there; REST reference: `docs/design/04_API_REFERENCE.md`; built vs not: `docs/process/01_IMPLEMENTATION_STATUS.md`; open issues: `docs/planning/01_OPEN_ISSUES.md`; AI plans and datasets: `docs/ai/`, `docs/dataset/`).
+deployed with Docker Swarm + Traefik. Full documentation lives in [`docs/`](docs/README.md) (start there; REST reference: `docs/design/04_API_REFERENCE.md`; built vs not: `docs/process/01_IMPLEMENTATION_STATUS.md`; open issues: `docs/planning/01_OPEN_ISSUES.md`; AI plans and datasets: `docs/ai/`, `docs/dataset/`; incident playbooks + agent ground truth: `docs/playbooks/`).
 
 ## Layout
 ```
@@ -13,10 +13,11 @@ services/product-service/ catalog/search, inventory (available/reserved/sold + l
 services/user-service/    buyer/seller profiles, delivery addresses   gRPC :50054
 services/analytics-service/ tracking + Kafka events → ClickHouse, scoped reports              gRPC :50055
 services/payment-service/ SIMULATED payments (mockpay), webhooks, refunds                     gRPC :50057
+services/ops-service/     incidents from Prometheus alerts + append-only audit log (ADR-38)     HTTP :8080 (gateway only, /admin/ops/*)
 (every Go service also serves an internal admin HTTP port :8081: /health /healthz /ready /readyz /metrics /version)
 shared/               Go module mini-marketplace/shared: ops, events (outbox worker + dead-letter tools), messagequeue/kafkaimpl, reqctx, tracing (ADR-33, ADR-36)
 deploy/               infra.yml (postgres, redis, clickhouse, kafka), observability.yml (prometheus + alerts.yml, grafana, loki/vector, tempo), services.yml (traefik + apps), grafana/, prometheus/, traefik/, .env.example
-scripts/              gen-dev-certs.sh, build-images.sh, deploy.sh, teardown.sh, backup-postgres.sh, protogen/gen.sh, dev/chdb_server.py (+gen_traffic.py), e2e/ (outdated)
+scripts/              check-playbooks.sh, gen-dev-certs.sh, build-images.sh, deploy.sh, teardown.sh, backup-postgres.sh, protogen/gen.sh, dev/chdb_server.py (+gen_traffic.py), e2e/ (outdated)
 .github/workflows/    CI
 ```
 Each service is its own Go module (`go.mod`) that imports `shared/` via `replace ../../shared`; run go commands from `services/<name>`, but build images with the repo root as context: `docker build -f services/<name>/Dockerfile .` (or `scripts/build-images.sh`). Test shared code with `cd shared && go test ./...`.

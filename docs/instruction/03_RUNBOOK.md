@@ -286,6 +286,7 @@ Cửa hàng không phụ thuộc ClickHouse; rủi ro duy nhất là mất số 
 
 ## 10. Khác
 - **401 ngay sau đổi mật khẩu**: bình thường với token cũ. Nếu token *mới* cũng lỗi: kiểm tra Redis `<userId>:pwd_version` và consumer `auth.change_password` của gateway.
+- **503 "cannot verify credentials right now" trên mọi API có đăng nhập**: gateway không xác minh được phiên bản mật khẩu vì Redis lẫn DB (auth-service `GetPwdVersion`) cùng lỗi, hoặc auth-service chạy bản cũ (`Unimplemented` trong log gateway; đặc biệt sau khi deploy: auth-service phải lên trước, `docker service update --force marketplace_auth-service`). Chỉ Redis lỗi thì **không** có lỗi: gateway tự hỏi DB (ADR-39). Sau khi Redis khởi động lại / bị xoá, ~6 phút mọi request có đăng nhập đi qua auth-service (bình thường).
 - **429**: bộ đếm trong Redis `rate_limit:<scope>:<ip>` (`global`, `auth`, `events`). Sau Traefik phải đặt `TRUSTED_PROXIES`, nếu không mọi client chung một IP.
 - **Migration Postgres lỗi lúc khởi động** (service restart liên tục, log `goose` / `migrate`): xem `docker service logs <service>`. Bảng version của service là `goose_db_version_<svc>` (`auth|user|product|order|payment`); `SELECT * FROM goose_db_version_order ORDER BY id;` cho biết file nào đã chạy. Khoá advisory được giữ bằng session nên tự nhả khi kết nối đóng; nếu một replica khác đang migrate, replica này chỉ chờ. Sửa bằng **file migration mới** (đánh số tiếp), không sửa file `00001` đã chạy. DB cũ do `AutoMigrate` tạo: baseline `IF NOT EXISTS` nên chạy được.
 - **503 và 504 ở gateway**: `Unavailable` (service đích down / không kết nối được) → 503; `DeadlineExceeded` (vượt `GRPC_TIMEOUT_READ_MS` 3 s đọc / `GRPC_TIMEOUT_WRITE_MS` 10 s ghi) → 504. Lệnh đọc gặp `Unavailable` được retry tới `GRPC_RETRY_MAX_ATTEMPTS` (3) lần, số lần retry đếm ở `mm_grpc_client_retries_total{service,method}`; lệnh ghi không retry. Nhiều 504 ở một `service` đích ⇒ service đó chậm (xem dashboard *Business* panel p95 gRPC client và dashboard *Services*).
@@ -299,7 +300,7 @@ Cửa hàng không phụ thuộc ClickHouse; rủi ro duy nhất là mất số 
 | Dữ liệu | Cách |
 |---|---|
 | Postgres (`postgres-data`) – **nguồn sự thật** (tài khoản, catalog, đơn, payment, outbox) | `scripts/backup-postgres.sh backup` (dump + kiểm tra + xoá bản quá `BACKUP_KEEP_DAYS`=7 ngày, lưu `~/mm-backups`), `scripts/backup-postgres.sh verify` (khôi phục bản mới nhất vào DB tạm `restore_check`, so số bảng/số dòng với DB thật, rồi xoá), `scripts/backup-postgres.sh cron-install` in dòng crontab mẫu (02:30 backup, 02:45 verify). Thủ công: `docker exec <postgres> pg_dump -U postgres -Fc postgres > mm-$(date +%F).dump`; khôi phục vào DB trống: `pg_restore -U postgres -d postgres --clean --if-exists mm.dump` khi **dừng** các service ghi. Hoặc snapshot volume khi Postgres đã dừng. Dùng cùng một dump cho mọi service (chung DB) |
-| Redis (`redis-data`, AOF) | chỉ là cache/ bộ đếm/ `pwd_version`; mất thì tự dựng (token cũ trước khi đổi mật khẩu có thể hợp lệ lại tới khi hết hạn ≤ 5 phút) – không cần sao lưu |
+| Redis (`redis-data`, AOF) | chỉ là cache/ bộ đếm/ `pwd_version`; mất thì tự dựng; gateway coi Redis mới/bị xoá là chưa đáng tin trong ~6 phút và hỏi DB nên không mất an toàn (ADR-39) – không cần sao lưu |
 | Kafka (`kafka-data-1..3`) | không phải nguồn sự thật dài hạn (retention 7 ngày); outbox trong Postgres bảo vệ message chưa gửi; 3 broker nhân bản nhau (RF 3) nên mất 1 volume không mất dữ liệu |
 | ClickHouse (`clickhouse-data`) | **dẫn xuất**: có thể mất mà shop vẫn đúng, nhưng chỉ dựng lại được ~7 ngày từ Kafka. Sao lưu: dừng analytics-service, `docker run --rm -v <volume>:/data -v $PWD:/out alpine tar czf /out/ch-$(date +%F).tgz -C /data .` (hoặc `BACKUP DATABASE marketplace TO Disk(…)` nếu cấu hình disk backup). Khôi phục: bung tar vào volume rỗng khi ClickHouse dừng, rồi khởi động; analytics-service chạy lại migration idempotent |
 | Prometheus/Grafana | dashboard nằm trong repo (`deploy/grafana`), không cần sao lưu volume; số liệu lịch sử Prometheus (`prometheus-data`) tuỳ chọn |
@@ -368,7 +369,7 @@ $KAFKA/kafka-metadata-quorum.sh --bootstrap-server broker1:9092 describe --statu
 
 | Cảnh báo | Nghĩa | Xem mục | `action` |
 |---|---|---|---|
-| `ServiceDown`, `ServiceNotReady` | không scrape được / `/ready` 503 | §1, §10 | low |
+| `ServiceDown`, `ServiceMissing`, `ServiceNotReady` | không scrape được / không còn target (0 replica) / `/ready` 503 | §1, §10 | low |
 | `CircuitBreakerOpen` | gateway đã mở mạch tới một service (request tới đó bị 503 ngay) | §1 + dưới đây | low |
 | `OutboxDeadRows` | có hàng outbox DEAD | §5 | high |
 | `OutboxBacklogOld` | event cũ nhất chờ > 5 phút | §5, §6 | low |
@@ -383,3 +384,29 @@ $KAFKA/kafka-metadata-quorum.sh --bootstrap-server broker1:9092 describe --statu
 **Trace (Tempo, Grafana → Explore → Tempo):** bật khi service có `OTEL_EXPORTER_OTLP_ENDPOINT` (mặc định trỏ `http://tempo:4318`). Lấy mẫu 10% (`OTEL_TRACES_SAMPLER_ARG`), nên request lỗi cụ thể có thể không có trace: dùng `request_id` + Loki (§2) trước, trace để xem đoạn nào chậm. Tìm theo thuộc tính `request_id` hoặc `service.name`. Tracing hỏng không ảnh hưởng nghiệp vụ (xuất span là bất đồng bộ, mất span thì bỏ).
 
 **Đối soát Postgres / ClickHouse tự động:** `GET /admin/analytics/data-health` có khoá `reconcile` (nếu `RECONCILE_PG_DSN` được đặt, mặc định bật). `mismatches > 0` kéo dài sau khi pipeline đã hết lag nghĩa là lệch thật; chạy `backfill reconcile` (§12) để xem chi tiết, sửa bằng `backfill` là hành động `high`.
+
+## 14. Sự cố tự ghi (`ops-service`, ADR-38)
+`ops-service` đọc cảnh báo Prometheus mỗi 30 s và tạo bản ghi **sự cố**; admin xem qua `GET /admin/ops/incidents` (xem [04_API_REFERENCE.md](../design/04_API_REFERENCE.md)). Cần đặt `OPS_API_TOKEN` (cùng giá trị cho gateway và ops-service, sinh bằng `openssl rand -hex 24`, thêm vào `deploy/.env`, rồi `./scripts/deploy.sh services`); để trống thì API 503 nhưng poller vẫn ghi.
+- **Không thấy sự cố dù cảnh báo đang bắn:** `up{job="mm-services",swarm_service="ops-service"}`, `mm_ops_poll_last_success_timestamp_seconds` (cũ hơn vài phút = poller không tới được Prometheus; xem `docker service logs marketplace_ops-service`), `mm_ops_poll_failures`.
+- **Sự cố không tự đóng:** cảnh báo vẫn bắn, hoặc Prometheus không trả lời (poller không kết luận khi không đọc được). Sự cố đóng sau 2 chu kỳ kể từ lần cuối thấy cảnh báo.
+- **Nhật ký** (`ops_audit_log`) chỉ thêm; UPDATE/DELETE/TRUNCATE bị từ chối. Đừng gỡ trigger `ops_audit_no_update` / `ops_audit_no_truncate`.
+- `ServiceDown` (target còn nhưng `up == 0`) và `ServiceMissing` (target biến mất: service về 0 replica mà DNS trả NXDOMAIN) bổ sung cho nhau; cùng bắn là bình thường.
+
+### Đề xuất (đợt 2): xem, duyệt, từ chối
+- Liệt kê: `GET /admin/ops/proposals?state=pending`. Mỗi đề xuất ghi hành động, tham số, bằng chứng, mức rủi ro (do sổ hành động gán), người tạo, hạn.
+- Duyệt gồm hai bước: `POST .../review` (xem và nhận `approval_token`, hiệu lực 5 phút), rồi `POST .../decision` kèm mã. Mã hết hạn thì xem lại để nhận mã mới. Hành động `high` (requeue outbox, backfill) bắt buộc ghi `reason`.
+- Chấp nhận **chưa chạy gì**: ở đợt 2 `ACCEPTED` chỉ là ghi nhận; người tự thực hiện theo playbook. Việc thực thi có kiểm soát là đợt 3.
+- Đề xuất chờ quá `OPS_PROPOSAL_TTL_MIN` (24 h) tự thành `EXPIRED`. Người tạo không tự duyệt được (403): agent cần tài khoản admin riêng.
+- Kiểm chứng sau sự cố: `GET /admin/ops/audit?subject_type=proposal&subject_id=<id>`.
+
+### Thực thi (đợt 3)
+- **Mặc định tắt.** Bật: thêm `OPS_ACTIONS_ENABLED=true` vào `deploy/.env` rồi `./scripts/deploy.sh services`. Tắt khẩn cấp: đặt lại `false` và deploy (hoặc `docker service update --env-add OPS_ACTIONS_ENABLED=false marketplace_ops-service`).
+- Chỉ `requeue_outbox` tự chạy (`POST .../execute`, người khác người tạo, trong 60 phút sau khi duyệt). Cần `METRICS_TOKEN` (ops-service dùng nó gọi cổng admin của service đích). Kết quả ở `exec_result` (`dead_before`, `requeued`, `dead_after`, `verified`).
+- `restart_service` / `scale_service` / `run_backfill`: mở đề xuất đã duyệt, lấy `command`, chạy trên máy quản trị, rồi `POST .../executed {"outcome":"success","note":"..."}`.
+- 429 = quá `OPS_MAX_EXEC_PER_HOUR` hoặc cooldown cùng hành động + service; 409 "quá hạn" = duyệt cũ hơn cửa sổ, tạo đề xuất mới. `FAILED` không tự chạy lại: đọc `exec_result` và audit trước khi tạo đề xuất khác. `EXECUTING` bỏ dở quá 10 phút tự thành `FAILED`.
+
+### Truy vấn đọc, thông báo, cảnh báo của chính ops-service
+- `GET /admin/ops/queries` liệt kê truy vấn có tên; `POST /admin/ops/queries/<tên>` chạy. Không có PromQL/LogQL tự do. Loki mặc định `http://loki:3100` (`LOKI_URL`).
+- Thông báo: đặt `OPS_NOTIFY_WEBHOOK_URL` (Slack/Discord/Mattermost). Tin chỉ có tên cảnh báo, id, người tạo. Khởi động lại ops-service thì không gửi bù tin lúc ngừng.
+- `OpsPollerStale` (poller không đọc được Prometheus > 5 phút) và `OpsProposalsWaiting` (đề xuất PENDING > 1 giờ): playbook `docs/playbooks/ops-service.yml`; dashboard *Marketplace · Ops*. Nếu **Prometheus chết** thì không cảnh báo nào bắn: đây là điểm mù, kiểm tay.
+

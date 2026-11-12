@@ -4,7 +4,7 @@
 - Mật khẩu băm bằng bcrypt; mật khẩu ≥ 8 ký tự khi đăng ký/đổi mật khẩu.
 - JWT HS256 ký bằng `JWT_SECRET` (≥ 16 ký tự, mọi service đều kiểm tra khi khởi động). Xoay khoá bằng cách đổi secret ở mọi nơi (toàn bộ phiên đăng nhập kết thúc).
 - Gateway chỉ chấp nhận token có `Type=="access"`. Refresh token chỉ auth-service chấp nhận, và auth-service còn so sánh `PwdVersion` với DB.
-- Đổi mật khẩu sẽ tăng `pwd_version`; gateway cache phiên bản mới trong Redis trong `JWT_EXPIRE_TIME + 1 min` (= thời hạn access token) nên các access token cũ bị từ chối ngay. Thiếu key cũng không sao: token cũ hơn TTL vốn đã hết hạn.
+- Đổi mật khẩu sẽ tăng `pwd_version` (nguồn sự thật: bảng `accounts` của auth-service). Redis chỉ là **đường nhanh**: gateway ghi key `<userId>:pwd_version` trong `JWT_EXPIRE_TIME + 1 min` (= thời hạn access token); key vắng nghĩa là "không đổi trong một vòng đời token". Đường nhanh chỉ được tin khi Redis đáng tin. **Redis lỗi, mới khởi động hoặc bị xoá** (khoá mốc `pwd_version:safe_after` thiếu hoặc còn ở tương lai) thì gateway **hỏi DB** qua RPC `AuthService.GetPwdVersion`; trong một cửa sổ `JWT_EXPIRE_TIME + 1 min` sau khi Redis được tạo lại, mọi request có đăng nhập đều hỏi DB (vì các key deny của cửa sổ trước có thể đã mất). Cả Redis lẫn DB cùng lỗi thì từ chối bằng **503** (không phải 401, để client thử lại thay vì tự đăng xuất). ADR-39.
 
 ### Luồng request: token, middleware theo route, quyền sở hữu
 
@@ -15,7 +15,7 @@ flowchart TD
   RT -->|"công khai, ví dụ /search, /categories, /events"| OPT["OptionalAuth chỉ gắn danh tính nếu có token hợp lệ"]
   RT -->|"nhóm cần đăng nhập"| AM["AuthMiddleware: Bearer token, chữ ký HS256 và hạn dùng, Type access"]
   AM -->|"không hợp lệ"| E401["401"]
-  AM --> PV{"pwd_version trong token khớp key Redis userId:pwd_version?"}
+  AM --> PV{"pwd_version trong token còn hiện hành? (Redis nhanh, DB khi Redis lỗi hoặc mất dữ liệu)"}
   PV -->|"không"| E401
   PV -->|"có"| RO["AuthorizationMiddleware: role có được phép với nhóm này?"]
   RO -->|"không"| E403["403"]
