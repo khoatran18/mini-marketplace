@@ -80,7 +80,7 @@ if [[ "$want" == *" A "* ]]; then
 echo "[A] ClickHouse down: analytics 503, nhưng đặt hàng + POST /events vẫn OK; hồi phục sau khi bật lại"
   stop "${INFRA}_clickhouse"
   r=$(step analytics); echo "  analytics: $r"
-  expect "báo cáo analytics trả 503 khi ClickHouse down" "$(eq "$(j "$r" http)" 503; echo $?)"
+  expect "báo cáo analytics trả 503/504 khi ClickHouse down (504 = hết deadline gRPC)" "$([[ "$(j "$r" http)" == 503 || "$(j "$r" http)" == 504 ]]; echo $?)"
   r=$(step events); echo "  events: $r"
   expect "POST /events vẫn 202 (best-effort)" "$(eq "$(j "$r" http)" 202; echo $?)"
   r=$(step order); echo "  order: $r"

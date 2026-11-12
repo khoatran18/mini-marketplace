@@ -41,29 +41,29 @@ flowchart LR
   PG --> ORD["order-service"]
   PG --> PAY["payment-service"]
   CH --> ANA["analytics-service"]
-  AUTH --> USER
-  PROD --> ORD
-  AUTH --> GW["api-gateway"]
-  USER --> GW
-  PROD --> GW
-  ORD --> GW
+  AUTH -.-> USER
+  PROD -.-> ORD
+  AUTH -.-> GW["api-gateway"]
+  USER -.-> GW
+  PROD -.-> GW
+  ORD -.-> GW
   PAY -.-> GW
   ANA -.-> GW
 ```
 
-Mũi tên đi từ dependency tới service bị ảnh hưởng: Postgres hỏng làm 5 service Go `not_ready`, ClickHouse hỏng làm analytics-service `not_ready` nhưng gateway chỉ `degraded`. Ngoài ra `order-service` còn critical theo `timers_worker`, `payment-service` theo `workers`.
+Mũi tên đi từ dependency tới service bị ảnh hưởng: Postgres hỏng làm 5 service Go `not_ready`, ClickHouse hỏng làm analytics-service `not_ready`. **Service đồng cấp luôn là non-critical (ADR-35)**: một service chậm hoặc chết chỉ làm service gọi nó `degraded`, không lan lên gateway; request tới route liên quan thất bại theo deadline (503/504), các route khác vẫn chạy. Ngoài ra `order-service` còn critical theo `timers_worker`, `payment-service` theo `workers`.
 
 | Service | Critical (hỏng ⇒ 503) | Non-critical (hỏng ⇒ `degraded`, vẫn 200) |
 |---|---|---|
-| api-gateway | kafka, `AuthClient`, `OrderClient`, `ProductClient`, `UserClient` (gRPC health) | redis, `PaymentClient`, `AnalyticsClient` |
-| auth-service | postgres, kafka | redis |
-| user-service | postgres, kafka, auth-service | redis |
-| product-service | postgres, kafka | redis |
-| order-service | postgres, kafka, product-service, `timers_worker` (không tick quá 90 s) | redis |
-| payment-service | postgres, kafka, `workers` (không tick quá 30 s) | redis |
-| analytics-service | **clickhouse**, kafka | `insert_pipeline` (có hàng đợi mà >1 phút chưa insert được), redis (nếu có `REDIS_ADDR`) |
+| api-gateway | (không có; chỉ `not_ready` khi chưa khởi động xong hoặc đang drain) | kafka, redis, mọi `*Client` (gRPC health của service đồng cấp) |
+| auth-service | postgres | kafka, redis |
+| user-service | postgres | kafka, redis, auth-service |
+| product-service | postgres | kafka, redis |
+| order-service | postgres, `timers_worker` (không tick quá 90 s) | kafka, redis, product-service |
+| payment-service | postgres, `workers` (không tick quá 30 s) | kafka, redis |
+| analytics-service | **clickhouse** | kafka, `insert_pipeline` (có hàng đợi mà >1 phút chưa insert được), redis (nếu có `REDIS_ADDR`) |
 
-Traefik chỉ route vào replica gateway khi `/ready` = 200. Gateway `degraded` khi payment/analytics down (cửa hàng vẫn chạy: COD, không dashboard). `GET /admin/system/health` (admin) gom tất cả vào một bảng; `/version` cho biết bản đang chạy.
+Traefik chỉ route vào replica gateway khi `/ready` = 200. Gateway `degraded` khi bất kỳ service đồng cấp nào down (vẫn trong pool Traefik; route liên quan trả lỗi, route khác chạy bình thường). `GET /admin/system/health` (admin) gom tất cả vào một bảng; `/version` cho biết bản đang chạy.
 
 ## 2. Đọc dashboard Grafana (`https://grafana.<PUBLIC_HOST>`, thư mục *Marketplace*, làm mới 15 s)
 Chỉ xem, **không có cảnh báo/ thông báo** – người vận hành tự nhìn. Màu ô số chỉ là gợi ý.
