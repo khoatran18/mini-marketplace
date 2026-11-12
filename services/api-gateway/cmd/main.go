@@ -7,7 +7,6 @@ import (
 	"api-gateway/internal/middleware"
 	"api-gateway/internal/router"
 	"api-gateway/internal/service"
-	"api-gateway/pkg/clientname"
 	"api-gateway/pkg/ops"
 	"context"
 	"log"
@@ -97,8 +96,9 @@ func main() {
 		ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
 	}
 	for name, addr := range grpcAddrs {
-		// payments and analytics are add-ons: the shop keeps working (COD, no dashboards) when they are down
-		checks = append(checks, ops.GRPCHealthCheck(name, addr, name != clientname.PaymentClientName && name != clientname.AnalyticsClientName))
+		// Peers are never critical (ADR-35): a slow or down service must not take the gateway out of Traefik's pool
+		// and 503 every route. Calls to it fail on their own deadline; /ready only reports "degraded".
+		checks = append(checks, ops.GRPCHealthCheck(name, addr, false))
 	}
 	adm := ops.New(ops.Options{Service: "api-gateway", Checks: checks})
 	engine.Use(middleware.MetricsMiddleware(adm.ObserveHTTP))

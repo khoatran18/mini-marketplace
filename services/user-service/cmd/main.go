@@ -76,7 +76,7 @@ func main() {
 			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
 			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
 			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
-			ops.GRPCHealthCheck("auth-service", config.NewGRPCAddrConfig()["AuthClientAddr"], true),
+			ops.GRPCHealthCheck("auth-service", config.NewGRPCAddrConfig()["AuthClientAddr"], false), // peer: degraded only (ADR-35)
 		},
 	})
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {

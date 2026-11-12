@@ -119,7 +119,7 @@ func main() {
 			ops.SQLCheck("postgres", serviceConfig.PostgresDB.DB, true),
 			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
 			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
-			ops.GRPCHealthCheck("product-service", config.NewGRPCAddrConfig()["ProductClientAddr"], true),
+			ops.GRPCHealthCheck("product-service", config.NewGRPCAddrConfig()["ProductClientAddr"], false), // peer: degraded only (ADR-35)
 			ops.FuncCheck("timers_worker", true, func(ctx context.Context) error {
 				if time.Since(time.Unix(lastTick.Load(), 0)) > 3*timersInterval {
 					return errors.New("stalled")

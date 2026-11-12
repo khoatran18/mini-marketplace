@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"google.golang.org/grpc"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func newTestServer(checks ...Check) *Server {
@@ -319,5 +321,61 @@ func TestGRPCHealthCheckUnreachableFailsWithinBudget(t *testing.T) {
 	}
 	if d := time.Since(start); d > 1500*time.Millisecond {
 		t.Errorf("took %v, want within the 1s budget", d)
+	}
+}
+
+type slowHealth struct {
+	healthpb.UnimplementedHealthServer
+	mu    sync.Mutex
+	slow  int // number of upcoming calls that stall past the caller's deadline
+	calls int
+}
+
+func (h *slowHealth) Check(ctx context.Context, _ *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
+	h.mu.Lock()
+	h.calls++
+	stall := h.slow > 0
+	if stall {
+		h.slow--
+	}
+	h.mu.Unlock()
+	if stall {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_SERVING}, nil
+}
+
+// One stalled call (overlay SYN retransmit) must not flip the check; two in a row must; a good call resets the count.
+func TestGRPCHealthCheckToleratesSingleTimeout(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := &slowHealth{}
+	g := grpc.NewServer()
+	healthpb.RegisterHealthServer(g, h)
+	go g.Serve(lis)
+	defer g.Stop()
+
+	chk := GRPCHealthCheck("slow", lis.Addr().String(), true)
+	run := func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		return chk.Fn(ctx)
+	}
+	h.slow = 1
+	if err := run(); err != nil {
+		t.Fatalf("a single timeout must be tolerated: %v", err)
+	}
+	if err := run(); err != nil {
+		t.Fatalf("a good call must pass: %v", err)
+	}
+	h.slow = 2
+	if err := run(); err != nil {
+		t.Fatalf("first timeout after a good call must be tolerated: %v", err)
+	}
+	if err := run(); err == nil {
+		t.Fatal("two timeouts in a row must fail the check")
 	}
 }

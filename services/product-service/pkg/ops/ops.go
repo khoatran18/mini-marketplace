@@ -503,39 +503,47 @@ func TCPCheck(name, addrs string, critical bool) Check {
 }
 
 // GRPCHealthCheck asks another service's grpc.health.v1 whether it is serving.
+// It keeps one long-lived connection: dialing a new one per check on the Swarm overlay occasionally stalls ~1 s
+// (SYN retransmit), which exceeded the check timeout and flipped /ready to 503 (Traefik then dropped every gateway).
+// A single DeadlineExceeded is therefore tolerated; the second one in a row fails the check. An explicit NOT_SERVING
+// or a refused connection fails immediately.
 func GRPCHealthCheck(name, addr string, critical bool) Check {
+	var (
+		mu       sync.Mutex
+		conn     *grpc.ClientConn
+		timeouts int
+	)
 	return Check{Name: name, Critical: critical, Fn: func(ctx context.Context) error {
-		// A new connection on the overlay network occasionally stalls ~1 s (SYN retransmit, 2-3% of dials), which
-		// would flip /ready to 503 for one refresh and make Traefik drop the gateway. So try twice: a short first
-		// attempt, then a second one on a fresh connection with the rest of the budget.
-		err := grpcHealthOnce(ctx, addr, 400*time.Millisecond)
-		if err != nil && ctx.Err() == nil {
-			err = grpcHealthOnce(ctx, addr, 0)
+		mu.Lock()
+		if conn == nil {
+			c, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				mu.Unlock()
+				return err
+			}
+			conn = c
 		}
-		return err
-	}}
-}
+		c := conn
+		mu.Unlock()
 
-// grpcHealthOnce dials addr and calls grpc.health.v1 Check; perAttempt <= 0 uses the remaining ctx time.
-func grpcHealthOnce(ctx context.Context, addr string, perAttempt time.Duration) error {
-	if perAttempt > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, perAttempt)
-		defer cancel()
-	}
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	resp, err := healthpb.NewHealthClient(conn).Check(ctx, &healthpb.HealthCheckRequest{})
-	if err != nil {
-		return err
-	}
-	if resp.GetStatus() != healthpb.HealthCheckResponse_SERVING {
-		return errors.New("not_serving")
-	}
-	return nil
+		resp, err := healthpb.NewHealthClient(c).Check(ctx, &healthpb.HealthCheckRequest{})
+		mu.Lock()
+		defer mu.Unlock()
+		if err != nil {
+			if status.Code(err) == codes.DeadlineExceeded || errors.Is(err, context.DeadlineExceeded) {
+				timeouts++
+				if timeouts < 2 {
+					return nil
+				}
+			}
+			return err
+		}
+		timeouts = 0
+		if resp.GetStatus() != healthpb.HealthCheckResponse_SERVING {
+			return errors.New("not_serving")
+		}
+		return nil
+	}}
 }
 
 // FuncCheck wraps any function (e.g. redisClient.Ping(ctx).Err()).
