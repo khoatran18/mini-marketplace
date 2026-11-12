@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+
+	"mini-marketplace/shared/reqctx"
 )
 
 type KafkaProducer struct {
@@ -32,10 +34,11 @@ func (p *KafkaProducer) Publish(ctx context.Context, balance kafka.Balancer, top
 	}
 	var lastErr error
 	for i := 0; i < attempts; i++ {
-		err := writer.WriteMessages(ctx, kafka.Message{
-			Key:   key,
-			Value: value,
-		})
+		msg := kafka.Message{Key: key, Value: value}
+		if id := reqctx.Get(ctx); id != "" {
+			msg.Headers = []kafka.Header{{Key: reqctx.Header, Value: []byte(id)}}
+		}
+		err := writer.WriteMessages(ctx, msg)
 		if err == nil {
 			return nil
 		}

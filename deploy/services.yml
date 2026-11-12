@@ -98,6 +98,9 @@ services:
     hostname: api-gateway
     networks: [marketplace]
     environment: &svc_env
+      # ADR-36: trace gửi tới Tempo (stack observability); đặt OTEL_EXPORTER_OTLP_ENDPOINT rỗng để tắt
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT-http://tempo:4318}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       JWT_EXPIRE_TIME: ${JWT_EXPIRE_TIME:-5}
       REDIS_ADDR: redis:6379
@@ -119,6 +122,8 @@ services:
       EVENTS_RATE_LIMIT_PER_MINUTE: ${EVENTS_RATE_LIMIT_PER_MINUTE:-120}
       GRPC_TIMEOUT_READ_MS: ${GRPC_TIMEOUT_READ_MS:-3000}
       GRPC_TIMEOUT_WRITE_MS: ${GRPC_TIMEOUT_WRITE_MS:-10000}
+      CIRCUIT_FAILURE_THRESHOLD: ${CIRCUIT_FAILURE_THRESHOLD:-5}   # ADR-36: lỗi hạ tầng liên tiếp thì mở mạch (0 = tắt)
+      CIRCUIT_COOLDOWN_MS: ${CIRCUIT_COOLDOWN_MS:-10000}
       GRPC_RETRY_MAX_ATTEMPTS: ${GRPC_RETRY_MAX_ATTEMPTS:-3}
       IP_HASH_SECRET: ${IP_HASH_SECRET:-}
       # optional bearer token protecting /metrics, /version (and pprof) on :8081; empty = open (Prometheus gets the same value)
@@ -261,6 +266,9 @@ services:
     hostname: payment-service
     networks: [marketplace]
     environment:
+      # ADR-36: trace gửi tới Tempo (stack observability); đặt OTEL_EXPORTER_OTLP_ENDPOINT rỗng để tắt
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT-http://tempo:4318}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
       <<: *svc_env
       PAYMENTS_MODE: mock
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?set PAYMENT_WEBHOOK_SECRET (at least 16 characters)}
@@ -290,6 +298,9 @@ services:
     hostname: analytics-service
     networks: [marketplace]
     environment:
+      # ADR-36: trace gửi tới Tempo (stack observability); đặt OTEL_EXPORTER_OTLP_ENDPOINT rỗng để tắt
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT-http://tempo:4318}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
       REDIS_ADDR: redis:6379
       KAFKA_BROKERS_ADDR: ${KAFKA_BROKERS_ADDR:-broker1:9092,broker2:9092,broker3:9092}
       KAFKA_CONSUMER_BACKOFF: ${KAFKA_CONSUMER_BACKOFF:-100}
@@ -305,6 +316,11 @@ services:
       ANALYTICS_SPOOL_DIR: ${ANALYTICS_SPOOL_DIR-/var/spool/analytics}
       ANALYTICS_SPOOL_MAX_MB: ${ANALYTICS_SPOOL_MAX_MB:-256}
       EVENTS_RETENTION_MONTHS: ${EVENTS_RETENTION_MONTHS:-13}
+      # ADR-37: so sánh định kỳ Postgres với ClickHouse (kết nối CHỈ ĐỌC); đặt RECONCILE_PG_DSN rỗng để tắt
+      RECONCILE_PG_DSN: ${RECONCILE_PG_DSN-host=postgres user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD} dbname=${POSTGRES_DB:-postgres} port=5432 sslmode=disable default_transaction_read_only=on}
+      RECONCILE_INTERVAL_SEC: ${RECONCILE_INTERVAL_SEC:-600}
+      RECONCILE_DAYS: ${RECONCILE_DAYS:-2}
+      RECONCILE_TOLERANCE: ${RECONCILE_TOLERANCE:-0.02}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
       interval: 10s

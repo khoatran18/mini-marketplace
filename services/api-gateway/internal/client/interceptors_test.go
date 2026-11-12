@@ -121,3 +121,17 @@ func TestNoRetryWhenParentCancelled(t *testing.T) {
 		t.Fatalf("calls=%d", calls)
 	}
 }
+
+func TestCheckoutIsRetriedOtherWritesAreNot(t *testing.T) {
+	for method, want := range map[string]int{"/order.OrderService/Checkout": 3, "/payment.PaymentService/RefundPayment": 1, "/order.OrderService/ApplyAction": 1} {
+		calls := 0
+		inv := func(context.Context, string, any, any, *grpc.ClientConn, ...grpc.CallOption) error {
+			calls++
+			return status.Error(codes.Unavailable, "down")
+		}
+		_ = RetryInterceptor("t", testPolicy)(context.Background(), method, nil, nil, nil, inv)
+		if calls != want {
+			t.Errorf("%s: %d calls, want %d", method, calls, want)
+		}
+	}
+}

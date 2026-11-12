@@ -26,6 +26,7 @@ services:
       PROMETHEUS_RETENTION: ${PROMETHEUS_RETENTION:-15d}
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/ready >/dev/null 2>&1 || exit 1"]
@@ -224,17 +225,44 @@ services:
       resources:
         limits: {memory: 128M}
 
+  # Trace (ADR-36): Tempo nhận OTLP/HTTP :4318 từ các service, Grafana truy vấn qua datasource "Tempo".
+  tempo:
+    logging: *logging
+    image: grafana/tempo:2.6.1
+    hostname: tempo
+    networks: [marketplace]
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    configs:
+      - source: tempo-config
+        target: /etc/tempo/tempo.yml
+    volumes:
+      - tempo-data:/var/tempo
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3200/ready >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    deploy:
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+      resources:
+        limits: {memory: 256M}
+
 volumes:
   prometheus-data:
   grafana-data:
   loki-data:
   vector-data:
+  tempo-data:
 
 configs:
   loki-config:
     file: ./loki/loki.yml
   vector-config:
     file: ./vector/vector.yaml
+  tempo-config:
+    file: ./tempo/tempo.yml
 
 networks:
   marketplace:

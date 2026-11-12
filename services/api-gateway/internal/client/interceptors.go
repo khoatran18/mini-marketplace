@@ -46,6 +46,25 @@ var writeOverrides = map[string]bool{
 	"GetAndDecreaseInventoryByID": true, // trừ tồn kho
 }
 
+// idempotentWrites: method ghi mà request mang khoá idempotency do CLIENT đặt và server dedupe theo khoá đó,
+// nên retry sau Unavailable không nhân đôi tác dụng phụ (Checkout: unique (buyer, idempotency_key)).
+// Không thêm method mà server tự sinh khoá (vd. admin refund dùng khoá theo thời gian).
+var idempotentWrites = map[string]bool{
+	"Checkout": true,
+}
+
+func methodName(fullMethod string) string {
+	if i := strings.LastIndex(fullMethod, "/"); i >= 0 {
+		return fullMethod[i+1:]
+	}
+	return fullMethod
+}
+
+// IsRetryable: method đọc, hoặc ghi có khoá idempotency (idempotentWrites).
+func IsRetryable(fullMethod string) bool {
+	return IsReadMethod(fullMethod) || idempotentWrites[methodName(fullMethod)]
+}
+
 // IsReadMethod phân loại method gRPC đầy đủ ("/pkg.Service/Name") là đọc (an toàn để retry) hay ghi.
 // Mặc định là ghi: tên không nhận ra thì coi là ghi để không bao giờ retry nhầm lệnh có tác dụng phụ.
 // Login/Register/RefreshToken/IngestEvents/MergeCart... đều là ghi.
@@ -83,14 +102,15 @@ func DeadlineInterceptor(p CallPolicy) grpc.UnaryClientInterceptor {
 	}
 }
 
-// RetryInterceptor retry CHỈ method đọc khi gặp codes.Unavailable (backoff mũ 100ms, 200ms... + jitter).
-// Method ghi KHÔNG retry: không biết request đã được server xử lý hay chưa nên retry có thể nhân đôi tác dụng phụ
-// (tạo order/payment, trừ kho...). POST /orders có Idempotency-Key nhưng việc retry ghi để dành đợt sau.
+// RetryInterceptor retry method đọc và method ghi idempotent theo khoá (idempotentWrites, hiện là Checkout)
+// khi gặp codes.Unavailable (backoff mũ 100ms, 200ms... + jitter).
+// Method ghi khác KHÔNG retry: không biết request đã được server xử lý hay chưa nên retry có thể nhân đôi tác dụng phụ
+// (tạo payment, trừ kho...).
 // DeadlineExceeded không retry; ngừng ngay khi ctx cha hết hạn/bị huỷ.
 func RetryInterceptor(service string, p CallPolicy) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		err := invoker(ctx, method, req, reply, cc, opts...)
-		if !IsReadMethod(method) {
+		if !IsRetryable(method) {
 			return err
 		}
 		backoff := p.BaseBackoff

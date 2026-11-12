@@ -13,8 +13,11 @@ import (
 	userpb "api-gateway/pkg/pb/userservice"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/backoff"
 	"log"
+	"mini-marketplace/shared/tracing"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -44,10 +47,18 @@ func newServiceClient[T any](name, addr string, createClient func(conn *grpc.Cli
 
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		tracing.ClientOption(),
+		// Kết nối lại nhanh sau khi service đích khởi động lại (mặc định gRPC: 1 s tăng dần tới 120 s, nên lời gọi ngay sau
+		// khi service bật lại có thể vẫn lỗi). Tối đa 3 s giữa hai lần thử.
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff:           backoff.Config{BaseDelay: 200 * time.Millisecond, Multiplier: 1.6, Jitter: 0.2, MaxDelay: 3 * time.Second},
+			MinConnectTimeout: 3 * time.Second,
+		}),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
-		// Thứ tự: requestid -> deadline -> retry -> metrics (mỗi lần thử đều được đếm trong mm_grpc_client_*).
+		// Thứ tự: requestid -> breaker -> deadline -> retry -> metrics (mỗi lần thử đều được đếm trong mm_grpc_client_*).
 		grpc.WithChainUnaryInterceptor(
 			requestid.UnaryClientInterceptor(),
+			BreakerInterceptor(NewBreaker(name, loadBreakerPolicy())),
 			DeadlineInterceptor(loadCallPolicy()),
 			RetryInterceptor(name, loadCallPolicy()),
 			ops.ClientInterceptor(name),

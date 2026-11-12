@@ -6,13 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"mini-marketplace/shared/reqctx"
 )
 
 // The production schema is created by each service's goose migrations; the tests only need the table that
@@ -29,7 +34,8 @@ CREATE TABLE domain_events (
   published_at TIMESTAMPTZ,
   next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_error TEXT,
-  dead_at TIMESTAMPTZ
+  dead_at TIMESTAMPTZ,
+  request_id TEXT
 );
 CREATE INDEX idx_domain_events_unpublished ON domain_events (id) WHERE status IN ('PENDING', 'FAILED');`
 
@@ -259,5 +265,121 @@ func TestSetTableValidatesAndSeparatesOutboxes(t *testing.T) {
 	var tried []string
 	if sent, err := PublishBatch(context.Background(), db, failFor(nil, &tried), 10, time.Second); sent != 1 || err != nil || len(tried) != 1 || tried[0] != "mine" {
 		t.Errorf("sent=%d err=%v tried=%v", sent, err, tried)
+	}
+}
+
+type rkey struct{}
+
+func TestRequestIDStoredAndPassedToPublisher(t *testing.T) {
+	reqctx.Use(func(c context.Context) string { s, _ := c.Value(rkey{}).(string); return s },
+		func(c context.Context, id string) context.Context { return context.WithValue(c, rkey{}, id) })
+	t.Cleanup(func() { reqctx.Use(nil, nil) })
+	db := testDB(t)
+	ctx := context.WithValue(context.Background(), rkey{}, "req-abcdef123")
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error { return Emit(tx, "t", "with", map[string]int{"v": 1}) }); err != nil {
+		t.Fatal(err)
+	}
+	emit(t, db, "without") // no request id in ctx
+	if e := rowByKey(t, db, "with"); e.RequestID == nil || *e.RequestID != "req-abcdef123" {
+		t.Fatalf("request_id not stored: %+v", e)
+	}
+	if e := rowByKey(t, db, "without"); e.RequestID != nil {
+		t.Fatalf("request_id should be NULL: %v", *e.RequestID)
+	}
+	got := map[string]string{}
+	pub := func(c context.Context, _ string, key string, _ []byte) error {
+		got[key], _ = c.Value(rkey{}).(string)
+		return nil
+	}
+	if sent, err := PublishBatch(context.Background(), db, pub, 10, time.Second); sent != 2 || err != nil {
+		t.Fatalf("sent=%d err=%v", sent, err)
+	}
+	if got["with"] != "req-abcdef123" || got["without"] != "" {
+		t.Fatalf("ctx passed to publisher: %v", got)
+	}
+}
+
+func TestListAndRequeueDead(t *testing.T) {
+	db := testDB(t)
+	for _, k := range []string{"a", "b", "c"} {
+		emit(t, db, k)
+	}
+	if err := db.Model(&Event{}).Where("key IN ?", []string{"a", "b"}).
+		Updates(map[string]any{"status": StatusDead, "attempts": 10, "dead_at": time.Now(), "last_error": "boom"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	rows, err := ListDead(db, 0)
+	if err != nil || len(rows) != 2 || rows[0].Key != "b" || rows[0].LastError == nil {
+		t.Fatalf("rows=%+v err=%v", rows, err)
+	}
+	// by id: only that row; a non-DEAD id is ignored
+	idC := rowByKey(t, db, "c").ID
+	n, err := RequeueDead(db, []uint64{rows[1].ID, idC}, 0)
+	if err != nil || n != 1 {
+		t.Fatalf("requeue by id n=%d err=%v", n, err)
+	}
+	if e := rowByKey(t, db, "a"); e.Status != StatusFailed || e.Attempts != 0 || e.DeadAt != nil {
+		t.Fatalf("a not requeued: %+v", e)
+	}
+	if e := rowByKey(t, db, "b"); e.Status != StatusDead {
+		t.Fatalf("b must stay DEAD: %+v", e)
+	}
+	// no ids: every remaining DEAD row
+	if n, err := RequeueDead(db, nil, 10); err != nil || n != 1 {
+		t.Fatalf("requeue all n=%d err=%v", n, err)
+	}
+	if n, _ := DeadCount(db); n != 0 {
+		t.Fatalf("dead=%d", n)
+	}
+	if sent, err := PublishBatch(context.Background(), db, func(context.Context, string, string, []byte) error { return nil }, 10, time.Second); sent != 3 || err != nil {
+		t.Fatalf("sent=%d err=%v", sent, err)
+	}
+}
+
+func TestAdminMountListAndRequeue(t *testing.T) {
+	db := testDB(t)
+	emit(t, db, "x")
+	emit(t, db, "y")
+	db.Model(&Event{}).Where("key = ?", "x").Updates(map[string]any{"status": StatusDead, "attempts": 10, "dead_at": time.Now(), "last_error": "boom"})
+	mux := http.NewServeMux()
+	Mount(db)(mux)
+	do := func(method, url string, hdr ...string) (int, string) {
+		req := httptest.NewRequest(method, url, nil)
+		if len(hdr) == 1 {
+			req.Header.Set("Authorization", hdr[0])
+		}
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec.Code, rec.Body.String()
+	}
+	if code, body := do("GET", "/internal/outbox/dead"); code != 200 || !strings.Contains(body, `"dead_total":1`) || !strings.Contains(body, "boom") {
+		t.Fatalf("list: %d %s", code, body)
+	}
+	if code, _ := do("POST", "/internal/outbox/requeue?id=abc"); code != 400 {
+		t.Fatalf("bad id: %d", code)
+	}
+	if code, body := do("POST", "/internal/outbox/requeue"); code != 200 || !strings.Contains(body, `"requeued":1`) {
+		t.Fatalf("requeue: %d %s", code, body)
+	}
+	if n, _ := DeadCount(db); n != 0 {
+		t.Fatalf("dead=%d", n)
+	}
+}
+
+func TestAdminMountRequiresTokenWhenConfigured(t *testing.T) {
+	t.Setenv("METRICS_TOKEN", "s3cret-token")
+	db := testDB(t)
+	mux := http.NewServeMux()
+	Mount(db)(mux)
+	for hdr, want := range map[string]int{"": 401, "Bearer wrong": 401, "Bearer s3cret-token": 200} {
+		req := httptest.NewRequest("GET", "/internal/outbox/dead", nil)
+		if hdr != "" {
+			req.Header.Set("Authorization", hdr)
+		}
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != want {
+			t.Errorf("auth %q: %d want %d", hdr, rec.Code, want)
+		}
 	}
 }

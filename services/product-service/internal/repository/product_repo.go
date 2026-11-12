@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"mini-marketplace/shared/reqctx"
 	"product-service/pkg/model"
 	"product-service/pkg/ops"
 	"product-service/pkg/outbox"
@@ -186,6 +187,7 @@ func (r *ProductRepository) ReserveInventory(ctx context.Context, orderID uint64
 			Success:   true,
 			Status:    "PENDING",
 			Processed: true,
+			RequestID: requestIDPtr(ctx),
 		}).Error
 	})
 	switch {
@@ -231,4 +233,12 @@ func (r *ProductRepository) GetProducts(ctx context.Context, page, pageSize uint
 		return nil, err
 	}
 	return products, nil
+}
+
+// requestIDPtr returns the request id of ctx for an outbox row, nil when there is none (ADR-36).
+func requestIDPtr(ctx context.Context) *string {
+	if id := reqctx.Get(ctx); id != "" {
+		return &id
+	}
+	return nil
 }

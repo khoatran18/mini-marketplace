@@ -9,6 +9,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/segmentio/kafka-go"
+
+	"mini-marketplace/shared/reqctx"
 )
 
 // maxHandlerAttempts bounds how often a failing message is retried before it is
@@ -150,8 +152,19 @@ func buildDLQMessage(topic string, msg kafka.Message, cause error, attempts int,
 	return kafka.Message{Key: msg.Key, Value: msg.Value, Headers: headers}
 }
 
+// requestIDOf returns the x-request-id header of msg ("" when absent).
+func requestIDOf(msg *kafka.Message) string {
+	for _, h := range msg.Headers {
+		if h.Key == reqctx.Header {
+			return string(h.Value)
+		}
+	}
+	return ""
+}
+
 func (c *KafkaConsumer) handleWithRetry(ctx context.Context, topic string, handler MessageHandler, msg *kafka.Message) error {
 	var err error
+	ctx = reqctx.Put(ctx, requestIDOf(msg)) // the handler's logs and any events it emits keep the originating request id
 	for attempt := 1; attempt <= maxHandlerAttempts; attempt++ {
 		if err = handler(ctx, msg); err == nil {
 			return nil

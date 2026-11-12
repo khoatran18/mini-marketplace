@@ -59,7 +59,7 @@ func TestRunOnEmptyDBIsIdempotent(t *testing.T) {
 			t.Errorf("thiếu bảng %s", tbl)
 		}
 	}
-	if n := count(t, db, "SELECT count(*) FROM "+VersionTable); n != 4 { // bản ghi 0 + baseline + outbox_dead_letter + own_outbox
+	if n := count(t, db, "SELECT count(*) FROM "+VersionTable); n != 5 { // bản ghi 0 + baseline + outbox_dead_letter + own_outbox + outbox_request_id
 		t.Errorf("version rows = %d", n)
 	}
 }

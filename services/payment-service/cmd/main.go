@@ -6,6 +6,8 @@ import (
 	"log"
 	"mini-marketplace/shared/events"
 	"mini-marketplace/shared/ops"
+	"mini-marketplace/shared/reqctx"
+	"mini-marketplace/shared/tracing"
 	"net"
 	"net/http"
 	"os"
@@ -42,6 +44,15 @@ func main() {
 	if err != nil {
 		log.Fatal("Error NewServiceConfig: ", err)
 	}
+
+	// ADR-36: request id follows events through the outbox and Kafka; stdlib log lines become JSON via zap.
+	reqctx.Use(requestid.FromContext, requestid.NewContext)
+	zap.RedirectStdLog(serviceConfig.ZapLogger)
+	stopTracing, terr := tracing.Init(context.Background(), "payment-service")
+	if terr != nil {
+		serviceConfig.ZapLogger.Warn("tracing disabled", zap.Error(terr))
+	}
+	defer stopTracing(context.Background())
 	if err := service.Migrate(serviceConfig.PostgresDB); err != nil {
 		log.Fatalf("Can not migrate database: %v", err)
 	}
@@ -94,7 +105,10 @@ func main() {
 			}),
 		},
 		// the simulated provider notifies this endpoint (internal port only, HMAC signed)
-		Mount: func(mux *http.ServeMux) { mux.HandleFunc("POST /internal/payments/webhook", svc.WebhookHandler()) },
+		Mount: func(mux *http.ServeMux) {
+			mux.HandleFunc("POST /internal/payments/webhook", svc.WebhookHandler())
+			events.Mount(serviceConfig.PostgresDB)(mux) // dead-letter list / requeue (ADR-36)
+		},
 	})
 	svc.Metrics.Register(adm.Registry(), "payment-service")
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
@@ -111,7 +125,7 @@ func main() {
 	events.Register(adm.Registry(), "payment-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
 	adm.GaugeFunc("mm_worker_last_tick_timestamp_seconds", "Unix time of the last worker round.", map[string]string{"worker": "payment_workers"}, func() float64 { return float64(lastTick.Load()) })
 
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	paymentpb.RegisterPaymentServiceServer(s, &server.PaymentServer{Service: svc})
 	reflection.Register(s)
 

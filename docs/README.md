@@ -27,6 +27,7 @@ flowchart LR
 | Phiên làm việc gần nhất đã đổi gì? | [process/04_SESSION_LOG_2026-11-12.md](process/04_SESSION_LOG_2026-11-12.md) |
 | Còn tồn đọng vấn đề gì? | [planning/01_OPEN_ISSUES.md](planning/01_OPEN_ISSUES.md) |
 | Hạ tầng còn thiếu gì để làm dự án AI lớn? | [planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md](planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md) |
+| Hạ tầng đã đủ cho agent chưa (hỏi đáp, điều tra sự cố, đề xuất / duyệt, runbook)? | [planning/05_AGENT_INFRA_READINESS.md](planning/05_AGENT_INFRA_READINESS.md) |
 | Loader / exporter / backfill dữ liệu là gì, mock từ dataset ra sao? | [planning/04_DATA_PIPELINE_NOTES.md](planning/04_DATA_PIPELINE_NOTES.md) |
 | Gọi API nào? Event Kafka nào? Bảng DB nào? | [design/](design/README.md) (`04_API_REFERENCE`, `03_EVENTS_KAFKA`, `02_DATA_MODEL`, `07_DATA_PIPELINE`) |
 | Sự cố (đơn kẹt, Kafka lag, ClickHouse…) xử lý sao? | [instruction/03_RUNBOOK.md](instruction/03_RUNBOOK.md) |

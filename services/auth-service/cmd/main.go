@@ -8,8 +8,11 @@ import (
 	"auth-service/internal/service"
 	authpb "auth-service/pkg/pb"
 	"context"
+	"go.uber.org/zap"
 	"log"
 	"mini-marketplace/shared/ops"
+	"mini-marketplace/shared/reqctx"
+	"mini-marketplace/shared/tracing"
 	"net"
 	"os"
 	"time"
@@ -27,6 +30,15 @@ func main() {
 	if err != nil {
 		log.Fatal("Error NewServiceConfig", err)
 	}
+
+	// ADR-36: request id follows events through the outbox and Kafka; stdlib log lines become JSON via zap.
+	reqctx.Use(requestid.FromContext, requestid.NewContext)
+	zap.RedirectStdLog(serviceConfig.ZapLogger)
+	stopTracing, terr := tracing.Init(context.Background(), "auth-service")
+	if terr != nil {
+		serviceConfig.ZapLogger.Warn("tracing disabled", zap.Error(terr))
+	}
+	defer stopTracing(context.Background())
 	envConfig, err := config.NewEnvConfig()
 	if err != nil {
 		log.Fatal("Error NewEnvConfig: ", err)
@@ -60,7 +72,7 @@ func main() {
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
 		adm.AttachDB(sqlDB)
 	}
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	authpb.RegisterAuthServiceServer(s, &authServer)
 
 	// Platform administrator (never self-registered): created once from ADMIN_BOOTSTRAP_USERNAME/PASSWORD

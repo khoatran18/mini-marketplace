@@ -19,6 +19,8 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+
+	"mini-marketplace/shared/reqctx"
 )
 
 const (
@@ -73,6 +75,9 @@ type Event struct {
 	NextAttemptAt time.Time `gorm:"not null"`
 	LastError     *string
 	DeadAt        *time.Time
+	// RequestID is the X-Request-ID of the request that caused the event (ADR-36); the publisher sends it as the
+	// Kafka header "x-request-id". NULL for rows written before the column existed or outside a request.
+	RequestID *string `gorm:"column:request_id"`
 }
 
 // TableName is the service's own outbox table (see SetTable).
@@ -85,7 +90,12 @@ func Emit(tx *gorm.DB, topic, key string, payload any) error {
 	if err != nil {
 		return err
 	}
-	return tx.Table(Table()).Create(&Event{Topic: topic, Key: key, Payload: b, Status: StatusPending, NextAttemptAt: time.Now()}).Error
+	e := &Event{Topic: topic, Key: key, Payload: b, Status: StatusPending, NextAttemptAt: time.Now()}
+	// tx.Statement.Context is the ctx the transaction was opened with (db.WithContext(ctx).Transaction ...).
+	if id := reqctx.Get(tx.Statement.Context); id != "" {
+		e.RequestID = &id
+	}
+	return tx.Table(Table()).Create(e).Error
 }
 
 // Options tunes the failure handling of PublishBatch.
@@ -198,6 +208,9 @@ func PublishBatchOpts(ctx context.Context, db *gorm.DB, publish PublishFunc, lim
 				break
 			}
 			mctx, cancel := context.WithTimeout(ctx, perMessage)
+			if e.RequestID != nil {
+				mctx = reqctx.Put(mctx, *e.RequestID) // the producer turns it into the Kafka header
+			}
 			err := publish(mctx, e.Topic, e.Key, e.Payload)
 			cancel()
 			if err != nil {
@@ -295,4 +308,49 @@ func Backlog(db *gorm.DB) (pending int64, oldestSeconds float64, err error) {
 		return row.N, 0, err
 	}
 	return row.N, time.Since(*row.Oldest).Seconds(), nil
+}
+
+// DeadRow is a dead-lettered outbox row without its payload body in the listing (use the id to inspect it).
+type DeadRow struct {
+	ID        uint64     `json:"id"`
+	Topic     string     `json:"topic"`
+	Key       string     `json:"key"`
+	Attempts  int        `json:"attempts"`
+	LastError *string    `json:"last_error,omitempty"`
+	DeadAt    *time.Time `json:"dead_at,omitempty"`
+	RequestID *string    `json:"request_id,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+// ListDead returns up to limit dead-lettered rows, newest first (limit <= 0 means 50, capped at 500).
+func ListDead(db *gorm.DB, limit int) ([]DeadRow, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 500 {
+		limit = 500
+	}
+	var rows []DeadRow
+	err := db.Table(Table()).Select("id, topic, key, attempts, last_error, dead_at, request_id, created_at").
+		Where("status = ?", StatusDead).Order("id DESC").Limit(limit).Scan(&rows).Error
+	return rows, err
+}
+
+// RequeueDead puts dead-lettered rows back in the queue (status FAILED, attempts 0, due now) so the worker
+// publishes them again, and returns how many it changed. ids selects rows; an empty ids requeues every DEAD
+// row up to limit (<= 0 means 100). Only DEAD rows are touched. Consumers are idempotent (at-least-once), so a
+// repeat is safe; fix the cause first (see last_error), otherwise the row dies again after MaxAttempts.
+func RequeueDead(db *gorm.DB, ids []uint64, limit int) (int64, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	q := db.Table(Table()).Where("status = ?", StatusDead)
+	if len(ids) > 0 {
+		q = q.Where("id IN ?", ids)
+	} else {
+		sub := db.Table(Table()).Select("id").Where("status = ?", StatusDead).Order("id ASC").Limit(limit)
+		q = q.Where("id IN (?)", sub)
+	}
+	res := q.Updates(map[string]any{"status": StatusFailed, "attempts": 0, "next_attempt_at": time.Now(), "dead_at": nil})
+	return res.RowsAffected, res.Error
 }

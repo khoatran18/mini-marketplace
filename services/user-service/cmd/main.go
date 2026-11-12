@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"mini-marketplace/shared/ops"
+	"mini-marketplace/shared/reqctx"
+	"mini-marketplace/shared/tracing"
 	"net"
 	"os"
 	"time"
@@ -30,6 +32,15 @@ func main() {
 	if err != nil {
 		log.Fatal("Error NewServiceConfig: ", err.Error())
 	}
+
+	// ADR-36: request id follows events through the outbox and Kafka; stdlib log lines become JSON via zap.
+	reqctx.Use(requestid.FromContext, requestid.NewContext)
+	zap.RedirectStdLog(serviceConfig.ZapLogger)
+	stopTracing, terr := tracing.Init(context.Background(), "user-service")
+	if terr != nil {
+		serviceConfig.ZapLogger.Warn("tracing disabled", zap.Error(terr))
+	}
+	defer stopTracing(context.Background())
 	fmt.Println("Create ServiceConfig successfully!")
 
 	_, err = config.NewEnvConfig()
@@ -82,7 +93,7 @@ func main() {
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
 		adm.AttachDB(sqlDB)
 	}
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), errLogInterceptor(serviceConfig.ZapLogger), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), errLogInterceptor(serviceConfig.ZapLogger), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	userpb.RegisterUserServiceServer(s, &server.UserServer{
 		UserService: userService,
 		ZapLogger:   serviceConfig.ZapLogger,

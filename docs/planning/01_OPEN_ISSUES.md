@@ -24,7 +24,7 @@ mindmap
       gRPC plaintext
       thẻ img canary trong README
     Quan sát
-      thiếu tracing, metric nghiệp vụ
+      tracing mẫu 10% (Tempo), chưa có Alertmanager
       Grafana 11 dashboard, chưa xem thật
     Công cụ
       Swagger viết tay
@@ -37,8 +37,9 @@ mindmap
 |---|---|---|---|
 | V1 | 🟡 Lần chạy thật đầu tiên (2026-10-26): 22 service lên, Traefik / Prometheus (18 target) / Grafana (11 dashboard provision, datasource OK) chạy; đã sửa healthcheck frontend, lỗi consumer Kafka 0 partition, HTTPS tự ký ([nhật ký](../process/03_SESSION_LOG_2026-10-26.md)). Còn: xem từng panel Grafana, chạy trên Kafka rỗng, nhiều node | P1 | Lần deploy đầu theo [../instruction/02_DEPLOYMENT.md](../instruction/02_DEPLOYMENT.md) §1 và xem `docker service logs` từng service |
 | V2 | SQL ClickHouse thử trên chDB 26.9; ClickHouse 24.8 thật chỉ chạy ở CI | P2 | Có thể lệch ở chi tiết hiếm |
-| V3 | ✅ 2026-11-12 trên Swarm thật: `run.mjs` 377 đạt (+ 09 hết hạn giữ hàng đạt với TTL=1), `resilience.sh` A–J đạt, `load` 150 RPS × 90 s = 12 060 request, 0 lỗi, p95 ≤ 26 ms ([nhật ký](../process/04_SESSION_LOG_2026-11-12.md) §6). Chưa chạy: bước force-payment (cần stack `ENV=dev`) | P1 | [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5 |
+| V3 | ✅ 2026-11-12 trên Swarm thật: `run.mjs` 377 đạt (+ 09 hết hạn giữ hàng đạt với TTL=1), `resilience.sh` A–J đạt, `load` 150 RPS × 90 s = 12 060 request, 0 lỗi, p95 ≤ 26 ms ([nhật ký](../process/04_SESSION_LOG_2026-11-12.md) §6). force-payment (09, `payment-service` bật `ENV=dev` tạm) cũng đạt | P1 | [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5 |
 | V4 | Chạy nhiều replica cho service ngoài gateway chưa được kiểm chứng (worker timers của order-service, worker payment…) | P2 | Outbox dùng `SKIP LOCKED` nên có cơ sở, nhưng chưa có test |
+| V6 | 🟡 `resilience.sh` D (product-service down rồi bật lại): đặt hàng ngay sau khi hồi phục đôi khi trả 503 (`transport: Error while dialing`); chưa rõ có sẵn từ trước hay do thay đổi 2026-11-12, xem [nhật ký](../process/04_SESSION_LOG_2026-11-12.md) §7.1 | P2 |
 | V5 | Frontend (nhánh UI) chưa được kiểm chứng end-to-end với backend thật | P2 | [../design/platform/07_UI_DESIGN.md](../design/platform/07_UI_DESIGN.md) |
 
 ## 2. Tính năng nghiệp vụ chưa làm
@@ -78,12 +79,12 @@ mindmap
 | S3 | Token lưu `localStorage` (rủi ro XSS); nên chuyển cookie httpOnly | P2 |
 | S4 | gRPC và Postgres giữa các service đang plaintext (`sslmode=disable`) | P3 |
 | S5 | ClickHouse, Prometheus, cổng `:8081` không có xác thực (chỉ an toàn nhờ không publish cổng). **Đã làm một phần (🟡 chưa chạy trên Swarm)**: `METRICS_TOKEN` (bearer, tuỳ chọn) khoá `/metrics`, `/version`, pprof ở cả 7 service, Prometheus gửi token; ClickHouse bắt buộc mật khẩu và chỉ nhận kết nối từ loopback + dải private (`deploy/clickhouse/users-networks.xml`, đã thử bằng container thật). **Còn lại**: Prometheus chưa bật web basic auth (cố ý: không publish, chỉ Grafana truy cập); `/health`/`/ready` vẫn mở; webhook thanh toán đã ký HMAC | P2 |
-| S6 | gRPC: đã có deadline + retry lệnh đọc ở **gateway** (🟡 chưa chạy thật); còn thiếu retry lệnh ghi có `Idempotency-Key`, circuit breaker, và deadline / retry ở order-service | P2 |
+| S6 | ✅ 2026-11-12 (ADR-36): gateway có deadline, retry lệnh đọc + `Checkout` có khoá, circuit breaker mỗi service đích. Còn: deadline / retry ở order-service khi gọi product-service | P3 |
 | S7 | `README.md` gốc có 2 thẻ `<img>` ẩn (kích thước 0×0, `display:none`) trỏ tới `canarytokens.com` — là ảnh theo dõi (canary token) chứ không phải tài liệu; nếu không chủ ý thì nên gỡ | P2 |
 
 ## 5. Quan sát (observability)
 
-- Đã có request-id (`X-Request-ID`, 🟡 chưa vào Kafka / outbox), deadline / retry đọc ở gateway, log tập trung Vector → Loki (🟡 chưa chạy trên Swarm). Còn thiếu: distributed tracing, circuit breaker, chuẩn hoá log JSON trong service. Metric nghiệp vụ (`mm_orders_*`, `mm_payments_*`, `mm_inventory_*`, `mm_rate_limited_total`, `mm_grpc_client_*`) đã thêm và test đơn vị, chưa chạy stack thật; lag Kafka dùng `kafka_consumergroup_lag` của kafka-exporter.
+- ✅ 2026-11-12 (ADR-36): request-id đi qua outbox + Kafka (header `x-request-id`), log JSON thống nhất, trace OpenTelemetry qua Tempo (mẫu 10%), 11 luật cảnh báo Prometheus. Còn: Alertmanager / kênh thông báo, span cho Kafka. Metric nghiệp vụ (`mm_orders_*`, `mm_payments_*`, `mm_inventory_*`, `mm_rate_limited_total`, `mm_grpc_client_*`); lag Kafka dùng `kafka_consumergroup_lag` của kafka-exporter.
 - Grafana có **11** dashboard (ClickHouse server, Outbox & Workers, Payments, Business, Kafka consumer lag, Logs mới viết, chưa xem trên Grafana thật; PromQL chưa chạy trên Prometheus thật).
 - 🟡 `update_config: start-first` / `failure_action: rollback` và `scripts/wait-ready.sh` đã viết, chưa chạy thử trên Swarm thật.
 - postgres-exporter và kafka-exporter đã có healthcheck; redis-exporter không làm được (image scratch, không có shell/wget/curl), trạng thái xem qua `up{job="redis"}`.

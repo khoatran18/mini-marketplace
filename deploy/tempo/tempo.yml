@@ -1,0 +1,21 @@
+# Tempo (trace backend) một node, lưu file cục bộ. Chỉ nhận OTLP/HTTP từ các service qua marketplace-net (không publish cổng).
+# Tracing chỉ bật khi service có OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4318 (ADR-36); mẫu 10% request mặc định.
+stream_over_http_enabled: true
+server:
+  http_listen_port: 3200
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:4318
+compactor:
+  compaction:
+    block_retention: 72h   # giữ trace 3 ngày
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks

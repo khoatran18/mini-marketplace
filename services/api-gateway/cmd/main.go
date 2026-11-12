@@ -5,11 +5,15 @@ import (
 	"api-gateway/internal/config"
 	"api-gateway/internal/handler"
 	"api-gateway/internal/middleware"
+	"api-gateway/internal/requestid"
 	"api-gateway/internal/router"
 	"api-gateway/internal/service"
 	"api-gateway/pkg/ops"
 	"context"
+	"go.uber.org/zap"
 	"log"
+	"mini-marketplace/shared/reqctx"
+	"mini-marketplace/shared/tracing"
 	"net/http"
 	"os"
 	"time"
@@ -46,6 +50,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// ADR-36: request id follows events through the outbox and Kafka; stdlib log lines become JSON via zap.
+	reqctx.Use(requestid.FromContext, requestid.NewContext)
+	zap.RedirectStdLog(serviceConfig.ZapLogger)
+	stopTracing, terr := tracing.Init(context.Background(), "api-gateway")
+	if terr != nil {
+		serviceConfig.ZapLogger.Warn("tracing disabled", zap.Error(terr))
+	}
+	defer stopTracing(context.Background())
 
 	// Load env for jwt, ...
 	envConfig, err := config.NewEnvConfig()

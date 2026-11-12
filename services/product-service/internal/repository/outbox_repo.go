@@ -19,6 +19,7 @@ func (r *ProductRepository) RecordFailedValidation(ctx context.Context, orderID 
 		Success:   false,
 		Status:    "PENDING",
 		Processed: true,
+		RequestID: requestIDPtr(ctx),
 	}
 	return r.DB.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(event).Error
 }

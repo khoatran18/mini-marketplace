@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"mini-marketplace/shared/events"
+	"mini-marketplace/shared/reqctx"
+	"mini-marketplace/shared/tracing"
 	"net"
 	"os"
 	"product-service/internal/config"
@@ -37,6 +39,15 @@ func main() {
 	if err != nil {
 		log.Fatal("Error NewServiceConfig", err.Error())
 	}
+
+	// ADR-36: request id follows events through the outbox and Kafka; stdlib log lines become JSON via zap.
+	reqctx.Use(requestid.FromContext, requestid.NewContext)
+	zap.RedirectStdLog(serviceConfig.ZapLogger)
+	stopTracing, terr := tracing.Init(context.Background(), "product-service")
+	if terr != nil {
+		serviceConfig.ZapLogger.Warn("tracing disabled", zap.Error(terr))
+	}
+	defer stopTracing(context.Background())
 
 	_, err = config.NewEnvConfig()
 	if err != nil {
@@ -112,6 +123,7 @@ func main() {
 			ops.FuncCheck("redis", false, func(ctx context.Context) error { return serviceConfig.RedisClient.Ping(ctx).Err() }),
 			ops.TCPCheck("kafka", os.Getenv("KAFKA_BROKERS_ADDR"), false),
 		},
+		Mount: events.Mount(serviceConfig.PostgresDB), // dead-letter list / requeue (ADR-36)
 	})
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
 		adm.AttachDB(sqlDB)
@@ -124,7 +136,7 @@ func main() {
 	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": events.Table()}, func() float64 { n, _ := backlog(); return n })
 	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": events.Table()}, func() float64 { _, a := backlog(); return a })
 	events.Register(adm.Registry(), "product-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	productpb.RegisterProductServiceServer(s, &productServer)
 	log.Printf("Product Server Listen at %v", lis.Addr())
 

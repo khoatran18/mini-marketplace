@@ -1,0 +1,106 @@
+# Quy tắc cảnh báo (ADR-36). Chưa có Alertmanager: xem tại Prometheus /alerts hoặc API /api/v1/alerts; một agent hoặc
+# script chỉ cần đọc API đó. Mỗi cảnh báo mang `runbook` (mục trong docs/instruction/03_RUNBOOK.md) và `action`
+# (loại hành động đề xuất: observe = chỉ xem; low = an toàn thử; high = cần người duyệt).
+groups:
+  - name: marketplace
+    rules:
+      - alert: ServiceDown
+        expr: up{job="mm-services"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.swarm_service }} ({{ $labels.instance }}) không scrape được"
+          runbook: "§1 readiness, §10"
+          action: low
+
+      - alert: ServiceNotReady
+        expr: mm_ready == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.service }} báo not_ready (phụ thuộc critical hỏng)"
+          runbook: "§1 readiness"
+          action: low
+
+      - alert: CircuitBreakerOpen
+        expr: mm_circuit_state == 1
+        for: 30s
+        labels: {severity: warning}
+        annotations:
+          summary: "Gateway đã mở mạch tới {{ $labels.service }}: request tới service này bị từ chối ngay (503)"
+          runbook: "§1 readiness, §10"
+          action: low
+
+      - alert: OutboxDeadRows
+        expr: mm_outbox_dead > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.service }}: {{ $value }} dòng outbox ở trạng thái DEAD (event không gửi được sau nhiều lần thử)"
+          runbook: "§5 outbox"
+          action: high   # requeue = ghi lại dữ liệu: cần người duyệt sau khi xem last_error
+
+      - alert: OutboxBacklogOld
+        expr: mm_outbox_oldest_age_seconds > 300
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.service }}: event cũ nhất trong outbox chờ {{ $value | printf \"%.0f\" }}s (Kafka hoặc worker)"
+          runbook: "§5 outbox, §6 Kafka"
+          action: low
+
+      - alert: ConsumerDLQGrowing
+        expr: increase(mm_kafka_dlq_total[15m]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: "Consumer {{ $labels.topic }} chuyển message vào DLQ"
+          runbook: "§6 DLQ"
+          action: high
+
+      - alert: ReconcileDrift
+        expr: mm_reconcile_diff_ratio > 0.02
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "ClickHouse lệch Postgres tới {{ $value | printf \"%.3f\" }} (tỉ lệ lớn nhất theo ngày/chỉ số)"
+          runbook: "§8 ClickHouse, §12 đối soát"
+          action: high   # backfill ghi đè dữ liệu phân tích
+
+      - alert: ReconcileStale
+        expr: time() - mm_reconcile_last_success_timestamp_seconds > 3600
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Không có lần đối soát Postgres/ClickHouse thành công trong 1 giờ"
+          runbook: "§8 ClickHouse"
+          action: low
+
+      - alert: AnalyticsRowsDropped
+        expr: increase(mm_ch_rows_dropped_total[10m]) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: "analytics-service làm mất dòng dữ liệu (buffer đầy, không có spool)"
+          runbook: "§8 ClickHouse"
+          action: low
+
+      - alert: GatewayServerErrors
+        expr: |
+          sum(rate(mm_http_requests_total{service="api-gateway",status=~"5.."}[5m]))
+            / clamp_min(sum(rate(mm_http_requests_total{service="api-gateway"}[5m])), 0.1) > 0.05
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "Gateway trả 5xx cho hơn 5% request trong 5 phút"
+          runbook: "§1, §2 dashboard Services"
+          action: observe
+
+      - alert: ContainerNearMemoryLimit
+        expr: |
+          container_memory_working_set_bytes{container_label_com_docker_swarm_service_name!=""}
+            / (container_spec_memory_limit_bytes{container_label_com_docker_swarm_service_name!=""} > 0) > 0.9
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.container_label_com_docker_swarm_service_name }} dùng hơn 90% giới hạn bộ nhớ"
+          runbook: "§10"
+          action: low

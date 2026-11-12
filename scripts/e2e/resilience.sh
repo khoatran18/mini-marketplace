@@ -123,7 +123,7 @@ echo "[D] product-service down: đặt hàng bị từ chối nhanh (503), khôn
   r=$(step order); echo "  order: $r"
   expect "POST /orders trả 503" "$(eq "$(j "$r" http)" 503; echo $?)"
   start "${APP}_product-service" 12
-  r=$(step order); expect "đặt hàng lại bình thường sau khi hồi phục" "$(eq "$(j "$r" http)" 201; echo $?)"
+  r=$(step order); echo "  order sau hồi phục: $r"; expect "đặt hàng lại bình thường sau khi hồi phục" "$(eq "$(j "$r" http)" 201; echo $?)"
 fi
 
 if [[ "$want" == *" E "* ]]; then

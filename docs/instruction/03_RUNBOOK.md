@@ -83,7 +83,7 @@ Sáu dashboard *ClickHouse server*, *Outbox & Workers*, *Payments*, *Business*, 
 ### Tra log theo `request_id` (dashboard *Logs*, Loki)
 1. Lấy `request_id` từ header `X-Request-ID` của response lỗi (hoặc field `request_id` trong body lỗi).
 2. Grafana → *Marketplace · Logs* → dán vào ô `request_id`, chọn `service` = tất cả, khoảng thời gian quanh lúc lỗi. Truy vấn tương đương: `{service=~".+"} | json | request_id="<id>"` (không dùng `request_id` làm nhãn).
-3. Đọc theo thứ tự thời gian qua gateway → các service để thấy service nào lỗi trước. Log không phải JSON vẫn có nhưng không lọc được theo `request_id`.
+3. Đọc theo thứ tự thời gian qua gateway → các service để thấy service nào lỗi trước. Từ ADR-36 mọi dòng log (kể cả `log.Printf` cũ) là JSON; id còn đi qua outbox và header Kafka `x-request-id`, nên một id cho ra cả chuỗi gateway → order → product → payment (các event cũ trước ADR-36 không có id).
 4. Không thấy log nào: kiểm Vector (`docker service logs marketplace-obs_vector`), Loki `/ready`, `up{job="loki"}` / `up{job="vector"}` ở Prometheus. Số điện thoại / thẻ dạng có dấu cách không bị che (xem [../design/05_SECURITY.md](../design/05_SECURITY.md)).
 
 ## 3. Đơn kẹt `PENDING`
@@ -176,7 +176,15 @@ Không đặt `SUCCESS` để "bỏ qua" nếu chưa chắc: event đó sẽ m�
 
 Metric: gauge `mm_outbox_pending{table="<svc>_domain_events"}`, `mm_outbox_oldest_age_seconds`, `mm_outbox_dead` (số dòng `DEAD`, cần xử lý khi > 0) và counter `mm_outbox_published_total`, `mm_outbox_publish_failures_total`, `mm_outbox_dead_total` (từ lúc process khởi động) ở `:8081/metrics` của order/product/payment (mỗi service chỉ đếm bảng của chính nó). Hai nguyên nhân thường gặp: (a) Kafka không tới được → mọi dòng `FAILED`/`PENDING` tăng, tự hết khi Kafka về (không bị `DEAD`); (b) một dòng "độc" (publish luôn lỗi, vd. payload quá lớn) → thử lại theo backoff rồi vào `DEAD`; các dòng key khác không bị chặn, chỉ các dòng sau cùng key chờ.
 Phát lại một event đã `SUCCESS`: `UPDATE <svc>_domain_events SET status='PENDING' WHERE id=<id>;` (consumer idempotent). Outbox **cũ** vẫn còn ở auth (`pwd_version_events`), user (`create_seller_events`), product (`validate_order_events`), order (`create_order_events`, `cancel_order_events`): đặt cột `status` về `'PENDING'` theo khoá chính của bảng đó.
-Chưa có API requeue (`/admin/system/outbox*` chưa làm): requeue bằng SQL ở trên.
+**Requeue qua API nội bộ (ADR-36)** trên cổng admin `:8081` của order / product / payment (chạy trong mạng swarm, ví dụ từ container tạm; có `METRICS_TOKEN` thì thêm `-H "Authorization: Bearer $METRICS_TOKEN"`):
+
+```bash
+curl -s http://order-service:8081/internal/outbox/dead            # liệt kê DEAD (không kèm payload), có request_id để tra log
+curl -s -X POST 'http://order-service:8081/internal/outbox/requeue?id=12&id=13'   # requeue đúng các id đó
+curl -s -X POST 'http://order-service:8081/internal/outbox/requeue?limit=100'     # hoặc tất cả DEAD (tối đa limit)
+```
+
+Chỉ hàng `DEAD` bị chạm; sửa nguyên nhân (`last_error`) trước, nếu không hàng sẽ chết lại sau `OUTBOX_MAX_ATTEMPTS`. Cảnh báo `OutboxDeadRows` (mức `high`: cần người duyệt) báo khi `mm_outbox_dead > 0` quá 5 phút. Chưa có route qua gateway (`/admin/system/outbox*`); SQL ở trên vẫn dùng được.
 
 ## 6. Kafka lag / consumer đứng im
 
@@ -347,3 +355,31 @@ $KAFKA/kafka-metadata-quorum.sh --bootstrap-server broker1:9092 describe --statu
 - Mất 1 broker (`docker service scale marketplace-infra_broker3=0`): producer/consumer vẫn chạy (RF 3, min ISR 2); khi bật lại broker tự đồng bộ. Mất 2 broker: ghi bị từ chối (dưới min ISR) và quorum controller mất; đơn vẫn được nhận nhờ outbox và xử lý khi cụm trở lại. Kịch bản kiểm: `scripts/e2e/resilience.sh J` (1 broker) và `B` (cả 3).
 - Topic do service tạo qua `EnsureTopicExist` có RF `min(3, số broker)`; kiểm bằng lệnh `--describe` ở trên (topic tạo trước khi đổi code có thể còn RF 1).
 - Chế độ `LITE=true`: chỉ `broker1` chạy (RF 1).
+
+## 13. Cảnh báo, mức hành động, trace và circuit breaker (ADR-36, ADR-37)
+
+**Đọc cảnh báo đang bắn:** Prometheus `/alerts` hoặc `GET /api/v1/alerts` (trong mạng swarm: `http://prometheus:9090/api/v1/alerts`). Luật ở `deploy/prometheus/alerts.yml`; mỗi luật có annotation `runbook` (mục ở file này) và `action` = mức tác động của hành động xử lý đề xuất:
+
+| `action` | Nghĩa | Ai được làm |
+|---|---|---|
+| `observe` | chỉ cần xem thêm (dashboard, log, trace) | agent / người, không cần duyệt |
+| `low` | hành động ít rủi ro, đảo ngược được: chạy lại một lần kiểm tra, `docker service update --force` một service không trạng thái, scale lại | agent đề xuất, người bấm xác nhận (hoặc tự động nếu chủ hệ thống cho phép) |
+| `high` | ghi lại / sửa dữ liệu hoặc mất thời gian dài: requeue outbox, `backfill`, hoàn tiền, restore backup | **luôn cần người duyệt**, ghi lý do |
+
+| Cảnh báo | Nghĩa | Xem mục | `action` |
+|---|---|---|---|
+| `ServiceDown`, `ServiceNotReady` | không scrape được / `/ready` 503 | §1, §10 | low |
+| `CircuitBreakerOpen` | gateway đã mở mạch tới một service (request tới đó bị 503 ngay) | §1 + dưới đây | low |
+| `OutboxDeadRows` | có hàng outbox DEAD | §5 | high |
+| `OutboxBacklogOld` | event cũ nhất chờ > 5 phút | §5, §6 | low |
+| `ConsumerDLQGrowing` | message vào DLQ của consumer | §6 | high |
+| `ReconcileDrift`, `ReconcileStale` | ClickHouse lệch Postgres / đối soát không chạy | §8, §12 | high / low |
+| `AnalyticsRowsDropped` | analytics mất dòng dữ liệu | §8 | low |
+| `GatewayServerErrors` | > 5% request trả 5xx | §1, §2 | observe |
+| `ContainerNearMemoryLimit` | container > 90% giới hạn bộ nhớ | §10 | low |
+
+**Circuit breaker:** `mm_circuit_state{service}` = 1 nghĩa là gateway ngừng gọi service đó (503 `circuit open: <service>`) trong `CIRCUIT_COOLDOWN_MS` (10 s), rồi thử một lời gọi. Mở mạch là **triệu chứng**, không phải nguyên nhân: tìm vì sao service đó lỗi (`/ready` của nó, log, §1). Tự đóng lại khi service trả lời. Khẩn cấp có thể tắt bằng `CIRCUIT_FAILURE_THRESHOLD=0` (cần update gateway); không nên làm khi service đích đang hỏng.
+
+**Trace (Tempo, Grafana → Explore → Tempo):** bật khi service có `OTEL_EXPORTER_OTLP_ENDPOINT` (mặc định trỏ `http://tempo:4318`). Lấy mẫu 10% (`OTEL_TRACES_SAMPLER_ARG`), nên request lỗi cụ thể có thể không có trace: dùng `request_id` + Loki (§2) trước, trace để xem đoạn nào chậm. Tìm theo thuộc tính `request_id` hoặc `service.name`. Tracing hỏng không ảnh hưởng nghiệp vụ (xuất span là bất đồng bộ, mất span thì bỏ).
+
+**Đối soát Postgres / ClickHouse tự động:** `GET /admin/analytics/data-health` có khoá `reconcile` (nếu `RECONCILE_PG_DSN` được đặt, mặc định bật). `mismatches > 0` kéo dài sau khi pipeline đã hết lag nghĩa là lệch thật; chạy `backfill reconcile` (§12) để xem chi tiết, sửa bằng `backfill` là hành động `high`.

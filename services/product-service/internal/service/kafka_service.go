@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"mini-marketplace/shared/reqctx"
 	"product-service/internal/repository"
 	"product-service/pkg/dto"
 	"product-service/pkg/outbox"
@@ -145,6 +146,9 @@ func (s *ProductService) producerValOrdKafkaEvent(ctx context.Context, eventMode
 	eventJson, err := json.Marshal(eventModel)
 	if err != nil {
 		return err
+	}
+	if eventModel.RequestID != nil {
+		ctx = reqctx.Put(ctx, *eventModel.RequestID) // becomes the Kafka header x-request-id (ADR-36)
 	}
 	// Key = order ID keeps all events of an order on one partition, in order.
 	key := []byte(strconv.FormatUint(eventModel.OrderID, 10))

@@ -33,10 +33,22 @@ type Config struct {
 	Brokers            []string
 	// Retention of raw events in months (the TTL of events_raw)
 	EventsRetentionMonths int
+	// Reconcile monitor (ADR-37): off unless ReconcilePGDSN (a read-only Postgres DSN) is set.
+	ReconcilePGDSN     string
+	ReconcileInterval  time.Duration
+	ReconcileDays      int
+	ReconcileTolerance float64
 }
 
 func envInt(key string, def int) int {
 	if v, err := strconv.Atoi(os.Getenv(key)); err == nil {
+		return v
+	}
+	return def
+}
+
+func envFloat(key string, def float64) float64 {
+	if v, err := strconv.ParseFloat(os.Getenv(key), 64); err == nil && v >= 0 {
 		return v
 	}
 	return def
@@ -64,6 +76,10 @@ func FromEnv() (*Config, error) {
 		SpoolDir:              os.Getenv("ANALYTICS_SPOOL_DIR"),
 		SpoolMaxBytes:         int64(envInt("ANALYTICS_SPOOL_MAX_MB", 256)) << 20,
 		EventsRetentionMonths: envInt("EVENTS_RETENTION_MONTHS", 13),
+		ReconcilePGDSN:        os.Getenv("RECONCILE_PG_DSN"),
+		ReconcileInterval:     time.Duration(envInt("RECONCILE_INTERVAL_SEC", 600)) * time.Second,
+		ReconcileDays:         envInt("RECONCILE_DAYS", 2),
+		ReconcileTolerance:    envFloat("RECONCILE_TOLERANCE", 0.02),
 	}
 	for _, b := range strings.Split(os.Getenv("KAFKA_BROKERS_ADDR"), ",") {
 		if b = strings.TrimSpace(b); b != "" {

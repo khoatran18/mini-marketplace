@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log"
+	"mini-marketplace/shared/tracing"
 	"net"
 	"os"
 	"sync"
@@ -11,12 +13,14 @@ import (
 
 	_ "time/tzdata" // Asia/Ho_Chi_Minh must resolve inside the minimal alpine image
 
+	_ "github.com/jackc/pgx/v5/stdlib" // read-only Postgres connection of the reconcile monitor
 	"github.com/lpernett/godotenv"
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"analytics-service/internal/backfill"
 	"analytics-service/internal/ch"
 	"analytics-service/internal/config"
 	"analytics-service/internal/ingest"
@@ -29,6 +33,12 @@ import (
 
 func main() {
 	godotenv.Load(".env")
+	ops.JSONStdLog("analytics-service") // same JSON shape as the zap services (ADR-36)
+	stopTracing, terr := tracing.Init(context.Background(), "analytics-service")
+	if terr != nil {
+		log.Printf("tracing disabled: %v", terr)
+	}
+	defer stopTracing(context.Background())
 	cfg, err := config.FromEnv()
 	if err != nil {
 		log.Fatal(err)
@@ -73,6 +83,20 @@ func main() {
 		cache = service.RedisCache{C: rdb}
 	}
 	svc := &service.Service{Q: &store.Queries{DB: db}, Sink: sink, Cache: cache, CacheTTL: cfg.CacheTTL}
+
+	// Postgres vs ClickHouse comparison on a schedule (ADR-37); off without RECONCILE_PG_DSN.
+	var mon *backfill.Monitor
+	if cfg.ReconcilePGDSN != "" {
+		pg, err := sql.Open("pgx", cfg.ReconcilePGDSN)
+		if err != nil {
+			log.Fatalf("RECONCILE_PG_DSN: %v", err)
+		}
+		pg.SetMaxOpenConns(2)
+		mon = &backfill.Monitor{PG: pg, CH: db, Days: cfg.ReconcileDays, Tolerance: cfg.ReconcileTolerance, Interval: cfg.ReconcileInterval}
+		go mon.Run(ctx)
+		svc.Reconcile = func() any { return mon.Snapshot() }
+		log.Printf("reconcile monitor enabled: every %s over the last %d days, tolerance %.3f", cfg.ReconcileInterval, cfg.ReconcileDays, cfg.ReconcileTolerance)
+	}
 
 	// Kafka → ClickHouse (idempotent consumers)
 	kc := cfg.NewKafka()
@@ -119,7 +143,24 @@ func main() {
 	g("mm_events_accepted_total", "Tracking events accepted.", func() float64 { a, _ := svc.Counters(); return float64(a) })
 	g("mm_events_rejected_total", "Tracking events rejected (validation).", func() float64 { _, r := svc.Counters(); return float64(r) })
 
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	if mon != nil {
+		g("mm_reconcile_diff_ratio", "Largest per-day relative difference between ClickHouse and Postgres in the last reconcile (-1 before the first run).", mon.MaxRatio)
+		g("mm_reconcile_mismatches", "Day-level lines over the tolerance in the last reconcile.", func() float64 {
+			if r := mon.Snapshot().Report; r != nil {
+				return float64(r.Mismatches)
+			}
+			return 0
+		})
+		g("mm_reconcile_last_success_timestamp_seconds", "Unix time of the last reconcile run that completed (0 = never).", func() float64 {
+			if t := mon.Snapshot().LastSuccess; t != nil {
+				return float64(t.Unix())
+			}
+			return 0
+		})
+		g("mm_reconcile_failures_total", "Reconcile runs that could not complete (database error).", func() float64 { return float64(mon.Snapshot().Failures) })
+	}
+
+	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	pb.RegisterAnalyticsServiceServer(s, &server.Server{Service: svc})
 	reflection.Register(s)
 

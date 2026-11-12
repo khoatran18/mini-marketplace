@@ -14,6 +14,7 @@ import (
 func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *config.ServiceConfig, envConfig *config.EnvConfig) {
 
 	router.Use(middleware.RequestIDMiddleware())
+	router.Use(middleware.TracingMiddleware())
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     envConfig.AllowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},

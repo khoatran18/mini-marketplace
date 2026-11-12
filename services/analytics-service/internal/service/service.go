@@ -33,6 +33,8 @@ type Service struct {
 	Cache    Cache
 	CacheTTL time.Duration
 	Now      func() time.Time
+	// Reconcile, when set, adds the Postgres-vs-ClickHouse comparison to the data_health report (ADR-37).
+	Reconcile func() any
 
 	accepted, rejected atomic.Int64
 }
@@ -170,7 +172,14 @@ func (s *Service) Query(ctx context.Context, r Request) (*Result, error) {
 	case "search_terms":
 		data, err = s.Q.SearchTerms(ctx, rg, r.Limit)
 	case "data_health":
-		data, err = s.Q.DataHealth(ctx)
+		var h map[string]any
+		h, err = s.Q.DataHealth(ctx)
+		if err == nil {
+			if s.Reconcile != nil {
+				h["reconcile"] = s.Reconcile() // Postgres vs ClickHouse (ADR-37); nil when the monitor is off
+			}
+			data = h
+		}
 	}
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, "analytics store error")

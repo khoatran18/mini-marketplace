@@ -20,6 +20,9 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"mini-marketplace/shared/reqctx"
+	"product-service/internal/requestid"
 )
 
 // testService connects to an isolated database on TEST_POSTGRES_DSN
@@ -358,5 +361,27 @@ func TestReturnedOrderRestocksOnce(t *testing.T) {
 	s.ProductRepo.DB.Model(&model.InventoryLedger{}).Where("product_id = ? AND reason = ?", a, model.ReasonReturn).Count(&n)
 	if n != 1 {
 		t.Errorf("return ledger rows = %d, want 1", n)
+	}
+}
+
+// ADR-36: the request id of the order's create_order message follows the validation result to Kafka.
+func TestValidationResultKeepsRequestID(t *testing.T) {
+	reqctx.Use(requestid.FromContext, requestid.NewContext)
+	t.Cleanup(func() { reqctx.Use(nil, nil) })
+	s := testService(t)
+	a := seed(t, s, 1, 10, 5)
+	ctx := requestid.NewContext(context.Background(), "req-abcdef1234")
+	if err := s.ValidateProductInventory(ctx, createOrderMsg(7, dto.ItemEvent{ProductID: a, Quantity: 1})); err != nil {
+		t.Fatal(err)
+	}
+	if e := validationOf(t, s, 7); e.RequestID == nil || *e.RequestID != "req-abcdef1234" {
+		t.Fatalf("request id not stored: %+v", e)
+	}
+	// without an id the column stays NULL
+	if err := s.ValidateProductInventory(context.Background(), createOrderMsg(8, dto.ItemEvent{ProductID: a, Quantity: 1})); err != nil {
+		t.Fatal(err)
+	}
+	if e := validationOf(t, s, 8); e.RequestID != nil {
+		t.Fatalf("expected NULL, got %q", *e.RequestID)
 	}
 }

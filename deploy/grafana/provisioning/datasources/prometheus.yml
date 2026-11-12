@@ -18,3 +18,10 @@ datasources:
     editable: false
     jsonData:
       maxLines: 1000
+  # Trace (Tempo, xem deploy/tempo/tempo.yml; ADR-36). Bật bằng OTEL_EXPORTER_OTLP_ENDPOINT ở các service.
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false

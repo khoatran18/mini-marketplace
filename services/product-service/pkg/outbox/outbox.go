@@ -14,9 +14,12 @@ type ValidateOrderEvent struct {
 	// Returned is set once the shipped goods of a refunded (returned) order went back to available stock.
 	Returned  bool      `gorm:"notnull;default:false"`
 	CreatedAt time.Time `gorm:"notnull;index:idx_status_created_at,priority:2"`
+	// RequestID is the request that caused the validation (ADR-36); the publisher sends it as the Kafka header.
+	RequestID *string `gorm:"column:request_id"`
 }
 
 type ValidateOrderKafkaEvent struct {
-	OrderID uint64 `json:"order_id"`
-	Success bool   `json:"success"`
+	OrderID   uint64  `json:"order_id"`
+	Success   bool    `json:"success"`
+	RequestID *string `json:"-" gorm:"column:request_id"` // not part of the payload, only the header
 }

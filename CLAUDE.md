@@ -14,9 +14,9 @@ services/user-service/    buyer/seller profiles, delivery addresses   gRPC :5005
 services/analytics-service/ tracking + Kafka events → ClickHouse, scoped reports              gRPC :50055
 services/payment-service/ SIMULATED payments (mockpay), webhooks, refunds                     gRPC :50057
 (every Go service also serves an internal admin HTTP port :8081: /health /healthz /ready /readyz /metrics /version)
-shared/               Go module mini-marketplace/shared: ops, events (outbox worker), messagequeue/kafkaimpl (ADR-33)
-deploy/               infra.yml (postgres, redis, clickhouse, kafka), observability.yml (prometheus, grafana), services.yml (traefik + apps), grafana/, prometheus/, traefik/, .env.example
-scripts/              gen-dev-certs.sh, build-images.sh, deploy.sh, teardown.sh, protogen/gen.sh, dev/chdb_server.py (+gen_traffic.py), e2e/ (outdated)
+shared/               Go module mini-marketplace/shared: ops, events (outbox worker + dead-letter tools), messagequeue/kafkaimpl, reqctx, tracing (ADR-33, ADR-36)
+deploy/               infra.yml (postgres, redis, clickhouse, kafka), observability.yml (prometheus + alerts.yml, grafana, loki/vector, tempo), services.yml (traefik + apps), grafana/, prometheus/, traefik/, .env.example
+scripts/              gen-dev-certs.sh, build-images.sh, deploy.sh, teardown.sh, backup-postgres.sh, protogen/gen.sh, dev/chdb_server.py (+gen_traffic.py), e2e/ (outdated)
 .github/workflows/    CI
 ```
 Each service is its own Go module (`go.mod`) that imports `shared/` via `replace ../../shared`; run go commands from `services/<name>`, but build images with the repo root as context: `docker build -f services/<name>/Dockerfile .` (or `scripts/build-images.sh`). Test shared code with `cd shared && go test ./...`.
@@ -51,6 +51,6 @@ cd apps/frontend && npm install && npm run dev
 - Money is `NUMERIC(18,2)` in Postgres, `float64` (VND) on the REST/gRPC wire, integer cents in arithmetic (`order-service/internal/service/money.go`); Kafka events carry integer `*_minor` (1/100 VND). Platform timezone is fixed `Asia/Ho_Chi_Minh`.
 - Payments are SIMULATED only (never store card data). Analytics revenue = subtotal of orders PAID (online) / DELIVERED (COD) minus refunds.
 - Postgres schema changes go through goose migrations in `services/<svc>/migrations/NNNNN_*.sql` (embedded, run at startup, version table `goose_db_version_<svc>`); never add `AutoMigrate`. Pin goose at v3.26.0 (v3.29 needs Go 1.26).
-- `X-Request-ID` (HTTP) / `x-request-id` (gRPC metadata) is set by the gateway and propagated by each service's `internal/requestid`; log it, never use it as a Loki label. Gateway gRPC calls have deadlines (`GRPC_TIMEOUT_*`) and retry only read methods.
+- `X-Request-ID` (HTTP) / `x-request-id` (gRPC metadata) is set by the gateway and propagated by each service's `internal/requestid`; log it, never use it as a Loki label. The id also rides the outbox (`request_id` column, set from the tx context: open transactions with `db.WithContext(ctx)`) and the Kafka header `x-request-id` (`shared/reqctx`; each service calls `reqctx.Use` in `main`). Gateway gRPC calls have deadlines (`GRPC_TIMEOUT_*`), a per-service circuit breaker (`CIRCUIT_*`), and retry only read methods plus the key-idempotent `Checkout` (`idempotentWrites`). Tracing (OTel → Tempo) is on when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; log through zap (stdlib `log` is redirected to JSON).
 - Add tests with every behavior change (see `docs/instruction/04_TESTING.md`).
 - Demo data only with `SEED_DEMO_DATA=true` (never in production).

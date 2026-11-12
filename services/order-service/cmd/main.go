@@ -6,6 +6,8 @@ import (
 	"log"
 	"mini-marketplace/shared/events"
 	"mini-marketplace/shared/ops"
+	"mini-marketplace/shared/reqctx"
+	"mini-marketplace/shared/tracing"
 	"net"
 	"order-service/internal/client/clientmanager"
 	"order-service/internal/client/serviceclientmanager"
@@ -44,6 +46,15 @@ func main() {
 	if err != nil {
 		log.Fatal("Error NewServiceConfig", err.Error())
 	}
+
+	// ADR-36: request id follows events through the outbox and Kafka; stdlib log lines become JSON via zap.
+	reqctx.Use(requestid.FromContext, requestid.NewContext)
+	zap.RedirectStdLog(serviceConfig.ZapLogger)
+	stopTracing, terr := tracing.Init(context.Background(), "order-service")
+	if terr != nil {
+		serviceConfig.ZapLogger.Warn("tracing disabled", zap.Error(terr))
+	}
+	defer stopTracing(context.Background())
 
 	_, err = config.NewEnvConfig()
 	if err != nil {
@@ -127,6 +138,7 @@ func main() {
 				return nil
 			}),
 		},
+		Mount: events.Mount(serviceConfig.PostgresDB), // dead-letter list / requeue (ADR-36)
 	})
 	if sqlDB, err := serviceConfig.PostgresDB.DB(); err == nil {
 		adm.AttachDB(sqlDB)
@@ -137,7 +149,7 @@ func main() {
 	events.Register(adm.Registry(), "order-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
 	adm.GaugeFunc("mm_worker_last_tick_timestamp_seconds", "Unix time of the last timers round.", map[string]string{"worker": "order_timers"}, func() float64 { return float64(lastTick.Load()) })
 
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	orderpb.RegisterOrderServiceServer(s, &server.OrderServer{
 		OrderService: orderService,
 		ZapLogger:    serviceConfig.ZapLogger,

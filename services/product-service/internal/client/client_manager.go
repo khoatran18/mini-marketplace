@@ -2,10 +2,13 @@ package client
 
 import (
 	"errors"
+	"google.golang.org/grpc/backoff"
 	"log"
+	"mini-marketplace/shared/tracing"
 	"product-service/internal/config"
 	"product-service/internal/requestid"
 	authpb "product-service/pkg/client/authclient"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -21,6 +24,13 @@ type ServiceClient struct {
 func NewServiceClient[T any](addr string, createClient func(conn *grpc.ClientConn) T) (*ServiceClient, error) {
 
 	conn, err := grpc.NewClient(addr,
+		tracing.ClientOption(),
+		// Kết nối lại nhanh sau khi service đích khởi động lại (mặc định gRPC: 1 s tăng dần tới 120 s, nên lời gọi ngay sau
+		// khi service bật lại có thể vẫn lỗi). Tối đa 3 s giữa hai lần thử.
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff:           backoff.Config{BaseDelay: 200 * time.Millisecond, Multiplier: 1.6, Jitter: 0.2, MaxDelay: 3 * time.Second},
+			MinConnectTimeout: 3 * time.Second,
+		}),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
 		grpc.WithChainUnaryInterceptor(requestid.UnaryClientInterceptor()),
