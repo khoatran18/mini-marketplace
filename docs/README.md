@@ -24,7 +24,7 @@ flowchart LR
 | Một request đi qua những đâu? (có sơ đồ) | [overview/02_REQUEST_FLOWS.md](overview/02_REQUEST_FLOWS.md) |
 | Cài gì, chạy lệnh gì, mở giao diện ở địa chỉ nào, đăng nhập bằng gì? | [instruction/01_QUICKSTART.md](instruction/01_QUICKSTART.md) |
 | Đã làm được những gì? | [process/01_IMPLEMENTATION_STATUS.md](process/01_IMPLEMENTATION_STATUS.md) |
-| Phiên làm việc gần nhất đã đổi gì? | [process/02_SESSION_LOG_2026-10-25.md](process/02_SESSION_LOG_2026-10-25.md) |
+| Phiên làm việc gần nhất đã đổi gì? | [process/04_SESSION_LOG_2026-11-12.md](process/04_SESSION_LOG_2026-11-12.md) |
 | Còn tồn đọng vấn đề gì? | [planning/01_OPEN_ISSUES.md](planning/01_OPEN_ISSUES.md) |
 | Hạ tầng còn thiếu gì để làm dự án AI lớn? | [planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md](planning/03_INFRA_GAPS_FOR_LARGE_PROJECT.md) |
 | Loader / exporter / backfill dữ liệu là gì, mock từ dataset ra sao? | [planning/04_DATA_PIPELINE_NOTES.md](planning/04_DATA_PIPELINE_NOTES.md) |

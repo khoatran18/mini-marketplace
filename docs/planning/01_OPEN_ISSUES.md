@@ -20,7 +20,6 @@ mindmap
       backfill ClickHouse mới là CLI
       Kafka 3 broker; topic do service tạo có RF = min(3, số broker) (đã kiểm: RF 3, ISR đủ)
     Bảo mật
-      xoay secret trong lịch sử git
       token trong localStorage
       gRPC plaintext
       thẻ img canary trong README
@@ -38,7 +37,7 @@ mindmap
 |---|---|---|---|
 | V1 | 🟡 Lần chạy thật đầu tiên (2026-10-26): 22 service lên, Traefik / Prometheus (18 target) / Grafana (11 dashboard provision, datasource OK) chạy; đã sửa healthcheck frontend, lỗi consumer Kafka 0 partition, HTTPS tự ký ([nhật ký](../process/03_SESSION_LOG_2026-10-26.md)). Còn: xem từng panel Grafana, chạy trên Kafka rỗng, nhiều node | P1 | Lần deploy đầu theo [../instruction/02_DEPLOYMENT.md](../instruction/02_DEPLOYMENT.md) §1 và xem `docker service logs` từng service |
 | V2 | SQL ClickHouse thử trên chDB 26.9; ClickHouse 24.8 thật chỉ chạy ở CI | P2 | Có thể lệch ở chi tiết hiếm |
-| V3 | 🟡 E2E đã viết lại (11 kịch bản, `resilience.sh` A..I, `scripts/load`); trên stack thật mới chạy `resilience.sh A` (đạt). Còn B..I, bộ chính `run.mjs`, `load`; chạy rồi sửa chỗ lệch contract | P1 | [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5 |
+| V3 | 🟡 Ngày 2026-11-12 trên Swarm thật: `run.mjs` 375 đạt (09, 10 SKIP vì chưa bật biến), `resilience.sh` B–J đạt (A đã sửa test 503/504, chưa chạy lại), `load` 0 lỗi nhưng 74% bị rate limit nên chưa đo tải thật ([nhật ký](../process/04_SESSION_LOG_2026-11-12.md)). Còn: load với rate limit nâng, 09 / 10, A | P1 | [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5 |
 | V4 | Chạy nhiều replica cho service ngoài gateway chưa được kiểm chứng (worker timers của order-service, worker payment…) | P2 | Outbox dùng `SKIP LOCKED` nên có cơ sở, nhưng chưa có test |
 | V5 | Frontend (nhánh UI) chưa được kiểm chứng end-to-end với backend thật | P2 | [../design/platform/07_UI_DESIGN.md](../design/platform/07_UI_DESIGN.md) |
 
@@ -75,7 +74,6 @@ mindmap
 
 | # | Vấn đề | Ưu tiên |
 |---|---|---|
-| S1 | Mọi bí mật từng commit trước khi dọn repo (JWT secret cũ, mật khẩu DB / Elastic, htpasswd Traefik, khóa TLS) **vẫn còn trong lịch sử git** → phải xoay (rotate) | P1 |
 | S2 | Username / password bị giới hạn `^[a-zA-Z0-9_]{3,16}$` bởi hợp đồng protobuf — mật khẩu tối đa 16 ký tự là yếu | P2 |
 | S3 | Token lưu `localStorage` (rủi ro XSS); nên chuyển cookie httpOnly | P2 |
 | S4 | gRPC và Postgres giữa các service đang plaintext (`sslmode=disable`) | P3 |

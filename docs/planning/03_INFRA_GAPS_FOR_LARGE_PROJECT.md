@@ -110,7 +110,6 @@ flowchart LR
 
 | # | Thiếu | Hiện trạng | Cỡ |
 |---|---|---|---|
-| P1 | Xoay các bí mật từng nằm trong lịch sử git | còn nguyên trong lịch sử | S |
 | P2 | `audit_log`, khóa tài khoản, xác thực email, đặt lại mật khẩu, logout | chưa có | M |
 | P3 | Token trong cookie httpOnly thay `localStorage` | chưa | S–M |
 | P4 | TLS cho gRPC / Postgres nội bộ | plaintext | M |
@@ -134,7 +133,7 @@ Bản e2e cũ (`e2e.mjs`, `resilience.mjs`) viết cho API **trước** khi có 
 
 ```mermaid
 flowchart LR
-  A["1. Nền đáng tin<br/>R1 chạy thật + e2e<br/>R4 dead-letter<br/>R5 backup có thử khôi phục<br/>P1 xoay secret"]
+  A["1. Nền đáng tin<br/>R1 chạy thật + e2e<br/>R4 dead-letter<br/>R5 backup có thử khôi phục"]
   B["2. Mở đường dữ liệu<br/>S1 request_id<br/>S3 wishlist, S5 nối danh tính<br/>D5 datagen<br/>D4 đối soát + backfill<br/>D3 snapshot, S6 consent"]
   C["3. Mở đường scope<br/>D2 vector store: scope 1, 2<br/>D1 + S4 upload: scope 3, 11<br/>S2 review: scope 7"]
   D["4. Khung tích hợp<br/>I1 feature flag<br/>I3 job nền, D6 scheduler<br/>I6 OpenAPI, I4 token job nền"]
