@@ -520,7 +520,7 @@
       "description": "node-exporter mount `/` của host tại /host",
       "targets": [
         {
-          "expr": "100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/host\"} / node_filesystem_size_bytes{mountpoint=\"/host\"})",
+          "expr": "100 * (1 - node_filesystem_avail_bytes{mountpoint=~\"/|/host\"} / node_filesystem_size_bytes{mountpoint=~\"/|/host\"})",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }

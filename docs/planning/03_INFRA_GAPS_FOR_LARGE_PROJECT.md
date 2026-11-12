@@ -86,7 +86,7 @@ flowchart LR
 | R2 | **Kiểm thử tải** (load / soak) | biết giới hạn trước khi thêm tải AI | 🟡 `scripts/load/load.mjs` đã viết (RPS cố định, p50/p95/p99), mới thử với mock HTTP, chưa chạy vào stack thật | S |
 | R3 | **Kafka 3 broker (RF 3, min ISR 2, topic của service cũng RF 3); không schema registry** (DLQ đã có) | chưa có schema registry | `infra.yml`: 3 node KRaft; `kafkaimpl/kafka_client.go` `ReplicationFactor: 1` | S |
 | R4 | ✅ **Outbox dùng chung một bảng, dòng độc chặn đầu hàng** | event cho ML đứng im | ADR-23; dead-letter (R2) và bảng riêng mỗi service (ADR-34) đã xong | M |
-| R5 | **Postgres / ClickHouse / Redis đơn node, backup thủ công** | mất dữ liệu nguồn sự thật | runbook chỉ có hướng dẫn `pg_dump` tay; chưa có lịch / kiểm thử khôi phục | M |
+| R5 | **Postgres / ClickHouse / Redis đơn node, backup thủ công** | mất dữ liệu nguồn sự thật | Postgres: đã có `scripts/backup-postgres.sh` (backup + verify khôi phục, 2026-11-12); còn thiếu: cài cron, sao chép ra ngoài máy, ClickHouse chưa có script | M |
 | R6 | **Mỗi service Go 1 replica**, chưa kiểm chứng chạy nhiều replica | điểm nghẽn đơn; cập nhật gây gián đoạn | chỉ gateway 2 replica; 🟡 `update_config: start-first` / rollback đã viết, chưa thử trên Swarm thật; chưa kiểm chứng nhiều replica | M |
 | R7 | **Thiếu tracing / request-id / metric nghiệp vụ** | gỡ lỗi nhiều tầng khi thêm dịch vụ mới | đã có metric RED + hạ tầng + metric nghiệp vụ (`mm_orders_*`, `mm_payments_*`, `mm_inventory_*`, `mm_grpc_client_*`; chưa chạy stack thật) và lag consumer qua kafka-exporter; đã có request-id xuyên service (🟡, chưa vào Kafka) và log tập trung Loki (🟡); chưa có tracing | M |
 | R8 | **Không có hệ thống cảnh báo** | sự cố không ai biết | cố ý (ADR-12), chỉ Grafana xem tay | S–M |

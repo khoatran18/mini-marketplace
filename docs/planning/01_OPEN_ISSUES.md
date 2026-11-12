@@ -37,7 +37,7 @@ mindmap
 |---|---|---|---|
 | V1 | 🟡 Lần chạy thật đầu tiên (2026-10-26): 22 service lên, Traefik / Prometheus (18 target) / Grafana (11 dashboard provision, datasource OK) chạy; đã sửa healthcheck frontend, lỗi consumer Kafka 0 partition, HTTPS tự ký ([nhật ký](../process/03_SESSION_LOG_2026-10-26.md)). Còn: xem từng panel Grafana, chạy trên Kafka rỗng, nhiều node | P1 | Lần deploy đầu theo [../instruction/02_DEPLOYMENT.md](../instruction/02_DEPLOYMENT.md) §1 và xem `docker service logs` từng service |
 | V2 | SQL ClickHouse thử trên chDB 26.9; ClickHouse 24.8 thật chỉ chạy ở CI | P2 | Có thể lệch ở chi tiết hiếm |
-| V3 | 🟡 Ngày 2026-11-12 trên Swarm thật: `run.mjs` 375 đạt (09, 10 SKIP vì chưa bật biến), `resilience.sh` B–J đạt (A đã sửa test 503/504, chưa chạy lại), `load` 0 lỗi nhưng 74% bị rate limit nên chưa đo tải thật ([nhật ký](../process/04_SESSION_LOG_2026-11-12.md)). Còn: load với rate limit nâng, 09 / 10, A | P1 | [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5 |
+| V3 | ✅ 2026-11-12 trên Swarm thật: `run.mjs` 377 đạt (+ 09 hết hạn giữ hàng đạt với TTL=1), `resilience.sh` A–J đạt, `load` 150 RPS × 90 s = 12 060 request, 0 lỗi, p95 ≤ 26 ms ([nhật ký](../process/04_SESSION_LOG_2026-11-12.md) §6). Chưa chạy: bước force-payment (cần stack `ENV=dev`) | P1 | [../instruction/04_TESTING.md](../instruction/04_TESTING.md) §5 |
 | V4 | Chạy nhiều replica cho service ngoài gateway chưa được kiểm chứng (worker timers của order-service, worker payment…) | P2 | Outbox dùng `SKIP LOCKED` nên có cơ sở, nhưng chưa có test |
 | V5 | Frontend (nhánh UI) chưa được kiểm chứng end-to-end với backend thật | P2 | [../design/platform/07_UI_DESIGN.md](../design/platform/07_UI_DESIGN.md) |
 

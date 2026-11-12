@@ -76,7 +76,7 @@ services:
   # Per-container CPU/RAM/network (labelled with the swarm service name)
   cadvisor:
     logging: *logging
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: ghcr.io/google/cadvisor:v0.60.6   # >=v0.5x: hỗ trợ Docker containerd image store (v0.49 chỉ thấy cgroup "/", panel container rỗng)
     networks: [marketplace]
     command:
       - --docker_only=true
