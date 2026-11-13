@@ -114,6 +114,15 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		}
 	}
 
+	// Feature flags (public) and the AI chat stream (ADR-40). The gateway streams to the agent service; it has no model logic.
+	router.GET("/config/features", handler.FeaturesHandler{AIChat: envConfig.FeatureAIChat && envConfig.AIServiceURL != "", AIOps: envConfig.FeatureAIOps && envConfig.AIServiceURL != ""}.Get)
+	aiHandler := handler.NewAIHandler(envConfig.FeatureAIChat, envConfig.AIServiceURL, envConfig.AIStreamTimeout, serviceConfig.ZapLogger)
+	aiRoute := router.Group("/ai", authenticated, middleware.AuthorizationMiddleware([]string{"buyer", "seller_admin", "seller_employee", "admin", "dev"}, serviceConfig.ZapLogger))
+	if envConfig.AIRateLimit > 0 {
+		aiRoute.Use(middleware.RateLimitingMiddleware("ai", envConfig.AIRateLimit, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient))
+	}
+	aiRoute.POST("/chat", aiHandler.Chat)
+
 	// Platform administrators only
 	var systemTargets []handler.SystemTarget
 	for name, url := range envConfig.SystemTargets {
@@ -122,24 +131,28 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	systemHandler := handler.NewSystemHandler(systemTargets, serviceConfig.ZapLogger)
 	adminRoute := router.Group("/admin", authenticated, middleware.AuthorizationMiddleware([]string{"admin"}, serviceConfig.ZapLogger))
 	{
-		// Incidents / audit trail of ops-service (ADR-38); the gateway has already checked JWT + admin role
 		opsHandler := handler.NewOpsHandler(envConfig.OpsServiceURL, envConfig.OpsAPIToken, serviceConfig.ZapLogger)
-		adminRoute.GET("/ops/incidents", opsHandler.Proxy("/incidents"))
-		adminRoute.GET("/ops/incidents/:id", opsHandler.Proxy("/incidents/:id"))
-		adminRoute.POST("/ops/incidents/:id/investigate", opsHandler.Proxy("/incidents/:id/investigate"))
-		adminRoute.GET("/ops/audit", opsHandler.Proxy("/audit"))
-		adminRoute.GET("/ops/actions", opsHandler.Proxy("/actions"))
-		adminRoute.GET("/ops/queries", opsHandler.Proxy("/queries"))
-		adminRoute.POST("/ops/queries/:name", opsHandler.Proxy("/queries/:name"))
-		adminRoute.GET("/ops/proposals", opsHandler.Proxy("/proposals"))
-		adminRoute.POST("/ops/proposals", opsHandler.Proxy("/proposals"))
-		adminRoute.GET("/ops/proposals/:id", opsHandler.Proxy("/proposals/:id"))
-		adminRoute.POST("/ops/proposals/:id/review", opsHandler.Proxy("/proposals/:id/review"))
-		adminRoute.POST("/ops/proposals/:id/decision", opsHandler.Proxy("/proposals/:id/decision"))
-		adminRoute.POST("/ops/proposals/:id/execute", opsHandler.Proxy("/proposals/:id/execute"))
-		adminRoute.POST("/ops/proposals/:id/executed", opsHandler.Proxy("/proposals/:id/executed"))
-		adminRoute.GET("/system/health", systemHandler.Health)
-		for _, r := range []string{"summary", "timeseries", "top-products", "funnel", "low-stock", "traffic", "payments", "search-terms", "data-health"} {
+		// The whole /admin/ops workflow (read, propose, review, approve, execute) and system health: admin or dev (ADR-40).
+		// Reports, revenue and every other /admin route stay admin only. The creator of a proposal still cannot approve or run it.
+		opsRead := router.Group("/admin", authenticated, middleware.AuthorizationMiddleware([]string{"admin", "dev"}, serviceConfig.ZapLogger))
+		opsRead.GET("/ops/incidents", opsHandler.Proxy("/incidents"))
+		opsRead.GET("/ops/incidents/:id", opsHandler.Proxy("/incidents/:id"))
+		opsRead.POST("/ops/incidents/:id/investigate", opsHandler.Proxy("/incidents/:id/investigate"))
+		opsRead.GET("/ops/audit", opsHandler.Proxy("/audit"))
+		opsRead.GET("/ops/outbox/:service/dead", opsHandler.Proxy("/outbox/:service/dead"))
+		opsRead.GET("/ops/actions", opsHandler.Proxy("/actions"))
+		opsRead.GET("/ops/queries", opsHandler.Proxy("/queries"))
+		opsRead.POST("/ops/queries/:name", opsHandler.Proxy("/queries/:name"))
+		opsRead.GET("/ops/proposals", opsHandler.Proxy("/proposals"))
+		opsRead.POST("/ops/proposals", opsHandler.Proxy("/proposals"))
+		opsRead.GET("/ops/proposals/:id", opsHandler.Proxy("/proposals/:id"))
+		opsRead.POST("/ops/proposals/:id/review", opsHandler.Proxy("/proposals/:id/review"))
+		opsRead.POST("/ops/proposals/:id/decision", opsHandler.Proxy("/proposals/:id/decision"))
+		opsRead.POST("/ops/proposals/:id/execute", opsHandler.Proxy("/proposals/:id/execute"))
+		opsRead.POST("/ops/proposals/:id/executed", opsHandler.Proxy("/proposals/:id/executed"))
+		opsRead.GET("/system/health", systemHandler.Health)
+		opsRead.GET("/analytics/data-health", h.AnalyticsHandler.Admin("data-health")) // pipeline health (lag, reconcile), not business figures
+		for _, r := range []string{"summary", "timeseries", "top-products", "funnel", "low-stock", "traffic", "payments", "search-terms"} {
 			adminRoute.GET("/analytics/"+r, h.AnalyticsHandler.Admin(r))
 		}
 		adminRoute.GET("/categories", h.CatalogHandler.AdminCategories)

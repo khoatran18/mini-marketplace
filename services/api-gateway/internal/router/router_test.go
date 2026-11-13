@@ -323,7 +323,7 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 		{"GET", "/admin/ops/incidents"}, {"GET", "/admin/ops/incidents/1"}, {"POST", "/admin/ops/incidents/1/investigate"}, {"GET", "/admin/ops/audit"},
 		{"GET", "/admin/ops/actions"}, {"GET", "/admin/ops/proposals"}, {"POST", "/admin/ops/proposals"}, {"GET", "/admin/ops/proposals/1"},
 		{"POST", "/admin/ops/proposals/1/review"}, {"POST", "/admin/ops/proposals/1/decision"},
-		{"POST", "/admin/ops/proposals/1/execute"}, {"POST", "/admin/ops/proposals/1/executed"}, {"GET", "/admin/ops/queries"}, {"POST", "/admin/ops/queries/service_up"},
+		{"POST", "/admin/ops/proposals/1/execute"}, {"POST", "/admin/ops/proposals/1/executed"}, {"GET", "/admin/ops/queries"}, {"POST", "/admin/ops/queries/service_up"}, {"GET", "/admin/ops/outbox/order-service/dead"}, {"POST", "/admin/ops/queries/gateway_latency_p95"},
 	} {
 		if w := request(e, route.method, route.path, ""); w.Code != http.StatusUnauthorized {
 			t.Errorf("%s %s anonymous: %d, want 401", route.method, route.path, w.Code)
@@ -333,6 +333,31 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 				t.Errorf("%s %s as %s: %d, want 403", route.method, route.path, role, w.Code)
 			}
 		}
+	}
+	// a "dev" runs the whole ops workflow (read, propose, review, decide, execute) but never reports/revenue/other admin routes (ADR-40)
+	for _, route := range []struct {
+		method, path string
+		want         int
+	}{
+		{"GET", "/admin/ops/incidents", 200}, {"GET", "/admin/ops/proposals", 200}, {"POST", "/admin/ops/proposals", 200},
+		{"POST", "/admin/ops/queries/service_up", 200}, {"POST", "/admin/ops/incidents/1/investigate", 200}, {"GET", "/admin/system/health", -1},
+		{"POST", "/admin/ops/proposals/1/review", 200}, {"POST", "/admin/ops/proposals/1/decision", 200},
+		{"POST", "/admin/ops/proposals/1/execute", 200}, {"POST", "/admin/ops/proposals/1/executed", 200}, {"GET", "/admin/analytics/data-health", -1},
+		{"GET", "/admin/analytics/summary", 403}, {"GET", "/admin/analytics/traffic", 403}, {"GET", "/admin/payments", 403}, {"GET", "/admin/orders", 403},
+		{"GET", "/admin/categories", 403}, {"POST", "/admin/orders/1/cancel", 403}, {"POST", "/admin/payments/1/refund", 403},
+	} {
+		w := request(e, route.method, route.path, token(t, "dev"))
+		if route.want == -1 {
+			if w.Code == http.StatusUnauthorized || w.Code == http.StatusForbidden {
+				t.Errorf("dev %s %s: %d, must be allowed", route.method, route.path, w.Code)
+			}
+		} else if w.Code != route.want {
+			t.Errorf("dev %s %s: %d, want %d", route.method, route.path, w.Code, route.want)
+		}
+	}
+	request(e, "GET", "/admin/ops/incidents", token(t, "dev"))
+	if !strings.HasPrefix(gotActor, "dev:") {
+		t.Errorf("actor for dev: %q", gotActor)
 	}
 	if w := request(e, "GET", "/admin/ops/incidents?state=open", token(t, "admin")); w.Code != 200 || gotPath != "/incidents?state=open" || gotAuth != "Bearer ops-secret" || !strings.HasPrefix(gotActor, "admin:") {
 		t.Fatalf("proxy: %d path=%q auth=%q actor=%q", w.Code, gotPath, gotAuth, gotActor)
@@ -361,6 +386,14 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Errorf("oversize body: %d, want 413", rec.Code)
 	}
+	// query names may contain digits (p95); anything outside [a-z0-9_] is rejected before reaching the upstream
+	gotPath = ""
+	if w := request(e, "POST", "/admin/ops/queries/gateway_latency_p95", token(t, "admin")); w.Code != 200 || gotPath != "/queries/gateway_latency_p95" {
+		t.Errorf("query name with digits: %d path=%q", w.Code, gotPath)
+	}
+	if w := request(e, "POST", "/admin/ops/queries/Bad-Name", token(t, "admin")); w.Code != http.StatusBadRequest {
+		t.Errorf("bad query name: %d, want 400", w.Code)
+	}
 	if w := request(e, "GET", "/admin/ops/incidents/abc", token(t, "admin")); w.Code != http.StatusBadRequest {
 		t.Errorf("non numeric id: %d, want 400", w.Code)
 	}
@@ -369,5 +402,40 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 	gotPath = ""
 	if w := request(e2, "GET", "/admin/ops/incidents", token(t, "admin")); w.Code != http.StatusServiceUnavailable || gotPath != "" {
 		t.Errorf("disabled proxy: %d path=%q", w.Code, gotPath)
+	}
+}
+
+func TestFeaturesPublicAndAIChatAuthenticatedAndGated(t *testing.T) {
+	var gotPath, gotRole string
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotRole = r.URL.Path, r.Header.Get("X-User-Role")
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: ok\n\n"))
+	}))
+	defer up.Close()
+	// flag off: features say so (public), chat 404 for a signed-in user, 401 anonymous
+	off := newEngine(t)
+	w := request(off, "GET", "/config/features", "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"ai_chat":false`) {
+		t.Errorf("features (off): %d %s", w.Code, w.Body.String())
+	}
+	if w := request(off, "POST", "/ai/chat", ""); w.Code != http.StatusUnauthorized {
+		t.Errorf("anonymous chat: %d, want 401", w.Code)
+	}
+	if w := request(off, "POST", "/ai/chat", token(t, "buyer")); w.Code != http.StatusNotFound {
+		t.Errorf("chat with flag off: %d, want 404", w.Code)
+	}
+	// flag on + upstream: allowed for buyer/seller/admin/dev, stream reaches the client
+	on := newEngineEnv(t, func(c *config.EnvConfig) {
+		c.FeatureAIChat, c.AIServiceURL, c.AIStreamTimeout = true, up.URL, 5*time.Second
+	})
+	if w := request(on, "GET", "/config/features", ""); !strings.Contains(w.Body.String(), `"ai_chat":true`) {
+		t.Errorf("features (on): %s", w.Body.String())
+	}
+	for _, role := range []string{"buyer", "seller_admin", "seller_employee", "admin", "dev"} {
+		w := request(on, "POST", "/ai/chat", token(t, role))
+		if w.Code != 200 || !strings.Contains(w.Body.String(), "data: ok") || gotPath != "/chat" || gotRole != role {
+			t.Errorf("chat as %s: %d %q path=%q role=%q", role, w.Code, w.Body.String(), gotPath, gotRole)
+		}
 	}
 }
