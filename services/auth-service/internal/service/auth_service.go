@@ -78,7 +78,8 @@ func (s *AuthService) Register(ctx context.Context, input *dto.RegisterInput) (*
 	}
 
 	// Check account existed
-	existingAccount, err := s.AccountRepo.GetAccountByUsernameRole(ctx, input.Username, input.Role)
+	// A username belongs to exactly one role for good: it is taken if any account uses it.
+	existingAccount, err := s.AccountRepo.GetAccountByUsername(ctx, input.Username)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		s.ZapLogger.Error("AuthService: DB error", zap.Error(err))
 		return nil, err
@@ -156,7 +157,14 @@ func (s *AuthService) ensurePrivileged(ctx context.Context, role, username, pass
 func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.LoginOutput, error) {
 
 	// Check account existed
-	account, err := s.AccountRepo.GetAccountByUsernameRole(ctx, req.Username, req.Role)
+	// The role comes from the account itself; a role in the request is optional and, when present, must match.
+	var account *model.Account
+	var err error
+	if req.Role != "" {
+		account, err = s.AccountRepo.GetAccountByUsernameRole(ctx, req.Username, req.Role)
+	} else {
+		account, err = s.AccountRepo.GetAccountByUsername(ctx, req.Username)
+	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		s.ZapLogger.Warn("AuthService: account not found", zap.String("username", req.Username))
 		return nil, status.Error(codes.Unauthenticated, "username or password is incorrect")
@@ -167,7 +175,7 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (*dto.Logi
 	}
 
 	// Check password
-	if err := bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(req.Password)); err != nil || account.Role != req.Role {
+	if err := bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(req.Password)); err != nil || (req.Role != "" && account.Role != req.Role) {
 		s.ZapLogger.Warn("AuthService: wrong password", zap.Error(err))
 		return nil, status.Error(codes.Unauthenticated, "username or password is incorrect")
 	}

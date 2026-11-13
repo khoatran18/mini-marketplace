@@ -42,6 +42,16 @@ func (r *AccountRepository) GetAccountByUsernameRole(ctx context.Context, userna
 	return &acc, nil
 }
 
+// GetAccountByUsername returns the account for a username (usernames are unique across roles since migration 00003).
+// Legacy databases that still hold the same username under several roles get the oldest account.
+func (r *AccountRepository) GetAccountByUsername(ctx context.Context, username string) (*model.Account, error) {
+	var acc model.Account
+	if err := r.DB.WithContext(ctx).Model(&model.Account{}).Where("Username = ?", username).Order("id ASC").First(&acc).Error; err != nil {
+		return nil, err
+	}
+	return &acc, nil
+}
+
 // GetAccountByUsernamePasswordRole get account, mainly for logic login
 func (r *AccountRepository) GetAccountByUsernamePasswordRole(ctx context.Context, username, password, role string) (*model.Account, error) {
 	var user model.Account
