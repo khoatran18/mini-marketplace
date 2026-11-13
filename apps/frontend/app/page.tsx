@@ -5,7 +5,7 @@ import { SearchBar } from '../components/shop/SearchBar';
 export default function HomePage() {
   return (
     <div className="grid gap-8">
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 px-6 py-8 text-white sm:px-10">
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-700 to-emerald-800 px-6 py-8 text-white sm:px-10">
         <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
         <div className="relative grid max-w-xl gap-4">
           <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">Mua sắm đơn giản</h1>

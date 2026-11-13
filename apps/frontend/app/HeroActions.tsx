@@ -8,7 +8,7 @@ export function HeroActions() {
   const { accessToken } = useAuth();
   return (
     <div className="flex flex-wrap gap-3">
-      <Link href="/products" className="rounded-xl bg-white px-5 py-2 font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50">
+      <Link href="/products" className="rounded-xl bg-white px-5 py-2 font-semibold text-teal-800 shadow-sm transition hover:bg-teal-50">
         Xem sản phẩm
       </Link>
       {accessToken ? null : (
