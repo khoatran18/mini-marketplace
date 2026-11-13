@@ -30,6 +30,10 @@ var validRoles = map[string]bool{"buyer": true, "seller_admin": true, "seller_em
 // RoleAdmin is the platform administrator role (cannot be self-registered).
 const RoleAdmin = "admin"
 
+// RoleDev is the operator role: it can read the system and propose ops actions but cannot approve or run them (ADR-40).
+// Like admin it cannot be self-registered; it is created by EnsureDev (DEV_BOOTSTRAP_* at start-up).
+const RoleDev = "dev"
+
 // credentialPattern mirrors the login contract in auth.proto (username/password: 3-16 letters, digits, underscore).
 var credentialPattern = regexp.MustCompile(`^[a-zA-Z0-9_]{3,16}$`)
 
@@ -115,13 +119,22 @@ func (s *AuthService) Register(ctx context.Context, input *dto.RegisterInput) (*
 // exists yet. It is idempotent and never changes the password of an existing admin. The credentials
 // must satisfy the same rules as login (auth.proto), otherwise the admin could never sign in.
 func (s *AuthService) EnsureAdmin(ctx context.Context, username, password string) (created bool, err error) {
+	return s.ensurePrivileged(ctx, RoleAdmin, username, password)
+}
+
+// EnsureDev does the same for the "dev" operator role (see RoleDev).
+func (s *AuthService) EnsureDev(ctx context.Context, username, password string) (created bool, err error) {
+	return s.ensurePrivileged(ctx, RoleDev, username, password)
+}
+
+func (s *AuthService) ensurePrivileged(ctx context.Context, role, username, password string) (created bool, err error) {
 	if !credentialPattern.MatchString(username) || !credentialPattern.MatchString(password) {
-		return false, errors.New("admin username/password must be 3-16 characters of letters, digits or underscore")
+		return false, fmt.Errorf("%s username/password must be 3-16 characters of letters, digits or underscore", role)
 	}
 	if len(password) < minPasswordLength {
-		return false, fmt.Errorf("admin password must be at least %d characters", minPasswordLength)
+		return false, fmt.Errorf("%s password must be at least %d characters", role, minPasswordLength)
 	}
-	existing, err := s.AccountRepo.GetAccountByUsernameRole(ctx, username, RoleAdmin)
+	existing, err := s.AccountRepo.GetAccountByUsernameRole(ctx, username, role)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return false, err
 	}
@@ -132,10 +145,10 @@ func (s *AuthService) EnsureAdmin(ctx context.Context, username, password string
 	if err != nil {
 		return false, err
 	}
-	if err := s.AccountRepo.CreateAccount(ctx, &model.Account{Username: username, Password: string(hashed), Role: RoleAdmin}); err != nil {
+	if err := s.AccountRepo.CreateAccount(ctx, &model.Account{Username: username, Password: string(hashed), Role: role}); err != nil {
 		return false, err
 	}
-	s.ZapLogger.Info("AuthService: admin account created", zap.String("username", username))
+	s.ZapLogger.Info("AuthService: privileged account created", zap.String("role", role), zap.String("username", username))
 	return true, nil
 }
 

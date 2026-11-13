@@ -72,3 +72,31 @@ func TestAdminCanNeverBeRegisteredThroughTheAPI(t *testing.T) {
 		t.Error("admin credentials must not work for the buyer role")
 	}
 }
+
+func TestDevRoleIsBootstrapOnlyAndLogsInWithRoleDev(t *testing.T) {
+	s := testService(t)
+	ctx := context.Background()
+	if err := register(t, s, "sneaky", "password123", "dev"); err == nil || !strings.Contains(err.Error(), "invalid role") {
+		t.Fatalf("registering dev must be rejected, got %v", err)
+	}
+	if created, err := s.EnsureDev(ctx, "ops_dev", "password123"); err != nil || !created {
+		t.Fatalf("EnsureDev: created=%v err=%v", created, err)
+	}
+	if created, err := s.EnsureDev(ctx, "ops_dev", "another_pass1"); err != nil || created {
+		t.Fatalf("EnsureDev must be idempotent: created=%v err=%v", created, err)
+	}
+	out, err := s.Login(ctx, &dto.LoginInput{Username: "ops_dev", Password: "password123", Role: "dev"})
+	if err != nil {
+		t.Fatalf("dev login: %v", err)
+	}
+	claims := jwt.MapClaims{}
+	if _, err := jwt.ParseWithClaims(out.AccessToken, &claims, func(*jwt.Token) (any, error) { return []byte(testSecret), nil }); err != nil {
+		t.Fatal(err)
+	}
+	if claims["Role"] != "dev" {
+		t.Errorf("unexpected claims: %v", claims)
+	}
+	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_dev", Password: "password123", Role: "admin"}); err == nil {
+		t.Error("dev credentials must not work for the admin role")
+	}
+}

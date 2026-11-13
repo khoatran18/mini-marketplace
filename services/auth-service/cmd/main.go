@@ -84,6 +84,15 @@ func main() {
 		log.Printf("Admin bootstrap: user %q (created=%v)", u, created)
 	}
 
+	// Operator ("dev") account: may read and propose ops actions, never approve or run them (ADR-40)
+	if u, pw := os.Getenv("DEV_BOOTSTRAP_USERNAME"), os.Getenv("DEV_BOOTSTRAP_PASSWORD"); u != "" || pw != "" {
+		created, err := authService.EnsureDev(context.Background(), u, pw)
+		if err != nil {
+			log.Fatalf("DEV_BOOTSTRAP_* rejected: %v", err)
+		}
+		log.Printf("Dev bootstrap: user %q (created=%v)", u, created)
+	}
+
 	// Demo accounts only when explicitly requested (never in production)
 	if os.Getenv("SEED_DEMO_DATA") == "true" {
 		SeedAccounts(&authServer)
