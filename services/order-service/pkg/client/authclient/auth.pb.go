@@ -900,11 +900,11 @@ const file_auth_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x127\n" +
 	"\busername\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\busername\x127\n" +
 	"\bpassword\x18\x03 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12?\n" +
-	"\x04role\x18\x04 \x01(\tB+\xbaH(r&R\x05buyerR\fseller_adminR\x0fseller_employeeR\x04role\"\xcd\x01\n" +
+	"\x04role\x18\x04 \x01(\tB+\xbaH(r&R\x05buyerR\fseller_adminR\x0fseller_employeeR\x04role\"\xd0\x01\n" +
 	"\fLoginRequest\x127\n" +
 	"\busername\x18\x01 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\busername\x127\n" +
-	"\bpassword\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12K\n" +
-	"\x04role\x18\x03 \x01(\tB7\xbaH4r2R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\x03devR\x04role\"\x8b\x01\n" +
+	"\bpassword\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12N\n" +
+	"\x04role\x18\x03 \x01(\tB:\xbaH7\xd8\x01\x01r2R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\x03devR\x04role\"\x8b\x01\n" +
 	"\rLoginResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12#\n" +

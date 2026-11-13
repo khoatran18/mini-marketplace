@@ -17,7 +17,7 @@ message Account {
 message LoginRequest {
   string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
   string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
-  string role = 3 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee", (buf.validate.field).string.in = "admin", (buf.validate.field).string.in = "dev"];
+  string role = 3 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee", (buf.validate.field).string.in = "admin", (buf.validate.field).string.in = "dev", (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE];
 }
 message LoginResponse {
   string message = 1;
