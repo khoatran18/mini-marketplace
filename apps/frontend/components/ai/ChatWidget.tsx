@@ -32,6 +32,7 @@ export function AssistantButton() {
       onClick={toggleChat}
       aria-pressed={open}
       aria-label="Trợ lý AI"
+      data-chat-ui
       title="Trợ lý AI (Ctrl+K)"
       className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand ${
         open ? 'border-brand/40 bg-brand-soft text-brand' : 'border-line bg-surface text-text hover:bg-surface2'
@@ -83,7 +84,7 @@ function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
       : 'fixed bottom-20 right-4 z-40 h-[560px] max-h-[calc(100vh-7rem)] w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl sm:w-[380px]';
 
   return (
-    <section aria-label="Trợ lý AI" className={`${frame} flex flex-col border-line bg-surface text-text`}>
+    <section aria-label="Trợ lý AI" data-chat-ui className={`${frame} flex flex-col border-line bg-surface text-text`}>
       <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-soft text-brand">
@@ -181,9 +182,18 @@ export function ChatWidget({ mode }: { mode: 'drawer' | 'floating' }) {
         closeChat();
       }
     };
+    // Storefront bubble: a click anywhere outside the panel closes it. The console drawer sits beside the page (it
+    // pushes the content), so there a click on the page must keep working and the drawer stays until closed.
+    const onPointerDown = (event: PointerEvent) => {
+      if (mode === 'floating' && open && event.target instanceof Element && !event.target.closest('[data-chat-ui]')) closeChat();
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [enabled, toggleChat, closeChat]);
+    window.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [enabled, mode, open, toggleChat, closeChat]);
 
   if (!enabled) return null;
   return (
@@ -195,6 +205,7 @@ export function ChatWidget({ mode }: { mode: 'drawer' | 'floating' }) {
           onClick={toggleChat}
           aria-label={open ? 'Đóng trợ lý AI' : 'Mở trợ lý AI'}
           aria-expanded={open}
+          data-chat-ui
           className="fixed bottom-4 right-4 z-40 grid h-12 w-12 place-items-center rounded-full bg-brand-solid text-white shadow-lg transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
           <SparkIcon className="h-6 w-6" />

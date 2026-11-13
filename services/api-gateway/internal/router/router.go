@@ -155,6 +155,10 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		for _, r := range []string{"summary", "timeseries", "top-products", "funnel", "low-stock", "traffic", "payments", "search-terms"} {
 			adminRoute.GET("/analytics/"+r, h.AnalyticsHandler.Admin(r))
 		}
+		adminRoute.GET("/accounts", h.AuthHandler.ListAccounts)
+		adminRoute.POST("/accounts", h.AuthHandler.CreateStaffAccount)
+		adminRoute.DELETE("/accounts/:id", h.AuthHandler.DeleteStaffAccount)
+		adminRoute.POST("/accounts/:id/reset-password", h.AuthHandler.ResetStaffPassword)
 		adminRoute.GET("/categories", h.CatalogHandler.AdminCategories)
 		adminRoute.POST("/categories", h.CatalogHandler.CreateCategory)
 		adminRoute.PUT("/categories/:id", h.CatalogHandler.UpdateCategory)

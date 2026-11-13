@@ -13,6 +13,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: '/admin/payments', label: 'Thanh toán', icon: 'payments', roles: ['admin'] },
         { href: '/admin/categories', label: 'Danh mục', icon: 'tag', roles: ['admin'] },
         { href: '/admin/analytics', label: 'Phân tích', icon: 'chart', roles: ['admin'] },
+        { href: '/admin/accounts', label: 'Tài khoản', icon: 'users', roles: ['admin'] },
         { href: '/admin/system', label: 'Hệ thống', icon: 'map' }
       ]}
     >

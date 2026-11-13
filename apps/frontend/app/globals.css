@@ -5,15 +5,15 @@
 /* Design tokens: space separated RGB triplets so Tailwind can apply opacity (see tailwind.config.ts). */
 :root {
   color-scheme: light;
-  --bg: 231 236 235;
+  --bg: 220 231 229;
   --surface: 255 255 255;
-  --surface-2: 241 245 244;
+  --surface-2: 232 240 238;
   --text: 15 23 22;
-  --muted: 69 84 81;
-  --line: 186 198 195;
+  --muted: 52 68 65;
+  --line: 163 180 176;
   --brand: 13 118 108;
   --brand-solid: 15 118 110;
-  --brand-soft: 204 238 231;
+  --brand-soft: 190 232 224;
   --success: 4 120 87;
   --success-soft: 232 250 242;
   --warning: 161 98 7;
@@ -80,7 +80,7 @@
 
 @layer components {
   .card {
-    @apply rounded-xl border border-line bg-surface p-5 text-text shadow-[0_1px_3px_rgb(15_23_22_/_0.10)] md:p-6;
+    @apply rounded-xl border border-line bg-surface p-5 text-text shadow-[0_1px_3px_rgb(15_23_22_/_0.14),0_6px_16px_-6px_rgb(15_23_22_/_0.12)] md:p-6;
   }
 
   .dark .card {
@@ -106,6 +106,15 @@
     color: #fff;
   }
 
+  /* Table headers read as headers: tinted band, strong text */
+  thead {
+    @apply bg-surface2;
+  }
+
+  thead th {
+    @apply font-bold text-text;
+  }
+
   /* Storefront page container: wide, centred, with a soft brand glow so the side margins never feel empty. */
   .page {
     @apply mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-10;
@@ -126,7 +135,7 @@
   }
 
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full border border-line bg-surface2 px-2.5 py-0.5 text-xs font-semibold text-muted;
+    @apply inline-flex items-center gap-1 rounded-full border border-brand/30 bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand;
   }
 
   /* Reusable buttons */

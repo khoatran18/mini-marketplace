@@ -246,3 +246,52 @@ func (s *AuthServer) GetPwdVersion(ctx context.Context, req *authpb.GetPwdVersio
 	}
 	return &authpb.GetPwdVersionResponse{PwdVersion: v}, nil
 }
+
+// ListAccounts returns accounts for the admin console (gateway restricts the caller to role admin).
+func (s *AuthServer) ListAccounts(ctx context.Context, req *authpb.ListAccountsRequest) (*authpb.ListAccountsResponse, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	accs, err := s.AuthService.ListAccounts(ctx, req.GetRole(), req.GetQuery(), int(req.GetLimit()))
+	if err != nil {
+		return nil, err
+	}
+	out := &authpb.ListAccountsResponse{}
+	for _, a := range accs {
+		out.Accounts = append(out.Accounts, &authpb.AccountInfo{Id: a.ID, Username: a.Username, Role: a.Role, StoreId: a.StoreID})
+	}
+	return out, nil
+}
+
+// CreateStaffAccount creates an admin or dev account.
+func (s *AuthServer) CreateStaffAccount(ctx context.Context, req *authpb.CreateStaffAccountRequest) (*authpb.StaffAccountResponse, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if err := s.AuthService.CreateStaffAccount(ctx, req.GetUsername(), req.GetPassword(), req.GetRole()); err != nil {
+		return nil, err
+	}
+	return &authpb.StaffAccountResponse{Message: "Account created", Success: true}, nil
+}
+
+// DeleteStaffAccount deletes an admin or dev account.
+func (s *AuthServer) DeleteStaffAccount(ctx context.Context, req *authpb.StaffAccountRequest) (*authpb.StaffAccountResponse, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if err := s.AuthService.DeleteStaffAccount(ctx, req.GetId(), req.GetActorId()); err != nil {
+		return nil, err
+	}
+	return &authpb.StaffAccountResponse{Message: "Account deleted", Success: true}, nil
+}
+
+// ResetStaffPassword sets a new password for an admin or dev account.
+func (s *AuthServer) ResetStaffPassword(ctx context.Context, req *authpb.StaffAccountRequest) (*authpb.StaffAccountResponse, error) {
+	if err := protovalidate.Validate(req); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if err := s.AuthService.ResetStaffPassword(ctx, req.GetId(), req.GetActorId(), req.GetNewPassword()); err != nil {
+		return nil, err
+	}
+	return &authpb.StaffAccountResponse{Message: "Password reset", Success: true}, nil
+}

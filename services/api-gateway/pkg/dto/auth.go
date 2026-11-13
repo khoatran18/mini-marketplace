@@ -53,3 +53,22 @@ type RegisterSellerRolesOutput struct {
 	Message string `json:"message"`
 	Success bool   `json:"success"`
 }
+
+// Account management (admin only)
+type AccountInfo struct {
+	ID       uint64 `json:"id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	StoreID  uint64 `json:"store_id,omitempty"`
+}
+type ListAccountsOutput struct {
+	Accounts []AccountInfo `json:"accounts"`
+}
+type CreateStaffInput struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+	Role     string `json:"role" binding:"required"`
+}
+type ResetStaffPasswordInput struct {
+	NewPassword string `json:"new_password" binding:"required"`
+}

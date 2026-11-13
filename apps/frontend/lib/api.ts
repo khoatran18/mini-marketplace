@@ -1,4 +1,5 @@
 import type {
+  AccountInfo,
   AnalyticsEnvelope,
   Address,
   CartOutput,
@@ -430,4 +431,25 @@ export async function listOpsIncidentsRequest(token: string, state = 'open', lim
 export async function getFeatureFlagsRequest(): Promise<FeatureFlags> {
   const out = await apiFetch<{ features?: Partial<FeatureFlags> }>('/config/features', { method: 'GET' });
   return { ai_chat: out.features?.ai_chat === true, ai_ops: out.features?.ai_ops === true };
+}
+
+// ---- admin: accounts -----------------------------------------------------------------------------------------------
+
+export async function listAccountsRequest(token: string, params: { role?: string; q?: string } = {}): Promise<{ accounts: AccountInfo[] }> {
+  const qs = new URLSearchParams();
+  if (params.role) qs.set('role', params.role);
+  if (params.q) qs.set('q', params.q);
+  return apiFetch(`/admin/accounts${qs.size ? `?${qs}` : ''}`, { method: 'GET', token });
+}
+
+export async function createStaffAccountRequest(input: { username: string; password: string; role: 'admin' | 'dev' }, token: string): Promise<RegisterOutput> {
+  return apiFetch('/admin/accounts', { method: 'POST', body: json(input), token });
+}
+
+export async function deleteStaffAccountRequest(id: number, token: string): Promise<RegisterOutput> {
+  return apiFetch(`/admin/accounts/${id}`, { method: 'DELETE', token });
+}
+
+export async function resetStaffPasswordRequest(id: number, newPassword: string, token: string): Promise<RegisterOutput> {
+  return apiFetch(`/admin/accounts/${id}/reset-password`, { method: 'POST', body: json({ new_password: newPassword }), token });
 }

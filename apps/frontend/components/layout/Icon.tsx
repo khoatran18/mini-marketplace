@@ -1,6 +1,12 @@
 import {
   BarChart3,
   Boxes,
+  Bot,
+  CornerDownRight,
+  Folder,
+  KeyRound,
+  Trash2,
+  Users,
   ChevronLeft,
   ClipboardList,
   CreditCard,
@@ -13,7 +19,6 @@ import {
   Receipt,
   Server,
   ShoppingCart,
-  Sparkles,
   Store,
   Sun,
   Tags,
@@ -38,10 +43,15 @@ const icons: Record<string, LucideIcon> = {
   receipt: Receipt,
   store: Store,
   user: User,
-  spark: Sparkles,
+  spark: Bot,
   sun: Sun,
   moon: Moon,
-  system: Monitor
+  system: Monitor,
+  folder: Folder,
+  child: CornerDownRight,
+  users: Users,
+  key: KeyRound,
+  trash: Trash2
 };
 
 export function Icon({ name, className = 'h-[18px] w-[18px]' }: { name: string; className?: string }) {

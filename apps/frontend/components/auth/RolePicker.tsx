@@ -1,15 +1,15 @@
 import { ROLE_HINT, ROLE_LABEL } from '../../lib/roles';
 
 /** Radio-card group for choosing a role. Generic over the role union so login and register can share it. */
-export function RolePicker<R extends string>({ value, options, onChange, legend = 'Bạn là' }: { value: R; options: R[]; onChange: (role: R) => void; legend?: string }) {
+export function RolePicker<R extends string>({ value, options, onChange, legend = 'Bạn là', labels }: { value: R; options: R[]; onChange: (role: R) => void; legend?: string; labels?: Partial<Record<R, string>> }) {
   return (
     <fieldset className="grid gap-2">
       <legend className="mb-1 text-sm font-semibold text-muted">{legend}</legend>
       <div className="grid gap-2 sm:grid-cols-2">
         {options.map((role) => {
           const selected = role === value;
-          const label = ROLE_LABEL[role as keyof typeof ROLE_LABEL] ?? role;
-          const hint = ROLE_HINT[role as keyof typeof ROLE_HINT];
+          const label = labels?.[role] ?? ROLE_LABEL[role as keyof typeof ROLE_LABEL] ?? role;
+          const hint = labels ? undefined : ROLE_HINT[role as keyof typeof ROLE_HINT];
           return (
             <label
               key={role}

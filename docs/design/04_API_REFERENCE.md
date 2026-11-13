@@ -62,8 +62,8 @@ Username/password phải khớp `^[a-zA-Z0-9_]{3,16}$` (hợp đồng `auth.prot
 
 | Method & path | Ai | Request | Response / lỗi |
 |---|---|---|---|
-| POST `/auth/register` | 🌐 | `{username,password,role}` – `role` ∈ `buyer`, `seller_admin` | 200 `{message,success}`; 400 sai định dạng hoặc role `admin`; 403 role `seller_employee`; 409 đã tồn tại (cùng username+role). `accounts.username` UNIQUE toàn cục nên trùng username khác role sẽ là lỗi DB (500) |
-| POST `/auth/login` | 🌐 | `{username,password,role}` – role ∈ `buyer, seller_admin, seller_employee, admin` | 200 `{message,success,access_token,refresh_token}`; 401 `username or password is incorrect` (thông báo thống nhất) |
+| POST `/auth/register` | 🌐 | `{username,password,role}` – `role` ∈ `buyer`, `seller_admin` | 200 `{message,success}`; 400 sai định dạng hoặc role `admin`; 403 role `seller_employee`; 409 username đã được dùng ở bất kỳ role nào (username duy nhất toàn hệ thống, migration `00003`; role gắn với tài khoản, muốn đổi role phải tạo tài khoản mới) |
+| POST `/auth/login` | 🌐 | `{username,password}` (`role` tùy chọn, nếu gửi phải khớp tài khoản; role lấy từ tài khoản) | 200 `{message,success,access_token,refresh_token}`; 401 `username or password is incorrect` (thông báo thống nhất) |
 | POST `/auth/refresh-token` | 🌐 | `{refresh_token}` | 200 token mới; 401 nếu là access token / hết hạn / đã đổi mật khẩu |
 | POST `/auth/change-password` | 🔑 | `{old_password,new_password}` (tài khoản lấy từ token; mới ≥ 8) | 200; token cũ bị vô hiệu qua Redis `<userId>:pwd_version` |
 | POST `/auth/register-seller-roles` | SA | `{username,password}` | 200; tạo `seller_employee` trong store của admin; 403 nếu chưa có store |
@@ -280,6 +280,10 @@ Vai trò `dev` (ADR-40): toàn bộ `/admin/ops/*` (đọc, điều tra, đề x
 
 | Method & path | Ghi chú |
 |---|---|
+| GET `/admin/accounts?role=&q=&limit=` | danh sách tài khoản (mọi role, không có mật khẩu); chỉ `admin` |
+| POST `/admin/accounts` | tạo tài khoản `admin` hoặc `dev`: `{username, password (≥8), role}`; trùng username → 409 |
+| DELETE `/admin/accounts/:id` | xoá hẳn tài khoản admin/dev và thu hồi token; không xoá chính mình, không xoá admin cuối cùng (422), buyer/seller → 403 |
+| POST `/admin/accounts/:id/reset-password` | `{new_password}`; đặt lại mật khẩu admin/dev (không cần mật khẩu cũ), thu hồi token cũ; không áp dụng cho chính mình |
 | GET `/admin/categories` | gồm cả danh mục `active=false` |
 | POST `/admin/categories` | **201**; `{parent_id, name (1-100), slug (tự sinh từ name nếu trống; a-z0-9 và `-`), sort, active (mặc định true)}`; tối đa **3 cấp**; slug trùng/vòng lặp → 400; cha không tồn tại → 404 |
 | PUT `/admin/categories/:id` | 200, thay toàn bộ |

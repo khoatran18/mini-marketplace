@@ -203,6 +203,10 @@ func TestCatalogRouteAccessRules(t *testing.T) {
 	e := newEngine(t)
 	// admin-only and seller-only routes: anonymous -> 401, wrong role -> 403
 	for _, route := range []struct{ method, path, wrongRole string }{
+		{"GET", "/admin/accounts", "seller_admin"},
+		{"POST", "/admin/accounts", "buyer"},
+		{"DELETE", "/admin/accounts/1", "seller_admin"},
+		{"POST", "/admin/accounts/1/reset-password", "dev"},
 		{"GET", "/admin/categories", "seller_admin"},
 		{"POST", "/admin/categories", "buyer"},
 		{"PUT", "/admin/categories/1", "seller_admin"},
@@ -344,7 +348,7 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 		{"POST", "/admin/ops/proposals/1/review", 200}, {"POST", "/admin/ops/proposals/1/decision", 200},
 		{"POST", "/admin/ops/proposals/1/execute", 200}, {"POST", "/admin/ops/proposals/1/executed", 200}, {"GET", "/admin/analytics/data-health", -1},
 		{"GET", "/admin/analytics/summary", 403}, {"GET", "/admin/analytics/traffic", 403}, {"GET", "/admin/payments", 403}, {"GET", "/admin/orders", 403},
-		{"GET", "/admin/categories", 403}, {"POST", "/admin/orders/1/cancel", 403}, {"POST", "/admin/payments/1/refund", 403},
+		{"GET", "/admin/categories", 403}, {"GET", "/admin/accounts", 403}, {"POST", "/admin/accounts", 403}, {"DELETE", "/admin/accounts/1", 403}, {"POST", "/admin/orders/1/cancel", 403}, {"POST", "/admin/payments/1/refund", 403},
 	} {
 		w := request(e, route.method, route.path, token(t, "dev"))
 		if route.want == -1 {

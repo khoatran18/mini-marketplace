@@ -37,6 +37,13 @@ export interface RegisterInput {
   role: Role;
 }
 
+export interface AccountInfo {
+  id: number;
+  username: string;
+  role: Role;
+  store_id?: number;
+}
+
 export interface RegisterOutput {
   success?: boolean;
   message?: string;

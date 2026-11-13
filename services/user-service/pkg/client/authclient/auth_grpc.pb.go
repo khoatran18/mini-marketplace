@@ -19,6 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AuthService_ListAccounts_FullMethodName        = "/auth_service.pkb.pb.AuthService/ListAccounts"
+	AuthService_CreateStaffAccount_FullMethodName  = "/auth_service.pkb.pb.AuthService/CreateStaffAccount"
+	AuthService_DeleteStaffAccount_FullMethodName  = "/auth_service.pkb.pb.AuthService/DeleteStaffAccount"
+	AuthService_ResetStaffPassword_FullMethodName  = "/auth_service.pkb.pb.AuthService/ResetStaffPassword"
 	AuthService_Login_FullMethodName               = "/auth_service.pkb.pb.AuthService/Login"
 	AuthService_Register_FullMethodName            = "/auth_service.pkb.pb.AuthService/Register"
 	AuthService_RefreshToken_FullMethodName        = "/auth_service.pkb.pb.AuthService/RefreshToken"
@@ -34,6 +38,10 @@ const (
 //
 // Service
 type AuthServiceClient interface {
+	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	CreateStaffAccount(ctx context.Context, in *CreateStaffAccountRequest, opts ...grpc.CallOption) (*StaffAccountResponse, error)
+	DeleteStaffAccount(ctx context.Context, in *StaffAccountRequest, opts ...grpc.CallOption) (*StaffAccountResponse, error)
+	ResetStaffPassword(ctx context.Context, in *StaffAccountRequest, opts ...grpc.CallOption) (*StaffAccountResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
@@ -49,6 +57,46 @@ type authServiceClient struct {
 
 func NewAuthServiceClient(cc grpc.ClientConnInterface) AuthServiceClient {
 	return &authServiceClient{cc}
+}
+
+func (c *authServiceClient) ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAccountsResponse)
+	err := c.cc.Invoke(ctx, AuthService_ListAccounts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) CreateStaffAccount(ctx context.Context, in *CreateStaffAccountRequest, opts ...grpc.CallOption) (*StaffAccountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StaffAccountResponse)
+	err := c.cc.Invoke(ctx, AuthService_CreateStaffAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) DeleteStaffAccount(ctx context.Context, in *StaffAccountRequest, opts ...grpc.CallOption) (*StaffAccountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StaffAccountResponse)
+	err := c.cc.Invoke(ctx, AuthService_DeleteStaffAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ResetStaffPassword(ctx context.Context, in *StaffAccountRequest, opts ...grpc.CallOption) (*StaffAccountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StaffAccountResponse)
+	err := c.cc.Invoke(ctx, AuthService_ResetStaffPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *authServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
@@ -127,6 +175,10 @@ func (c *authServiceClient) GetPwdVersion(ctx context.Context, in *GetPwdVersion
 //
 // Service
 type AuthServiceServer interface {
+	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
+	CreateStaffAccount(context.Context, *CreateStaffAccountRequest) (*StaffAccountResponse, error)
+	DeleteStaffAccount(context.Context, *StaffAccountRequest) (*StaffAccountResponse, error)
+	ResetStaffPassword(context.Context, *StaffAccountRequest) (*StaffAccountResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
@@ -144,6 +196,18 @@ type AuthServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAuthServiceServer struct{}
 
+func (UnimplementedAuthServiceServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (UnimplementedAuthServiceServer) CreateStaffAccount(context.Context, *CreateStaffAccountRequest) (*StaffAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateStaffAccount not implemented")
+}
+func (UnimplementedAuthServiceServer) DeleteStaffAccount(context.Context, *StaffAccountRequest) (*StaffAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteStaffAccount not implemented")
+}
+func (UnimplementedAuthServiceServer) ResetStaffPassword(context.Context, *StaffAccountRequest) (*StaffAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetStaffPassword not implemented")
+}
 func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
@@ -184,6 +248,78 @@ func RegisterAuthServiceServer(s grpc.ServiceRegistrar, srv AuthServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&AuthService_ServiceDesc, srv)
+}
+
+func _AuthService_ListAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAccountsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ListAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ListAccounts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ListAccounts(ctx, req.(*ListAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_CreateStaffAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateStaffAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).CreateStaffAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_CreateStaffAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).CreateStaffAccount(ctx, req.(*CreateStaffAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_DeleteStaffAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StaffAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).DeleteStaffAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_DeleteStaffAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).DeleteStaffAccount(ctx, req.(*StaffAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ResetStaffPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StaffAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ResetStaffPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ResetStaffPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ResetStaffPassword(ctx, req.(*StaffAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AuthService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -319,6 +455,22 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "auth_service.pkb.pb.AuthService",
 	HandlerType: (*AuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListAccounts",
+			Handler:    _AuthService_ListAccounts_Handler,
+		},
+		{
+			MethodName: "CreateStaffAccount",
+			Handler:    _AuthService_CreateStaffAccount_Handler,
+		},
+		{
+			MethodName: "DeleteStaffAccount",
+			Handler:    _AuthService_DeleteStaffAccount_Handler,
+		},
+		{
+			MethodName: "ResetStaffPassword",
+			Handler:    _AuthService_ResetStaffPassword_Handler,
+		},
 		{
 			MethodName: "Login",
 			Handler:    _AuthService_Login_Handler,

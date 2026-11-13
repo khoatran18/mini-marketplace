@@ -92,8 +92,46 @@ message GetPwdVersionResponse {
   int64 pwd_version = 1;
 }
 
+// Account management (platform admin only; the gateway enforces the caller's role).
+message AccountInfo {
+  uint64 id = 1;
+  string username = 2;
+  string role = 3;
+  uint64 store_id = 4;
+}
+message ListAccountsRequest {
+  // Empty = every role.
+  string role = 1 [(buf.validate.field).string.in = "buyer", (buf.validate.field).string.in = "seller_admin", (buf.validate.field).string.in = "seller_employee", (buf.validate.field).string.in = "admin", (buf.validate.field).string.in = "dev", (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE];
+  // Substring of the username.
+  string query = 2 [(buf.validate.field).string.max_len = 32];
+  uint32 limit = 3 [(buf.validate.field).uint32.lte = 200];
+}
+message ListAccountsResponse {
+  repeated AccountInfo accounts = 1;
+}
+message CreateStaffAccountRequest {
+  string username = 1 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string password = 2 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$"];
+  string role = 3 [(buf.validate.field).string.in = "admin", (buf.validate.field).string.in = "dev"];
+}
+message StaffAccountRequest {
+  uint64 id = 1 [(buf.validate.field).uint64.gt = 0];
+  // The admin making the call (taken from the token by the gateway): an admin can not delete themselves.
+  uint64 actor_id = 2 [(buf.validate.field).uint64.gt = 0];
+  // Only for ResetStaffPassword.
+  string new_password = 3 [(buf.validate.field).string.pattern = "^[a-zA-Z0-9_]{3,16}$", (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE];
+}
+message StaffAccountResponse {
+  string message = 1;
+  bool success = 2;
+}
+
 // Service
 service AuthService {
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+  rpc CreateStaffAccount(CreateStaffAccountRequest) returns (StaffAccountResponse);
+  rpc DeleteStaffAccount(StaffAccountRequest) returns (StaffAccountResponse);
+  rpc ResetStaffPassword(StaffAccountRequest) returns (StaffAccountResponse);
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc Register(RegisterRequest) returns (RegisterResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);

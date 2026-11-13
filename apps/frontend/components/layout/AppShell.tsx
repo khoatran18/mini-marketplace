@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Role } from '../../lib/types';
-import { AssistantButton, ChatWidget } from '../ai/ChatWidget';
+import { AssistantButton, ChatWidget, useAssistantEnabled } from '../ai/ChatWidget';
+import { useChat } from '../ai/ChatProvider';
 import { useAuth } from '../auth/AuthProvider';
 import { useCart } from '../cart/CartProvider';
 import { ProtectedContent } from '../ProtectedContent';
@@ -39,6 +40,8 @@ export function AppShell({ title, roles, links, children }: Props) {
   const { accessToken, username, role, logout } = useAuth();
   const { clearCart } = useCart();
   const [collapsed, setCollapsed] = useState(false);
+  const { open: chatOpen } = useChat();
+  const chatEnabled = useAssistantEnabled();
 
   useEffect(() => {
     try {
@@ -71,7 +74,7 @@ export function AppShell({ title, roles, links, children }: Props) {
 
   return (
     <div className="min-h-screen bg-bg">
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 bar px-3 md:px-5">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 bar px-3 md:px-4">
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -121,25 +124,26 @@ export function AppShell({ title, roles, links, children }: Props) {
         <aside
           className={`sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-y-auto border-r border-line bg-surface py-3 transition-[width] md:block ${collapsed ? 'w-[68px]' : 'w-60'}`}
         >
-          <nav aria-label={title} className="grid gap-1 px-2">
+          <nav aria-label={title} className="grid gap-1 px-3">
             {visible.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 title={collapsed ? link.label : undefined}
                 aria-current={active(link) ? 'page' : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${collapsed ? 'justify-center' : ''} ${
-                  active(link) ? 'bg-brand-solid font-semibold text-white shadow-sm' : 'text-muted hover:bg-surface2 hover:text-text'
+                className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${collapsed ? 'justify-center' : ''} ${
+                  active(link) ? 'bg-brand-soft font-bold text-brand' : 'font-medium text-text hover:bg-surface2'
                 }`}
               >
-                <Icon name={link.icon} />
+                {active(link) ? <span aria-hidden="true" className="absolute -left-3 top-1.5 bottom-1.5 w-1 rounded-r-full bg-brand" /> : null}
+                <Icon name={link.icon} className={`h-[18px] w-[18px] shrink-0 ${active(link) ? 'text-brand' : 'text-muted'}`} />
                 {collapsed ? <span className="sr-only">{link.label}</span> : <span className="truncate">{link.label}</span>}
               </Link>
             ))}
           </nav>
         </aside>
 
-        <div className="min-w-0 flex-1">
+        <div className={`min-w-0 flex-1 transition-[padding] duration-200 ${chatOpen && chatEnabled ? 'md:pr-[400px]' : ''}`}>
           {/* phones: the sidebar becomes a scrolling strip */}
           <nav aria-label={`${title} (di động)`} className="flex gap-1 overflow-x-auto border-b border-line bg-surface px-3 py-2 md:hidden">
             {visible.map((link) => (
