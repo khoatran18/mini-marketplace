@@ -142,7 +142,7 @@ Danh sách đầy đủ + hành vi: [04_API_REFERENCE.md §7](../design/04_API_R
 scripts/e2e/run-in-swarm.sh                           # chạy run.mjs từ container tạm trong mạng marketplace-net
 scripts/e2e/run-in-swarm.sh --only 03,04              # chỉ chạy vài kịch bản (hoặc --skip 09)
 RATE_LIMIT_TEST=1 scripts/e2e/run-in-swarm.sh         # thêm kịch bản rate limit 429
-scripts/e2e/resilience.sh                             # tiêm lỗi, chạy cả bộ A..I
+scripts/e2e/resilience.sh                             # tiêm lỗi, chạy cả bộ A..M
 scripts/e2e/resilience.sh A F                         # hoặc chọn từng chữ
 ```
 
@@ -197,6 +197,12 @@ Lưu ý khi chạy thật:
 | G | order-service down sau khi nhận đơn | đơn được xử lý khi service về |
 | H | rolling restart mọi service | không mất dữ liệu |
 | I | Postgres restart | tự hồi phục |
+| J | một broker Kafka down | đặt hàng vẫn OK (RF 3, min ISR 2) |
+| K | Loki down (hạ tầng quan sát) | cửa hàng vẫn chạy; `InfraTargetDown{job=loki}` (giữ ≥ 120 s: `GT_HOLD`) |
+| L | payment-service + order-service down cùng lúc | đặt đơn 503, catalog 200, hồi phục cả hai; cảnh báo cho cả hai service |
+| M | khoá `ACCESS EXCLUSIVE` bảng `products` trong Postgres | catalog / đặt đơn chậm hoặc lỗi khi bị khoá, tự hết khi nhả; `GatewayLatencyHigh` nếu giữ ≥ 5 phút có lưu lượng (`GT_HOLD=300`) |
+
+Luồng SSE `POST /ai/chat` (ADR-40) có kịch bản riêng, **không** gọi LLM: `scripts/e2e/sse.sh` (upstream giả, đi qua Traefik thật, đo thời điểm từng khối, giữ 70 s, kiểm ngắt giữa chừng huỷ upstream, tự trả lại cấu hình).
 
 Dừng/bật bằng `docker service scale` kèm chờ ổn định; probe `/ready` gọi thẳng `http://<service>:8081` từ container trong mạng `marketplace-net`. Cũng **chưa chạy thật**.
 

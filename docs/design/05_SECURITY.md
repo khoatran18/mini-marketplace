@@ -117,3 +117,9 @@ Không có gì nhạy cảm được commit. Dùng các template `.env.example`;
 - Hoàn tiền thủ công của admin (`POST /admin/payments/:id/refund`) không gắn với đơn hàng, nên `orders.payment_status` không được cập nhật bởi thao tác này.
 - Body request bị giới hạn bởi `MAX_BODY_BYTES` (mặc định 1 MiB, trả HTTP 413 khi `Content-Length` lớn hơn; body không khai báo/chunked sẽ lỗi khi đọc).
 - Dashboard Traefik chỉ được bảo vệ bằng basic auth (`TRAEFIK_DASHBOARD_USERS`).
+
+## Vai trò `dev`, token agent và luồng chat AI (ADR-40)
+- **Quyền nhỏ nhất cho phần vận hành:** `dev` tác động được vào hệ thống (duyệt, thực thi qua ops-service) nhưng không xem dữ liệu kinh doanh (báo cáo, doanh thu, đơn, thanh toán), chỉ thấy thông tin vận hành (sức khoẻ, truy vấn, outbox, sự cố); `OPS_AGENT_TOKEN` (ops-service) cũng chỉ đọc + đề xuất, tác nhân luôn là `agent`, và không tạo được mã duyệt (ký bằng `OPS_API_TOKEN`). Hai tài khoản đặc quyền (`admin`, `dev`) chỉ sinh từ biến môi trường bootstrap, không tự đăng ký được.
+- **Chat AI:** gateway chỉ chuyển tiếp. Danh tính tới upstream lấy từ JWT đã kiểm (`X-User-ID`, `X-User-Role`), không từ request; upstream gọi lại REST bằng JWT của chính người dùng nên RBAC/ownership vẫn áp cho mọi công cụ. `AI_SERVICE_URL` chỉ nằm trong mạng overlay, không công khai. Có giới hạn tần suất, giới hạn thời gian luồng và huỷ upstream khi client ngắt. **Chưa có** giới hạn theo người dùng / ngân sách token (việc của tầng agent).
+- Dữ liệu tới agent là **không tin cậy** (log Loki, nội dung người dùng): giữ nguyên quy tắc ADR-38 (log đánh dấu `untrusted`, hành động ngoài sổ bị chặn ở API).
+
