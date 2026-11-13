@@ -1,0 +1,47 @@
+id: multiple-faults
+title: "Nhiều cảnh báo cùng lúc: tìm nguyên nhân gốc trước, triệu chứng sau"
+triggers:
+  alerts: [ServiceDown, ServiceMissing, CircuitBreakerOpen, GatewayServerErrors, OutboxBacklogOld]
+runbook: "§15, §1, §5"
+diagnose:
+  - id: firing-now
+    tool: prometheus
+    query: 'ALERTS{alertstate="firing"}'
+    read_only: true
+    interpret: "danh sách đầy đủ; xếp theo thứ tự thời điểm bắt đầu (activeAt): cái sớm nhất thường là gốc"
+  - id: shared-infra
+    tool: prometheus
+    query: 'mm_ready, up{job=~"postgres|redis|kafka|clickhouse"}'
+    read_only: true
+    interpret: "nếu hạ tầng dùng chung hỏng, mọi service phụ thuộc báo theo: một nguyên nhân, nhiều triệu chứng"
+  - id: dependency-order
+    tool: prometheus
+    query: 'mm_circuit_state, rate(mm_grpc_client_requests_total{code!="OK"}[5m])'
+    read_only: true
+    interpret: "mạch mở và lỗi gRPC trỏ service đích; service đích ở cuối chuỗi (auth, product) là ứng viên gốc"
+  - id: per-service-health
+    tool: http
+    query: "GET /admin/system/health (qua gateway)"
+    read_only: true
+    interpret: "service nào ready/degraded/not_ready và check nào hỏng"
+causes:
+  - id: one-root-many-symptoms
+    when: "tất cả cảnh báo cùng nằm sau một service hoặc một hạ tầng dùng chung (cảnh báo gốc bắn trước)"
+    fix: [handle-root-cause-first]
+  - id: independent-faults
+    when: "các cảnh báo không có phụ thuộc chung (hai service không liên quan cùng hỏng)"
+    fix: [handle-root-cause-first, escalate-to-dev]
+actions:
+  - id: handle-root-cause-first
+    risk: low
+    approval: confirm
+    command: "chọn playbook của cảnh báo gốc (sớm nhất / thấp nhất trong chuỗi phụ thuộc: Postgres, Kafka, Redis, đĩa, rồi auth/product, rồi order/gateway) và làm theo; sau đó đánh giá lại các cảnh báo còn lại, nhiều cái sẽ tự tắt"
+    precondition: "không chạy hành động của các triệu chứng (restart gateway, requeue outbox) khi gốc chưa hết"
+    verify: "các cảnh báo hệ quả tắt sau khi gốc được xử lý"
+    rollback: "không cần"
+  - id: escalate-to-dev
+    risk: observe
+    approval: none
+    command: "báo người kèm danh sách cảnh báo theo thời điểm, đồ thị phụ thuộc đã dùng, kết luận gốc nghi ngờ"
+escalate: "Hai lỗi độc lập trở lên, hoặc không xác định được gốc sau khi xem hạ tầng dùng chung: báo người; không thử hành động trên nhiều service cùng lúc."
+ground_truth: [L]

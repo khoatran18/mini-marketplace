@@ -120,3 +120,104 @@ tests:
               summary: "Có đề xuất xử lý sự cố chờ duyệt hơn 1 giờ"
               runbook: "§14"
               action: observe
+  # ADR-40: các cảnh báo ngoài sách
+  - interval: 1m
+    input_series:
+      - series: 'up{job="loki",instance="10.0.0.20:3100"}'
+        values: '1x5 0x30'
+      - series: 'up{job="vector",instance="10.0.0.21:9598"}'
+        values: '1x40'
+      - series: 'mm_db_pool_wait_seconds_total{job="mm-services",swarm_service="product-service"}'
+        values: '0+60x40'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/",fstype="ext4"}'
+        values: '50x40'
+      - series: 'node_filesystem_size_bytes{mountpoint="/",fstype="ext4"}'
+        values: '1000x40'
+      - series: 'container_memory_working_set_bytes{container_label_com_docker_swarm_service_name="marketplace_leaky"}'
+        values: '100000000+4000000x120'
+      - series: 'container_spec_memory_limit_bytes{container_label_com_docker_swarm_service_name="marketplace_leaky"}'
+        values: '1000000000x120'
+      - series: 'container_memory_working_set_bytes{container_label_com_docker_swarm_service_name="marketplace_flat"}'
+        values: '100000000x120'
+      - series: 'container_spec_memory_limit_bytes{container_label_com_docker_swarm_service_name="marketplace_flat"}'
+        values: '1000000000x120'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: InfraTargetDown
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: InfraTargetDown
+        exp_alerts:
+          - exp_labels: {severity: warning, job: loki, instance: "10.0.0.20:3100"}
+            exp_annotations:
+              summary: "Target loki không scrape được: thành phần hạ tầng (hoặc exporter của nó) hỏng, log/metric có thể thiếu"
+              runbook: "§15"
+              action: low
+      - eval_time: 10m
+        alertname: DBPoolWaiting
+        exp_alerts:
+          - exp_labels: {severity: warning, swarm_service: product-service}
+            exp_annotations:
+              summary: "product-service chờ lấy kết nối Postgres (pool cạn): truy vấn chậm hoặc bị khoá"
+              runbook: "§15"
+              action: observe
+      - eval_time: 20m
+        alertname: DiskFillingUp
+        exp_alerts:
+          - exp_labels: {severity: warning, mountpoint: "/", fstype: ext4}
+            exp_annotations:
+              summary: "Đĩa / còn dưới 10% trống: ClickHouse/Postgres/Kafka/Loki có thể ngừng ghi"
+              runbook: "§15"
+              action: observe
+      # rò rỉ: +4 MB/phút từ 100 MB, giới hạn 1 GB, dự báo 4 giờ vượt giới hạn; dịch vụ phẳng không bắn
+      - eval_time: 90m
+        alertname: ContainerMemoryGrowing
+        exp_alerts:
+          - exp_labels: {severity: warning, container_label_com_docker_swarm_service_name: marketplace_leaky}
+            exp_annotations:
+              summary: "marketplace_leaky: bộ nhớ tăng đều, sẽ chạm giới hạn trong vòng 4 giờ (nghi rò rỉ)"
+              runbook: "§15"
+              action: low
+  # GatewayLatencyHigh: một route chậm (1-5 s) bắn; luồng stream /ai/chat dài thì không tính
+  - interval: 1m
+    input_series:
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/search",le="0.5"}'
+        values: '0x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/search",le="1"}'
+        values: '0x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/search",le="5"}'
+        values: '0+10x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/search",le="+Inf"}'
+        values: '0+10x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/ai/chat",le="0.5"}'
+        values: '0x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/ai/chat",le="1"}'
+        values: '0x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/ai/chat",le="5"}'
+        values: '0x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/ai/chat",le="+Inf"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: GatewayLatencyHigh
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: "p95 của gateway hơn 1 giây trong 5 phút: có thành phần phía sau chậm (thường là Postgres/Kafka/service đích). Không tính /ai/chat (luồng stream dài là bình thường)"
+              runbook: "§15"
+              action: observe
+  # chỉ /ai/chat chậm (stream dài): KHÔNG bắn
+  - interval: 1m
+    input_series:
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/ai/chat",le="0.5"}'
+        values: '0x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/ai/chat",le="1"}'
+        values: '0x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/ai/chat",le="5"}'
+        values: '0x30'
+      - series: 'mm_http_request_duration_seconds_bucket{service="api-gateway",route="/ai/chat",le="+Inf"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: GatewayLatencyHigh
+        exp_alerts: []

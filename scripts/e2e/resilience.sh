@@ -3,11 +3,12 @@
 # hệ thống suy giảm đúng cách và tự hồi phục. Cần deploy trước (scripts/deploy.sh), image marketplace/frontend:latest (có node)
 # và ADMIN_BOOTSTRAP_* (để kiểm /admin/system/health; không có thì bỏ qua phần đó).
 #
-# Usage: scripts/e2e/resilience.sh [A B C ... J]      (mặc định chạy tất cả; mỗi chữ là một kịch bản)
+# Usage: scripts/e2e/resilience.sh [A B C ... M]      (mặc định chạy tất cả; mỗi chữ là một kịch bản)
 #   A ClickHouse down   B Kafka down (cả 3 broker)   C payment-service down   D product-service down
 #   E Redis down        F Postgres down (/ready 503)           G order-service down sau khi nhận đơn
 #   H rolling restart   I Postgres restart   J một broker Kafka down (cụm 3 broker)
-# Biến: PUBLIC_HOST, ADMIN_USERNAME/ADMIN_PASSWORD, STACK_INFRA (marketplace-infra), STACK_APP (marketplace)
+#   K Loki down (hạ tầng quan sát)   L hai service down cùng lúc (payment + order)   M khoá bảng products trong Postgres (hệ thống chậm)
+# Biến: PUBLIC_HOST, ADMIN_USERNAME/ADMIN_PASSWORD, STACK_INFRA (marketplace-infra), STACK_APP (marketplace), STACK_OBS (marketplace-obs)
 set -uo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 host="${PUBLIC_HOST:-marketplace.swarm.localhost}"
@@ -15,9 +16,10 @@ scheme="${PUBLIC_SCHEME:-$(grep -E '^PUBLIC_SCHEME=' "$root/deploy/.env" 2>/dev/
 ca=(); [ "$scheme" = https ] && ca=(-v "$root/deploy/traefik/certs/local.crt:/ca.crt:ro" -e NODE_EXTRA_CA_CERTS=/ca.crt)
 INFRA="${STACK_INFRA:-marketplace-infra}"
 APP="${STACK_APP:-marketplace}"
+OBS="${STACK_OBS:-marketplace-obs}"
 state="$(mktemp -d)"
 fails=0
-want=" ${*:-A B C D E F G H I J} "
+want=" ${*:-A B C D E F G H I J K L M} "
 
 # Tài khoản admin (cho /admin/system/health): lấy từ biến môi trường, không có thì đọc ADMIN_BOOTSTRAP_* trong deploy/.env
 envval() { [ -f "$root/deploy/.env" ] && grep -E "^$1=" "$root/deploy/.env" | tail -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' || true; }
@@ -86,6 +88,9 @@ gt_meta() { # gt_meta <scenario> -> "fault|playbook|alerts(,)|signals"
     H) echo "rolling_restart|service-unavailable||thoáng qua; không cảnh báo" ;;
     I) echo "postgres_restart|service-unavailable||thoáng qua; không cảnh báo" ;;
     J) echo "one_kafka_broker_down|kafka-consumer-dlq||RF=3 min ISR=2 vẫn ghi được; không cảnh báo" ;;
+    K) echo "loki_down|observability-down|InfraTargetDown:loki|không có log mới trong Loki; cửa hàng vẫn chạy bình thường (InfraTargetDown cần lỗi > 2 phút: dùng GT_HOLD>=120)" ;;
+    L) echo "two_services_down|multiple-faults,service-unavailable|ServiceDown/ServiceMissing:payment-service+order-service|hai service cùng down; /admin/system/health liệt kê cả hai; đặt đơn 503 (order-service down)" ;;
+    M) echo "postgres_table_lock|slow-database|GatewayLatencyHigh:api-gateway|truy vấn tới bảng products bị chặn bởi khoá ACCESS EXCLUSIVE: catalog/đặt đơn chậm hoặc 5xx tới khi nhả khoá (cần giữ > 5 phút và có lưu lượng: GT_HOLD>=300). DBPoolWaiting có thể bắn nhưng không bảo đảm" ;;
   esac
 }
 gt_log() { # gt_log <phase> <component>
@@ -253,6 +258,54 @@ echo "[J] Một broker Kafka down (cụm 3 broker, RF=3, min ISR=2): đơn vẫn
   r=$(step order); expect "đặt đơn bình thường sau khi broker3 trở lại" "$(eq "$(j "$r" http)" 201; echo $?)"
   st=$(step wait -e WAIT_MS=120000); echo "  $st"
   expect "không còn đơn PENDING sau khi broker3 trở lại" "$(eq "$(j "$st" timed_out)" False; echo $?)"
+fi
+
+if [[ "$want" == *" K "* ]]; then
+SCEN=K
+echo "[K] Loki down (hạ tầng quan sát): cửa hàng vẫn chạy, hồi phục khi bật lại"
+  stop "${OBS}_loki" 5
+  r=$(step order); echo "  order: $r"
+  expect "đặt đơn COD vẫn 201 khi Loki down" "$(eq "$(j "$r" http)" 201; echo $?)"
+  r=$(step catalog); expect "duyệt catalog vẫn 200" "$(eq "$(j "$r" http)" 200; echo $?)"
+  start "${OBS}_loki" 15
+  r=$(step order); expect "đặt đơn bình thường sau khi Loki trở lại" "$(eq "$(j "$r" http)" 201; echo $?)"
+fi
+
+if [[ "$want" == *" L "* ]]; then
+SCEN=L
+echo "[L] Hai service down cùng lúc (payment-service + order-service): hồi phục cả hai, không còn đơn PENDING"
+  gt_log fault_start "${APP}_payment-service"; gt_log fault_start "${APP}_order-service"
+  scale "${APP}_payment-service" 0; scale "${APP}_order-service" 0
+  wait_down "${APP}_payment-service"; wait_down "${APP}_order-service"; sleep 5
+  [ -n "${GT_HOLD:-}" ] && hold_traffic "$GT_HOLD"
+  r=$(step order); echo "  order: $r"
+  expect "đặt đơn không còn 201 khi order-service down (503 từ gateway)" "$([[ "$(j "$r" http)" == 5* ]]; echo $?)"
+  r=$(step catalog); expect "duyệt catalog vẫn 200 (không phụ thuộc hai service này)" "$(eq "$(j "$r" http)" 200; echo $?)"
+  scale "${APP}_payment-service" 1; scale "${APP}_order-service" 1
+  wait_up "${APP}_payment-service" 120; wait_up "${APP}_order-service" 120
+  gt_log fault_end "${APP}_payment-service"; gt_log fault_end "${APP}_order-service"; sleep 10
+  wait_step order http 201 step order; expect "đặt đơn lại được sau khi cả hai trở lại" "$?"
+  st=$(step wait -e WAIT_MS=120000); echo "  $st"
+  expect "không còn đơn PENDING" "$(eq "$(j "$st" timed_out)" False; echo $?)"
+fi
+
+if [[ "$want" == *" M "* ]]; then
+SCEN=M
+echo "[M] Khoá bảng products trong Postgres (ACCESS EXCLUSIVE): hệ thống chậm/lỗi trong lúc khoá, tự hết khi nhả"
+  pgc=$(docker ps -q -f name="${INFRA}_postgres" | head -1)
+  pgdb="$(envval POSTGRES_DB)"; pguser="$(envval POSTGRES_USER)"
+  if [ -z "$pgc" ]; then echo "  bỏ qua: không tìm thấy container postgres"; else
+    dur=$((45 + ${GT_HOLD:-0}))
+    gt_log fault_start "${INFRA}_postgres"
+    docker exec -d "$pgc" psql -U "${pguser:-postgres}" -d "${pgdb:-postgres}" -c "BEGIN; LOCK TABLE products IN ACCESS EXCLUSIVE MODE; SELECT pg_sleep($dur); COMMIT;" >/dev/null 2>&1
+    sleep 5
+    r=$(step catalog); echo "  catalog khi bị khoá: $r (chỉ ghi nhận, kết quả có thể là 5xx/504 hoặc 200 nếu đã có cache)"
+    end=$((SECONDS+dur-8)); while [ $SECONDS -lt $end ]; do step catalog >/dev/null; sleep 3; done
+    sleep 12
+    gt_log fault_end "${INFRA}_postgres"
+    wait_step catalog http 200 step catalog; expect "catalog trở lại 200 sau khi nhả khoá" "$?"
+    wait_step order http 201 step order; expect "đặt đơn lại được sau khi nhả khoá" "$?"
+  fi
 fi
 
 if [ "$has_admin" = 1 ]; then

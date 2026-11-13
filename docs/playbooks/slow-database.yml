@@ -1,0 +1,67 @@
+id: slow-database
+title: "Hệ thống chậm: gateway p95 cao, pool kết nối Postgres cạn (khoá, truy vấn nặng, thiếu tài nguyên)"
+triggers:
+  alerts: [GatewayLatencyHigh, DBPoolWaiting]
+runbook: "§15, §10"
+diagnose:
+  - id: slow-service
+    tool: prometheus
+    query: 'histogram_quantile(0.95, sum by (le, service) (rate(mm_grpc_client_duration_seconds_bucket[5m])))'
+    read_only: true
+    interpret: "service đích nào có p95 cao; chậm ở một service ⇒ nguyên nhân ở service đó hoặc DB của nó"
+  - id: pool-wait
+    tool: prometheus
+    query: 'sum by (swarm_service) (rate(mm_db_pool_wait_seconds_total[5m])), mm_db_pool_in_use_connections'
+    read_only: true
+    interpret: "wait > 0 và in_use sát trần = pool cạn: truy vấn giữ kết nối lâu hoặc bị khoá"
+  - id: pg-activity
+    tool: sql
+    query: "SELECT pid, state, wait_event_type, wait_event, now()-xact_start AS age, left(query,80) FROM pg_stat_activity WHERE state <> 'idle' ORDER BY age DESC LIMIT 10"
+    read_only: true
+    interpret: "giao dịch mở rất lâu hoặc wait_event_type = Lock cho thấy khoá"
+  - id: pg-locks
+    tool: sql
+    query: "SELECT locktype, relation::regclass, mode, granted, pid FROM pg_locks WHERE NOT granted"
+    read_only: true
+    interpret: "có dòng granted = false: có truy vấn đang chờ khoá; tìm pid giữ khoá ở pg-activity"
+  - id: resource
+    tool: prometheus
+    query: 'rate(node_cpu_seconds_total{mode!="idle"}[5m]), node_filesystem_avail_bytes'
+    read_only: true
+    interpret: "CPU kịch hoặc đĩa đầy cũng làm chậm; loại trừ trước khi kết luận là khoá"
+  - id: errors-by-request
+    tool: loki
+    query: '{service="api-gateway"} | json | status >= 500'
+    read_only: true
+    interpret: "lấy vài request_id mẫu rồi tra chuỗi gateway -> service (DeadlineExceeded = vượt GRPC_TIMEOUT)"
+causes:
+  - id: lock-contention
+    when: "có giao dịch mở lâu giữ khoá, truy vấn khác wait_event_type=Lock"
+    fix: [escalate-to-dev]
+  - id: single-service-slow
+    when: "chỉ một service chậm, DB bình thường (CPU/đĩa ổn)"
+    fix: [force-restart-service, escalate-to-dev]
+  - id: resource-starved
+    when: "CPU/đĩa của máy gần kịch"
+    fix: [escalate-to-dev]
+actions:
+  - id: force-restart-service
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace_<service>"
+    precondition: "service không trạng thái; chỉ khi đã loại trừ khoá DB (restart không gỡ khoá của giao dịch đang mở)"
+    verify: "p95 giảm, DBPoolWaiting tắt"
+    rollback: "không cần"
+  - id: terminate-blocking-backend
+    risk: high
+    approval: required
+    command: "SELECT pg_terminate_backend(<pid>)   (pid giữ khoá, đã đọc câu truy vấn của nó)"
+    precondition: "đã xác định đúng pid giữ khoá và biết câu lệnh của nó; huỷ giao dịch làm mất việc đang làm dở"
+    verify: "pg_locks không còn granted=false; p95 giảm"
+    rollback: "không hoàn tác được (giao dịch bị huỷ); người dùng thử lại"
+  - id: escalate-to-dev
+    risk: observe
+    approval: none
+    command: "báo người kèm pg_stat_activity, pg_locks, biểu đồ p95 theo service"
+escalate: "Không tự terminate backend hay restart Postgres. Khoá kéo dài, CPU/đĩa kịch, hoặc không rõ nguyên nhân: báo người."
+ground_truth: [M]

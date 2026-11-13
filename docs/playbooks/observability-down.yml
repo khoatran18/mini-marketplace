@@ -1,0 +1,55 @@
+id: observability-down
+title: "Thành phần quan sát hoặc exporter hạ tầng mất (Loki, Vector, cAdvisor, node-exporter, exporter DB/Kafka, Traefik)"
+triggers:
+  alerts: [InfraTargetDown]
+runbook: "§15"
+diagnose:
+  - id: which-target
+    tool: prometheus
+    query: 'up{job=~"loki|vector|cadvisor|node-exporter|postgres|redis|kafka|clickhouse|traefik"} == 0'
+    read_only: true
+    interpret: "nhãn job cho biết target nào; exporter (postgres/redis/kafka) chết khác với chính DB chết"
+  - id: service-state
+    tool: shell
+    query: "docker service ps marketplace-obs_<tên> --no-trunc; docker service ps marketplace-infra_<tên> --no-trunc"
+    read_only: true
+    interpret: "Failed/Rejected + lý do (OOM, image, DNS). 0/1 = không có task"
+  - id: dependent-ready
+    tool: prometheus
+    query: 'mm_ready'
+    read_only: true
+    interpret: "nếu service dùng thành phần đó cũng not_ready thì là DB/Kafka/Redis chết thật, không chỉ exporter: chuyển sang playbook service-unavailable"
+  - id: log-gap
+    tool: loki
+    query: 'sum(count_over_time({service=~".+"}[5m]))'
+    read_only: true
+    interpret: "0 = Loki/Vector không nhận log; ghi lại thời điểm để biết khoảng trống khi tra log"
+  - id: tempo-check
+    tool: shell
+    query: "docker service ps marketplace-obs_tempo --no-trunc"
+    read_only: true
+    interpret: "Tempo không được scrape; nếu trace biến mất thì xem ở đây (từng bị OOM-kill ở 256M, V9)"
+causes:
+  - id: exporter-only
+    when: "service chính (postgres/redis/kafka/clickhouse) vẫn ready, chỉ target up == 0"
+    fix: [restart-observability-service]
+  - id: obs-service-oom-or-crash
+    when: "task Failed do OOM hoặc crash (cAdvisor, Loki, Tempo, Vector)"
+    fix: [restart-observability-service, escalate-to-dev]
+  - id: real-dependency-down
+    when: "service dùng thành phần này cũng báo not_ready / ServiceNotReady"
+    fix: [escalate-to-dev]
+actions:
+  - id: restart-observability-service
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace-obs_<loki|vector|cadvisor|node-exporter>  (hoặc marketplace-infra_<postgres-exporter|redis-exporter|kafka-exporter>)"
+    precondition: "chỉ thành phần quan sát/exporter; KHÔNG dùng cho postgres, redis, kafka, clickhouse"
+    verify: "up == 1 trở lại; log mới xuất hiện trong Loki"
+    rollback: "không cần"
+  - id: escalate-to-dev
+    risk: observe
+    approval: none
+    command: "báo người kèm job, trạng thái task, thời điểm mất, khoảng trống log"
+escalate: "Nếu chính DB/Kafka/Redis chết thật hoặc OOM lặp lại: báo người; không tự restart thành phần có dữ liệu."
+ground_truth: [K]
