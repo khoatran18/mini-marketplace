@@ -5,44 +5,44 @@
 /* Design tokens: space separated RGB triplets so Tailwind can apply opacity (see tailwind.config.ts). */
 :root {
   color-scheme: light;
-  --bg: 244 244 245;
+  --bg: 246 247 249;
   --surface: 255 255 255;
-  --surface-2: 241 245 249;
-  --text: 15 23 42;
-  --muted: 71 85 105;
-  --line: 226 232 240;
+  --surface-2: 240 242 246;
+  --text: 17 24 39;
+  --muted: 82 91 107;
+  --line: 224 228 235;
   --brand: 79 70 229;
   --brand-solid: 79 70 229;
-  --brand-soft: 238 242 255;
+  --brand-soft: 238 240 255;
   --success: 4 120 87;
-  --success-soft: 236 253 245;
-  --warning: 180 83 9;
-  --warning-soft: 254 243 199;
+  --success-soft: 232 250 242;
+  --warning: 161 98 7;
+  --warning-soft: 254 246 219;
   --danger: 190 18 60;
-  --danger-soft: 255 241 242;
+  --danger-soft: 255 238 241;
   --info: 3 105 161;
-  --info-soft: 240 249 255;
+  --info-soft: 236 248 255;
 }
 
 .dark {
   color-scheme: dark;
-  --bg: 9 9 11;
-  --surface: 24 24 27;
-  --surface-2: 39 39 42;
-  --text: 244 244 245;
-  --muted: 161 161 170;
-  --line: 63 63 70;
+  --bg: 11 13 18;
+  --surface: 19 22 30;
+  --surface-2: 29 33 44;
+  --text: 238 241 246;
+  --muted: 148 156 171;
+  --line: 42 48 64;
   --brand: 165 180 252;
   --brand-solid: 79 70 229;
-  --brand-soft: 30 27 75;
+  --brand-soft: 34 33 82;
   --success: 110 231 183;
-  --success-soft: 2 44 34;
+  --success-soft: 4 47 36;
   --warning: 252 211 77;
-  --warning-soft: 69 26 3;
+  --warning-soft: 66 44 6;
   --danger: 253 164 175;
-  --danger-soft: 76 5 25;
+  --danger-soft: 78 12 30;
   --info: 125 211 252;
-  --info-soft: 8 47 73;
+  --info-soft: 10 46 70;
 }
 
 @layer base {
@@ -56,10 +56,6 @@
 
   button {
     @apply cursor-pointer;
-  }
-
-  main {
-    @apply mx-auto w-full max-w-6xl px-4 py-8 md:px-8 md:py-12;
   }
 
   form {
@@ -84,11 +80,34 @@
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-line bg-surface p-6 text-text shadow-xl shadow-slate-900/10;
+    @apply rounded-xl border border-line bg-surface p-5 text-text shadow-sm md:p-6;
   }
 
   .dark .card {
     @apply shadow-none;
+  }
+
+  /* Storefront page container: wide, centred, with a soft brand glow so the side margins never feel empty. */
+  .page {
+    @apply mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-10;
+  }
+
+  .storefront-bg {
+    background-image: radial-gradient(ellipse 80% 420px at 50% 0, rgb(var(--brand) / 0.09), transparent 70%);
+    background-repeat: no-repeat;
+  }
+
+  /* Console building blocks */
+  .page-title {
+    @apply text-xl font-bold tracking-tight text-text md:text-2xl;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-line bg-surface2 px-2.5 py-0.5 text-xs font-semibold text-muted;
   }
 
   /* Reusable buttons */
@@ -102,5 +121,56 @@
 
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-danger/40 bg-danger-soft px-4 py-2 text-sm font-semibold text-danger transition hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:cursor-not-allowed disabled:opacity-60;
+  }
+}
+
+/* React Flow (system map) follows the app theme tokens instead of its own light/dark palette. */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-edge-stroke-default: rgb(var(--muted) / 0.55);
+  --xy-edge-label-background-color-default: rgb(var(--surface));
+  --xy-edge-label-color-default: rgb(var(--muted));
+  --xy-controls-button-background-color-default: rgb(var(--surface));
+  --xy-controls-button-background-color-hover-default: rgb(var(--surface-2));
+  --xy-controls-button-color-default: rgb(var(--text));
+  --xy-controls-button-border-color-default: rgb(var(--line));
+  --xy-minimap-background-color-default: rgb(var(--surface));
+  --xy-attribution-background-color-default: transparent;
+}
+
+.react-flow__controls {
+  @apply overflow-hidden rounded-lg border border-line shadow-sm;
+}
+
+.react-flow .react-flow__controls-button {
+  @apply border-0 border-b border-line bg-surface text-text;
+}
+
+.react-flow .react-flow__controls-button:hover {
+  @apply bg-surface2;
+}
+
+.react-flow .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.react-flow__attribution {
+  opacity: 0.6;
+}
+
+@keyframes mm-dash {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+.react-flow__edge.mm-edge-flow .react-flow__edge-path {
+  stroke-dasharray: 6 3;
+  animation: mm-dash 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge.mm-edge-flow .react-flow__edge-path {
+    animation: none;
   }
 }
