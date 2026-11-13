@@ -71,7 +71,7 @@ export function AppShell({ title, roles, links, children }: Props) {
 
   return (
     <div className="min-h-screen bg-bg">
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-surface/90 px-3 backdrop-blur md:px-5">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 bar px-3 md:px-5">
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -129,7 +129,7 @@ export function AppShell({ title, roles, links, children }: Props) {
                 title={collapsed ? link.label : undefined}
                 aria-current={active(link) ? 'page' : undefined}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${collapsed ? 'justify-center' : ''} ${
-                  active(link) ? 'bg-brand-soft font-semibold text-brand' : 'text-muted hover:bg-surface2 hover:text-text'
+                  active(link) ? 'bg-brand-solid font-semibold text-white shadow-sm' : 'text-muted hover:bg-surface2 hover:text-text'
                 }`}
               >
                 <Icon name={link.icon} />
@@ -148,7 +148,7 @@ export function AppShell({ title, roles, links, children }: Props) {
                 href={link.href}
                 aria-current={active(link) ? 'page' : undefined}
                 className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium ${
-                  active(link) ? 'bg-brand-soft font-semibold text-brand' : 'text-muted'
+                  active(link) ? 'bg-brand-solid font-semibold text-white shadow-sm' : 'text-muted'
                 }`}
               >
                 <Icon name={link.icon} className="h-4 w-4" />

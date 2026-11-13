@@ -1,8 +1,8 @@
 'use client';
 
-import { Background, MarkerType, BackgroundVariant, Controls, Handle, Position, ReactFlow, type Edge, type Node, type NodeProps } from '@xyflow/react';
+import { Background, MarkerType, BackgroundVariant, Controls, Handle, useReactFlow, useStore, Position, ReactFlow, type Edge, type Node, type NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { edgeHealth, nodeStatus, type EdgeHealth } from '../../lib/systemMapModel';
 import { formatRate, STATUS_DOT, STATUS_LABEL, type NodeStatus } from '../../lib/systemStatus';
 import { EDGES, NODES, type EdgeLayer, type NodeKind, type TopoNode } from '../../lib/topology';
@@ -45,6 +45,17 @@ const ServiceNode = memo(function ServiceNode({ data, selected }: NodeProps<MapN
 });
 
 const nodeTypes = { svc: ServiceNode };
+
+/** Re-fits the view whenever the canvas size changes (sidebar toggle, detail panel, window resize). */
+function FitOnResize() {
+  const { fitView } = useReactFlow();
+  const width = useStore((s) => s.width);
+  const height = useStore((s) => s.height);
+  useEffect(() => {
+    if (width > 0 && height > 0) void fitView({ padding: 0.12, duration: 150 });
+  }, [width, height, fitView]);
+  return null;
+}
 
 const edgeColor: Record<EdgeHealth, string> = {
   ok: 'rgb(var(--success))',
@@ -141,6 +152,7 @@ export function SystemMap({ data, layers, selectedId, onSelect }: Props) {
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="rgb(var(--line))" />
         <Controls showInteractive={false} position="bottom-right" />
+        <FitOnResize />
       </ReactFlow>
     </div>
   );

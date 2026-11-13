@@ -5,15 +5,15 @@
 /* Design tokens: space separated RGB triplets so Tailwind can apply opacity (see tailwind.config.ts). */
 :root {
   color-scheme: light;
-  --bg: 245 248 247;
+  --bg: 231 236 235;
   --surface: 255 255 255;
-  --surface-2: 237 243 241;
-  --text: 17 24 39;
-  --muted: 82 91 107;
-  --line: 220 229 226;
-  --brand: 15 118 110;
+  --surface-2: 241 245 244;
+  --text: 15 23 22;
+  --muted: 69 84 81;
+  --line: 186 198 195;
+  --brand: 13 118 108;
   --brand-solid: 15 118 110;
-  --brand-soft: 223 246 241;
+  --brand-soft: 204 238 231;
   --success: 4 120 87;
   --success-soft: 232 250 242;
   --warning: 161 98 7;
@@ -26,15 +26,15 @@
 
 .dark {
   color-scheme: dark;
-  --bg: 10 17 20;
-  --surface: 17 26 30;
-  --surface-2: 25 37 42;
-  --text: 238 241 246;
-  --muted: 148 163 168;
-  --line: 36 52 58;
-  --brand: 45 212 191;
+  --bg: 17 19 22;
+  --surface: 26 29 33;
+  --surface-2: 36 40 46;
+  --text: 233 237 240;
+  --muted: 152 160 168;
+  --line: 56 62 70;
+  --brand: 94 200 188;
   --brand-solid: 15 118 110;
-  --brand-soft: 9 52 49;
+  --brand-soft: 28 56 54;
   --success: 110 231 183;
   --success-soft: 4 47 36;
   --warning: 252 211 77;
@@ -80,11 +80,30 @@
 
 @layer components {
   .card {
-    @apply rounded-xl border border-line bg-surface p-5 text-text shadow-sm md:p-6;
+    @apply rounded-xl border border-line bg-surface p-5 text-text shadow-[0_1px_3px_rgb(15_23_22_/_0.10)] md:p-6;
   }
 
   .dark .card {
     @apply shadow-none;
+  }
+
+  /* Top bar. Light theme: a deep teal band with light text (tokens are re-scoped inside it); dark theme: the plain surface. */
+  .bar {
+    @apply border-b border-line bg-surface/90 backdrop-blur;
+  }
+
+  :root:not(.dark) .bar {
+    --text: 255 255 255;
+    --muted: 196 226 221;
+    --surface: 17 100 94;
+    --surface-2: 28 120 113;
+    --line: 52 137 130;
+    --brand: 255 255 255;
+    --brand-soft: 34 126 119;
+    --brand-solid: 6 62 58;
+    background: rgb(13 82 78);
+    border-color: rgb(8 64 60);
+    color: #fff;
   }
 
   /* Storefront page container: wide, centred, with a soft brand glow so the side margins never feel empty. */
@@ -93,7 +112,7 @@
   }
 
   .storefront-bg {
-    background-image: radial-gradient(ellipse 80% 420px at 50% 0, rgb(var(--brand) / 0.09), transparent 70%);
+    background-image: radial-gradient(ellipse 80% 420px at 50% 0, rgb(var(--brand) / 0.05), transparent 70%);
     background-repeat: no-repeat;
   }
 

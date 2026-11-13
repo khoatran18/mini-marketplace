@@ -46,7 +46,7 @@ export function NavBar() {
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`));
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur">
+    <header className="sticky top-0 z-30 bar">
     <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8">
       <Link href="/" className="text-lg font-bold tracking-tight text-text">
         Mini Marketplace
