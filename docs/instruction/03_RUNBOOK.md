@@ -427,3 +427,6 @@ Các cảnh báo `InfraTargetDown`, `GatewayLatencyHigh`, `DBPoolWaiting`, `Cont
 - **Triệu chứng:** `POST /ai/chat` 404 = cờ tắt; 503 `ai service is not configured` = thiếu `AI_SERVICE_URL`; 503 `unavailable` = upstream chết (xem log gateway `AIHandler: upstream unavailable`); luồng đứng im rồi `event: error` = upstream treo hoặc vượt `AI_STREAM_TIMEOUT_SEC`; 429 = quá `AI_RATE_LIMIT_PER_MINUTE`.
 - **Không gây báo giả:** `GatewayLatencyHigh` bỏ route `/ai/chat` (luồng dài là bình thường). Truy vấn `gateway_latency_p95` cũng bỏ route này.
 
+## 17. Triển khai lại riêng frontend / ops-service
+Tag `:latest` không đổi thì Swarm không kéo bản mới. Build rồi ép update: `./scripts/build-images.sh frontend && docker service update --force marketplace_frontend`; thêm `ops-service` (và `marketplace_ops-service`) khi đổi truy vấn allowlist. Chi tiết và lưu ý `NEXT_PUBLIC_*` (chỉ nướng lúc build): `docs/process/06_UI_REFRESH_2026-11-13.md`.
+
