@@ -3,6 +3,7 @@
 package api
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,10 @@ import (
 type API struct {
 	Store *store.Store
 	Token string
+	// AgentToken (tùy chọn, ADR-40) là token phạm vi hẹp cho agent/bộ điều phối: đọc, chạy truy vấn allowlist, mở điều tra,
+	// tạo đề xuất; KHÔNG duyệt, xem lại, thực thi hay ghi nhận kết quả. Tác nhân luôn là "agent" (bỏ qua X-Actor).
+	// Mã duyệt ký bằng Token nên AgentToken không thể tự tạo mã duyệt.
+	AgentToken string
 	// Now cho phép test đặt giờ; mặc định time.Now.
 	Now func() time.Time
 	// Cấu hình đề xuất (0 = mặc định): hạn đề xuất, hạn mã duyệt, số đề xuất PENDING tối đa cho một sự cố.
@@ -32,6 +37,8 @@ type API struct {
 	ActionsEnabled bool
 	ExecLimits     store.ExecLimits
 	Runner         Runner
+	// Outbox đọc hàng DEAD của outbox từng service (chỉ đọc); nil = 503.
+	Outbox OutboxReader
 
 	signer *approval.Signer
 }
@@ -53,17 +60,43 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /proposals", a.createProposal)
 	mux.HandleFunc("GET /proposals", a.listProposals)
 	mux.HandleFunc("GET /proposals/{id}", a.getProposal)
-	mux.HandleFunc("POST /proposals/{id}/review", a.reviewProposal)
-	mux.HandleFunc("POST /proposals/{id}/decision", a.decideProposal)
-	mux.HandleFunc("POST /proposals/{id}/execute", a.executeProposal)
-	mux.HandleFunc("POST /proposals/{id}/executed", a.recordExecuted)
+	mux.HandleFunc("POST /proposals/{id}/review", human(a.reviewProposal))
+	mux.HandleFunc("POST /proposals/{id}/decision", human(a.decideProposal))
+	mux.HandleFunc("POST /proposals/{id}/execute", human(a.executeProposal))
+	mux.HandleFunc("POST /proposals/{id}/executed", human(a.recordExecuted))
 	mux.HandleFunc("GET /incidents", a.listIncidents)
 	mux.HandleFunc("GET /incidents/{id}", a.getIncident)
 	mux.HandleFunc("POST /incidents/{id}/investigate", a.investigate)
 	mux.HandleFunc("GET /audit", a.listAudit)
 	mux.HandleFunc("GET /queries", a.listQueries)
 	mux.HandleFunc("POST /queries/{name}", a.runQuery)
+	mux.HandleFunc("GET /outbox/{service}/dead", a.outboxDead)
 	return a.auth(mux)
+}
+
+type scopeKey struct{}
+
+const (
+	scopeFull  = "full"
+	scopeAgent = "agent"
+)
+
+func scopeOf(r *http.Request) string {
+	if v, ok := r.Context().Value(scopeKey{}).(string); ok {
+		return v
+	}
+	return scopeFull
+}
+
+// human chặn token phạm vi agent: duyệt, xem lại, thực thi và ghi nhận kết quả chỉ dành cho người (qua gateway).
+func human(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if scopeOf(r) != scopeFull {
+			writeErr(w, http.StatusForbidden, "token phạm vi agent không được duyệt, xem lại hay thực thi đề xuất")
+			return
+		}
+		h(w, r)
+	}
 }
 
 func (a *API) auth(next http.Handler) http.Handler {
@@ -72,12 +105,18 @@ func (a *API) auth(next http.Handler) http.Handler {
 			writeErr(w, http.StatusServiceUnavailable, "OPS_API_TOKEN chưa cấu hình: API đang tắt")
 			return
 		}
-		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if subtle.ConstantTimeCompare([]byte(got), []byte(a.Token)) != 1 {
+		got := []byte(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+		scope := ""
+		if subtle.ConstantTimeCompare(got, []byte(a.Token)) == 1 {
+			scope = scopeFull
+		} else if a.AgentToken != "" && subtle.ConstantTimeCompare(got, []byte(a.AgentToken)) == 1 {
+			scope = scopeAgent
+		}
+		if scope == "" {
 			writeErr(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), scopeKey{}, scope)))
 	})
 }
 
@@ -92,6 +131,9 @@ func writeErr(w http.ResponseWriter, code int, msg string) {
 }
 
 func actor(r *http.Request) string {
+	if scopeOf(r) == scopeAgent {
+		return "agent"
+	}
 	if v := r.Header.Get("X-Actor"); v != "" {
 		return v
 	}
@@ -205,4 +247,31 @@ func (a *API) runQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, res)
+}
+
+// OutboxReader đọc danh sách DEAD của outbox một service.
+type OutboxReader interface {
+	Dead(ctx context.Context, service string, limit int) (json.RawMessage, error)
+}
+
+// outboxDead (chỉ đọc) trả các hàng outbox DEAD của một service để chẩn đoán (id, topic, attempts, last_error, request_id; không có payload).
+func (a *API) outboxDead(w http.ResponseWriter, r *http.Request) {
+	if a.Outbox == nil {
+		writeErr(w, http.StatusServiceUnavailable, "đọc outbox chưa cấu hình")
+		return
+	}
+	svc := r.PathValue("service")
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	raw, err := a.Outbox.Dead(r.Context(), svc, limit)
+	if err != nil {
+		if strings.Contains(err.Error(), "không có outbox") {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeErr(w, http.StatusBadGateway, "không đọc được outbox: "+err.Error())
+		return
+	}
+	_ = a.Store.Audit(r.Context(), actor(r), "outbox.read", "service", svc, r.Header.Get("X-Request-ID"), map[string]any{"limit": limit})
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(raw)
 }

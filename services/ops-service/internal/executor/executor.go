@@ -141,6 +141,28 @@ func (h *HTTP) requeueOutbox(ctx context.Context, p map[string]any) (map[string]
 	return res, nil
 }
 
+// OutboxServices là các service có bảng outbox (domain_events) và cổng /internal/outbox/*.
+var OutboxServices = []string{"order-service", "product-service", "payment-service"}
+
+// Dead đọc danh sách hàng outbox DEAD của một service (CHỈ ĐỌC; cổng admin không trả payload). limit 1..100.
+func (h *HTTP) Dead(ctx context.Context, service string, limit int) (json.RawMessage, error) {
+	ok := false
+	for _, s := range OutboxServices {
+		ok = ok || s == service
+	}
+	if !ok {
+		return nil, fmt.Errorf("service %q không có outbox", service)
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	var raw json.RawMessage
+	if err := h.do(ctx, http.MethodGet, h.base(service)+"/internal/outbox/dead?limit="+strconv.Itoa(limit), &raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
 // Strings dùng cho log: che token.
 func (h *HTTP) String() string {
 	return "executor.HTTP{token:" + strings.Repeat("*", min(len(h.Token), 4)) + "}"

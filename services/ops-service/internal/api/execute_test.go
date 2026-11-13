@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -137,4 +138,31 @@ func indexOf(s, sub string) int {
 		}
 	}
 	return -1
+}
+
+type fakeOutbox struct{ err error }
+
+func (f fakeOutbox) Dead(_ context.Context, svc string, _ int) (json.RawMessage, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return json.RawMessage(`{"dead_total":1,"rows":[{"id":3,"service":"` + svc + `"}]}`), nil
+}
+
+// Đọc outbox là chỉ đọc: token agent dùng được, được ghi audit, service lạ bị 400.
+func TestOutboxDeadIsReadOnlyAndAudited(t *testing.T) {
+	e := newEnv(t)
+	e.h = (&API{Store: e.st, Token: "tok", AgentToken: "agent-tok", Outbox: fakeOutbox{}}).Handler()
+	code, out := e.call("GET", "/outbox/order-service/dead?limit=5", "admin:1", nil)
+	if code != 200 || out["dead_total"] != float64(1) {
+		t.Fatalf("%d %v", code, out)
+	}
+	e.h = (&API{Store: e.st, Token: "tok", Outbox: fakeOutbox{err: errors.New("không có outbox")}}).Handler()
+	if code, _ := e.call("GET", "/outbox/auth-service/dead", "admin:1", nil); code != 400 {
+		t.Errorf("service lạ: %d, muốn 400", code)
+	}
+	e.h = (&API{Store: e.st, Token: "tok"}).Handler()
+	if code, _ := e.call("GET", "/outbox/order-service/dead", "admin:1", nil); code != 503 {
+		t.Errorf("chưa cấu hình: %d, muốn 503", code)
+	}
 }

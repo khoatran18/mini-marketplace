@@ -79,3 +79,44 @@ func TestQueriesAuthAndValidation(t *testing.T) {
 		t.Errorf("thiếu tham số phải 400: %d", w.Code)
 	}
 }
+
+// Token agent (ADR-40): vào được đường đọc/đề xuất nhưng bị chặn ở mọi đường duyệt và thực thi, trước khi chạm DB.
+func TestAgentTokenCannotApproveOrExecute(t *testing.T) {
+	h := (&API{Token: "full-token", AgentToken: "agent-token"}).Handler()
+	for _, p := range []string{"/proposals/1/review", "/proposals/1/decision", "/proposals/1/execute", "/proposals/1/executed"} {
+		if w := do(h, "POST", p, "Bearer agent-token"); w.Code != 403 {
+			t.Errorf("%s với token agent: %d, muốn 403", p, w.Code)
+		}
+		// token đầy đủ không bị chặn ở lớp này (id không hợp lệ/DB nil xử lý ở sau; chỉ cần không phải 403 do phạm vi)
+		if w := do(h, "POST", "/proposals/abc/review", "Bearer full-token"); w.Code == 403 || w.Code == 401 {
+			t.Errorf("token đầy đủ bị chặn nhầm: %d", w.Code)
+		}
+	}
+	if w := do(h, "GET", "/actions", "Bearer agent-token"); w.Code != 200 {
+		t.Errorf("agent đọc /actions: %d", w.Code)
+	}
+	if w := do(h, "GET", "/incidents?state=bogus", "Bearer agent-token"); w.Code != 400 {
+		t.Errorf("agent phải vượt auth (400 do state sai), được %d", w.Code)
+	}
+	if w := do(h, "GET", "/actions", "Bearer nope"); w.Code != 401 {
+		t.Errorf("sai token: %d", w.Code)
+	}
+}
+
+func TestAgentActorIsForcedAndIgnoresHeader(t *testing.T) {
+	var got string
+	h := (&API{Token: "full-token", AgentToken: "agent-token"}).auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { got = actor(r) }))
+	for _, c := range []struct{ token, header, want string }{
+		{"agent-token", "admin:1", "agent"}, {"full-token", "admin:7", "admin:7"}, {"full-token", "", "unknown"},
+	} {
+		r := httptest.NewRequest("GET", "/", nil)
+		r.Header.Set("Authorization", "Bearer "+c.token)
+		if c.header != "" {
+			r.Header.Set("X-Actor", c.header)
+		}
+		h.ServeHTTP(httptest.NewRecorder(), r)
+		if got != c.want {
+			t.Errorf("token %s header %q: actor %q, muốn %q", c.token, c.header, got, c.want)
+		}
+	}
+}
