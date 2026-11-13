@@ -39,6 +39,9 @@ import type {
   SearchParams,
   SearchProductsOutput,
   StockLevel,
+  OpsIncidentsOutput,
+  OpsQueryResult,
+  FeatureFlags,
   SystemHealthOutput,
   UpdateBuyerProfileInput,
   UpdateBuyerProfileOutput,
@@ -413,4 +416,18 @@ export async function getAnalyticsRequest(
 
 export async function getSystemHealthRequest(token: string): Promise<SystemHealthOutput> {
   return apiFetch<SystemHealthOutput>('/admin/system/health', { method: 'GET', token });
+}
+
+export async function runOpsQueryRequest(token: string, name: string, params: Record<string, string> = {}): Promise<OpsQueryResult> {
+  return apiFetch<OpsQueryResult>(`/admin/ops/queries/${name}`, { method: 'POST', token, body: JSON.stringify({ params }) });
+}
+
+export async function listOpsIncidentsRequest(token: string, state = 'open', limit = 50): Promise<OpsIncidentsOutput> {
+  return apiFetch<OpsIncidentsOutput>(`/admin/ops/incidents?state=${encodeURIComponent(state)}&limit=${limit}`, { method: 'GET', token });
+}
+
+/** GET /config/features answers `{ features: { ai_chat, ai_ops } }`; missing keys count as off. */
+export async function getFeatureFlagsRequest(): Promise<FeatureFlags> {
+  const out = await apiFetch<{ features?: Partial<FeatureFlags> }>('/config/features', { method: 'GET' });
+  return { ai_chat: out.features?.ai_chat === true, ai_ops: out.features?.ai_ops === true };
 }

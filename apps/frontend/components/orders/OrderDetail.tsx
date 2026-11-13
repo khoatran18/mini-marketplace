@@ -12,6 +12,7 @@ import { CountdownTimer } from '../checkout/CountdownTimer';
 import { ErrorBlock, LoadingBlock, SimulatedBadge } from '../ui/StateBlock';
 import { StatusBadge } from '../ui/StatusBadge';
 import { OrderActions } from './OrderActions';
+import { PageTitle } from '../layout/PageTitle';
 
 const backLinks: Record<OrdersScope, { href: string; label: string }> = {
   buyer: { href: '/orders', label: '← Đơn hàng của tôi' },
@@ -49,7 +50,7 @@ export function OrderDetail({ scope, orderId }: { scope: OrdersScope; orderId: n
 
       <header className="card flex flex-wrap items-start justify-between gap-4">
         <div className="grid gap-1">
-          <h1 className="text-2xl font-bold text-text">Đơn hàng #{order.id}</h1>
+          <PageTitle icon="receipt">Đơn hàng #{order.id}</PageTitle>
           <p className="text-sm text-muted">Đặt lúc {formatDateTime(order.created_at)}</p>
           {scope !== 'buyer' ? <p className="text-sm text-muted">Người mua #{order.buyer_id} · Cửa hàng #{order.store_id}</p> : null}
         </div>

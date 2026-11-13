@@ -12,6 +12,7 @@ import { checkoutRequest, getCheckoutRequest, getPaymentMethodsRequest, previewC
 import { useApiData, useAuthedAction } from '../../lib/hooks';
 import { track } from '../../lib/tracking';
 import type { PaymentMethodInfo } from '../../lib/types';
+import { PageTitle } from '../../components/layout/PageTitle';
 
 // Fallback when GET /payments/methods is unavailable.
 const fallbackMethods: PaymentMethodInfo[] = [
@@ -106,7 +107,7 @@ export function CheckoutClient() {
   return (
     <div className="grid gap-6">
       <header className="card grid gap-1">
-        <h1 className="text-2xl font-bold text-text">Thanh toán</h1>
+        <PageTitle icon="payments">Thanh toán</PageTitle>
         <p className="text-sm text-muted">Giá, phí giao hàng và tồn kho do máy chủ tính và kiểm tra lại khi đặt hàng.</p>
       </header>
 

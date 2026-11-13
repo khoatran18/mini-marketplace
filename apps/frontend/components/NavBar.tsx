@@ -22,7 +22,7 @@ const navLinks: NavLink[] = [
   { href: '/products', label: 'Sản phẩm', requiresAuth: false },
   { href: '/orders', label: 'Đơn hàng', requiresAuth: true, roles: ['buyer'] },
   { href: '/seller', label: 'Kênh người bán', requiresAuth: true, roles: ['seller_admin', 'seller_employee'] },
-  { href: '/admin', label: 'Quản trị', requiresAuth: true, roles: ['admin'] },
+  { href: '/admin', label: 'Quản trị', requiresAuth: true, roles: ['admin', 'dev'] },
   { href: '/profile', label: 'Thông tin cá nhân', requiresAuth: true, roles: ['buyer', 'seller_admin', 'seller_employee'] },
   { href: '/dev/tracking', label: 'Dev', requiresAuth: false, devOnly: true }
 ];
@@ -46,8 +46,9 @@ export function NavBar() {
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`));
 
   return (
-    <header className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 md:px-8">
-      <Link href="/" className="text-xl font-bold text-text">
+    <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur">
+    <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8">
+      <Link href="/" className="text-lg font-bold tracking-tight text-text">
         Mini Marketplace
       </Link>
       <nav aria-label="Điều hướng chính" className="flex flex-wrap items-center gap-2 text-sm font-medium text-muted">
@@ -105,6 +106,7 @@ export function NavBar() {
           </div>
         )}
       </nav>
+    </div>
     </header>
   );
 }

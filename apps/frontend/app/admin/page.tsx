@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AdminOverviewClient } from './AdminOverviewClient';
+import { PageTitle } from '../../components/layout/PageTitle';
 
 const links = [
   { href: '/admin/orders', title: 'Đơn hàng', text: 'Xem mọi đơn, huỷ, duyệt hoàn trả' },
@@ -13,7 +14,7 @@ export default function AdminHomePage() {
   return (
     <div className="grid gap-6">
       <header className="card grid gap-1">
-        <h1 className="text-2xl font-bold text-text">Quản trị</h1>
+        <PageTitle icon="home">Quản trị</PageTitle>
         <p className="text-sm text-muted">Quyền thật được kiểm tra ở gateway; ẩn/hiện menu chỉ để tiện dùng.</p>
       </header>
       <AdminOverviewClient />

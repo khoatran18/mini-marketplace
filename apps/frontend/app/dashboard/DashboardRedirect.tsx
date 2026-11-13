@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '../../components/auth/AuthProvider';
 
-const homes = { buyer: '/orders', seller_admin: '/seller', seller_employee: '/seller', admin: '/admin' } as const;
+const homes = { buyer: '/orders', seller_admin: '/seller', seller_employee: '/seller', admin: '/admin', dev: '/admin/system' } as const;
 
 export function DashboardRedirect() {
   const router = useRouter();

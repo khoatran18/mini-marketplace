@@ -9,6 +9,7 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { getSellerProductsRequest, setProductStatusRequest } from '../../../lib/api';
 import { formatVND } from '../../../lib/format';
 import { useApiData, useAuthedAction } from '../../../lib/hooks';
+import { PageTitle } from '../../../components/layout/PageTitle';
 
 const PAGE_SIZE = 20;
 
@@ -35,7 +36,7 @@ export function SellerProductsClient() {
     <div className="grid gap-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="grid gap-1">
-          <h1 className="text-2xl font-bold text-text">Sản phẩm của cửa hàng</h1>
+          <PageTitle icon="package">Sản phẩm của cửa hàng</PageTitle>
           <p className="text-sm text-muted">Gồm cả nháp và sản phẩm đang ẩn.</p>
         </div>
         <Link href="/seller/products/new" className="btn-primary">

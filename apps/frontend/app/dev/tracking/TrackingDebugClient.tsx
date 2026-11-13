@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { formatTime } from '../../../lib/format';
 import { getTracker, setConsent, track, type DebugEntry, type DebugState } from '../../../lib/tracking';
+import { PageTitle } from '../../../components/layout/PageTitle';
 
 const stateStyle: Record<DebugState, string> = {
   queued: 'bg-surface2 text-muted',
@@ -40,7 +41,7 @@ export function TrackingDebugClient() {
   return (
     <div className="grid gap-6">
       <header className="card grid gap-3">
-        <h1 className="text-2xl font-bold text-text">Tracking – debug</h1>
+        <PageTitle icon="receipt">Tracking – debug</PageTitle>
         <p className="text-sm text-muted">
           Event được gom theo lô (5 giây hoặc 20 event) và gửi tới <code>POST /events</code>. Nếu gateway chưa có endpoint (404) SDK tự tắt trong lần tải trang này.
         </p>

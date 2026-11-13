@@ -1,12 +1,13 @@
-export type Role = 'buyer' | 'seller_admin' | 'seller_employee' | 'admin';
+export type Role = 'buyer' | 'seller_admin' | 'seller_employee' | 'admin' | 'dev';
 
 // Roles that can sign up from the UI; admin accounts are created by the operator (ADMIN_BOOTSTRAP_*).
-export type RegisterableRole = Exclude<Role, 'admin'>;
+export type RegisterableRole = Exclude<Role, 'admin' | 'dev'>;
 
 export interface LoginInput {
   username: string;
   password: string;
-  role: Role;
+  /** Optional: the role belongs to the account and is read from it on login. */
+  role?: Role;
 }
 
 export interface LoginOutput {
@@ -457,4 +458,42 @@ export interface SystemHealthOutput {
   as_of: string;
   status: ServiceStatus;
   services: ServiceHealth[];
+}
+
+/** One row of a named read-only query (POST /admin/ops/queries/{name}). */
+export interface OpsSeries {
+  labels: Record<string, string>;
+  value: string;
+}
+
+export interface OpsQueryResult {
+  query: string;
+  params: Record<string, string>;
+  backend: string;
+  series?: OpsSeries[];
+  total: number;
+  truncated: boolean;
+}
+
+export interface OpsIncident {
+  id: number;
+  alert_name: string;
+  severity: string;
+  component?: string;
+  summary?: string;
+  state: 'open' | 'investigating' | 'resolved';
+  fire_count: number;
+  first_seen: string;
+  last_seen: string;
+  labels?: Record<string, string>;
+}
+
+export interface OpsIncidentsOutput {
+  incidents: OpsIncident[];
+}
+
+/** GET /config/features (public). */
+export interface FeatureFlags {
+  ai_chat: boolean;
+  ai_ops: boolean;
 }

@@ -12,6 +12,7 @@ import { useApiData, useAuthedAction } from '../../../lib/hooks';
 import { failureCodeLabel, paymentMethodLabel } from '../../../lib/status';
 import { track } from '../../../lib/tracking';
 import type { Payment } from '../../../lib/types';
+import { PageTitle } from '../../../components/layout/PageTitle';
 
 const POLL_MS = 2000;
 
@@ -91,7 +92,7 @@ export function PayClient({ paymentId }: { paymentId: number }) {
       <section className="card grid gap-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-1">
-            <h1 className="text-2xl font-bold text-text">Thanh toán #{payment.id}</h1>
+            <PageTitle icon="receipt">Thanh toán #{payment.id}</PageTitle>
             <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
               {paymentMethodLabel(payment.method).replace(/\s*\(MÔ PHỎNG\)/, '')} <SimulatedBadge />
             </p>

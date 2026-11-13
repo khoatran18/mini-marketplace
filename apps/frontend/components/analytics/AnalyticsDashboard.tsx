@@ -30,6 +30,7 @@ import { FunnelChart } from './FunnelChart';
 import { KpiRow, type Kpi } from './KpiRow';
 import { TimeSeriesChart } from './TimeSeriesChart';
 import { StatusBadge } from '../ui/StatusBadge';
+import { PageTitle } from '../layout/PageTitle';
 
 const defs = {
   revenue: 'Doanh thu ghi nhận = đơn đã thanh toán, cộng đơn COD đã giao; chưa trừ hoàn tiền. Không gồm đơn chờ thanh toán, đã huỷ hoặc hết hạn.',
@@ -122,7 +123,7 @@ export function AnalyticsDashboard({ scope }: { scope: 'seller' | 'admin' }) {
   return (
     <div className="grid gap-6">
       <header className="card grid gap-3">
-        <h1 className="text-2xl font-bold text-text">{scope === 'seller' ? 'Phân tích cửa hàng' : 'Phân tích nền tảng'}</h1>
+        <PageTitle icon="chart">{scope === 'seller' ? 'Phân tích cửa hàng' : 'Phân tích nền tảng'}</PageTitle>
         <DateRangePicker value={range} onChange={setRange} />
       </header>
 

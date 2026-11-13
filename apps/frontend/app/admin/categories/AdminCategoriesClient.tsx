@@ -5,6 +5,7 @@ import { EmptyBlock, ErrorBlock, LoadingBlock, Notice } from '../../../component
 import { getAdminCategoriesRequest, saveCategoryRequest } from '../../../lib/api';
 import { useApiData, useAuthedAction } from '../../../lib/hooks';
 import type { Category } from '../../../lib/types';
+import { PageTitle } from '../../../components/layout/PageTitle';
 
 interface Draft {
   id?: number;
@@ -75,7 +76,7 @@ export function AdminCategoriesClient() {
     <div className="grid gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="grid gap-1">
-          <h1 className="text-2xl font-bold text-text">Danh mục</h1>
+          <PageTitle icon="tag">Danh mục</PageTitle>
           <p className="text-sm text-muted">Danh mục cha/con; danh mục ẩn không xuất hiện với khách.</p>
         </div>
         <button type="button" className="btn-primary" onClick={() => setDraft({ ...blank })}>

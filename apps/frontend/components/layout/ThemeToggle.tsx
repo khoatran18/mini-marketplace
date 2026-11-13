@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Icon } from './Icon';
 import { applyTheme, readThemeMode, saveThemeMode, type ThemeMode } from '../../lib/theme';
 
 const options: { mode: ThemeMode; label: string; icon: string }[] = [
-  { mode: 'light', label: 'Sáng', icon: '☀' },
-  { mode: 'system', label: 'Hệ thống', icon: '⚙' },
-  { mode: 'dark', label: 'Tối', icon: '☾' }
+  { mode: 'light', label: 'Sáng', icon: 'sun' },
+  { mode: 'system', label: 'Hệ thống', icon: 'system' },
+  { mode: 'dark', label: 'Tối', icon: 'moon' }
 ];
 
 export function ThemeToggle() {
@@ -42,7 +43,7 @@ export function ThemeToggle() {
             mode === option.mode ? 'bg-brand-soft font-semibold text-brand' : 'bg-surface text-muted hover:bg-surface2'
           }`}
         >
-          <span aria-hidden="true">{option.icon}</span>
+          <Icon name={option.icon} className="h-4 w-4" />
         </button>
       ))}
     </div>
