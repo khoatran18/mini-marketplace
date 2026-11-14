@@ -825,3 +825,67 @@ func TestConfigRequiresAWebhookSecret(t *testing.T) {
 		t.Error("only ENV=dev enables development tools")
 	}
 }
+
+func TestPaymentListFiltersNarrowAndRejectTypos(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	h.newPayment(t, "co_a", model.MethodCard, 100000)
+	h.newPayment(t, "co_b", model.MethodWallet, 500000)
+	h.newPayment(t, "co_c", model.MethodCard, 900000)
+	list := func(f ListFilter) []*View {
+		t.Helper()
+		v, _, err := h.ListFiltered(ctx, f, 1, 50)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	amounts := func(v []*View) string {
+		var s []string
+		for _, x := range v {
+			s = append(s, fmt.Sprint(x.Payment.AmountMinor))
+		}
+		return strings.Join(s, ",")
+	}
+
+	if got := list(ListFilter{}); len(got) != 3 {
+		t.Fatalf("no filter = all: %d", len(got))
+	}
+	if got := list(ListFilter{Method: "mock_card"}); len(got) != 2 {
+		t.Errorf("method: %d", len(got))
+	}
+	if got := amounts(list(ListFilter{Sort: "amount_desc"})); got != "900000,500000,100000" {
+		t.Errorf("amount_desc: %s", got)
+	}
+	if got := amounts(list(ListFilter{Sort: "amount_asc"})); got != "100000,500000,900000" {
+		t.Errorf("amount_asc: %s", got)
+	}
+	if got := amounts(list(ListFilter{Sort: "oldest"})); got != "100000,500000,900000" {
+		t.Errorf("oldest: %s", got)
+	}
+	if got := amounts(list(ListFilter{MinAmountMinor: 500000})); got != "900000,500000" {
+		t.Errorf("min amount: %s", got)
+	}
+	if got := amounts(list(ListFilter{MinAmountMinor: 200000, MaxAmountMinor: 600000})); got != "500000" {
+		t.Errorf("amount range: %s", got)
+	}
+	now := time.Now()
+	if got := list(ListFilter{CreatedFrom: now.Add(-time.Hour), CreatedTo: now.Add(time.Hour)}); len(got) != 3 {
+		t.Errorf("date range around now: %d", len(got))
+	}
+	if got := list(ListFilter{CreatedFrom: now.Add(time.Hour)}); len(got) != 0 {
+		t.Errorf("created_from in the future: %d", len(got))
+	}
+
+	for name, f := range map[string]ListFilter{
+		"status":        {Status: "DONE"},
+		"method":        {Method: "BITCOIN"},
+		"sort":          {Sort: "random"},
+		"min above max": {MinAmountMinor: 10, MaxAmountMinor: 5},
+		"from after to": {CreatedFrom: now, CreatedTo: now.Add(-time.Hour)},
+	} {
+		if _, _, err := h.ListFiltered(ctx, f, 1, 20); status.Code(err) != codes.InvalidArgument {
+			t.Errorf("%s must be rejected, not silently ignored: %v", name, err)
+		}
+	}
+}

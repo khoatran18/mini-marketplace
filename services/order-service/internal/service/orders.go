@@ -41,10 +41,40 @@ func (s *OrderService) GetOrder(ctx context.Context, id uint64, scope repository
 
 // ListOrders returns a page of orders in scope.
 func (s *OrderService) ListOrders(ctx context.Context, scope repository.Scope, statusFilter string, page, pageSize uint64) ([]*model.Order, int64, error) {
-	if statusFilter != "" && !validStatus(strings.ToUpper(statusFilter)) {
+	return s.ListOrdersFiltered(ctx, scope, repository.OrderFilter{Status: statusFilter}, page, pageSize)
+}
+
+// ListOrdersFiltered returns a page of orders in scope that match f. Unknown values are rejected (InvalidArgument) instead of silently
+// matching nothing, so a typo in a filter is an error the caller sees, not an empty list that looks like an answer.
+func (s *OrderService) ListOrdersFiltered(ctx context.Context, scope repository.Scope, f repository.OrderFilter, page, pageSize uint64) ([]*model.Order, int64, error) {
+	if f.Status != "" && !validStatus(strings.ToUpper(f.Status)) {
 		return nil, 0, status.Error(codes.InvalidArgument, "unknown status")
 	}
-	return s.OrderRepo.ListOrders(ctx, scope, statusFilter, page, pageSize)
+	if f.PaymentMethod != "" && !model.ValidMethod(strings.ToUpper(f.PaymentMethod)) {
+		return nil, 0, status.Error(codes.InvalidArgument, "unknown payment_method")
+	}
+	if f.PaymentStatus != "" {
+		switch strings.ToUpper(f.PaymentStatus) {
+		case model.PaymentUnpaid, model.PaymentPaid, model.PaymentRefunded:
+		default:
+			return nil, 0, status.Error(codes.InvalidArgument, "unknown payment_status")
+		}
+	}
+	switch f.Sort {
+	case "", repository.OrderSortNewest, repository.OrderSortOldest, repository.OrderSortTotalDesc, repository.OrderSortTotalAsc:
+	default:
+		return nil, 0, status.Error(codes.InvalidArgument, "unknown sort")
+	}
+	if f.MinTotal < 0 || f.MaxTotal < 0 || (f.MaxTotal > 0 && f.MinTotal > f.MaxTotal) {
+		return nil, 0, status.Error(codes.InvalidArgument, "min_total must not be greater than max_total")
+	}
+	if !f.CreatedFrom.IsZero() && !f.CreatedTo.IsZero() && !f.CreatedFrom.Before(f.CreatedTo) {
+		return nil, 0, status.Error(codes.InvalidArgument, "created_from must be before created_to")
+	}
+	if f.StoreID != 0 && !scope.Admin {
+		return nil, 0, status.Error(codes.PermissionDenied, "filtering by store is only for the admin view")
+	}
+	return s.OrderRepo.ListOrdersFiltered(ctx, scope, f, page, pageSize)
 }
 
 func validStatus(st string) bool {

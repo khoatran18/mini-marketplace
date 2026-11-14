@@ -81,6 +81,14 @@ func lines(items []*orderpb.CheckoutItem) []service.Line {
 	return out
 }
 
+// parseRFC3339 reads an optional timestamp ("" = none).
+func parseRFC3339(s string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, s)
+}
+
 func scopeOf(buyerID, storeID uint64, admin bool) repository.Scope {
 	return repository.Scope{BuyerID: buyerID, StoreID: storeID, Admin: admin}
 }
@@ -144,7 +152,18 @@ func (s *OrderServer) GetOrder(ctx context.Context, req *orderpb.GetOrderRequest
 
 // ListOrders returns a page of orders in scope.
 func (s *OrderServer) ListOrders(ctx context.Context, req *orderpb.ListOrdersRequest) (*orderpb.ListOrdersResponse, error) {
-	orders, total, err := s.OrderService.ListOrders(ctx, scopeOf(req.GetBuyerId(), req.GetStoreId(), req.GetIsAdmin()), req.GetStatus(), req.GetPage(), req.GetPageSize())
+	f := repository.OrderFilter{
+		Status: req.GetStatus(), PaymentMethod: req.GetPaymentMethod(), PaymentStatus: req.GetPaymentStatus(),
+		MinTotal: req.GetMinTotal(), MaxTotal: req.GetMaxTotal(), Sort: req.GetSort(), StoreID: req.GetFilterStoreId(),
+	}
+	var err error
+	if f.CreatedFrom, err = parseRFC3339(req.GetCreatedFrom()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "created_from must be RFC 3339")
+	}
+	if f.CreatedTo, err = parseRFC3339(req.GetCreatedTo()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "created_to must be RFC 3339")
+	}
+	orders, total, err := s.OrderService.ListOrdersFiltered(ctx, scopeOf(req.GetBuyerId(), req.GetStoreId(), req.GetIsAdmin()), f, req.GetPage(), req.GetPageSize())
 	if err != nil {
 		return nil, err
 	}

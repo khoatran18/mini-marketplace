@@ -91,7 +91,17 @@ func (s *PaymentServer) CancelPayment(ctx context.Context, req *paymentpb.Cancel
 
 // ListPayments returns a page of payments (admin).
 func (s *PaymentServer) ListPayments(ctx context.Context, req *paymentpb.ListPaymentsRequest) (*paymentpb.ListPaymentsResponse, error) {
-	views, total, err := s.Service.List(ctx, req.GetStatus(), req.GetMethod(), req.GetPage(), req.GetPageSize())
+	f := service.ListFilter{
+		Status: req.GetStatus(), Method: req.GetMethod(), MinAmountMinor: req.GetMinAmountMinor(), MaxAmountMinor: req.GetMaxAmountMinor(), Sort: req.GetSort(),
+	}
+	var err error
+	if f.CreatedFrom, err = parseRFC3339(req.GetCreatedFrom()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "created_from must be RFC 3339")
+	}
+	if f.CreatedTo, err = parseRFC3339(req.GetCreatedTo()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "created_to must be RFC 3339")
+	}
+	views, total, err := s.Service.ListFiltered(ctx, f, req.GetPage(), req.GetPageSize())
 	if err != nil {
 		return nil, err
 	}
@@ -121,4 +131,12 @@ func (s *PaymentServer) ForceStatus(ctx context.Context, req *paymentpb.ForceSta
 		return nil, err
 	}
 	return toProto(v), nil
+}
+
+// parseRFC3339 reads an optional timestamp ("" = none).
+func parseRFC3339(s string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, s)
 }

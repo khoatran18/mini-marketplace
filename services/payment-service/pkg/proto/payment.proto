@@ -84,6 +84,12 @@ message ListPaymentsRequest {
   string method = 2;
   uint64 page = 3;
   uint64 page_size = 4;
+  // optional filters, all AND-ed; empty/zero = no filter
+  string created_from = 5;      // RFC3339, inclusive
+  string created_to = 6;        // RFC3339, exclusive
+  int64 min_amount_minor = 7;   // amount_minor >= (1/100 VND)
+  int64 max_amount_minor = 8;   // amount_minor <= (1/100 VND)
+  string sort = 9;              // newest (default) | oldest | amount_desc | amount_asc
 }
 message ListPaymentsResponse {
   repeated Payment payments = 1;

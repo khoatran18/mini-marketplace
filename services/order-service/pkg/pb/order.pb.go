@@ -1147,13 +1147,22 @@ func (x *GetOrderRequest) GetIsAdmin() bool {
 }
 
 type ListOrdersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	BuyerId       uint64                 `protobuf:"varint,1,opt,name=buyer_id,json=buyerId,proto3" json:"buyer_id,omitempty"` // buyer view
-	StoreId       uint64                 `protobuf:"varint,2,opt,name=store_id,json=storeId,proto3" json:"store_id,omitempty"` // seller view
-	IsAdmin       bool                   `protobuf:"varint,3,opt,name=is_admin,json=isAdmin,proto3" json:"is_admin,omitempty"` // admin view (all orders)
-	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`                   // optional filter
-	Page          uint64                 `protobuf:"varint,5,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      uint64                 `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	BuyerId  uint64                 `protobuf:"varint,1,opt,name=buyer_id,json=buyerId,proto3" json:"buyer_id,omitempty"` // buyer view
+	StoreId  uint64                 `protobuf:"varint,2,opt,name=store_id,json=storeId,proto3" json:"store_id,omitempty"` // seller view
+	IsAdmin  bool                   `protobuf:"varint,3,opt,name=is_admin,json=isAdmin,proto3" json:"is_admin,omitempty"` // admin view (all orders)
+	Status   string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`                   // optional filter
+	Page     uint64                 `protobuf:"varint,5,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize uint64                 `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// optional filters, all AND-ed; empty/zero = no filter
+	PaymentMethod string  `protobuf:"bytes,7,opt,name=payment_method,json=paymentMethod,proto3" json:"payment_method,omitempty"`     // COD | MOCK_CARD | MOCK_WALLET | MOCK_BANK_TRANSFER
+	PaymentStatus string  `protobuf:"bytes,8,opt,name=payment_status,json=paymentStatus,proto3" json:"payment_status,omitempty"`     // UNPAID | PAID | REFUNDED
+	CreatedFrom   string  `protobuf:"bytes,9,opt,name=created_from,json=createdFrom,proto3" json:"created_from,omitempty"`           // RFC3339, inclusive
+	CreatedTo     string  `protobuf:"bytes,10,opt,name=created_to,json=createdTo,proto3" json:"created_to,omitempty"`                // RFC3339, exclusive
+	MinTotal      float64 `protobuf:"fixed64,11,opt,name=min_total,json=minTotal,proto3" json:"min_total,omitempty"`                 // total_price >= (VND)
+	MaxTotal      float64 `protobuf:"fixed64,12,opt,name=max_total,json=maxTotal,proto3" json:"max_total,omitempty"`                 // total_price <= (VND)
+	Sort          string  `protobuf:"bytes,13,opt,name=sort,proto3" json:"sort,omitempty"`                                           // newest (default) | oldest | total_desc | total_asc
+	FilterStoreId uint64  `protobuf:"varint,14,opt,name=filter_store_id,json=filterStoreId,proto3" json:"filter_store_id,omitempty"` // admin view only: one store's orders (rejected for buyer/seller views, whose store comes from the token)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1226,6 +1235,62 @@ func (x *ListOrdersRequest) GetPage() uint64 {
 func (x *ListOrdersRequest) GetPageSize() uint64 {
 	if x != nil {
 		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListOrdersRequest) GetPaymentMethod() string {
+	if x != nil {
+		return x.PaymentMethod
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetPaymentStatus() string {
+	if x != nil {
+		return x.PaymentStatus
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetCreatedFrom() string {
+	if x != nil {
+		return x.CreatedFrom
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetCreatedTo() string {
+	if x != nil {
+		return x.CreatedTo
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetMinTotal() float64 {
+	if x != nil {
+		return x.MinTotal
+	}
+	return 0
+}
+
+func (x *ListOrdersRequest) GetMaxTotal() float64 {
+	if x != nil {
+		return x.MaxTotal
+	}
+	return 0
+}
+
+func (x *ListOrdersRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetFilterStoreId() uint64 {
+	if x != nil {
+		return x.FilterStoreId
 	}
 	return 0
 }
@@ -2105,14 +2170,24 @@ const file_order_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x19\n" +
 	"\bbuyer_id\x18\x02 \x01(\x04R\abuyerId\x12\x19\n" +
 	"\bstore_id\x18\x03 \x01(\x04R\astoreId\x12\x19\n" +
-	"\bis_admin\x18\x04 \x01(\bR\aisAdmin\"\xad\x01\n" +
+	"\bis_admin\x18\x04 \x01(\bR\aisAdmin\"\xb3\x03\n" +
 	"\x11ListOrdersRequest\x12\x19\n" +
 	"\bbuyer_id\x18\x01 \x01(\x04R\abuyerId\x12\x19\n" +
 	"\bstore_id\x18\x02 \x01(\x04R\astoreId\x12\x19\n" +
 	"\bis_admin\x18\x03 \x01(\bR\aisAdmin\x12\x16\n" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12\x12\n" +
 	"\x04page\x18\x05 \x01(\x04R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x06 \x01(\x04R\bpageSize\"_\n" +
+	"\tpage_size\x18\x06 \x01(\x04R\bpageSize\x12%\n" +
+	"\x0epayment_method\x18\a \x01(\tR\rpaymentMethod\x12%\n" +
+	"\x0epayment_status\x18\b \x01(\tR\rpaymentStatus\x12!\n" +
+	"\fcreated_from\x18\t \x01(\tR\vcreatedFrom\x12\x1d\n" +
+	"\n" +
+	"created_to\x18\n" +
+	" \x01(\tR\tcreatedTo\x12\x1b\n" +
+	"\tmin_total\x18\v \x01(\x01R\bminTotal\x12\x1b\n" +
+	"\tmax_total\x18\f \x01(\x01R\bmaxTotal\x12\x12\n" +
+	"\x04sort\x18\r \x01(\tR\x04sort\x12&\n" +
+	"\x0ffilter_store_id\x18\x0e \x01(\x04R\rfilterStoreId\"_\n" +
 	"\x12ListOrdersResponse\x123\n" +
 	"\x06orders\x18\x01 \x03(\v2\x1b.order_service.pkg.pb.OrderR\x06orders\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x04R\x05total\"e\n" +

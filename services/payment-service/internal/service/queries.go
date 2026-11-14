@@ -8,6 +8,7 @@ import (
 	"mini-marketplace/shared/events"
 	"payment-service/pkg/model"
 	"strings"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
@@ -94,8 +95,48 @@ func (s *PaymentService) GetByCheckout(ctx context.Context, checkoutID string, s
 	return s.viewOf(&p, sc.Admin), nil
 }
 
-// List returns a page of payments (admin view), newest first.
+// ListFilter narrows the payment list. Every field is optional: the zero value means "no filter".
+type ListFilter struct {
+	Status         string
+	Method         string
+	CreatedFrom    time.Time // inclusive
+	CreatedTo      time.Time // exclusive
+	MinAmountMinor int64
+	MaxAmountMinor int64
+	Sort           string // newest (default) | oldest | amount_desc | amount_asc
+}
+
+// List returns a page of payments (admin), optionally by status and method.
 func (s *PaymentService) List(ctx context.Context, statusFilter, method string, page, pageSize uint64) ([]*View, int64, error) {
+	return s.ListFiltered(ctx, ListFilter{Status: statusFilter, Method: method}, page, pageSize)
+}
+
+// ListFiltered returns a page of payments that match f. Unknown values are rejected (InvalidArgument) instead of silently matching nothing.
+func (s *PaymentService) ListFiltered(ctx context.Context, f ListFilter, page, pageSize uint64) ([]*View, int64, error) {
+	if f.Status != "" && !model.ValidStatus(strings.ToUpper(f.Status)) {
+		return nil, 0, status.Error(codes.InvalidArgument, "unknown status")
+	}
+	if f.Method != "" && !model.ValidMethod(strings.ToUpper(f.Method)) {
+		return nil, 0, status.Error(codes.InvalidArgument, "unknown method")
+	}
+	order := "id DESC"
+	switch f.Sort {
+	case "", "newest":
+	case "oldest":
+		order = "id ASC"
+	case "amount_desc":
+		order = "amount_minor DESC, id DESC"
+	case "amount_asc":
+		order = "amount_minor ASC, id DESC"
+	default:
+		return nil, 0, status.Error(codes.InvalidArgument, "unknown sort")
+	}
+	if f.MinAmountMinor < 0 || f.MaxAmountMinor < 0 || (f.MaxAmountMinor > 0 && f.MinAmountMinor > f.MaxAmountMinor) {
+		return nil, 0, status.Error(codes.InvalidArgument, "min_amount must not be greater than max_amount")
+	}
+	if !f.CreatedFrom.IsZero() && !f.CreatedTo.IsZero() && !f.CreatedFrom.Before(f.CreatedTo) {
+		return nil, 0, status.Error(codes.InvalidArgument, "created_from must be before created_to")
+	}
 	if page < 1 {
 		page = 1
 	}
@@ -103,18 +144,30 @@ func (s *PaymentService) List(ctx context.Context, statusFilter, method string, 
 		pageSize = 20
 	}
 	q := s.DB.WithContext(ctx).Model(&model.Payment{})
-	if statusFilter != "" {
-		q = q.Where("status = ?", strings.ToUpper(statusFilter))
+	if f.Status != "" {
+		q = q.Where("status = ?", strings.ToUpper(f.Status))
 	}
-	if method != "" {
-		q = q.Where("method = ?", strings.ToUpper(method))
+	if f.Method != "" {
+		q = q.Where("method = ?", strings.ToUpper(f.Method))
+	}
+	if !f.CreatedFrom.IsZero() {
+		q = q.Where("created_at >= ?", f.CreatedFrom)
+	}
+	if !f.CreatedTo.IsZero() {
+		q = q.Where("created_at < ?", f.CreatedTo)
+	}
+	if f.MinAmountMinor > 0 {
+		q = q.Where("amount_minor >= ?", f.MinAmountMinor)
+	}
+	if f.MaxAmountMinor > 0 {
+		q = q.Where("amount_minor <= ?", f.MaxAmountMinor)
 	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	var ps []*model.Payment
-	if err := q.Order("id DESC").Limit(int(pageSize)).Offset(int((page - 1) * pageSize)).Find(&ps).Error; err != nil {
+	if err := q.Order(order).Limit(int(pageSize)).Offset(int((page - 1) * pageSize)).Find(&ps).Error; err != nil {
 		return nil, 0, err
 	}
 	out := make([]*View, 0, len(ps))

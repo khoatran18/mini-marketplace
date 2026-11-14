@@ -142,6 +142,15 @@ message ListOrdersRequest {
   string status = 4;   // optional filter
   uint64 page = 5;
   uint64 page_size = 6;
+  // optional filters, all AND-ed; empty/zero = no filter
+  string payment_method = 7;  // COD | MOCK_CARD | MOCK_WALLET | MOCK_BANK_TRANSFER
+  string payment_status = 8;  // UNPAID | PAID | REFUNDED
+  string created_from = 9;    // RFC3339, inclusive
+  string created_to = 10;     // RFC3339, exclusive
+  double min_total = 11;      // total_price >= (VND)
+  double max_total = 12;      // total_price <= (VND)
+  string sort = 13;           // newest (default) | oldest | total_desc | total_asc
+  uint64 filter_store_id = 14; // admin view only: one store's orders (rejected for buyer/seller views, whose store comes from the token)
 }
 message ListOrdersResponse {
   repeated Order orders = 1;

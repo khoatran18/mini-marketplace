@@ -6,6 +6,21 @@ import (
 	"gorm.io/datatypes"
 )
 
+// AllStatuses lists every payment status.
+var AllStatuses = []string{
+	StatusRequiresAction, StatusProcessing, StatusSucceeded, StatusFailed, StatusCanceled, StatusExpired, StatusPartialRefunded, StatusRefunded,
+}
+
+// ValidStatus reports whether st is a payment status.
+func ValidStatus(st string) bool {
+	for _, v := range AllStatuses {
+		if v == st {
+			return true
+		}
+	}
+	return false
+}
+
 // Payment statuses.
 const (
 	StatusRequiresAction  = "REQUIRES_ACTION" // waiting for the buyer (card details, OTP, wallet approval, transfer)

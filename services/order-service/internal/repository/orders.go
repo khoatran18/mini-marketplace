@@ -151,8 +151,35 @@ func (r *OrderRepository) GetOrder(ctx context.Context, id uint64, scope Scope) 
 	return &o, history, nil
 }
 
-// ListOrders returns a page of orders in scope (newest first) and the total count.
+// OrderFilter narrows a list. Every field is optional: the zero value means "no filter".
+type OrderFilter struct {
+	Status        string
+	PaymentMethod string
+	PaymentStatus string
+	CreatedFrom   time.Time // inclusive
+	CreatedTo     time.Time // exclusive
+	MinTotal      float64
+	MaxTotal      float64
+	Sort          string // newest (default) | oldest | total_desc | total_asc
+	StoreID       uint64 // admin scope only
+}
+
+// Order sorts.
+const (
+	OrderSortNewest    = "newest"
+	OrderSortOldest    = "oldest"
+	OrderSortTotalDesc = "total_desc"
+	OrderSortTotalAsc  = "total_asc"
+)
+
+// ListOrders returns a page of orders in scope, optionally by status.
 func (r *OrderRepository) ListOrders(ctx context.Context, scope Scope, status string, page, pageSize uint64) ([]*model.Order, int64, error) {
+	return r.ListOrdersFiltered(ctx, scope, OrderFilter{Status: status}, page, pageSize)
+}
+
+// ListOrdersFiltered returns a page of orders in scope that match f. The scope (buyer / store / admin) is always applied first, so a
+// filter can only narrow what the caller may already see.
+func (r *OrderRepository) ListOrdersFiltered(ctx context.Context, scope Scope, f OrderFilter, page, pageSize uint64) ([]*model.Order, int64, error) {
 	if !scope.valid() {
 		return nil, 0, nil
 	}
@@ -163,15 +190,45 @@ func (r *OrderRepository) ListOrders(ctx context.Context, scope Scope, status st
 		pageSize = 20
 	}
 	q := scope.apply(r.DB.WithContext(ctx).Model(&model.Order{}))
-	if status != "" {
-		q = q.Where("status = ?", strings.ToUpper(status))
+	if f.Status != "" {
+		q = q.Where("status = ?", strings.ToUpper(f.Status))
+	}
+	if f.PaymentMethod != "" {
+		q = q.Where("payment_method = ?", strings.ToUpper(f.PaymentMethod))
+	}
+	if f.PaymentStatus != "" {
+		q = q.Where("payment_status = ?", strings.ToUpper(f.PaymentStatus))
+	}
+	if !f.CreatedFrom.IsZero() {
+		q = q.Where("created_at >= ?", f.CreatedFrom)
+	}
+	if !f.CreatedTo.IsZero() {
+		q = q.Where("created_at < ?", f.CreatedTo)
+	}
+	if f.MinTotal > 0 {
+		q = q.Where("total_price >= ?", f.MinTotal)
+	}
+	if f.MaxTotal > 0 {
+		q = q.Where("total_price <= ?", f.MaxTotal)
+	}
+	if f.StoreID != 0 && scope.Admin {
+		q = q.Where("store_id = ?", f.StoreID)
 	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
+	order := "id DESC"
+	switch f.Sort {
+	case OrderSortOldest:
+		order = "id ASC"
+	case OrderSortTotalDesc:
+		order = "total_price DESC, id DESC"
+	case OrderSortTotalAsc:
+		order = "total_price ASC, id DESC"
+	}
 	var orders []*model.Order
-	err := q.Preload("OrderItems").Order("id DESC").Limit(int(pageSize)).Offset(int((page - 1) * pageSize)).Find(&orders).Error
+	err := q.Preload("OrderItems").Order(order).Limit(int(pageSize)).Offset(int((page - 1) * pageSize)).Find(&orders).Error
 	return orders, total, err
 }
 

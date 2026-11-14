@@ -573,3 +573,86 @@ func TestAdminRefundWithoutOrderMarksCheckoutOrders(t *testing.T) {
 		t.Errorf("payment status = %s, want REFUNDED", got.PaymentStatus)
 	}
 }
+
+func TestOrderListFiltersNarrowWithinTheCallersScope(t *testing.T) {
+	db := testDB(t)
+	s, _ := newTestService(repository.NewOrderRepository(db), product(1, 10, 1000, 500), product(3, 20, 1000, 500))
+	ctx := context.Background()
+	checkout(t, s, 5, model.MethodCOD, "f1", Line{1, 1})
+	checkout(t, s, 5, model.MethodCOD, "f2", Line{1, 5})
+	checkout(t, s, 5, model.MethodMockCard, "f3", Line{3, 3})
+	checkout(t, s, 6, model.MethodCOD, "f4", Line{1, 2}) // someone else's
+	own := repository.Scope{BuyerID: 5}
+	list := func(sc repository.Scope, f repository.OrderFilter) []*model.Order {
+		t.Helper()
+		o, _, err := s.ListOrdersFiltered(ctx, sc, f, 1, 50)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return o
+	}
+
+	if got := list(own, repository.OrderFilter{}); len(got) != 3 {
+		t.Fatalf("no filter = everything in scope: %d", len(got))
+	}
+	if got := list(own, repository.OrderFilter{PaymentMethod: "mock_card"}); len(got) != 1 || got[0].PaymentMethod != model.MethodMockCard {
+		t.Errorf("payment_method (case-insensitive): %d", len(got))
+	}
+	if got := list(own, repository.OrderFilter{PaymentStatus: model.PaymentUnpaid}); len(got) != 3 {
+		t.Errorf("payment_status UNPAID: %d", len(got))
+	}
+
+	desc := list(own, repository.OrderFilter{Sort: repository.OrderSortTotalDesc})
+	asc := list(own, repository.OrderFilter{Sort: repository.OrderSortTotalAsc})
+	if desc[0].TotalPrice < desc[1].TotalPrice || desc[1].TotalPrice < desc[2].TotalPrice || asc[0].TotalPrice > asc[1].TotalPrice || asc[0].ID != desc[2].ID {
+		t.Errorf("total sorts: desc=%v asc=%v", []float64{desc[0].TotalPrice, desc[1].TotalPrice, desc[2].TotalPrice}, []float64{asc[0].TotalPrice, asc[1].TotalPrice, asc[2].TotalPrice})
+	}
+	if old := list(own, repository.OrderFilter{Sort: repository.OrderSortOldest}); old[0].ID > old[1].ID {
+		t.Error("oldest first")
+	}
+	mid := desc[1].TotalPrice
+	if got := list(own, repository.OrderFilter{MinTotal: mid}); len(got) != 2 {
+		t.Errorf("min_total=%v: %d, want 2", mid, len(got))
+	}
+	if got := list(own, repository.OrderFilter{MaxTotal: mid}); len(got) != 2 {
+		t.Errorf("max_total=%v: %d, want 2", mid, len(got))
+	}
+	if got := list(own, repository.OrderFilter{MinTotal: mid, MaxTotal: mid}); len(got) != 1 {
+		t.Errorf("min=max=%v: %d, want 1", mid, len(got))
+	}
+
+	now := time.Now()
+	if got := list(own, repository.OrderFilter{CreatedFrom: now.Add(-time.Hour), CreatedTo: now.Add(time.Hour)}); len(got) != 3 {
+		t.Errorf("date range around now: %d", len(got))
+	}
+	if got := list(own, repository.OrderFilter{CreatedFrom: now.Add(time.Hour)}); len(got) != 0 {
+		t.Errorf("created_from in the future: %d", len(got))
+	}
+	if got := list(own, repository.OrderFilter{CreatedTo: now.Add(-time.Hour)}); len(got) != 0 {
+		t.Errorf("created_to in the past: %d", len(got))
+	}
+
+	// store filter: admin only, and a buyer/seller scope can never widen itself with it
+	if got := list(repository.Scope{Admin: true}, repository.OrderFilter{StoreID: 20}); len(got) != 1 || got[0].StoreID != 20 {
+		t.Errorf("admin store filter: %d", len(got))
+	}
+	if _, _, err := s.ListOrdersFiltered(ctx, own, repository.OrderFilter{StoreID: 20}, 1, 20); status.Code(err) != codes.PermissionDenied {
+		t.Errorf("buyer must not use the store filter: %v", err)
+	}
+	if got := list(repository.Scope{StoreID: 10}, repository.OrderFilter{PaymentMethod: model.MethodCOD}); len(got) != 3 {
+		t.Errorf("store 10 COD orders (buyers 5 and 6): %d", len(got))
+	}
+
+	for name, f := range map[string]repository.OrderFilter{
+		"payment_method": {PaymentMethod: "BITCOIN"},
+		"payment_status": {PaymentStatus: "MAYBE"},
+		"sort":           {Sort: "random"},
+		"min above max":  {MinTotal: 10, MaxTotal: 5},
+		"negative total": {MinTotal: -1},
+		"from after to":  {CreatedFrom: now, CreatedTo: now.Add(-time.Hour)},
+	} {
+		if _, _, err := s.ListOrdersFiltered(ctx, own, f, 1, 20); status.Code(err) != codes.InvalidArgument {
+			t.Errorf("%s must be rejected, not silently ignored: %v", name, err)
+		}
+	}
+}
