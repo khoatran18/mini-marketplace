@@ -16,7 +16,7 @@
 | Nền | Chi tiết | Dùng cho agent thế nào |
 |---|---|---|
 | Danh tính và phân quyền | JWT, RBAC theo vai trò `buyer`, `seller_admin`, `seller_employee`, `admin`; kiểm sở hữu ở gateway; rate limit theo nhóm | agent gọi REST bằng JWT của người dùng ⇒ không có quyền riêng, hỏi shop khác bị 403 |
-| REST có sẵn cho hỏi đáp | catalog, tìm kiếm (SQL), tồn kho, đơn, thanh toán, 9 báo cáo analytics có `as_of` / `source`, `GET /admin/system/health` | tool chỉ-đọc cho shopper, seller, admin (A1, A3) |
+| REST có sẵn cho hỏi đáp | catalog, tìm kiếm (SQL), tồn kho, đơn, thanh toán, 9 báo cáo analytics có `as_of` / `source`, `GET /ops/system/health` | tool chỉ-đọc cho shopper, seller, admin (A1, A3) |
 | Idempotency | `Idempotency-Key` bắt buộc ở `POST /orders`; gateway nay retry `Checkout` an toàn (ADR-36) | mã đề xuất của agent dùng làm khoá ⇒ bấm hai lần không tạo hai đơn |
 | Cảnh báo | 11 luật Prometheus, mỗi luật có `runbook` và `action` (`observe` / `low` / `high`) | điểm bắt đầu cho phân loại rủi ro và cho "điều gì đáng gọi agent" |
 | Truy vết | `X-Request-ID` đi qua gateway, gRPC, outbox, Kafka (header), log JSON thống nhất, Loki + Vector, trace OTel qua Tempo (mẫu 10%) | agent lần theo một đơn qua mọi service bằng một id |
@@ -50,8 +50,8 @@ Chuỗi cần có: **phát hiện → gom ngữ cảnh → kích hoạt agent �
 
 | Khâu | Trạng thái | Chi tiết |
 |---|---|---|
-| Phát hiện | ✅ có | luật trong `deploy/prometheus/alerts.yml`: service down / not ready, circuit mở, outbox DEAD / backlog cũ, DLQ, reconcile lệch / cũ, mất dòng analytics, 5xx gateway, bộ nhớ container. `/ready`, `/admin/system/health` |
-| Gom ngữ cảnh | 🟡 nguyên liệu có, chưa có bộ gom | cần một "gói bằng chứng" cho mỗi cảnh báo: nhãn cảnh báo, `/admin/system/health`, vài truy vấn Prometheus cố định, log lỗi gần đây theo `service`, `request_id` mẫu từ log. Mỗi nguồn đã đọc được; chưa có code ghép |
+| Phát hiện | ✅ có | luật trong `deploy/prometheus/alerts.yml`: service down / not ready, circuit mở, outbox DEAD / backlog cũ, DLQ, reconcile lệch / cũ, mất dòng analytics, 5xx gateway, bộ nhớ container. `/ready`, `/ops/system/health` |
+| Gom ngữ cảnh | 🟡 nguyên liệu có, chưa có bộ gom | cần một "gói bằng chứng" cho mỗi cảnh báo: nhãn cảnh báo, `/ops/system/health`, vài truy vấn Prometheus cố định, log lỗi gần đây theo `service`, `request_id` mẫu từ log. Mỗi nguồn đã đọc được; chưa có code ghép |
 | Kích hoạt | ❌ chưa có | Prometheus **chưa có Alertmanager**: cảnh báo chỉ xem ở `/alerts`. Hai cách: (a) thêm Alertmanager với webhook tới dịch vụ điều phối agent (có nhóm, giảm trùng, im lặng); (b) dịch vụ điều phối tự hỏi `/api/v1/alerts` mỗi 30–60 s (đơn giản hơn, tự lo chống trùng) |
 | Chống kích hoạt thừa | ❌ chưa có | cần: một sự cố đang mở thì không mở thêm cho cùng cảnh báo, giới hạn số lần gọi LLM mỗi giờ, ngưỡng "đã bắn đủ lâu" (luật có `for:`), và chặn vòng lặp (agent hành động ⇒ sinh cảnh báo ⇒ gọi agent) |
 | Lưu sự cố | ❌ chưa có | bảng `incidents` (cảnh báo gốc, thời điểm, trạng thái mở / đã nhận / đã giải quyết, bằng chứng, kết luận) |
@@ -84,7 +84,7 @@ stateDiagram-v2
 | Bảng `proposals` | ❌ | id, sự cố gốc, loại hành động, tham số, bằng chứng, `risk` (`observe` / `low` / `high` như trong cảnh báo), trạng thái, người duyệt, lý do, hạn, băm nội dung. Mã đề xuất **ký** (gắn người dùng, băm, hạn ~5 phút) để LLM không sửa được sau khi người đã nhìn ([../ai/06_AGENT_FEATURES.md](../ai/06_AGENT_FEATURES.md) §2) |
 | `audit_log` | ❌ | ai duyệt cái gì, khi nào, lý do, kết quả; bất biến (chỉ thêm) |
 | Kênh thông báo cho người duyệt | ❌ | trang admin trong frontend + thông báo (email / chat). Hiện không có kênh nào, kể cả cho cảnh báo |
-| **Lớp thực thi có kiểm soát** | ❌ | mỗi hành động là một API có **điều kiện trước** (còn đúng không?), **thực hiện**, **kiểm lại sau**, và rollback nếu có. Hiện hành động là lệnh tay: `docker service update` cần quyền Docker trên manager; SQL tay vào DB; `/internal/outbox/*` chỉ trong mạng swarm. Không cấp quyền Docker hay DB cho agent: bọc từng hành động thành một route `/admin/ops/...` có RBAC + audit |
+| **Lớp thực thi có kiểm soát** | ❌ | mỗi hành động là một API có **điều kiện trước** (còn đúng không?), **thực hiện**, **kiểm lại sau**, và rollback nếu có. Hiện hành động là lệnh tay: `docker service update` cần quyền Docker trên manager; SQL tay vào DB; `/internal/outbox/*` chỉ trong mạng swarm. Không cấp quyền Docker hay DB cho agent: bọc từng hành động thành một route `/ops/...` có RBAC + audit |
 | Danh sách hành động cho phép | 🟡 | nguyên liệu có (requeue outbox, restart service không trạng thái, chạy `reconcile`, `backfill` ngày cụ thể, restore backup); chưa ai bọc |
 | Phản hồi để cải thiện | ❌ | tỉ lệ chấp nhận / từ chối theo loại đề xuất chính là số đo chất lượng agent ([../ai/07_COROOT_AND_INCIDENT_AGENT.md](../ai/07_COROOT_AND_INCIDENT_AGENT.md) §6 tầng vận hành) |
 
@@ -110,7 +110,7 @@ Phân loại rủi ro nên giữ như trong cảnh báo: `observe` không cần 
 1. **Chuẩn hoá 5 playbook đầu** từ runbook sang dạng có cấu trúc (YAML hoặc JSON): tín hiệu kích hoạt, danh sách kiểm tra (tool + kết quả mong đợi), ánh xạ nguyên nhân → hành động, `risk`, điều kiện trước, kiểm lại, rollback. Chọn 5 ca đã có hành động an toàn: outbox DEAD, Kafka lag / DLQ, service `not_ready`, circuit mở, reconcile lệch. Giữ Markdown làm nguồn cho người, sinh ra bản có cấu trúc (hoặc ngược lại), tránh hai nguồn lệch nhau.
 2. **Ghi nhãn cho `resilience.sh`:** mỗi kịch bản xuất `ground_truth.json` và chụp truy vấn Prometheus + log Loki trong cửa sổ lỗi. Rẻ, và mở đường cho bộ eval.
 3. **Thêm các kịch bản thiếu** (hàng DEAD do poison, ClickHouse đầy đĩa, Postgres chậm) và viết 50–100 câu hỏi tiếng Việt gắn nhãn, đáp án lấy từ runbook.
-4. **Bọc hành động thành API có RBAC + audit** (`/admin/ops/outbox/requeue`, `/admin/ops/service/restart` qua một tác nhân chạy trên manager có allow-list, `/admin/ops/analytics/reconcile`).
+4. **Bọc hành động thành API có RBAC + audit** (`/ops/outbox/requeue`, `/ops/service/restart` qua một tác nhân chạy trên manager có allow-list, `/ops/analytics/reconcile`).
 5. Chỉ sau đó mới nói chuyện **tự giải quyết**, và chỉ cho `risk=low`.
 
 ## Q5. Test agent thế nào khi không có bộ dữ liệu lớn
@@ -164,7 +164,7 @@ Nguyên tắc: **không tin LLM để giữ an toàn**; an toàn nằm ở hạ 
 | Lớp | Cơ chế | Trạng thái |
 |---|---|---|
 | 1. Quyền tối thiểu | agent chỉ có tool chỉ-đọc (truy vấn Prometheus/Loki qua proxy có danh sách truy vấn cho phép, REST bằng JWT người dùng). **Không** có quyền Docker, DB hay shell | ❌ proxy truy vấn Prometheus/Loki chưa có; hiện chưa cấp quyền gì cho agent |
-| 2. Hành động = danh sách cho phép | mỗi hành động là một API `/admin/ops/<id>` có tham số kiểm lược đồ; chỉ các `id` trong `actions` của playbook. Đề xuất ngoài danh sách bị từ chối ở API, không phải ở prompt | 🟡 đã ép khi tạo đề xuất (sổ hành động `ops-service`, ADR-38: ngoài sổ thì 400, tham số kiểm chặt); chưa có API thực thi (đợt 3) |
+| 2. Hành động = danh sách cho phép | mỗi hành động là một API `/ops/<id>` có tham số kiểm lược đồ; chỉ các `id` trong `actions` của playbook. Đề xuất ngoài danh sách bị từ chối ở API, không phải ở prompt | 🟡 đã ép khi tạo đề xuất (sổ hành động `ops-service`, ADR-38: ngoài sổ thì 400, tham số kiểm chặt); chưa có API thực thi (đợt 3) |
 | 3. Bất thường chưa biết = lớp "unknown" | không khớp playbook nào thì agent chỉ được `observe` (đọc), và đề xuất chỉ có một loại: *báo người kèm bằng chứng*. Mặc định rủi ro `high`, luôn cần người duyệt | 🟡 có `incidents` + `proposals` + hành động `escalate_to_human`; chưa có logic của agent chọn lớp này |
 | 4. Đề xuất có chữ ký, điều kiện trước, kiểm lại sau | mã ký gắn người, hạn ~5 phút; API kiểm trạng thái còn đúng trước khi chạy, kiểm lại kết quả sau, hỏng thì dừng/rollback | 🟡 đã có mã duyệt HMAC, hạn 5 phút, gắn đúng người + băm nội dung; chưa có điều kiện trước / kiểm lại sau (đợt 3) |
 | 5. Giới hạn | số đề xuất mỗi giờ, mỗi sự cố tối đa N hành động, ngân sách LLM, cooldown giữa hai hành động ghi (tránh vòng lặp tự gây thêm sự cố) | ❌ |
@@ -190,14 +190,14 @@ Kiểm tra bằng test: kịch bản "gài bẫy" có đáp án (đòi chạy l�
 | Bảng `proposals` | sự cố gốc, `action_id`, tham số, bằng chứng, `risk`, trạng thái (máy trạng thái ở Q3), người duyệt, lý do, hạn, băm nội dung | M |
 | Bảng `audit_log` | chỉ thêm, không sửa, không xoá (thu hồi quyền UPDATE/DELETE ở mức DB) | S |
 | Sổ hành động | bản code của `actions` trong playbook: `action_id`, lược đồ tham số, điều kiện trước, thực thi, kiểm lại sau. Bắt đầu 3 hành động: requeue outbox (gọi `/internal/outbox/requeue`), restart service không trạng thái, chạy `reconcile` | M |
-| Route `/admin/ops/*` | liệt kê sự cố, đề xuất; duyệt, từ chối, xem lại, chọn hành động khác; chỉ role admin | M |
+| Route `/ops/*` | liệt kê sự cố, đề xuất; duyệt, từ chối, xem lại, chọn hành động khác; chỉ role admin | M |
 | Mã đề xuất ký | HMAC gắn người dùng và băm, hạn ~5 phút | S |
 | Công tắc tắt | cờ `OPS_ACTIONS_ENABLED` | S |
 | Test | máy trạng thái, từ chối hành động ngoài sổ, hành động `high` không chạy khi chưa duyệt, hạn hết hiệu lực | M |
 
 **Quyết định (người dùng chọn):** service riêng `ops-service`; hành động cần quyền Docker chỉ sinh lệnh cho người chạy tay, không cấp quyền Docker cho service.
 
-**Tiến độ:** đợt 1 **xong** (2026-11-12, ADR-38): `incidents` + poller + `audit_log` bất biến + `GET/POST /admin/ops/*`, đã kiểm thật trên Swarm. Đợt 2 **xong** (cùng ngày): `proposals`, mã duyệt HMAC, duyệt / từ chối / xem lại / chọn hành động khác, sổ hành động (5 hành động), hạn và giới hạn, tách người tạo / người duyệt; chưa thực thi gì. Còn: đợt 3 (thực thi có kiểm soát + công tắc `OPS_ACTIONS_ENABLED`, mặc định tắt, trạng thái `EXECUTED` / `FAILED`).
+**Tiến độ:** đợt 1 **xong** (2026-11-12, ADR-38): `incidents` + poller + `audit_log` bất biến + `GET/POST /ops/*`, đã kiểm thật trên Swarm. Đợt 2 **xong** (cùng ngày): `proposals`, mã duyệt HMAC, duyệt / từ chối / xem lại / chọn hành động khác, sổ hành động (5 hành động), hạn và giới hạn, tách người tạo / người duyệt; chưa thực thi gì. Còn: đợt 3 (thực thi có kiểm soát + công tắc `OPS_ACTIONS_ENABLED`, mặc định tắt, trạng thái `EXECUTED` / `FAILED`).
 
 ## Đường đi đề xuất (tóm tắt)
 
@@ -238,7 +238,7 @@ Chỉ hạ tầng; logic agent, prompt và đánh giá agent là phần người
 |---|---|---|---|
 | B1 | Route `POST /ai/chat` **stream (SSE)** qua gateway và Traefik | ✅ kiểm thật qua Traefik (`scripts/e2e/sse.sh`) | một câu trả lời của agent kéo dài hàng chục giây (tool lặp tới 4 vòng, mỗi lượt tới 60 s). Route thường có deadline 3-10 s và có thể bị buffer nên người dùng chỉ thấy câu trả lời sau khi xong (hoặc bị cắt). Cần route riêng không buffer, không bị `WriteTimeout`, huỷ upstream khi người dùng đóng tab |
 | B2 | Cờ tính năng `GET /config/features` | ✅ | công tắc tắt AI không cần deploy lại code; UI ẩn lối vào AI và dùng luồng thường khi AI lỗi/hết ngân sách (đường lui không-AI) |
-| B3 | Công cụ hệ thống cho admin/dev ở gateway | ✅ | 19 truy vấn allowlist + `GET /admin/ops/outbox/{svc}/dead`; agent đọc được trạng thái hệ thống mà **không** có quyền chạm thẳng Prometheus/Loki/cổng admin |
+| B3 | Công cụ hệ thống cho admin/dev ở gateway | ✅ | 19 truy vấn allowlist + `GET /ops/outbox/{svc}/dead`; agent đọc được trạng thái hệ thống mà **không** có quyền chạm thẳng Prometheus/Loki/cổng admin |
 | B4, B5 | Kho vector (qdrant) cho hỏi đáp sản phẩm; xác nhận UI cho hành động ghi liên quan tiền | **bỏ** (người dùng quyết định) | không làm trong đợt này |
 
 ### Việc kỹ thuật tồn đọng (chưa làm)

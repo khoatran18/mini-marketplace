@@ -17,7 +17,7 @@ flowchart LR
     US -->|gRPC| AU
     GW --> RD[("Redis")]
     AN -->|"HTTP :8123"| CH[("ClickHouse")]
-    GW -.->|"/admin/system/health: HTTP :8081/ready"| ALL["mọi service"]
+    GW -.->|"/ops/system/health: HTTP :8081/ready"| ALL["mọi service"]
 ```
 
 Gateway dùng Redis cho rate limit và `pwd_version`; analytics ghi/đọc ClickHouse. order-service chỉ gọi gRPC tới product-service (định giá, tồn), user-service gọi auth-service.
@@ -52,7 +52,7 @@ flowchart LR
 
 | Service | Trách nhiệm | File chính |
 |---|---|---|
-| api-gateway | REST, JWT (`Type=="access"`), RBAC, kiểm sở hữu, CORS, rate limit, giới hạn body, **tracking `/events`** → analytics (gRPC), proxy báo cáo analytics, `/admin/system/health`, metrics HTTP | `internal/router` (danh sách route + quyền), `internal/middleware`, `internal/handler` |
+| api-gateway | REST, JWT (`Type=="access"`), RBAC, kiểm sở hữu, CORS, rate limit, giới hạn body, **tracking `/events`** → analytics (gRPC), proxy báo cáo analytics, `/ops/system/health`, metrics HTTP | `internal/router` (danh sách route + quyền), `internal/middleware`, `internal/handler` |
 | auth-service | đăng ký/ đăng nhập/ refresh/ đổi mật khẩu, role (`buyer`, `seller_admin`, `seller_employee`, `admin`), JWT, tra store của tài khoản, bootstrap admin | `internal/service/*` |
 | user-service | hồ sơ buyer, store (seller), **địa chỉ giao hàng**; tạo store phát `user.create_seller` | `internal/service/{buyer,seller,address}_service.go` |
 | product-service | catalog (danh mục, tìm kiếm không dấu, trạng thái), **tồn kho available/reserved/sold + sổ cái**, giữ/trả/xuất kho theo Kafka, outbox `product.changed`/`inventory.changed` | `internal/service`, `internal/repository` |

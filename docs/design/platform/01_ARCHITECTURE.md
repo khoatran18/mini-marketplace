@@ -47,13 +47,13 @@ Phụ thuộc gRPC thực tế: gateway → cả 6 service; order → product (g
 | product-service (mở rộng) | | | danh mục, trường catalog, tồn kho + sổ cái, tìm kiếm, outbox `product.changed`/`inventory.changed` | ✅ (ảnh/MinIO ❌, reviews/wishlist ❌) |
 | auth-service (mở rộng) | | | role `admin` + bootstrap | ✅ (khoá đăng nhập, `audit_log` ❌) |
 | user-service (mở rộng) | | | nhiều địa chỉ giao hàng | ✅ |
-| api-gateway (mở rộng) | | | route mới, `/events`, `/admin/system/health`, giới hạn body, metrics | ✅ (proxy metrics hệ thống ❌) |
+| api-gateway (mở rộng) | | | route mới, `/events`, `/ops/system/health`, giới hạn body, metrics | ✅ (proxy metrics hệ thống ❌) |
 
 ## 3. Luồng dữ liệu chính
 1. **Đặt hàng + thanh toán** – xem 04 (reserve → `AWAITING_PAYMENT`/`CONFIRMED` → thanh toán mô phỏng → `PAID` → `SHIPPED` → `DELIVERED`; hết hạn nếu không trả). ✅
 2. **Tracking** – SDK → `POST /events` (gateway gắn `user_id/role/store_id` từ JWT, `ip_hash`) → **gRPC `IngestEvents`** → analytics-service (whitelist, consent, che PII) → bộ đệm → ClickHouse `events_raw`. Không có materialized view; báo cáo gom bảng với `FINAL`. ✅
 3. **Doanh thu** – `order.status_changed` + `payment.*` → `fact_order_status`/`fact_order_items`/`fact_payment_events`/`fact_refunds` → báo cáo seller/admin. Đối soát đêm với Postgres: ❌ chưa làm.
-4. **Metrics hệ thống** – Prometheus scrape `:8081/metrics`; xem bằng **Grafana** (11 dashboard); admin xem tóm tắt trong app qua `GET /admin/system/health` ✅ (`/admin/system/metrics` proxy ❌).
+4. **Metrics hệ thống** – Prometheus scrape `:8081/metrics`; xem bằng **Grafana** (11 dashboard); admin xem tóm tắt trong app qua `GET /ops/system/health` ✅ (`/admin/system/metrics` proxy ❌).
 5. **Cảnh báo: chưa làm (cố ý).** Chỉ Grafana; không alert-service, Alertmanager, thông báo.
 
 ## 4. Nguyên tắc (kế thừa + thực tế)

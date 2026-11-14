@@ -8,14 +8,14 @@
 Ban đầu chỉ `api-gateway` có HTTP; các service nội bộ chỉ có gRPC nên Prometheus/Docker không quan sát được. Đã chọn **cách A: cổng admin HTTP `:8081` riêng** (ADR-9) – mỗi service chạy thêm một `http.Server` nhỏ (`/health /healthz /ready /readyz /metrics /version`) cạnh gRPC bằng gói `pkg/ops` (**7 bản giống hệt nhau**, kiểm bằng `md5sum services/*/pkg/ops/ops.go`), đồng thời đăng ký `grpc.health.v1`. Gateway giữ `:8080` công khai (`GET /health`, `/healthz`) và mở `:8081` cho `/ready`, `/metrics`, `/version`. Cổng admin **không publish, không route qua Traefik**; payment-service gắn thêm `POST /internal/payments/webhook` lên cổng này.
 
 > **Tên endpoint**: hỗ trợ cả hai kiểu – `/health` = `/healthz` (liveness), `/ready` = `/readyz` (readiness), cùng kết quả. Docker/Traefik trong repo dùng `/healthz` và `/ready`.
-> **Đã làm**: `pkg/ops`, `:8081`, `grpc.health.v1`, metrics gRPC/HTTP/DB pool/build info + Go/process (nhãn `service`), tắt êm theo SIGTERM (`DRAIN_SECONDS`), healthcheck Docker + nhãn Traefik, frontend `/api/health|healthz|ready|readyz`, `GET /admin/system/health` (gom `/ready` của 7 service) + trang `/admin/system`, stack Prometheus/Grafana (11 dashboard), metric outbox (product/order/payment), worker (order/payment), pipeline (analytics). **Đã thêm (chưa chạy stack thật)**: metric nghiệp vụ order/payment/product/gateway và `mm_grpc_client_*` (xem [05_ANALYTICS_MONITORING.md](05_ANALYTICS_MONITORING.md) §2.2); lag Kafka lấy từ `kafka_consumergroup_lag` của kafka-exporter. **Đã thêm tiếp**: request-id (`X-Request-ID` / `x-request-id`), deadline + retry lệnh đọc gRPC ở gateway, log tập trung (Loki). **Chưa làm**: `/admin/system/metrics`, tracing, circuit breaker, request-id trong Kafka / outbox.
+> **Đã làm**: `pkg/ops`, `:8081`, `grpc.health.v1`, metrics gRPC/HTTP/DB pool/build info + Go/process (nhãn `service`), tắt êm theo SIGTERM (`DRAIN_SECONDS`), healthcheck Docker + nhãn Traefik, frontend `/api/health|healthz|ready|readyz`, `GET /ops/system/health` (gom `/ready` của 7 service) + trang `/admin/system`, stack Prometheus/Grafana (11 dashboard), metric outbox (product/order/payment), worker (order/payment), pipeline (analytics). **Đã thêm (chưa chạy stack thật)**: metric nghiệp vụ order/payment/product/gateway và `mm_grpc_client_*` (xem [05_ANALYTICS_MONITORING.md](05_ANALYTICS_MONITORING.md) §2.2); lag Kafka lấy từ `kafka_consumergroup_lag` của kafka-exporter. **Đã thêm tiếp**: request-id (`X-Request-ID` / `x-request-id`), deadline + retry lệnh đọc gRPC ở gateway, log tập trung (Loki). **Chưa làm**: `/admin/system/metrics`, tracing, circuit breaker, request-id trong Kafka / outbox.
 
 ## 1. Khác nhau giữa các endpoint
 
 | Endpoint | Câu hỏi | Kiểm tra gì | Khi lỗi | Ai dùng |
 |---|---|---|---|---|
 | `GET /health` · `/healthz` (liveness) | "Tiến trình còn sống, không bị treo?" | **Chỉ** bản thân process (HTTP server trả lời được; tuỳ chọn: goroutine chính/ worker heartbeat không quá cũ). **Không** gọi DB/Kafka/service khác | 200 `{"status":"ok"}`; không 200 ⇒ restart container | Docker `HEALTHCHECK`, Swarm |
-| `GET /ready` · `/readyz` (readiness) | "Nhận được traffic và xử lý đúng chưa?" | Dependency **bắt buộc** (bảng 3) + trạng thái khởi động xong + không đang drain | 200 hoặc **503** kèm JSON chi tiết từng check | Traefik LB healthcheck (chỉ api-gateway), `GET /admin/system/health` + UI trạng thái hệ thống, e2e (chưa có) |
+| `GET /ready` · `/readyz` (readiness) | "Nhận được traffic và xử lý đúng chưa?" | Dependency **bắt buộc** (bảng 3) + trạng thái khởi động xong + không đang drain | 200 hoặc **503** kèm JSON chi tiết từng check | Traefik LB healthcheck (chỉ api-gateway), `GET /ops/system/health` + UI trạng thái hệ thống, e2e (chưa có) |
 | `GET /metrics` | "Số đo Prometheus" | – | – | Prometheus |
 | `GET /version` | "Đang chạy build nào?" | – | – | người, CI, dashboard "đã deploy gì" |
 
@@ -27,7 +27,7 @@ flowchart LR
   DK2["Docker HEALTHCHECK của frontend"] -->|"GET /api/healthz :3000"| FE["frontend"]
   TF["Traefik, mỗi 5 s, timeout 2 s"] -->|"GET /ready :8081"| GW["các replica api-gateway"]
   PM["Prometheus"] -->|"GET /metrics :8081, qua tasks.service"| GO
-  ADM["api-gateway: GET /admin/system/health"] -->|"GET /ready của 7 service, timeout 2 s"| GO
+  ADM["api-gateway: GET /ops/system/health"] -->|"GET /ready của 7 service, timeout 2 s"| GO
   FE -->|"/api/ready gọi gateway /health"| GW
 ```
 
@@ -209,7 +209,7 @@ Thư viện: `prometheus/client_golang`, registry riêng trong `pkg/ops`; collec
 | Endpoint | Trạng thái |
 |---|---|
 | `GET /version` | ✅ mọi service (`{service, version, commit, built_at}`) |
-| `GET /admin/system/health` (gateway, role admin) | ✅ gom `/ready` của 7 service (timeout 2 s mỗi probe) |
+| `GET /ops/system/health` (gateway, role admin) | ✅ gom `/ready` của 7 service (timeout 2 s mỗi probe) |
 | `GET /admin/system/metrics?q=…` (proxy Prometheus whitelist) | ❌ chưa làm |
 | `GET /admin/system/outbox`, `/admin/system/kafka`, `POST /admin/system/outbox/requeue` | ❌ chưa làm (dùng SQL/runbook) |
 | `GET /debug/pprof/*` | ✅ tắt mặc định; chỉ bật bằng `PPROF_ENABLED=true` trên :8081 |

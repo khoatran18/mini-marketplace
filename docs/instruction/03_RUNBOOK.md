@@ -63,7 +63,7 @@ Mũi tên đi từ dependency tới service bị ảnh hưởng: Postgres hỏng
 | payment-service | postgres, `workers` (không tick quá 30 s) | kafka, redis |
 | analytics-service | **clickhouse** | kafka, `insert_pipeline` (có hàng đợi mà >1 phút chưa insert được), redis (nếu có `REDIS_ADDR`) |
 
-Traefik chỉ route vào replica gateway khi `/ready` = 200. Gateway `degraded` khi bất kỳ service đồng cấp nào down (vẫn trong pool Traefik; route liên quan trả lỗi, route khác chạy bình thường). `GET /admin/system/health` (admin) gom tất cả vào một bảng; `/version` cho biết bản đang chạy.
+Traefik chỉ route vào replica gateway khi `/ready` = 200. Gateway `degraded` khi bất kỳ service đồng cấp nào down (vẫn trong pool Traefik; route liên quan trả lỗi, route khác chạy bình thường). `GET /ops/system/health` (admin) gom tất cả vào một bảng; `/version` cho biết bản đang chạy.
 
 ## 2. Đọc dashboard Grafana (`https://grafana.<PUBLIC_HOST>`, thư mục *Marketplace*, làm mới 15 s)
 Chỉ xem, **không có cảnh báo/ thông báo** – người vận hành tự nhìn. Màu ô số chỉ là gợi ý.
@@ -386,18 +386,18 @@ $KAFKA/kafka-metadata-quorum.sh --bootstrap-server broker1:9092 describe --statu
 **Đối soát Postgres / ClickHouse tự động:** `GET /admin/analytics/data-health` có khoá `reconcile` (nếu `RECONCILE_PG_DSN` được đặt, mặc định bật). `mismatches > 0` kéo dài sau khi pipeline đã hết lag nghĩa là lệch thật; chạy `backfill reconcile` (§12) để xem chi tiết, sửa bằng `backfill` là hành động `high`.
 
 ## 14. Sự cố tự ghi (`ops-service`, ADR-38)
-`ops-service` đọc cảnh báo Prometheus mỗi 30 s và tạo bản ghi **sự cố**; admin xem qua `GET /admin/ops/incidents` (xem [04_API_REFERENCE.md](../design/04_API_REFERENCE.md)). Cần đặt `OPS_API_TOKEN` (cùng giá trị cho gateway và ops-service, sinh bằng `openssl rand -hex 24`, thêm vào `deploy/.env`, rồi `./scripts/deploy.sh services`); để trống thì API 503 nhưng poller vẫn ghi.
+`ops-service` đọc cảnh báo Prometheus mỗi 30 s và tạo bản ghi **sự cố**; admin xem qua `GET /ops/incidents` (xem [04_API_REFERENCE.md](../design/04_API_REFERENCE.md)). Cần đặt `OPS_API_TOKEN` (cùng giá trị cho gateway và ops-service, sinh bằng `openssl rand -hex 24`, thêm vào `deploy/.env`, rồi `./scripts/deploy.sh services`); để trống thì API 503 nhưng poller vẫn ghi.
 - **Không thấy sự cố dù cảnh báo đang bắn:** `up{job="mm-services",swarm_service="ops-service"}`, `mm_ops_poll_last_success_timestamp_seconds` (cũ hơn vài phút = poller không tới được Prometheus; xem `docker service logs marketplace_ops-service`), `mm_ops_poll_failures`.
 - **Sự cố không tự đóng:** cảnh báo vẫn bắn, hoặc Prometheus không trả lời (poller không kết luận khi không đọc được). Sự cố đóng sau 2 chu kỳ kể từ lần cuối thấy cảnh báo.
 - **Nhật ký** (`ops_audit_log`) chỉ thêm; UPDATE/DELETE/TRUNCATE bị từ chối. Đừng gỡ trigger `ops_audit_no_update` / `ops_audit_no_truncate`.
 - `ServiceDown` (target còn nhưng `up == 0`) và `ServiceMissing` (target biến mất: service về 0 replica mà DNS trả NXDOMAIN) bổ sung cho nhau; cùng bắn là bình thường.
 
 ### Đề xuất (đợt 2): xem, duyệt, từ chối
-- Liệt kê: `GET /admin/ops/proposals?state=pending`. Mỗi đề xuất ghi hành động, tham số, bằng chứng, mức rủi ro (do sổ hành động gán), người tạo, hạn.
+- Liệt kê: `GET /ops/proposals?state=pending`. Mỗi đề xuất ghi hành động, tham số, bằng chứng, mức rủi ro (do sổ hành động gán), người tạo, hạn.
 - Duyệt gồm hai bước: `POST .../review` (xem và nhận `approval_token`, hiệu lực 5 phút), rồi `POST .../decision` kèm mã. Mã hết hạn thì xem lại để nhận mã mới. Hành động `high` (requeue outbox, backfill) bắt buộc ghi `reason`.
 - Chấp nhận **chưa chạy gì**: ở đợt 2 `ACCEPTED` chỉ là ghi nhận; người tự thực hiện theo playbook. Việc thực thi có kiểm soát là đợt 3.
 - Đề xuất chờ quá `OPS_PROPOSAL_TTL_MIN` (24 h) tự thành `EXPIRED`. Người tạo không tự duyệt được (403): agent cần tài khoản admin riêng.
-- Kiểm chứng sau sự cố: `GET /admin/ops/audit?subject_type=proposal&subject_id=<id>`.
+- Kiểm chứng sau sự cố: `GET /ops/audit?subject_type=proposal&subject_id=<id>`.
 
 ### Thực thi (đợt 3)
 - **Mặc định tắt.** Bật: thêm `OPS_ACTIONS_ENABLED=true` vào `deploy/.env` rồi `./scripts/deploy.sh services`. Tắt khẩn cấp: đặt lại `false` và deploy (hoặc `docker service update --env-add OPS_ACTIONS_ENABLED=false marketplace_ops-service`).
@@ -406,7 +406,7 @@ $KAFKA/kafka-metadata-quorum.sh --bootstrap-server broker1:9092 describe --statu
 - 429 = quá `OPS_MAX_EXEC_PER_HOUR` hoặc cooldown cùng hành động + service; 409 "quá hạn" = duyệt cũ hơn cửa sổ, tạo đề xuất mới. `FAILED` không tự chạy lại: đọc `exec_result` và audit trước khi tạo đề xuất khác. `EXECUTING` bỏ dở quá 10 phút tự thành `FAILED`.
 
 ### Truy vấn đọc, thông báo, cảnh báo của chính ops-service
-- `GET /admin/ops/queries` liệt kê truy vấn có tên; `POST /admin/ops/queries/<tên>` chạy. Không có PromQL/LogQL tự do. Loki mặc định `http://loki:3100` (`LOKI_URL`).
+- `GET /ops/queries` liệt kê truy vấn có tên; `POST /ops/queries/<tên>` chạy. Không có PromQL/LogQL tự do. Loki mặc định `http://loki:3100` (`LOKI_URL`).
 - Thông báo: đặt `OPS_NOTIFY_WEBHOOK_URL` (Slack/Discord/Mattermost). Tin chỉ có tên cảnh báo, id, người tạo. Khởi động lại ops-service thì không gửi bù tin lúc ngừng.
 - `OpsPollerStale` (poller không đọc được Prometheus > 5 phút) và `OpsProposalsWaiting` (đề xuất PENDING > 1 giờ): playbook `docs/playbooks/ops-service.yml`; dashboard *Marketplace · Ops*. Nếu **Prometheus chết** thì không cảnh báo nào bắn: đây là điểm mù, kiểm tay.
 
@@ -424,9 +424,19 @@ Các cảnh báo `InfraTargetDown`, `GatewayLatencyHigh`, `DBPoolWaiting`, `Cont
 - **Token cho agent/bộ điều phối:** `openssl rand -hex 32` đặt vào `OPS_AGENT_TOKEN` (khác `OPS_API_TOKEN`), deploy `services`. Dùng ở ops-service trực tiếp trong mạng overlay (`Authorization: Bearer <token>`): đọc, `/queries`, `/outbox/<svc>/dead`, `/incidents/{id}/investigate`, tạo `/proposals`. Duyệt/thực thi trả 403. Đổi token: đổi biến rồi deploy lại (không cần khởi động lại gateway).
 - **Bật chat AI (khi dịch vụ agent đã có):** `FEATURE_AI_CHAT=true`, `AI_SERVICE_URL=http://<tên-dịch-vụ>:<cổng>` trong `deploy/.env`, rồi `./scripts/deploy.sh services` (gateway cuốn chiếu). Kiểm: `curl https://api.<host>/config/features`. **Tắt khẩn cấp** (không cần xoá code): `docker service update --env-add FEATURE_AI_CHAT=false marketplace_api-gateway`; UI nên đọc `/config/features` để ẩn lối vào.
 - **Kiểm luồng SSE thật qua Traefik** (không gọi LLM): `scripts/e2e/sse.sh`. Script tạm bật cờ, chạy upstream giả, đo thời điểm từng khối (chứng minh không buffer), giữ luồng 70 s (vượt mốc 60 s hay gặp của proxy), kiểm ngắt giữa chừng huỷ upstream, rồi trả cấu hình và xoá stub. Đã đặt sẵn: gateway không có `WriteTimeout`, Traefik v3 không nén route `api`; nếu về sau thêm middleware `compress` hay nginx phía trước phải loại trừ `text/event-stream`.
-- **Triệu chứng:** `POST /ai/chat` 404 = cờ tắt; 503 `ai service is not configured` = thiếu `AI_SERVICE_URL`; 503 `unavailable` = upstream chết (xem log gateway `AIHandler: upstream unavailable`); luồng đứng im rồi `event: error` = upstream treo hoặc vượt `AI_STREAM_TIMEOUT_SEC`; 429 = quá `AI_RATE_LIMIT_PER_MINUTE`.
+- **Triệu chứng:** `POST /ai/chat` 404 = cờ tắt; 503 `ai service is not configured` = thiếu `AI_SERVICE_URL`; 503 `unavailable` = upstream chết (xem log gateway `AIHandler: upstream unavailable`); luồng đứng im rồi `event: error` = upstream treo hoặc vượt `AI_STREAM_TIMEOUT_SEC`; 429 = quá `AI_RATE_LIMIT_PER_MINUTE` (IP) hoặc `AI_USER_RATE_LIMIT_PER_MINUTE` (người dùng); 503 `temporarily unavailable` ở `/ai/*` = Redis lỗi (đường AI cố ý từ chối, không cho qua). Gateway không chuyển JWT người dùng sang agent khi có `AGENT_TOKEN_KEYS`: agent bị 403 `the agent cannot call this route` nghĩa là route/role chưa có trong `agent.DefaultScopes`.
 - **Không gây báo giả:** `GatewayLatencyHigh` bỏ route `/ai/chat` (luồng dài là bình thường). Truy vấn `gateway_latency_p95` cũng bỏ route này.
 
 ## 17. Triển khai lại riêng frontend / ops-service
 Tag `:latest` không đổi thì Swarm không kéo bản mới. Build rồi ép update: `./scripts/build-images.sh frontend && docker service update --force marketplace_frontend`; thêm `ops-service` (và `marketplace_ops-service`) khi đổi truy vấn allowlist. Chi tiết và lưu ý `NEXT_PUBLIC_*` (chỉ nướng lúc build): `docs/process/06_UI_REFRESH_2026-11-13.md`.
 
+
+## 18. Xoay khoá token agent và gói đề xuất (ADR-42)
+Gateway ký token agent (sống ~150 s) và gói đề xuất (sống 5 phút) bằng `AGENT_TOKEN_KEYS=kid:secret,kid:secret`: khoá **đầu** để ký, mọi khoá để kiểm. Token mang `kid` trong header. Không gán khoá = tính năng tắt (`/ai/proposals` trả 503, không gửi `X-Agent-Token`). Giá trị sai định dạng (secret < 32 ký tự, trùng `kid`) làm gateway **không khởi động** thay vì âm thầm tắt.
+**Lần đầu:** `openssl rand -hex 32` → đặt `AGENT_TOKEN_KEYS=k1:<secret>` trong `deploy/.env` (không dán giá trị vào chat/repo), deploy `services`. Log gateway có dòng `agent token keys loaded` chỉ liệt kê `kid`, không có secret.
+**Xoay (hai khoá chạy chồng):**
+1. Tạo secret mới, đặt khoá mới **lên đầu** và giữ khoá cũ sau nó: `AGENT_TOKEN_KEYS=k2:<mới>,k1:<cũ>`. Deploy `services`. Từ giờ token mới ký bằng `k2`; token/gói đang sống ký bằng `k1` vẫn kiểm được.
+2. Chờ hơn 6 phút (lâu hơn tuổi thọ lâu nhất của gói đề xuất là 5 phút, token agent chỉ 150 s).
+3. Gỡ khoá cũ: `AGENT_TOKEN_KEYS=k2:<mới>`, deploy lại. Token còn sót của `k1` bị 401.
+`kid` không dùng lại cho khoá khác. Xoay ngay khi nghi lộ (nếu nghi lộ: bỏ khoá cũ luôn, chấp nhận gói đang chờ bị 401, người dùng bấm đề xuất lại) và khoảng 90 ngày một lần. Test `TestRotationKeepsOldTokensUntilTheKeyIsDropped` giữ hành vi này.
+**Tra một hành động do agent:** `SELECT * FROM order_domain_events WHERE agent_run_id = '<run id>'` (tương tự `payment_domain_events`, `product_domain_events`); log gateway có `agent run started` (giờ bắt đầu, người dùng) và `agent action confirmed by user` (route, đề xuất) cùng `agent_run_id`.

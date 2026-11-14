@@ -64,7 +64,7 @@ Mã commit tương ứng: bản đầu `2a4dd77`…`56a0da2`; dọn repo `c01ace
 ✅ tạo store, CRUD sản phẩm, trạng thái sản phẩm, điều chỉnh tồn kho + sổ cái · ✅ hộp thư đơn: ship / deliver / duyệt-từ chối trả hàng · ✅ analytics của store: summary, timeseries, top products, funnel, low-stock
 
 ### Admin
-✅ bootstrap qua biến môi trường · ✅ analytics toàn sàn (+ traffic, payments, search terms, data-health) · ✅ quản lý danh mục · ✅ xem thanh toán, hoàn tiền thủ công · ✅ `/admin/system/health` · ❌ `/admin/users`, `/admin/stores` (duyệt / khóa), audit log, proxy metrics
+✅ bootstrap qua biến môi trường · ✅ analytics toàn sàn (+ traffic, payments, search terms, data-health) · ✅ quản lý danh mục · ✅ xem thanh toán, hoàn tiền thủ công · ✅ `/ops/system/health` · ❌ `/admin/users`, `/admin/stores` (duyệt / khóa), audit log, proxy metrics
 
 ### Nền tảng
 ✅ 7 service Go + gateway 2 replica · ✅ outbox giao dịch + consumer idempotent (✅ R2: lỗi theo từng dòng, backoff, dead-letter `DEAD`, requeue bằng SQL) · ✅ health / ready / metrics mọi service · ✅ Prometheus + 11 dashboard Grafana (🟡 6 cái mới chưa xem trên Grafana thật) · ✅ tracking clickstream có consent, che PII, hash IP xoay ngày · ✅ CI (build, vet, test 7 service, ClickHouse 24.8 thật) · ✅ migration Postgres có version (goose, 5 service; ADR-26) · ✅ R5–R10 (2026-10-26): `accounts` UNIQUE (username, role), `payment.refunded` → `payment_status` đơn, nhập lại kho khi đơn `REFUNDED`, payment `PROCESSING` hết hạn sau 1 giờ, doanh thu COD không dịch khi trả hàng bị từ chối, store demo cho seller1, bỏ bảng thừa user-service · 🟡 DLQ Kafka `<topic>.dlq` sau 5 lần thử (R3, `mm_kafka_dlq_total`; chưa chạy trên Swarm) · 🟡 spool bền cho tracking analytics (R1, `ANALYTICS_SPOOL_DIR`; chưa chạy trên Swarm) · 🟡 request-id xuyên service (chưa vào Kafka; ADR-27) · 🟡 deadline / retry gRPC ở gateway (retry chỉ lệnh đọc; chưa circuit breaker) · 🟡 log tập trung Vector → Loki → Grafana (ADR-28, chạy thật cục bộ, chưa trên Swarm) · 🟡 metric nghiệp vụ (order / payment / product / gateway) · ❌ cảnh báo (cố ý, ADR-12) · 🟡 đối soát Postgres ↔ ClickHouse và backfill ClickHouse: CLI `reconcile` / `backfill` đã chạy thật cục bộ, chưa có lịch đêm / `data-health` · ✅ `scripts/datagen` (dữ liệu giả có seed) · 🟡 `scripts/export` (xuất snapshot CSV / Parquet; chưa có scheduler, kho đối tượng) · ❌ materialized view (cố ý, ADR-14)
@@ -76,7 +76,13 @@ Mỗi service là module Go riêng, có test đơn vị / tích hợp (tích h�
 Docker, Swarm, Traefik, ClickHouse server, Prometheus, Grafana **chưa từng chạy trong môi trường soạn code / tài liệu** (chỉ kiểm cú pháp; SQL ClickHouse được thử trên chDB, ClickHouse 24.8 thật chỉ chạy ở CI). E2E `scripts/e2e` đã viết lại cho API mới, `resilience.sh` (A..I), `scripts/load`, `wait-ready.sh` và `update_config` cũng đã viết nhưng chưa chạy trên stack thật. Danh sách đầy đủ: [../planning/01_OPEN_ISSUES.md](../planning/01_OPEN_ISSUES.md).
 
 ## 5. AI
-Chưa có `ai-service` hay endpoint AI nào. Mới có tài liệu nghiên cứu: [../ai/README.md](../ai/README.md) và [../dataset/README.md](../dataset/README.md).
+Tài liệu: [../ai/README.md](../ai/README.md), [../dataset/README.md](../dataset/README.md); kế hoạch và trạng thái tầng agent: [../ai/08_AGENT_BUILD_ROADMAP.md](../ai/08_AGENT_BUILD_ROADMAP.md) (§16).
+
+| Phần | Trạng thái |
+|---|---|
+| Gateway cho agent: token agent (khoá xoay), gói đề xuất ký (8 route), cột `agent_run_id` ở order/payment/product, bảng route đọc cho buyer và seller + `GET /ai/tools`, rate limit AI theo người dùng (fail-closed), không chuyển JWT người dùng sang agent | ✅ có test (2026-11-14) |
+| `services/ai-agent` (config yaml, LLM profile/role/factory, persona buyer + seller, tool từ gateway, `POST /chat` SSE, giới hạn vòng/thời gian/token, kho trong bộ nhớ, Dockerfile, mục trong `deploy/services.yml`) | 🟡 45 test đạt trên Python 3.12 (có `create_agent` thật + FastAPI) và một lượt thật với OpenCode (buyer, seller; gateway giả; stream từng token). Đã có tool đề xuất (huỷ đơn, trả hàng, tồn kho) + thẻ xác nhận ở UI và kho chat Postgres (64 test, Postgres 16 thật). **Chưa thử trên Swarm/trình duyệt**. Xem roadmap §16.5-16.7, ADR-43 |
+| Kho Postgres của agent, `/metrics`, tool đề xuất hành động, bộ câu hỏi vàng (`evals/`), chính sách buyer, persona admin/dev, RCA | ❌ |
 
 ## 6. Phiên 2026-10-25
 Chi tiết đã đổi gì, kiểm chứng gì và việc tiếp theo: [02_SESSION_LOG_2026-10-25.md](02_SESSION_LOG_2026-10-25.md).

@@ -78,7 +78,7 @@ Quy ước giữ nguyên: `Authorization: Bearer`, lỗi `{"error":"…"}`, ánh
 Đã có: `GET /seller/analytics/{summary,timeseries,top-products,funnel,low-stock}`. Khác thiết kế: tham số `from`, `to`, `granularity`, `sort`, `limit` (không có `period`/`compare`/`metric`/`k`); `summary` luôn kèm kỳ trước (`previous`). Chưa có: `stockout-forecast`, `products/:id/funnel`, `payments-breakdown`, `export.csv`.
 
 ### 2.7 Analytics & hệ thống (admin) – 🟡
-Đã có: `GET /admin/analytics/{summary,timeseries,top-products,funnel,low-stock,traffic,payments,search-terms,data-health}`, `GET /admin/system/health`. Chưa có: `top-stores`, `top-categories`, `/admin/system/metrics`, `/admin/system/outbox`, `/admin/system/kafka`, `POST /admin/system/outbox/requeue`.
+Đã có: `GET /admin/analytics/{summary,timeseries,top-products,funnel,low-stock,traffic,payments,search-terms,data-health}`, `GET /ops/system/health`. Chưa có: `top-stores`, `top-categories`, `/admin/system/metrics`, `/admin/system/outbox`, `/admin/system/kafka`, `POST /admin/system/outbox/requeue`.
 Phản hồi báo cáo: `{as_of, source:"clickhouse", cached, timezone:"Asia/Ho_Chi_Minh", data}` (khác thiết kế: có `cached`, không có `source` Prometheus/Postgres).
 
 ## 3. gRPC nội bộ (thực tế)

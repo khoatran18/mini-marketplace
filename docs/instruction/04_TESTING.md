@@ -112,7 +112,7 @@ flowchart TD
 | Analytics | `analytics-service/internal/store/store_test.go` (ClickHouse) | migrate idempotent; **định nghĩa doanh thu**; giao lại idempotent; bucket theo giờ VN; top sản phẩm/funnel/scope store; payments/traffic/search/health; low-stock; validate scope & range |
 | | `internal/ingest/ingest_test.go`, `internal/store/sink_test.go`, `internal/service/service_test.go`, `internal/server/server_test.go`, `internal/service/service_ch_test.go`, `internal/ch/client_test.go` | whitelist event, giới hạn/che PII, đồng hồ client ±24 h, consent; map event Kafka → hàng; sink gom lô/retry/rớt khi đầy buffer; luật truy cập báo cáo; đếm accepted/rejected; map gRPC; cache; client HTTP |
 | Gateway: handler | `api-gateway/internal/handler/*_test.go` | quyền sở hữu order/buyer/store/product; trường do client điều khiển bị bỏ qua; ánh xạ lỗi; search không lộ hàng ẩn & che tồn; endpoint seller dùng store từ token; checkout cần `Idempotency-Key`; actor từ token; payment nhãn MÔ PHỎNG, **không echo body có dữ liệu thẻ**, checkout kèm payment; analytics: scope lấy từ token, lỗi → HTTP; tracking: gắn danh tính phía server, best-effort, giới hạn, `identify`, ip-hash xoay theo ngày |
-| Gateway: middleware & route | `internal/middleware`, `internal/router/router_test.go` | JWT loại/hạn/alg, thu hồi theo `pwd_version`, kiểm role, rate limit nguyên tử, body limit 413, CORS allow-list, **bảng truy cập route** (§3), `/admin/system/health` |
+| Gateway: middleware & route | `internal/middleware`, `internal/router/router_test.go` | JWT loại/hạn/alg, thu hồi theo `pwd_version`, kiểm role, rate limit nguyên tử, body limit 413, CORS allow-list, **bảng truy cập route** (§3), `/ops/system/health` |
 | `pkg/ops` | `services/*/pkg/ops/ops_test.go` | liveness không đụng dependency; ready/degraded/not-ready; lỗi đã làm sạch; timeout; cache; draining; nhãn metric; test socket thật cho cổng admin + gRPC health. **Bảy bản phải giống hệt**: `md5sum services/*/pkg/ops/ops.go` (cũng `pkg/events/events.go` ở product/order/payment và `kafkaimpl/*`) |
 
 ### Bảng kiểm tra truy cập trong `router_test.go`
@@ -160,7 +160,7 @@ Chạy trực tiếp ngoài Swarm: `API_URL=https://api.<host> node scripts/e2e/
 | 05 | vòng đời đơn: huỷ và trả kho, huỷ đơn đã PAID thì hoàn tiền |
 | 06 | trả hàng / hoàn tiền: duyệt, từ chối, trả lần hai, admin hoàn tiền |
 | 07 | cô lập chéo shop / buyer; bỏ qua trường giả mạo trong body |
-| 08 | `/events` → chờ flush → báo cáo seller/admin, cô lập analytics giữa 2 shop, `/admin/system/health` |
+| 08 | `/events` → chờ flush → báo cáo seller/admin, cô lập analytics giữa 2 shop, `/ops/system/health` |
 | 09 | hết hạn giữ hàng và force payment (tuỳ chọn) |
 | 10 | rate limit 429 (tuỳ chọn) |
 

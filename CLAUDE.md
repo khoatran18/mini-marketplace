@@ -13,7 +13,8 @@ services/product-service/ catalog/search, inventory (available/reserved/sold + l
 services/user-service/    buyer/seller profiles, delivery addresses   gRPC :50054
 services/analytics-service/ tracking + Kafka events → ClickHouse, scoped reports              gRPC :50055
 services/payment-service/ SIMULATED payments (mockpay), webhooks, refunds                     gRPC :50057
-services/ops-service/     incidents from Prometheus alerts + append-only audit log (ADR-38)     HTTP :8080 (gateway only, /admin/ops/*)
+services/ops-service/     incidents from Prometheus alerts + append-only audit log (ADR-38)     HTTP :8080 (gateway only, /ops/*)
+services/ai-agent/        Python (FastAPI + LangChain) agent: buyer/seller personas, tools = gateway REST via agent token  HTTP :8090 (gateway only); see docs/ai/08_AGENT_BUILD_ROADMAP.md
 (every Go service also serves an internal admin HTTP port :8081: /health /healthz /ready /readyz /metrics /version)
 shared/               Go module mini-marketplace/shared: ops, events (outbox worker + dead-letter tools), messagequeue/kafkaimpl, reqctx, tracing (ADR-33, ADR-36)
 deploy/               infra.yml (postgres, redis, clickhouse, kafka), observability.yml (prometheus + alerts.yml, grafana, loki/vector, tempo), services.yml (traefik + apps), grafana/, prometheus/, traefik/, .env.example
@@ -44,7 +45,7 @@ cd apps/frontend && npm install && npm run dev
 ```
 
 ## Conventions
-- Never commit `.env`, keys, certs or binaries (`.gitignore` blocks them); add new settings to the matching `.env.example`.
+- Never commit `.env`, keys, certs or binaries (`.gitignore` blocks them); add new settings to the matching `.env.example` (every variable is a real `KEY=value` line, never commented out; no placeholder values; empty = unset; comments go on their own line and only explain; the one exception is a variable where empty differs from unset, e.g. `RECONCILE_PG_DSN`, described in a comment instead).
 - Identity comes **only** from the JWT (set by the gateway middleware). Never trust user/buyer/seller IDs, prices, totals or statuses from request bodies.
 - Service layer returns `status.Error(codes.X, …)`; the gateway maps gRPC codes to HTTP (`handler/helpers.go`).
 - Cross-service side effects go through the transactional **outbox** (DB row + worker → Kafka; `domain_events` in product/order/payment). Consumers must be idempotent. Browser tracking goes gateway → analytics-service over gRPC, not Kafka.
@@ -53,5 +54,6 @@ cd apps/frontend && npm install && npm run dev
 - Payments are SIMULATED only (never store card data). Analytics revenue = subtotal of orders PAID (online) / DELIVERED (COD) minus refunds.
 - Postgres schema changes go through goose migrations in `services/<svc>/migrations/NNNNN_*.sql` (embedded, run at startup, version table `goose_db_version_<svc>`); never add `AutoMigrate`. Pin goose at v3.26.0 (v3.29 needs Go 1.26).
 - `X-Request-ID` (HTTP) / `x-request-id` (gRPC metadata) is set by the gateway and propagated by each service's `internal/requestid`; log it, never use it as a Loki label. The id also rides the outbox (`request_id` column, set from the tx context: open transactions with `db.WithContext(ctx)`) and the Kafka header `x-request-id` (`shared/reqctx`; each service calls `reqctx.Use` in `main`). Gateway gRPC calls have deadlines (`GRPC_TIMEOUT_*`), a per-service circuit breaker (`CIRCUIT_*`), and retry only read methods plus the key-idempotent `Checkout` (`idempotentWrites`). Tracing (OTel → Tempo) is on when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; log through zap (stdlib `log` is redirected to JSON).
+- Git: never run `git add`/`git commit` unless the user asks; when they do, give one-line commands (one `git add` line, one `git commit -m` line with a single-line message). No `Co-Authored-By` trailer and no "Generated with" line in commits or PR text.
 - Add tests with every behavior change (see `docs/instruction/04_TESTING.md`).
 - Demo data only with `SEED_DEMO_DATA=true` (never in production).

@@ -107,7 +107,7 @@ flowchart LR
 Prometheus kéo (scrape) chứ service không đẩy; với service Go dùng DNS service discovery `tasks.<service>:8081` nên thêm replica không cần sửa cấu hình. Grafana là điểm duy nhất ra ngoài, đăng nhập bằng tài khoản Grafana.
 
 - Nguồn: cAdvisor (CPU/RAM/mạng theo container, nhãn swarm service), node-exporter (máy), metric ứng dụng (`mm_*`, [02 §8](02_HEALTH_READY_METRICS.md)), postgres/redis/kafka-exporter, Traefik. **Chưa có** exporter/metric riêng cho ClickHouse server, MinIO (chưa có).
-- Trong app: `GET /admin/system/health` (bảng service × `ready/degraded/not_ready/unreachable` × version × uptime) ✅. `GET /admin/system/metrics`, `/admin/system/outbox`, requeue ❌ chưa làm.
+- Trong app: `GET /ops/system/health` (bảng service × `ready/degraded/not_ready/unreachable` × version × uptime) ✅. `GET /admin/system/metrics`, `/admin/system/outbox`, requeue ❌ chưa làm.
 - Giới hạn bộ nhớ (`resources.limits.memory`) đã đặt cho service Go (256–384 MB), ClickHouse (2 GB) và container giám sát ⇒ panel "Memory % of limit" có nghĩa.
 
 ### 2.1 Đã triển khai
@@ -175,7 +175,7 @@ Quyết định (ADR-12): **không có cảnh báo.** Không `alert-service`, Al
 | Gateway | rate-limited, events nhận/loại, gRPC client | – | 🟡 `mm_rate_limited_total` và `mm_grpc_client_*` ở *Business*; 429 ở *Services*; `mm_events_*` ở *Analytics pipeline* |
 
 ### 3.2 "Cần chú ý" trong ứng dụng (không phải cảnh báo)
-Là **truy vấn thường**, người dùng mở trang mới thấy: seller – `low-stock` (tồn thấp/ sắp hết), sản phẩm nhiều lượt xem 0 đơn (`top-products?sort=viewed_unsold`); admin – trạng thái service (`/admin/system/health`) và `data-health` (độ trễ pipeline; **đối soát chưa có**). Đơn đã thanh toán chưa giao > 24 h: chưa có báo cáo riêng.
+Là **truy vấn thường**, người dùng mở trang mới thấy: seller – `low-stock` (tồn thấp/ sắp hết), sản phẩm nhiều lượt xem 0 đơn (`top-products?sort=viewed_unsold`); admin – trạng thái service (`/ops/system/health`) và `data-health` (độ trễ pipeline; **đối soát chưa có**). Đơn đã thanh toán chưa giao > 24 h: chưa có báo cáo riêng.
 
 ### 3.3 Runbook
 Đã viết: [03_RUNBOOK.md](../../instruction/03_RUNBOOK.md) (đọc dashboard, Kafka lag, outbox, ClickHouse down, payment thất bại cao, sao lưu).

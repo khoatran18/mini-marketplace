@@ -93,7 +93,7 @@ flowchart TD
 
 | Tool | Trạng thái | Ghi chú |
 |---|---|---|
-| `service_health` | ✅ `GET /admin/system/health` | gom `/ready` của 7 service |
+| `service_health` | ✅ `GET /ops/system/health` | gom `/ready` của 7 service |
 | `system_metrics` | 🆕 `GET /admin/system/metrics` | proxy Prometheus **có danh sách PromQL cho phép**, không để LLM viết PromQL tự do |
 | `outbox_status` | 🆕 `GET /admin/system/outbox` | `mm_outbox_pending`, tuổi dòng cũ nhất, dòng `FAILED` (nay phải vào DB / metric tay) |
 | `kafka_lag` | 🆕 `GET /admin/system/kafka` | lag theo consumer group (kafka-exporter đã có số liệu) |

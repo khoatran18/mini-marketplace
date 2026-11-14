@@ -21,7 +21,7 @@ diagnose:
     interpret: "JSON `checks` chỉ ra check nào hỏng (postgres, clickhouse, timers_worker, workers, *Client). 503 not_ready + /healthz 200 = phụ thuộc hỏng, KHÔNG restart"
   - id: admin-health
     tool: http
-    query: "GET /admin/system/health (JWT admin, qua gateway)"
+    query: "GET /ops/system/health (JWT admin, qua gateway)"
     read_only: true
     interpret: "bảng tổng hợp mọi service"
   - id: circuit

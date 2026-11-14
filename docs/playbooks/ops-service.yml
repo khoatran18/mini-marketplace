@@ -21,7 +21,7 @@ diagnose:
     interpret: "tìm 'ops poll' lỗi: connection refused / i/o timeout tới prometheus (DNS nhà mạng trả IP giả, V6)"
   - id: pending-proposals
     tool: http
-    query: "GET /admin/ops/proposals?state=pending"
+    query: "GET /ops/proposals?state=pending"
     read_only: true
     interpret: "liệt kê đề xuất chờ; không có ai trong ca trực thì cân nhắc kênh thông báo OPS_NOTIFY_WEBHOOK_URL"
 causes:

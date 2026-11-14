@@ -21,7 +21,7 @@ diagnose:
     interpret: "mạch mở và lỗi gRPC trỏ service đích; service đích ở cuối chuỗi (auth, product) là ứng viên gốc"
   - id: per-service-health
     tool: http
-    query: "GET /admin/system/health (qua gateway)"
+    query: "GET /ops/system/health (qua gateway)"
     read_only: true
     interpret: "service nào ready/degraded/not_ready và check nào hỏng"
 causes:

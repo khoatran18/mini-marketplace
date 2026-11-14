@@ -10,6 +10,7 @@
 | [04_AI_DATA_READINESS.md](04_AI_DATA_READINESS.md) | Nền đã có / còn thiếu gì cho từng scope |
 | [06_AGENT_FEATURES.md](06_AGENT_FEATURES.md) | Danh mục tính năng agent cho admin / seller / buyer: tool nào đã có, người xác nhận ở đâu, thứ tự làm |
 | [07_COROOT_AND_INCIDENT_AGENT.md](07_COROOT_AND_INCIDENT_AGENT.md) | Coroot (eBPF observability + RCA) là gì, giúp khoanh vùng sự cố ra sao, và kịch bản / dataset / test case cho agent điều tra sự cố: đã có, còn thiếu |
+| [08_AGENT_BUILD_ROADMAP.md](08_AGENT_BUILD_ROADMAP.md) | Lộ trình xây agent buyer/seller/admin/dev và vòng lặp RCA: nền đã có/thiếu, các điểm cần chốt trước, kiến trúc, cấu trúc thư mục `services/ai-agent`, thứ tự 8 bước có tiêu chí xong, đánh giá, an toàn |
 | [05_AI_DRAFT_ORIGINAL.md](05_AI_DRAFT_ORIGINAL.md) | Bản nháp ý tưởng ban đầu (hợp đồng tool, SSE, hệ gợi ý, RAG). Chỉ là điểm xuất phát; khi mâu thuẫn thì các file 01–04 mới hơn |
 
 Bộ dữ liệu để kiểm chứng từng scope: [../dataset/README.md](../dataset/README.md).

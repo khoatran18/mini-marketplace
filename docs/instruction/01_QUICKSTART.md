@@ -41,6 +41,32 @@ Biến bắt buộc trong `deploy/.env` (thiếu là stack không lên). `deploy
 | `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` | muốn có admin thì đặt: 3–16 ký tự `[a-zA-Z0-9_]`, mật khẩu ≥ 8 |
 | `SEED_DEMO_DATA=true` | muốn có tài khoản và ~100 sản phẩm demo (đừng bật ở production) |
 
+### Sinh token cho AI và ops (tuỳ chọn, khi bật `FEATURE_AI_CHAT` / `FEATURE_AI_OPS`)
+
+Ba biến này đều là chuỗi ngẫu nhiên nhưng **khác loại, không dùng chung giá trị**:
+
+| Biến | Dạng | Dùng để |
+|---|---|---|
+| `OPS_API_TOKEN` | `<hex>` | bí mật gateway ↔ ops-service (route `/ops/*`) |
+| `OPS_AGENT_TOKEN` | `<hex>`, khác `OPS_API_TOKEN` | quyền hẹp cho agent dev gọi ops-service (đọc + tạo đề xuất, không duyệt/chạy) |
+| `AGENT_TOKEN_KEYS` | `kid:<hex>` (vd `k1:...`), secret ≥ 32 ký tự, khác `JWT_SECRET` | khoá **ký** token agent và gói đề xuất (ADR-42); khoá đầu ký, các khoá sau chỉ kiểm. Chỉ gateway giữ, ai-agent không có |
+
+Lệnh dưới chỉ điền biến **đang trống hoặc chưa có**, không ghi đè, không in giá trị ra màn hình (chạy ở thư mục gốc repo):
+
+```bash
+set_if_empty() {  # $1 = tên biến, $2 = giá trị
+  if grep -qE "^$1=.+" deploy/.env; then echo "$1: đã có, giữ nguyên"
+  else sed -i -E "/^#? ?$1=/d" deploy/.env && echo "$1=$2" >> deploy/.env && echo "$1: đã sinh"; fi
+}
+set_if_empty OPS_API_TOKEN      "$(openssl rand -hex 24)"
+set_if_empty OPS_AGENT_TOKEN    "$(openssl rand -hex 32)"
+set_if_empty AGENT_TOKEN_KEYS   "k1:$(openssl rand -hex 32)"
+set_if_empty METRICS_TOKEN      "$(openssl rand -hex 24)"   # tuỳ chọn: khoá :8081/metrics; rỗng = mở trong mạng nội bộ
+./scripts/deploy.sh services    # gateway và ops-service đọc lại biến
+```
+
+Khoá đã đặt rồi thì **không** chạy lại để "làm mới": đổi khoá làm token và đề xuất đang sống mất hiệu lực. Xoay khoá có quy trình riêng ở [03_RUNBOOK.md](03_RUNBOOK.md) §18.
+
 Danh sách đầy đủ biến môi trường: [02_DEPLOYMENT.md](02_DEPLOYMENT.md) §3.
 
 ## 3. Giao diện và địa chỉ
@@ -214,7 +240,7 @@ scripts/e2e/resilience.sh A F                          # chọn từng chữ
 API_URL=http://api.marketplace.swarm.localhost node scripts/load/load.mjs --rps=20 --duration=30   # tải nhẹ; thêm P95_MS=800 để đặt ngưỡng
 python3 scripts/dev/gen_traffic.py --api http://api.marketplace.swarm.localhost --visitors 200 --products 1-60   # traffic giả cho dashboard
 ```
-`resilience.sh` tự đọc `ADMIN_BOOTSTRAP_*` trong `deploy/.env` (kiểm `/admin/system/health`); đặt `ADMIN_USERNAME` / `ADMIN_PASSWORD` để ghi đè. Mô tả từng kịch bản: [04_TESTING.md](04_TESTING.md) §5.
+`resilience.sh` tự đọc `ADMIN_BOOTSTRAP_*` trong `deploy/.env` (kiểm `/ops/system/health`); đặt `ADMIN_USERNAME` / `ADMIN_PASSWORD` để ghi đè. Mô tả từng kịch bản: [04_TESTING.md](04_TESTING.md) §5.
 
 ### Test từng service (không cần Swarm; máy không có Go thì dùng container)
 ```bash

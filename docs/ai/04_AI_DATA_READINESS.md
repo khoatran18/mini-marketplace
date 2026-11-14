@@ -63,7 +63,7 @@ Nét liền: dữ liệu đã có, scope dùng được ngay. Nét đứt: phả
 | Consent + PII | không consent chỉ giữ `page_view` / `error_client` ẩn danh; che email / SĐT trong truy vấn; hash IP xoay theo ngày | mọi scope dùng hành vi |
 | Fact nghiệp vụ | `fact_order_items`, `fact_order_status`, `fact_payment_events`, `fact_refunds`, `fact_inventory`, `dim_products` (ClickHouse, dựng từ Kafka) | 1, 4, 8, 9, 13 |
 | Catalog | sku, mô tả, danh mục (cây ≤ 3 cấp), brand, tags, ảnh (URL), trạng thái; event `product.changed` | 2, 10, 11 |
-| API theo vai trò | seller: summary, timeseries, top-products, funnel, low-stock; admin: + traffic, payments, search-terms, data-health; `/admin/system/health` | 4, 14 |
+| API theo vai trò | seller: summary, timeseries, top-products, funnel, low-stock; admin: + traffic, payments, search-terms, data-health; `/ops/system/health` | 4, 14 |
 | Giỏ hàng / đơn / thanh toán API | có phân quyền, idempotency | 5 |
 | Metric | Prometheus `mm_*`, cAdvisor, node-exporter, exporters | 14 |
 | Dữ liệu giả để dev | `SEED_DEMO_DATA` (~100 sản phẩm), `scripts/dev/gen_traffic.py` (chỉ event client), **`scripts/datagen`** (đơn, thanh toán, hoàn tiền, tồn kho, `events_raw`; synthetic + RetailRocket) và `scripts/export` (xuất snapshot) | dev pipeline |

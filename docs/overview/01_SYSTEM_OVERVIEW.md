@@ -54,7 +54,7 @@ Quy tắc xuyên suốt: trình duyệt **chỉ nói chuyện với gateway**; s
 |---|---|---|---|---|---|
 | `traefik` (v3.6) | 80 / 443 (publish) | 1 (chỉ trên node manager) | – | Kết thúc TLS, định tuyến theo host, dashboard (basic auth), healthcheck replica gateway qua `/ready` | – |
 | `frontend` | 3000 | 1 | – | Giao diện Next.js 14 (buyer / seller / admin); chỉ gọi gateway | – |
-| `api-gateway` | 8080 (REST) | **2** | 384 MB | REST → gRPC, JWT, RBAC, kiểm sở hữu, CORS, rate limit (Redis), giới hạn body, `POST /events` tracking, proxy báo cáo analytics, `/admin/system/health` | Redis (rate limit, `pwd_version`) |
+| `api-gateway` | 8080 (REST) | **2** | 384 MB | REST → gRPC, JWT, RBAC, kiểm sở hữu, CORS, rate limit (Redis), giới hạn body, `POST /events` tracking, proxy báo cáo analytics, `/ops/system/health` | Redis (rate limit, `pwd_version`) |
 | `auth-service` | 50051 (gRPC) | 1 | 256 MB | Đăng ký / đăng nhập / refresh / đổi mật khẩu, role (`buyer`, `seller_admin`, `seller_employee`, `admin`), phát JWT, bootstrap admin | Postgres `accounts…` |
 | `user-service` | 50054 (gRPC) | 1 | 256 MB | Hồ sơ buyer, store (seller), **địa chỉ giao hàng** | Postgres |
 | `product-service` | 50053 (gRPC) | 1 | 256 MB | Catalog, danh mục, tìm kiếm full-text không dấu, **tồn kho** (available / reserved / sold + sổ cái), giữ / trả / xuất kho theo Kafka | Postgres, outbox |

@@ -136,7 +136,7 @@ sequenceDiagram
 
 ## 6. Sức khoẻ hệ thống (admin)
 
-`GET /admin/system/health` → gateway gọi HTTP `:8081/ready` của cả 7 service rồi gom thành một bảng. Prometheus scrape `:8081/metrics` (qua DNS `tasks.<service>`), Grafana hiển thị. Cách đọc: [../instruction/03_RUNBOOK.md](../instruction/03_RUNBOOK.md).
+`GET /ops/system/health` → gateway gọi HTTP `:8081/ready` của cả 7 service rồi gom thành một bảng. Prometheus scrape `:8081/metrics` (qua DNS `tasks.<service>`), Grafana hiển thị. Cách đọc: [../instruction/03_RUNBOOK.md](../instruction/03_RUNBOOK.md).
 
 ## 7. Chỗ AI sẽ cắm vào (dự kiến, chưa có code)
 

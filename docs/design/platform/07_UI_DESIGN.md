@@ -53,7 +53,7 @@ Cập nhật lúc 08:15 · Doanh thu = đơn đã thanh toán/ COD đã giao (�
  │ api-gateway        2/2      ready   1.4.2    34    310/512         120ms  0.1%   –         –              │
  │ order-service      1/1      ready   1.4.2    12    180/512          45ms  0%     12        0.8s           │
  │ payment-service    1/1      ready   …                                                                     │
- ├ Hạ tầng: postgres ● redis ● kafka ● clickhouse ● minio ● prometheus ●  (từ /admin/system/health)          ┤
+ ├ Hạ tầng: postgres ● redis ● kafka ● clickhouse ● minio ● prometheus ●  (từ /ops/system/health)          ┤
  ├ Node: CPU/RAM/Disk gauge · Biểu đồ chọn (service, metric, 1h/6h/24h/7d) · Hàng đợi outbox/ consumer lag  ┘
 ```
 Hàng có trạng thái `degraded`/`not_ready` tô màu + hiện check lỗi (từ `checks{}` của `/ready`).

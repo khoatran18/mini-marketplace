@@ -147,3 +147,5 @@ sequenceDiagram
 ```
 
 Hợp đồng chi tiết (tool từng persona, sự kiện SSE, chống prompt injection, ngân sách chi phí): [05_AI_DRAFT_ORIGINAL.md](05_AI_DRAFT_ORIGINAL.md) §2–§9. Bản nháp đó là điểm xuất phát, không phải thiết kế đã duyệt.
+
+Lộ trình xây cụ thể, lựa chọn thư viện (langchain-core / LangGraph / LangSmith) và cấu hình LLM profile: [08_AGENT_BUILD_ROADMAP.md](08_AGENT_BUILD_ROADMAP.md) §13–§14.

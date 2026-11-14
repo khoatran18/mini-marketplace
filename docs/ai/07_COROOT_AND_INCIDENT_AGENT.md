@@ -53,7 +53,7 @@ Quy mô hệ thống hiện tại: 22 service Swarm trên **một node** (7 serv
 
 | Câu hỏi khi có sự cố | Đã trả lời được bằng |
 |---|---|
-| Service nào đang hỏng | `GET /admin/system/health`, `/ready` từng service, dashboard *Overview* / *Services (RED)* |
+| Service nào đang hỏng | `GET /ops/system/health`, `/ready` từng service, dashboard *Overview* / *Services (RED)* |
 | Hỏng vì thứ nó phụ thuộc hay vì chính nó | sơ đồ phụ thuộc trong runbook + `/ready` có `checks` JSON |
 | Một request cụ thể chết ở đâu | `request_id` xuyên service (ADR-27) + Loki: lọc `request_id` ra log của gateway → service gọi (nhãn Loki chỉ `service`, `stack`, `level`, `env`) |
 | Lỗi nghiệp vụ (outbox `DEAD`, DLQ, Kafka lag, đơn kẹt) | metric `mm_*` + runbook; **Coroot không hiểu các loại này** |
@@ -92,7 +92,7 @@ Cách đo có ý nghĩa: **so ba hệ trên cùng một lỗi có nhãn**: (a) b
 |---|---|---|
 | `scripts/e2e/resilience.sh` A..I | 9 kịch bản **chèn lỗi thật** bằng `docker service scale` (ClickHouse, Kafka, payment, product, Redis, Postgres, order-service, rolling restart, Postgres restart), mỗi cái có assertion hành vi hệ thống | biết **service gốc** và thời điểm dừng / bật ⇒ có thể gán nhãn nguyên nhân gốc |
 | `docs/instruction/03_RUNBOOK.md` §3–9 | cây quyết định: đơn kẹt, payment không hiện, outbox backlog / `DEAD`, Kafka lag và DLQ, thanh toán lỗi, ClickHouse down / spool, tồn kho sai | đáp án chuẩn (đường chẩn đoán + lệnh) cho câu hỏi điều tra |
-| Prometheus (`mm_*`, kafka-exporter, cAdvisor...), Loki + Vector (log JSON có `request_id`), `/admin/system/health` | nguồn dữ liệu thật cho tool của agent | đầu vào cho tool |
+| Prometheus (`mm_*`, kafka-exporter, cAdvisor...), Loki + Vector (log JSON có `request_id`), `/ops/system/health` | nguồn dữ liệu thật cho tool của agent | đầu vào cho tool |
 | `PAYMENT_CHAOS_RATE` (ENV=dev) | sinh `provider_error` ngẫu nhiên | một loại lỗi nghiệp vụ |
 
 **Còn thiếu (chưa có gì trong repo):**
