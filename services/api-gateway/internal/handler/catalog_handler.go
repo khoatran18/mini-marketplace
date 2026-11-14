@@ -182,7 +182,7 @@ func (h *CatalogHandler) searchRequest(c *gin.Context) (*productpb.SearchProduct
 // @Param brand query string false "Brand"
 // @Param seller_id query integer false "Store"
 // @Param in_stock query boolean false "Only products in stock"
-// @Param sort query string false "relevance | price_asc | price_desc | newest | best_selling"
+// @Param sort query string false "relevance | price_asc | price_desc | newest | best_selling | stock_desc | stock_asc"
 // @Param page query integer false "Page"
 // @Param page_size query integer false "Page size (max 50)"
 // @Success 200 {object} productpb.SearchProductsResponse

@@ -207,3 +207,29 @@ func TestAdminAndDevAreReadOnly(t *testing.T) {
 		}
 	}
 }
+
+// "Which product has the most stock?" must be one sorted call, not a walk through every page: the seller's product list offers the sort.
+func TestSellerProductListOffersStockSortsAndASmallPage(t *testing.T) {
+	for _, role := range []string{"seller_admin", "seller_employee"} {
+		var found bool
+		for _, tool := range DefaultScopes.Tools(role) {
+			if tool.Name != "list_my_products" {
+				continue
+			}
+			found = true
+			params := map[string]ToolParam{}
+			for _, p := range tool.Params {
+				params[p.Name] = p
+			}
+			if got := strings.Join(params["sort"].Enum, ","); !strings.Contains(got, "stock_desc") || !strings.Contains(got, "stock_asc") {
+				t.Errorf("%s: sort enum = %q", role, got)
+			}
+			if _, ok := params["page_size"]; !ok {
+				t.Errorf("%s: page_size missing", role)
+			}
+		}
+		if !found {
+			t.Errorf("%s has no list_my_products", role)
+		}
+	}
+}

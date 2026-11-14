@@ -97,10 +97,12 @@ var analyticsParams = []ToolParam{
 // parameter, so none of these takes a store id. Product browsing tools are the public ones (no owner data).
 var sellerTools = []Tool{
 	{Name: "get_shop_rules", Method: "GET", Path: "/shop/rules", Description: "The order rules in force right now: minutes to pay an online order, days to request a return after delivery, days until a shipped order counts as delivered, shipping fee per store order and the subtotal from which shipping is free (whole VND; 0 = never). Use it for EVERY number about these rules."},
-	{Name: "list_my_products", Method: "GET", Path: "/seller/products", Description: "Products of the seller's own store, every status.", Params: []ToolParam{
+	{Name: "list_my_products", Method: "GET", Path: "/seller/products", Description: "Products of the seller's own store, every status. For 'most/least stocked', 'best selling', 'newest' or 'cheapest' questions use sort with a small page_size (5) instead of paging through everything; the result's total tells how many products exist.", Params: []ToolParam{
 		{Name: "q", In: "query", Type: "string"},
+		{Name: "sort", In: "query", Type: "string", Enum: []string{"stock_desc", "stock_asc", "best_selling", "newest", "price_asc", "price_desc"}, Description: "stock_desc = most available stock first"},
+		{Name: "in_stock", In: "query", Type: "string", Enum: []string{"true"}, Description: "only products with stock above 0"},
 		{Name: "page", In: "query", Type: "integer"},
-		{Name: "page_size", In: "query", Type: "integer"},
+		{Name: "page_size", In: "query", Type: "integer", Description: "default 20, max 50; use 5 for top-N questions"},
 	}},
 	{Name: "get_product", Method: "GET", Path: "/products/:id", Description: "Details of one product.", Params: []ToolParam{
 		{Name: "id", In: "path", Type: "integer", Required: true},
