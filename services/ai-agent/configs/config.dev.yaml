@@ -1,0 +1,99 @@
+# Cấu hình ai-agent cho môi trường dev. KHÔNG đặt secret ở đây: dùng ${TÊN_BIẾN:-} và đặt giá trị trong .env / deploy/.env.
+# Nạp bởi ai_agent/config/loader.py theo APP_ENV (mặc định dev).
+app:
+  name: ai-agent
+  env: dev
+  log_level: INFO
+
+server:
+  host: "0.0.0.0"
+  port: 8090
+
+# Chỉ gateway gọi được ai-agent (mạng nội bộ Swarm, không publish cổng). ai-agent gọi ngược gateway bằng TOKEN AGENT.
+gateway:
+  base_url: "${GATEWAY_URL:-http://localhost:8080}"
+  timeout_sec: 5            # mỗi lần gọi tool
+  tools_cache_ttl_sec: 60   # danh sách tool (GET /ai/tools) theo role, lưu tạm trong bộ nhớ
+
+llm:
+  # profile = một mô hình đã cấu hình xong. role = chỗ dùng -> tên profile (đổi mô hình của persona = đổi một dòng ở roles).
+  profiles:
+    # Mô hình giả có kịch bản: không gọi mạng. Dùng cho dev/CI/test an toàn.
+    fake_buyer:
+      provider: "fake"
+      script:                # bước k = lần gọi mô hình thứ k trong MỘT lượt chat
+        - tool_calls:
+            - {name: list_my_orders, args: {page_size: 3}}
+        - content: "Đây là các đơn gần đây của bạn. Mình đã hiện chi tiết ở thẻ bên dưới."
+    fake_seller:
+      provider: "fake"
+      script:
+        - tool_calls:
+            - {name: count_store_orders, args: {}}
+        - content: "Mình đã tra số đơn theo trạng thái của shop. Chi tiết ở thẻ bên dưới."
+    fake_text:
+      provider: "fake"
+      script:
+        - content: "Xin chào! Mình có thể giúp gì cho bạn?"
+
+    # DeepSeek qua API tương thích OpenAI (provider openai + base_url). model_id theo tài liệu hiện hành của nhà cung cấp.
+    deepseek_flash:
+      provider: "openai"
+      model_id: "deepseek-chat"          # kiểm tra lại tên mô hình hiện hành trước khi dùng thật
+      api_key: "${DEEPSEEK_API_KEY:-}"
+      base_url: "${DEEPSEEK_BASE_URL:-https://api.deepseek.com}"
+      temperature: 0
+      timeout: 60
+      stream_usage: true                 # streaming qua base_url tuỳ chỉnh mặc định không trả usage; cần để đếm token
+      # extra_body: {thinking: {type: "disabled"}}   # tắt suy luận cho rẻ/nhanh (kiểm tra tài liệu nhà cung cấp)
+      limits: {rpm: 60, tpm: 200000}     # ghi theo tài liệu nhà cung cấp; chưa dùng ở bản này
+    # OpenCode Go (cổng mô hình tương thích OpenAI): https://opencode.ai/docs/go . Đã kiểm 2026-11-14 bằng curl: stream, usage, tool_calls đều chạy.
+    # OpenCode đòi client tự nhận diện bằng User-Agent riêng và gửi mã phiên ổn định trong header x-opencode-session.
+    opencode_deepseek_flash:
+      provider: "openai"
+      model_id: "deepseek-v4.1-flash"
+      api_key: "${OPENCODE_API_KEY:-}"
+      base_url: "${OPENCODE_BASE_URL:-https://opencode.ai/inference/go/openai/v1}"
+      temperature: 0
+      timeout: 60
+      stream_usage: true                 # cần để đếm token; OpenCode nhận stream_options.include_usage (đã kiểm)
+      default_headers: {User-Agent: "mini-marketplace-agent/0.1"}
+      session_header: "x-opencode-session"   # giá trị = conversation_id của lượt chat (gắn lúc gửi request)
+      extra_body: {thinking: {type: "disabled"}}   # tắt suy luận: nhanh và rẻ hơn (đã kiểm: reasoning_tokens = 0). Bỏ dòng này để bật lại
+    claude_haiku:
+      provider: "anthropic"
+      model_id: "<điền model id>"
+      api_key: "${ANTHROPIC_API_KEY:-}"
+      temperature: 0
+
+  roles:
+    buyer: "opencode_deepseek_flash"
+    seller: "opencode_deepseek_flash"
+    summarizer: "opencode_deepseek_flash"   # chưa dùng
+
+# Giới hạn cứng cho MỘT lượt chat (không phải cả cuộc trò chuyện). Hết giới hạn thì dừng và báo, không âm thầm hạ chất lượng.
+limits:
+  max_model_calls: 6          # số vòng gọi mô hình (tìm không ra thì model thử lại 1-2 lần rồi mới trả lời)
+  max_tool_calls: 8
+  turn_timeout_sec: 60        # gateway cắt cứng ở 120 s (AI_STREAM_TIMEOUT_SEC)
+  tool_result_max_chars: 6000 # kết quả tool đưa cho mô hình bị cắt theo ngưỡng này
+  tool_result_max_items: 20   # danh sách dài hơn thì chỉ giữ ngần này phần tử
+  max_message_chars: 2000     # độ dài tối đa một tin người dùng
+  max_history_messages: 20    # số tin cũ nạp lại cho mô hình
+  token_budget_per_turn: 20000  # tổng token (vào + ra) tối đa một lượt; cần usage_metadata từ mô hình
+
+personas:
+  buyer: {enabled: true}
+  seller: {enabled: true}
+
+# Kho lịch sử chat (xem store/postgres.py). Bảng ai_* nằm cùng cụm Postgres với các service khác.
+store:
+  # memory = trong bộ nhớ (mất khi restart; dùng cho test). postgres = lưu bền, giữ retention_days ngày rồi tự xoá.
+  backend: "postgres"
+  retention_days: 30
+  postgres:
+    host: "${POSTGRES_HOST:-localhost}"
+    port: 5432
+    user: "${POSTGRES_USER:-postgres}"
+    password: "${POSTGRES_PASSWORD:-}"
+    database: "${POSTGRES_DB:-postgres}"

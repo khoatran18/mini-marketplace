@@ -1,0 +1,16 @@
+# Phụ thuộc chạy của ai-agent. Python 3.12.
+# Dòng "==" là phiên bản đã kiểm trên máy dev (đã import và chạy thử); dòng "~=" là khoảng tương thích, CHƯA kiểm vì sandbox không có mạng:
+# sau khi cài lần đầu, chạy `pip freeze > requirements.lock.txt` và commit để mọi nơi dùng đúng một bộ phiên bản.
+# Nâng phiên bản LangChain: đọc changelog trước (tên stream, middleware còn đổi), chạy tests/ rồi mới đổi số ở đây.
+
+langchain-core==1.6.9
+langchain-openai==1.7.0
+langchain-anthropic==1.7.5
+langchain~=1.0          # create_agent + middleware (chưa kiểm cục bộ)
+httpx==0.28.1
+pydantic==2.14.0
+PyYAML==6.0.3
+python-dotenv==1.2.4
+fastapi~=0.115
+uvicorn[standard]~=0.34
+asyncpg~=0.32           # kho lịch sử chat trong Postgres (store.backend: postgres)
