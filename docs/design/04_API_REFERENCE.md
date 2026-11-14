@@ -98,7 +98,7 @@ Body: `{label≤50, receiver_name 1-100, phone (^\+?[0-9][0-9 .\-]{7,14}$), line
 
 | Method & path | Ai | Ghi chú |
 |---|---|---|
-| GET `/search` | 👁 | tham số: `q` (không dấu, khớp tiền tố, ≤200 ký tự), `category_id` (gồm danh mục con), `price_min`, `price_max`, `brand`, `seller_id`, `in_stock=true\|1`, `sort=relevance\|price_asc\|price_desc\|newest\|best_selling`, `page`, `page_size`. → `{message,success,products[],total}`. Khách chỉ thấy `status=active`; chủ store xem được `draft/hidden` của **chính store** khi lọc `seller_id` của mình (admin: của bất kỳ store) |
+| GET `/search` | 👁 | tham số: `q` (không dấu, khớp tiền tố, ≤200 ký tự), `category_id` (gồm danh mục con), `price_min`, `price_max`, `brand`, `seller_id`, `in_stock=true\|1`, `sort=relevance\|price_asc\|price_desc\|newest\|best_selling\|stock_desc\|stock_asc` (hai kiểu cuối theo tồn kho khả dụng, chỉ cho chủ store: route công khai bị 403 vì số tồn bị che), `page`, `page_size`. → `{message,success,products[],total}`. Khách chỉ thấy `status=active`; chủ store xem được `draft/hidden` của **chính store** khi lọc `seller_id` của mình (admin: của bất kỳ store) |
 | GET `/categories` | 🌐 | `{categories:[{id,parent_id,name,slug,sort,active,product_count}]}` danh sách phẳng (dựng cây theo `parent_id`), chỉ `active`; `Cache-Control: public, max-age=30`. `product_count` = sản phẩm active của danh mục + con |
 | GET `/products` | 👁 | danh sách phân trang, **luôn chỉ `active`** → `{message,success,products[]}` |
 | GET `/products/:id` | 👁 | `{message,success,product}`; sản phẩm không `active` → **404** với người không phải chủ/admin |
