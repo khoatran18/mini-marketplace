@@ -22,7 +22,7 @@ export interface DecodedAuthToken {
   tokenType: string | null;
 }
 
-const validRoles: Role[] = ['buyer', 'seller_admin', 'seller_employee', 'admin', 'dev'];
+const validRoles: Role[] = ['buyer', 'seller_admin', 'seller_employee', 'admin', 'operator'];
 
 function coerceUserId(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {

@@ -22,7 +22,7 @@ const navLinks: NavLink[] = [
   { href: '/products', label: 'Sản phẩm', requiresAuth: false },
   { href: '/orders', label: 'Đơn hàng', requiresAuth: true, roles: ['buyer'] },
   { href: '/seller', label: 'Kênh người bán', requiresAuth: true, roles: ['seller_admin', 'seller_employee'] },
-  { href: '/admin', label: 'Quản trị', requiresAuth: true, roles: ['admin', 'dev'] },
+  { href: '/admin', label: 'Quản trị', requiresAuth: true, roles: ['admin', 'operator'] },
   { href: '/profile', label: 'Thông tin cá nhân', requiresAuth: true, roles: ['buyer', 'seller_admin', 'seller_employee'] },
   { href: '/dev/tracking', label: 'Dev', requiresAuth: false, devOnly: true }
 ];

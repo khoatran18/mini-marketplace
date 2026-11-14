@@ -14,7 +14,7 @@ import type { AccountInfo } from '../../../lib/types';
 const filters: { value: string; label: string }[] = [
   { value: '', label: 'Tất cả' },
   { value: 'admin', label: 'Quản trị' },
-  { value: 'dev', label: 'Dev' },
+  { value: 'operator', label: 'Operator' },
   { value: 'seller_admin', label: 'Người bán' },
   { value: 'seller_employee', label: 'Nhân viên' },
   { value: 'buyer', label: 'Người mua' }
@@ -22,10 +22,10 @@ const filters: { value: string; label: string }[] = [
 
 const roleTone: Record<string, string> = {
   admin: 'bg-brand-soft text-brand',
-  dev: 'bg-warning-soft text-warning'
+  operator: 'bg-warning-soft text-warning'
 };
 
-const isStaff = (role: string) => role === 'admin' || role === 'dev';
+const isStaff = (role: string) => role === 'admin' || role === 'operator';
 
 export function AdminAccountsClient() {
   const run = useAuthedAction();
@@ -34,7 +34,7 @@ export function AdminAccountsClient() {
   const [query, setQuery] = useState('');
   const list = useApiData((token) => listAccountsRequest(token as string, { role, q: query.trim() }), [role, query]);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ username: '', password: '', confirm: '', role: 'dev' as 'admin' | 'dev' });
+  const [form, setForm] = useState({ username: '', password: '', confirm: '', role: 'operator' as 'admin' | 'operator' });
   const [resetFor, setResetFor] = useState<AccountInfo | null>(null);
   const [newPw, setNewPw] = useState('');
   const [busy, setBusy] = useState(false);
@@ -66,7 +66,7 @@ export function AdminAccountsClient() {
     const ok = await act((token) => createStaffAccountRequest({ username: form.username, password: form.password, role: form.role }, token), `Đã tạo tài khoản ${form.username}.`);
     if (ok) {
       setCreating(false);
-      setForm({ username: '', password: '', confirm: '', role: 'dev' });
+      setForm({ username: '', password: '', confirm: '', role: 'operator' });
     }
   };
 
@@ -89,10 +89,10 @@ export function AdminAccountsClient() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="grid gap-1">
           <PageTitle icon="users">Tài khoản</PageTitle>
-          <p className="text-sm text-muted">Tạo, xoá, đặt lại mật khẩu cho admin và dev. Tài khoản người mua/người bán chỉ xem.</p>
+          <p className="text-sm text-muted">Tạo, xoá, đặt lại mật khẩu cho admin và operator. Tài khoản người mua/người bán chỉ xem.</p>
         </div>
         <button type="button" className="btn-primary" onClick={() => setCreating((v) => !v)}>
-          + Tạo admin / dev
+          + Tạo admin / operator
         </button>
       </header>
 
@@ -114,8 +114,8 @@ export function AdminAccountsClient() {
             </label>
             <label>
               Vai trò
-              <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as 'admin' | 'dev' }))}>
-                <option value="dev">Dev (vận hành)</option>
+              <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as 'admin' | 'operator' }))}>
+                <option value="operator">Operator (vận hành)</option>
                 <option value="admin">Admin (quản trị)</option>
               </select>
             </label>

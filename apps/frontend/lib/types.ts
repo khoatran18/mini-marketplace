@@ -1,7 +1,7 @@
-export type Role = 'buyer' | 'seller_admin' | 'seller_employee' | 'admin' | 'dev';
+export type Role = 'buyer' | 'seller_admin' | 'seller_employee' | 'admin' | 'operator';
 
 // Roles that can sign up from the UI; admin accounts are created by the operator (ADMIN_BOOTSTRAP_*).
-export type RegisterableRole = Exclude<Role, 'admin' | 'dev'>;
+export type RegisterableRole = Exclude<Role, 'admin' | 'operator'>;
 
 export interface LoginInput {
   username: string;

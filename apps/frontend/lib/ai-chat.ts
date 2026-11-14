@@ -171,12 +171,16 @@ export function sseTransport(getToken: () => Promise<string | null>): ChatTransp
       const type = response.headers.get('content-type') ?? '';
       if (!response.ok || !type.includes('text/event-stream') || !response.body) {
         let detail = '';
+        let code = '';
         try {
-          const payload = (await response.json()) as { error?: string; message?: string };
+          const payload = (await response.json()) as { error?: string; message?: string; code?: string };
           detail = payload.error ?? payload.message ?? '';
+          code = payload.code ?? '';
         } catch {
           /* not JSON */
         }
+        // 429 is also the plain rate limit: only the daily token cap carries its own sentence (it says when the quota resets)
+        if (response.status === 429 && code === 'daily_token_limit' && detail) throw new ChatHttpError(detail, response.status);
         throw new ChatHttpError(HTTP_MESSAGES[response.status] ?? (detail || 'Không gửi được câu hỏi.'), response.status);
       }
       for await (const frame of parseSse(response.body)) {
@@ -214,14 +218,14 @@ export type AssistantAudience = 'shop' | 'ops';
 
 export function audienceOf(role: Role | null): AssistantAudience | null {
   if (!role) return null;
-  return role === 'admin' || role === 'dev' ? 'ops' : 'shop';
+  return role === 'admin' || role === 'operator' ? 'ops' : 'shop';
 }
 
 export function suggestionsFor(role: Role | null): string[] {
   switch (role) {
     case 'admin':
       return ['Hệ thống đang có sự cố nào mở?', 'Tóm tắt tình trạng các service', 'Doanh thu 7 ngày qua thế nào?'];
-    case 'dev':
+    case 'operator':
       return ['Service nào đang không khoẻ?', 'Có sự kiện outbox lỗi (DEAD) không?', 'Sự cố nào đang mở?'];
     case 'seller_admin':
     case 'seller_employee':

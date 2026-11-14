@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { audienceOf, suggestionsFor, AI_BACKEND_READY } from '../../lib/ai-chat';
 import { useFeatureFlags } from '../../lib/features';
 import { Icon } from '../layout/Icon';
-import { ChatCards } from './ChatCards';
+import { ChatCards, visibleCards } from './ChatCards';
 import { ChatMarkdown } from './ChatMarkdown';
 import { ChatProposals } from './ChatProposals';
 import { useChat } from './ChatProvider';
@@ -47,10 +47,9 @@ export function AssistantButton() {
   );
 }
 
-function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
+function Panel({ mode, text, setText }: { mode: 'drawer' | 'floating'; text: string; setText: (value: string) => void }) {
   const { role } = useAuth();
   const { messages, busy, send, stop, reset, closeChat, draft, clearDraft, service, confirm, dismiss } = useChat();
-  const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -80,11 +79,12 @@ function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
     }
   };
 
+  const audience = audienceOf(role);
   const suggestions = suggestionsFor(role);
   const frame =
     mode === 'drawer'
       ? 'fixed bottom-0 right-0 top-14 z-40 w-full border-l sm:w-[400px]'
-      : 'fixed bottom-20 right-4 z-40 h-[840px] max-h-[calc(100vh-7rem)] w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl sm:w-[456px]';
+      : 'fixed bottom-20 right-4 z-40 h-[700px] max-h-[calc(100vh-6rem)] w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl sm:w-[456px]';
 
   return (
     <section aria-label="Trợ lý AI" data-chat-ui className={`${frame} flex flex-col border-line bg-surface text-text`}>
@@ -137,10 +137,17 @@ function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
                   {m.content && m.status ? <span className="mt-1 block text-xs text-muted">{m.status}</span> : null}
                 </div>
               ) : null}
-              {m.cards && m.cards.length > 0 ? (
-                <div className="w-full max-w-[95%]">
-                  <ChatCards cards={m.cards} />
-                </div>
+              {visibleCards(m.cards ?? []).length > 0 && m.cards ? (
+                // The looked-up data is evidence, not the answer. Console users (admin/operator) get it folded away so a long health table
+                // does not push the answer out of view; shop users keep their own order/product cards open (they are the point of the reply).
+                <details className="w-full max-w-[95%] rounded-lg border border-line bg-surface" open={audience === 'shop' ? true : undefined}>
+                  <summary className="cursor-pointer select-none px-3 py-1.5 text-xs font-semibold text-muted hover:text-text">
+                    Dữ liệu đã tra cứu ({visibleCards(m.cards).length})
+                  </summary>
+                  <div className="p-2">
+                    <ChatCards cards={m.cards} />
+                  </div>
+                </details>
               ) : null}
               {m.proposals && m.proposals.length > 0 ? (
                 <div className="w-full max-w-[95%]">
@@ -188,8 +195,10 @@ function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
 export function ChatWidget({ mode }: { mode: 'drawer' | 'floating' }) {
   const enabled = useAssistantEnabled();
   const { open, toggleChat, closeChat } = useChat();
+  // The draft lives here, not in Panel: closing the panel (X, Esc, the launcher) must not throw away what the user was typing.
+  const [text, setText] = useState('');
 
-  // Ctrl/Cmd+K toggles, Esc closes
+  // Ctrl/Cmd+K toggles, Esc closes. Clicking elsewhere on the page does NOT close it: people chat while reading or copying from the page.
   useEffect(() => {
     if (!enabled) return;
     const onKey = (event: globalThis.KeyboardEvent) => {
@@ -200,23 +209,16 @@ export function ChatWidget({ mode }: { mode: 'drawer' | 'floating' }) {
         closeChat();
       }
     };
-    // Storefront bubble: a click anywhere outside the panel closes it. The console drawer sits beside the page (it
-    // pushes the content), so there a click on the page must keep working and the drawer stays until closed.
-    const onPointerDown = (event: PointerEvent) => {
-      if (mode === 'floating' && open && event.target instanceof Element && !event.target.closest('[data-chat-ui]')) closeChat();
-    };
     window.addEventListener('keydown', onKey);
-    window.addEventListener('pointerdown', onPointerDown);
     return () => {
       window.removeEventListener('keydown', onKey);
-      window.removeEventListener('pointerdown', onPointerDown);
     };
-  }, [enabled, mode, open, toggleChat, closeChat]);
+  }, [enabled, toggleChat, closeChat]);
 
   if (!enabled) return null;
   return (
     <>
-      {open ? <Panel mode={mode} /> : null}
+      {open ? <Panel mode={mode} text={text} setText={setText} /> : null}
       {mode === 'floating' ? (
         <button
           type="button"

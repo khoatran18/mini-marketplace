@@ -5,7 +5,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   seller_admin: 'Chủ cửa hàng',
   seller_employee: 'Nhân viên bán hàng',
   admin: 'Quản trị',
-  dev: 'Vận hành (dev)'
+  operator: 'Operator (vận hành)'
 };
 
 export const ROLE_HINT: Record<Role, string> = {
@@ -13,5 +13,5 @@ export const ROLE_HINT: Record<Role, string> = {
   seller_admin: 'Quản lý cửa hàng và đơn bán',
   seller_employee: 'Xử lý đơn, tồn kho',
   admin: 'Toàn bộ console quản trị',
-  dev: 'Vận hành hệ thống, không xem số liệu kinh doanh'
+  operator: 'Vận hành hệ thống, không xem số liệu kinh doanh'
 };

@@ -8,8 +8,13 @@ const TITLES: Record<string, string> = {
   list_my_orders: 'Đơn hàng của bạn', count_my_orders: 'Số đơn theo trạng thái', get_my_order: 'Chi tiết đơn hàng', list_payment_methods: 'Phương thức thanh toán',
   list_my_products: 'Sản phẩm của shop', get_inventory_ledger: 'Sổ kho', list_low_stock: 'Hàng sắp hết', list_store_orders: 'Đơn của shop',
   count_store_orders: 'Số đơn của shop theo trạng thái', get_store_order: 'Chi tiết đơn', analytics_summary: 'Tổng quan', analytics_timeseries: 'Theo thời gian',
-  analytics_top_products: 'Sản phẩm bán chạy', analytics_funnel: 'Phễu bán hàng', analytics_low_stock: 'Tồn kho thấp'
+  analytics_top_products: 'Sản phẩm bán chạy', analytics_funnel: 'Phễu bán hàng', analytics_low_stock: 'Tồn kho thấp',
+  admin_list_orders: 'Đơn hàng toàn sàn', admin_get_order: 'Chi tiết đơn hàng', admin_list_payments: 'Thanh toán', admin_get_payment: 'Chi tiết thanh toán',
+  admin_list_categories: 'Danh mục', ops_list_incidents: 'Sự cố', ops_get_incident: 'Chi tiết sự cố', ops_list_audit: 'Nhật ký kiểm toán', ops_outbox_dead: 'Sự kiện outbox lỗi',
+  ops_list_proposals: 'Đề xuất vận hành', ops_get_proposal: 'Chi tiết đề xuất vận hành', ops_metrics_query: 'Số liệu hệ thống', ops_system_health: 'Sức khoẻ hệ thống', data_health: 'Luồng dữ liệu'
 };
+
+const titleOf = (tool: string) => TITLES[tool] ?? (tool.startsWith('admin_analytics_') ? 'Báo cáo toàn sàn' : 'Dữ liệu');
 
 const PREFERRED = ['id', 'order_id', 'name', 'title', 'product_name', 'status', 'payment_status', 'total', 'total_amount', 'grand_total', 'price', 'revenue', 'quantity', 'available', 'stock', 'created_at'];
 const MONEY = /(total|price|amount|revenue|fee|subtotal)/i;
@@ -59,7 +64,7 @@ function pairsOf(data: unknown): [string, unknown][] {
 
 function Card({ card }: { card: ChatCard }) {
   const rows = rowsOf(card.data);
-  const title = TITLES[card.tool] ?? 'Dữ liệu';
+  const title = titleOf(card.tool);
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface text-xs">
       <p className="border-b border-line bg-surface2 px-3 py-1.5 font-semibold text-text">{title}</p>
@@ -109,8 +114,11 @@ const isEmpty = (card: ChatCard) => {
   return false;
 };
 
+/** The cards worth showing (empty results are noise). The panel uses it for the "(N)" count and to hide the fold when nothing is left. */
+export const visibleCards = (cards: ChatCard[]) => cards.filter((card) => !isEmpty(card));
+
 export function ChatCards({ cards }: { cards: ChatCard[] }) {
-  const shown = cards.filter((card) => !isEmpty(card));
+  const shown = visibleCards(cards);
   if (shown.length === 0) return null;
   return (
     <div className="grid gap-2">

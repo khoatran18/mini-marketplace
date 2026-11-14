@@ -442,7 +442,7 @@ export async function listAccountsRequest(token: string, params: { role?: string
   return apiFetch(`/admin/accounts${qs.size ? `?${qs}` : ''}`, { method: 'GET', token });
 }
 
-export async function createStaffAccountRequest(input: { username: string; password: string; role: 'admin' | 'dev' }, token: string): Promise<RegisterOutput> {
+export async function createStaffAccountRequest(input: { username: string; password: string; role: 'admin' | 'operator' }, token: string): Promise<RegisterOutput> {
   return apiFetch('/admin/accounts', { method: 'POST', body: json(input), token });
 }
 
