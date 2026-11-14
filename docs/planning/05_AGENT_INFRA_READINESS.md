@@ -220,3 +220,33 @@ Mỗi giai đoạn dùng được độc lập; dừng ở giai đoạn 2 đã c
 - `ops-service` đợt 2 (ADR-38): `proposals`, mã duyệt, sổ hành động, route duyệt qua gateway.
 - `ops-service` đợt 3 (ADR-38): thực thi có kiểm soát (chỉ `requeue_outbox` tự chạy, mặc định tắt), proxy truy vấn đọc có allowlist, thông báo webhook, cảnh báo + playbook + dashboard cho chính ops-service.
 - Còn lại: bật và kiểm thật `OPS_ACTIONS_ENABLED`; kiểm `ServiceMissing` với DNS trả NXDOMAIN; trace riêng cho agent (phần LLM do bạn làm).
+
+## Danh sách việc hạ tầng còn lại và tiến độ (2026-11-13, ADR-40)
+Chỉ hạ tầng; logic agent, prompt và đánh giá agent là phần người dùng tự làm. **Không gọi API LLM** trong mọi bước kiểm.
+
+### Cho dev / admin (điều tra sự cố, đề xuất, duyệt)
+| # | Việc | Trạng thái | Ghi chú |
+|---|---|---|---|
+| D1 | Bật `OPS_ACTIONS_ENABLED=true` và kiểm thật `/execute` | ✅ 2026-11-13 | hàng DEAD thử (đã xoá) -> agent đề xuất -> admin duyệt -> `EXECUTED` (`dead_before 1`, `requeued 1`, `verified true`); chạy lần hai 409; agent / chưa duyệt bị chặn. Mặc định vẫn **tắt** trong `deploy/services.yml` |
+| D2 | Kiểm `ServiceMissing` khi DNS trả NXDOMAIN | ✅ kiểm xong, kết luận khác dự đoán | với Prometheus dùng DNS 8.8.8.8 (`docker service update --dns-add` tạm), service về 0 replica cho NXDOMAIN, nhưng Prometheus **giữ target cũ khi DNS lỗi** nên `up == 0` và `ServiceDown` bắn, `ServiceMissing` **không** bắn. `ServiceDown` là cảnh báo đáng tin cho ca này; `ServiceMissing` chỉ là lớp dự phòng (target biến mất thật). Chi tiết: [nhật ký 2026-11-13](../process/05_SESSION_LOG_2026-11-13.md) |
+| D3 | Playbook cho ca ngoài sách | ✅ kiểm thật K, L, M: cảnh báo mong đợi đều bắn | `observability-down`, `slow-database`, `resource-trend`, `multiple-faults`, nhánh `corrupt-payload`; 5 cảnh báo mới; RUNBOOK §15; kịch bản chèn lỗi K, L, M. ClickHouse đầy đĩa và rò bộ nhớ: có cảnh báo + playbook, **chưa chèn lỗi thật** |
+| D4 | Token dịch vụ phạm vi hẹp cho agent (gap I4) | ✅ | `OPS_AGENT_TOKEN`: đọc / truy vấn / điều tra / đề xuất; không duyệt, không thực thi; tác nhân luôn `agent`. Chưa tách quyền theo từng hành động |
+| D5 | Vai trò `dev` | ✅ | `DEV_BOOTSTRAP_*`; chạy cả luồng ops (đề xuất, duyệt, thực thi) và xem sức khoẻ hệ thống/pipeline; không xem báo cáo, doanh thu, đơn, thanh toán; `X-Actor` mang vai trò |
+
+### Cho buyer / seller (chat AI)
+| # | Việc | Trạng thái | Vì sao cần |
+|---|---|---|---|
+| B1 | Route `POST /ai/chat` **stream (SSE)** qua gateway và Traefik | ✅ kiểm thật qua Traefik (`scripts/e2e/sse.sh`) | một câu trả lời của agent kéo dài hàng chục giây (tool lặp tới 4 vòng, mỗi lượt tới 60 s). Route thường có deadline 3-10 s và có thể bị buffer nên người dùng chỉ thấy câu trả lời sau khi xong (hoặc bị cắt). Cần route riêng không buffer, không bị `WriteTimeout`, huỷ upstream khi người dùng đóng tab |
+| B2 | Cờ tính năng `GET /config/features` | ✅ | công tắc tắt AI không cần deploy lại code; UI ẩn lối vào AI và dùng luồng thường khi AI lỗi/hết ngân sách (đường lui không-AI) |
+| B3 | Công cụ hệ thống cho admin/dev ở gateway | ✅ | 19 truy vấn allowlist + `GET /admin/ops/outbox/{svc}/dead`; agent đọc được trạng thái hệ thống mà **không** có quyền chạm thẳng Prometheus/Loki/cổng admin |
+| B4, B5 | Kho vector (qdrant) cho hỏi đáp sản phẩm; xác nhận UI cho hành động ghi liên quan tiền | **bỏ** (người dùng quyết định) | không làm trong đợt này |
+
+### Việc kỹ thuật tồn đọng (chưa làm)
+| Việc | Ghi chú |
+|---|---|
+| `pwd_version % 100` quay vòng | xem [01_OPEN_ISSUES.md](01_OPEN_ISSUES.md) V13 |
+| Backup ClickHouse, backup ngoài máy | |
+| Chèn lỗi thật cho ClickHouse đầy đĩa / rò bộ nhớ | chỉ có cảnh báo (kiểm bằng `promtool`) và playbook |
+| Giới hạn AI theo người dùng / ngân sách token | thuộc tầng agent; gateway chỉ giới hạn theo IP |
+| Bộ eval 50-100 câu hỏi tiếng Việt + đáp án chuẩn | nền (ground truth A-M) đã có; phần đánh giá agent do người dùng làm |
+

@@ -85,3 +85,20 @@ func TestWrongTokenAndUnknownAction(t *testing.T) {
 		t.Fatal("hành động mode=command không được tự chạy")
 	}
 }
+
+func TestDeadReadsOnlyAllowedServicesAndNeverWrites(t *testing.T) {
+	srv, calls := fakeService(t, []int{7, 9}, "tok")
+	raw, err := exec(srv, "tok").Dead(context.Background(), "order-service", 500)
+	if err != nil || len(*calls) != 1 || (*calls)[0] != "GET /internal/outbox/dead?limit=20" {
+		t.Fatalf("limit ngoài khoảng phải về 20 và chỉ GET: %v %v", err, *calls)
+	}
+	if string(raw) == "" {
+		t.Error("kết quả rỗng")
+	}
+	if _, err := exec(srv, "tok").Dead(context.Background(), "auth-service", 5); err == nil {
+		t.Error("service không có outbox phải bị từ chối")
+	}
+	if _, err := exec(srv, "wrong").Dead(context.Background(), "order-service", 5); err == nil {
+		t.Error("token sai phải lỗi (401)")
+	}
+}

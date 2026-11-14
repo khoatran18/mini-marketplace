@@ -124,6 +124,57 @@ groups:
           runbook: "§10"
           action: low
 
+      # --- ADR-40: phủ thêm các ca ngoài sách (hạ tầng quan sát/phụ thuộc hỏng, chậm, rò rỉ, đầy đĩa) ---
+      - alert: InfraTargetDown
+        expr: up{job=~"loki|vector|cadvisor|node-exporter|postgres|redis|kafka|clickhouse|traefik"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "Target {{ $labels.job }} không scrape được: thành phần hạ tầng (hoặc exporter của nó) hỏng, log/metric có thể thiếu"
+          runbook: "§15"
+          action: low
+
+      - alert: GatewayLatencyHigh
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(mm_http_request_duration_seconds_bucket{service="api-gateway",route!="/ai/chat"}[5m]))) > 1
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "p95 của gateway hơn 1 giây trong 5 phút: có thành phần phía sau chậm (thường là Postgres/Kafka/service đích). Không tính /ai/chat (luồng stream dài là bình thường)"
+          runbook: "§15"
+          action: observe
+
+      - alert: DBPoolWaiting
+        expr: sum by (swarm_service) (rate(mm_db_pool_wait_seconds_total[5m])) > 0.5
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.swarm_service }} chờ lấy kết nối Postgres (pool cạn): truy vấn chậm hoặc bị khoá"
+          runbook: "§15"
+          action: observe
+
+      - alert: ContainerMemoryGrowing
+        expr: |
+          predict_linear(container_memory_working_set_bytes{container_label_com_docker_swarm_service_name!=""}[1h], 4 * 3600)
+            > (container_spec_memory_limit_bytes{container_label_com_docker_swarm_service_name!=""} > 0)
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.container_label_com_docker_swarm_service_name }}: bộ nhớ tăng đều, sẽ chạm giới hạn trong vòng 4 giờ (nghi rò rỉ)"
+          runbook: "§15"
+          action: low
+
+      - alert: DiskFillingUp
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"} < 0.1
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Đĩa {{ $labels.mountpoint }} còn dưới 10% trống: ClickHouse/Postgres/Kafka/Loki có thể ngừng ghi"
+          runbook: "§15"
+          action: observe
+
       - alert: OpsPollerStale
         expr: time() - mm_ops_poll_last_success_timestamp_seconds > 300
         for: 5m

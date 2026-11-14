@@ -46,11 +46,19 @@ func (h *OpsHandler) Proxy(upstreamPath string) gin.HandlerFunc {
 		}
 		if strings.Contains(path, ":name") {
 			name := c.Param("name")
-			if name == "" || len(name) > 64 || strings.Trim(name, "abcdefghijklmnopqrstuvwxyz_") != "" {
+			if name == "" || len(name) > 64 || strings.Trim(name, "abcdefghijklmnopqrstuvwxyz0123456789_") != "" {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query name"})
 				return
 			}
 			path = strings.Replace(path, ":name", name, 1)
+		}
+		if strings.Contains(path, ":service") {
+			svc := c.Param("service")
+			if svc == "" || len(svc) > 32 || strings.Trim(svc, "abcdefghijklmnopqrstuvwxyz-") != "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid service"})
+				return
+			}
+			path = strings.Replace(path, ":service", svc, 1)
 		}
 		url := h.BaseURL + path
 		if q := c.Request.URL.RawQuery; q != "" {
@@ -74,7 +82,11 @@ func (h *OpsHandler) Proxy(upstreamPath string) gin.HandlerFunc {
 			req.Header.Set("Content-Type", "application/json")
 		}
 		req.Header.Set("Authorization", "Bearer "+h.Token)
-		req.Header.Set("X-Actor", fmt.Sprintf("admin:%v", c.Value("userID")))
+		role := "admin"
+		if r, ok := c.Value("userRole").(string); ok && r != "" {
+			role = r
+		}
+		req.Header.Set("X-Actor", fmt.Sprintf("%s:%v", role, c.Value("userID")))
 		if rid, ok := c.Get("requestID"); ok {
 			req.Header.Set("X-Request-ID", fmt.Sprint(rid))
 		}

@@ -246,3 +246,20 @@ func TestGetPwdVersionReadsTheDatabase(t *testing.T) {
 		t.Fatalf("unknown id must be NotFound, got %v", err)
 	}
 }
+
+func TestLoginWithoutRoleAndUsernameUnique(t *testing.T) {
+	s := testService(t)
+	ctx := context.Background()
+	if err := register(t, s, "alice", "password123", "buyer"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Login(ctx, &dto.LoginInput{Username: "alice", Password: "password123"}); err != nil {
+		t.Fatalf("login without role: %v", err)
+	}
+	if _, err := s.Login(ctx, &dto.LoginInput{Username: "alice", Password: "password123", Role: "seller_admin"}); err == nil {
+		t.Fatal("a wrong role must not log in")
+	}
+	if err := register(t, s, "alice", "password123", "seller_admin"); err == nil {
+		t.Fatal("the same username must not register under another role")
+	}
+}

@@ -145,6 +145,12 @@ services:
       # ADR-38: /admin/ops/* được gateway chuyển tới ops-service bằng token này (trống = các route trả 503)
       OPS_SERVICE_URL: ${OPS_SERVICE_URL:-http://ops-service:8080}
       OPS_API_TOKEN: ${OPS_API_TOKEN:-}
+      # ADR-40: AI chat stream (the agent service is built separately). Off by default; GET /config/features reports the flags.
+      FEATURE_AI_CHAT: ${FEATURE_AI_CHAT:-false}
+      FEATURE_AI_OPS: ${FEATURE_AI_OPS:-false}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-}
+      AI_STREAM_TIMEOUT_SEC: ${AI_STREAM_TIMEOUT_SEC:-120}
+      AI_RATE_LIMIT_PER_MINUTE: ${AI_RATE_LIMIT_PER_MINUTE:-20}
     # liveness only (never depends on other services); readiness (/ready) is used by Traefik below
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
@@ -184,6 +190,9 @@ services:
       # only auth-service needs these (never put the admin password in the shared env anchor)
       ADMIN_BOOTSTRAP_USERNAME: ${ADMIN_BOOTSTRAP_USERNAME:-}
       ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
+      # operator role "dev": reads the system and proposes ops actions, cannot approve or run them (ADR-40); empty = none
+      DEV_BOOTSTRAP_USERNAME: ${DEV_BOOTSTRAP_USERNAME:-}
+      DEV_BOOTSTRAP_PASSWORD: ${DEV_BOOTSTRAP_PASSWORD:-}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
       interval: 10s
@@ -314,6 +323,8 @@ services:
       # bí mật dùng chung với gateway; để trống thì API của ops-service từ chối mọi yêu cầu (poller vẫn chạy)
       OPS_API_TOKEN: ${OPS_API_TOKEN:-}
       LOKI_URL: ${LOKI_URL:-http://loki:3100}
+      # narrow-scope token for the agent/orchestrator: read, queries, investigate, propose; never approve or run (ADR-40)
+      OPS_AGENT_TOKEN: ${OPS_AGENT_TOKEN:-}
       OPS_NOTIFY_WEBHOOK_URL: ${OPS_NOTIFY_WEBHOOK_URL:-}
       OPS_ACTIONS_ENABLED: ${OPS_ACTIONS_ENABLED:-false}
       OPS_MAX_EXEC_PER_HOUR: ${OPS_MAX_EXEC_PER_HOUR:-5}

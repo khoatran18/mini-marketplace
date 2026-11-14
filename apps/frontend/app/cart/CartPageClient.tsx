@@ -8,6 +8,7 @@ import { StockBadge } from '../../components/shop/StockBadge';
 import { EmptyBlock, ErrorBlock, LoadingBlock, Notice } from '../../components/ui/StateBlock';
 import { formatVND } from '../../lib/format';
 import type { CartLine } from '../../lib/types';
+import { PageTitle } from '../../components/layout/PageTitle';
 
 function CartLineCard({ line, busy, onQuantity, onRemove }: { line: CartLine; busy: boolean; onQuantity: (quantity: number) => void; onRemove: () => void }) {
   return (
@@ -80,7 +81,7 @@ export function CartPageClient() {
   return (
     <div className="grid gap-6">
       <header className="card grid gap-1">
-        <h1 className="text-2xl font-bold text-text">Giỏ hàng</h1>
+        <PageTitle icon="cart">Giỏ hàng</PageTitle>
         <p className="text-sm text-muted">
           {isGuest ? 'Bạn chưa đăng nhập: giỏ hàng được lưu trên trình duyệt và sẽ được gộp vào tài khoản khi đăng nhập.' : 'Giỏ hàng được lưu trên máy chủ, giá và tồn kho luôn được kiểm tra lại khi thanh toán.'}
         </p>

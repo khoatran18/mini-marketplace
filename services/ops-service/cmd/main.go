@@ -84,10 +84,16 @@ func main() {
 	if token == "" {
 		logger.Warn("OPS_API_TOKEN chưa đặt: API /incidents, /audit từ chối mọi yêu cầu (poller vẫn chạy)")
 	}
-	handler := (&api.API{Store: st, Token: token, ProposalTTL: envMinutes("OPS_PROPOSAL_TTL_MIN", 1440), ApprovalTTL: envMinutes("OPS_APPROVAL_TTL_MIN", 5), MaxPending: envInt("OPS_MAX_PENDING_PER_INCIDENT", 5),
+	execHTTP := &executor.HTTP{Token: strings.TrimSpace(os.Getenv("METRICS_TOKEN"))}
+	agentToken := os.Getenv("OPS_AGENT_TOKEN")
+	if agentToken != "" && agentToken == token {
+		logger.Fatal("OPS_AGENT_TOKEN phải khác OPS_API_TOKEN (token agent chỉ có phạm vi hẹp)")
+	}
+	handler := (&api.API{Store: st, Token: token, AgentToken: agentToken, ProposalTTL: envMinutes("OPS_PROPOSAL_TTL_MIN", 1440), ApprovalTTL: envMinutes("OPS_APPROVAL_TTL_MIN", 5), MaxPending: envInt("OPS_MAX_PENDING_PER_INCIDENT", 5),
 		ActionsEnabled: os.Getenv("OPS_ACTIONS_ENABLED") == "true",
 		ExecLimits:     store.ExecLimits{MaxPerHour: envInt("OPS_MAX_EXEC_PER_HOUR", 5), Cooldown: envMinutes("OPS_EXEC_COOLDOWN_MIN", 5), Window: envMinutes("OPS_EXEC_WINDOW_MIN", 60)},
-		Runner:         &executor.HTTP{Token: strings.TrimSpace(os.Getenv("METRICS_TOKEN"))},
+		Runner:         execHTTP,
+		Outbox:         execHTTP,
 		Queries:        &queries.Runner{PrometheusURL: promURL, LokiURL: env("LOKI_URL", "http://loki:3100")}}).Handler()
 	// đề xuất PENDING quá hạn chuyển EXPIRED (mỗi phút)
 	// lần thực thi EXECUTING bị bỏ dở (tiến trình chết) -> FAILED, không tự chạy lại

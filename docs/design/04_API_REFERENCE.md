@@ -12,7 +12,7 @@
 | Request-id | gateway nhận header `X-Request-ID` (khớp `^[A-Za-z0-9._-]{8,64}$`, nếu không thì tạo UUID), đưa sang các service qua gRPC metadata `x-request-id`, và **luôn trả lại** trong response header; dùng để tra log (dashboard *Logs*) |
 | Content-Type | `application/json`; body tối đa `MAX_BODY_BYTES` (mặc định 1 MiB) → **413** |
 | CORS | `ALLOWED_ORIGINS`; header cho phép `Origin, Content-Type, Authorization, Idempotency-Key, X-Request-ID` (và expose `X-Request-ID`); method `GET POST PUT PATCH DELETE OPTIONS` |
-| Rate limit (Redis, theo IP, fail-open) | toàn cục `RATE_LIMIT_PER_MINUTE` (300) · `/auth/*` `AUTH_RATE_LIMIT_PER_MINUTE` (20) · `/events*` `EVENTS_RATE_LIMIT_PER_MINUTE` (120) → **429** `{"error":"Too many requests"}` |
+| Rate limit (Redis, theo IP, fail-open) | toàn cục `RATE_LIMIT_PER_MINUTE` (300) · `/auth/*` `AUTH_RATE_LIMIT_PER_MINUTE` (20) · `/events*` `EVENTS_RATE_LIMIT_PER_MINUTE` (120) · `/ai/*` `AI_RATE_LIMIT_PER_MINUTE` (20) → **429** `{"error":"Too many requests"}` |
 | JSON từ gRPC | các route cart/checkout/orders/catalog/seller/payments trả **tên trường proto (snake_case)**, có cả giá trị 0/rỗng, số nguyên 64-bit là số JSON, thời gian là chuỗi RFC 3339 (UTC) hoặc `""` |
 | Tiền | **VND dạng số thực** (`price`, `unit_price`, `line_total`, `subtotal`, `shipping_fee`, `total_price`, `grand_total`, `amount`…). Chỉ payment có thêm đơn vị nhỏ `amount_minor`/`refunded_minor` (1/100 VND, số nguyên – ADR-7). Server tính bằng cent nguyên, không bao giờ tin giá client |
 | Nhận diện | luôn từ JWT; `buyer_id`, `store_id`, `status`, giá, tổng trong body bị bỏ qua (store của seller lấy qua auth-service `GetStoreIDRoleById`) |
@@ -40,7 +40,7 @@ Ký hiệu cột **Ai**: 🌐 công khai · 👁 token tuỳ chọn (có token n
 |---|---|---|
 | GET `/health`, `/healthz` | 🌐 | liveness của gateway `{"status":"ok"}` |
 | GET `/admin/system/health` | A | gom `/ready` của mọi service (`SYSTEM_HEALTH_TARGETS`, mặc định 7 service): `{as_of, status, services:[{name,status,latency_ms,version,uptime_s,checks}]}`; `status` = tệ nhất của `ready<degraded<not_ready<unreachable`. Mỗi probe timeout 2 s |
-| GET `/admin/ops/incidents?state=&limit=` | A | sự cố từ cảnh báo Prometheus (ADR-38): `{incidents:[{id,dedupe_key,alert_name,severity,component,labels,summary,runbook,action,state,fire_count,first_seen,last_seen,resolved_at?}]}`; `state` = open\|investigating\|resolved; 400 `state` sai; 503 khi `OPS_API_TOKEN` chưa cấu hình |
+| GET `/admin/ops/incidents?state=&limit=` | A, dev | sự cố từ cảnh báo Prometheus (ADR-38): `{incidents:[{id,dedupe_key,alert_name,severity,component,labels,summary,runbook,action,state,fire_count,first_seen,last_seen,resolved_at?}]}`; `state` = open\|investigating\|resolved; 400 `state` sai; 503 khi `OPS_API_TOKEN` chưa cấu hình |
 | GET `/admin/ops/incidents/{id}` | A | `{incident, audit:[…]}` (nhật ký của sự cố); 404 |
 | POST `/admin/ops/incidents/{id}/investigate` | A | open sang investigating, ghi nhật ký với `actor=admin:<id>`; 409 nếu không đang open, 404 |
 | GET `/admin/ops/audit?subject_type=&subject_id=&limit=` | A | nhật ký bất biến mới nhất trước (`subject_type` và `subject_id` đi cùng nhau) |
@@ -52,8 +52,9 @@ Ký hiệu cột **Ai**: 🌐 công khai · 👁 token tuỳ chọn (có token n
 | POST `/admin/ops/proposals/{id}/decision` | A | `{decision: accept\|reject\|needs_review\|alternative, reason, approval_token, alternative?:{action_id, params}}`. 403 mã sai / hết hạn / không phải người đã xem, hoặc người tạo tự quyết; 400 thiếu `reason` (bắt buộc trừ accept hành động không phải high), alternative sai hoặc giống gốc; 409 không còn PENDING hoặc hết hạn |
 | POST `/admin/ops/proposals/{id}/execute` | A | tự chạy hành động đã duyệt (chỉ mode `http`, hiện là `requeue_outbox`). 403 khi `OPS_ACTIONS_ENABLED=false` hoặc người gọi là người tạo; 409 chưa duyệt / đã thực thi / duyệt quá `OPS_EXEC_WINDOW_MIN` / hành động không tự chạy; 429 quá hạn mức hoặc cooldown; 422 chạy lỗi (tiền điều kiện hỏng…). → `{exec_state: EXECUTED\|FAILED, result}` |
 | POST `/admin/ops/proposals/{id}/executed` | A | người ghi kết quả sau khi tự chạy lệnh (mode `command`/`manual`): `{outcome: success\|failed, note ≤2000}`; người tạo không được ghi. `GET /proposals/{id}` trả thêm `command` (lệnh để chạy) khi đã ACCEPTED/ALTERNATIVE |
-| GET `/admin/ops/queries` | A | catalog truy vấn đọc có tên (Prometheus/Loki), mỗi truy vấn kèm tham số (enum hoặc regex) |
+| GET `/admin/ops/queries` | A, dev | catalog truy vấn đọc có tên (Prometheus/Loki; 24 truy vấn, gồm `service_replicas`, `service_replicas_up`, `gateway_request_rate`, `grpc_request_rate`, `grpc_error_rate` cho bản đồ hệ thống), mỗi truy vấn kèm tham số (enum hoặc regex) |
 | POST `/admin/ops/queries/{name}` | A | `{params:{…}}` → `{query, params, backend, expr, series\|lines, total, truncated, untrusted?}`. 400 tên/tham số sai (thông báo liệt kê giá trị hợp lệ); kết quả cắt 50 chuỗi / 100 dòng; log luôn `untrusted: true`; mỗi lần chạy ghi audit `query.run` |
+| GET `/admin/ops/outbox/{service}/dead?limit=` | A, dev | hàng outbox DEAD của `order-service`\|`product-service`\|`payment-service` (chỉ đọc, không payload): `{dead_total, rows:[{id,topic,attempts,last_error,request_id,…}]}`; 400 service lạ; ghi audit `outbox.read` |
 | GET `/ready`, `/readyz`, `/metrics`, `/version` | nội bộ `:8081` | **không** nằm trên cổng công khai 8080 (xem [platform/02](platform/02_HEALTH_READY_METRICS.md)) |
 
 ## 2. Xác thực & tài khoản
@@ -61,8 +62,8 @@ Username/password phải khớp `^[a-zA-Z0-9_]{3,16}$` (hợp đồng `auth.prot
 
 | Method & path | Ai | Request | Response / lỗi |
 |---|---|---|---|
-| POST `/auth/register` | 🌐 | `{username,password,role}` – `role` ∈ `buyer`, `seller_admin` | 200 `{message,success}`; 400 sai định dạng hoặc role `admin`; 403 role `seller_employee`; 409 đã tồn tại (cùng username+role). `accounts.username` UNIQUE toàn cục nên trùng username khác role sẽ là lỗi DB (500) |
-| POST `/auth/login` | 🌐 | `{username,password,role}` – role ∈ `buyer, seller_admin, seller_employee, admin` | 200 `{message,success,access_token,refresh_token}`; 401 `username or password is incorrect` (thông báo thống nhất) |
+| POST `/auth/register` | 🌐 | `{username,password,role}` – `role` ∈ `buyer`, `seller_admin` | 200 `{message,success}`; 400 sai định dạng hoặc role `admin`; 403 role `seller_employee`; 409 username đã được dùng ở bất kỳ role nào (username duy nhất toàn hệ thống, migration `00003`; role gắn với tài khoản, muốn đổi role phải tạo tài khoản mới) |
+| POST `/auth/login` | 🌐 | `{username,password}` (`role` tùy chọn, nếu gửi phải khớp tài khoản; role lấy từ tài khoản) | 200 `{message,success,access_token,refresh_token}`; 401 `username or password is incorrect` (thông báo thống nhất) |
 | POST `/auth/refresh-token` | 🌐 | `{refresh_token}` | 200 token mới; 401 nếu là access token / hết hạn / đã đổi mật khẩu |
 | POST `/auth/change-password` | 🔑 | `{old_password,new_password}` (tài khoản lấy từ token; mới ≥ 8) | 200; token cũ bị vô hiệu qua Redis `<userId>:pwd_version` |
 | POST `/auth/register-seller-roles` | SA | `{username,password}` | 200; tạo `seller_employee` trong store của admin; 403 nếu chưa có store |
@@ -267,10 +268,22 @@ Phản hồi: `{"as_of":"…","source":"clickhouse","cached":false,"timezone":"A
 Lỗi: ClickHouse/analytics-service down → **503** (`analytics store error` / unavailable) – cửa hàng vẫn chạy bình thường.
 
 ---
+## 9b. Cờ tính năng và chat AI (ADR-40)
+| Route | Role | Mô tả |
+|---|---|---|
+| GET `/config/features` | công khai | `{"features":{"ai_chat":bool,"ai_ops":bool}}`, `Cache-Control: no-store`. Chỉ true khi cờ (`FEATURE_AI_CHAT`, `FEATURE_AI_OPS`) bật **và** `AI_SERVICE_URL` có giá trị. UI dùng để ẩn lối vào AI và quay về luồng thường |
+| POST `/ai/chat` | buyer, seller_admin, seller_employee, admin, dev | **SSE** (`Content-Type: text/event-stream`). Gateway chuyển body JSON (≤ 64 KB) tới `AI_SERVICE_URL/chat` và stream trả về không buffer. Gửi kèm `Authorization` của người dùng, `X-User-ID`, `X-User-Role` (từ JWT), `X-Request-ID`. 404 cờ tắt; 503 chưa cấu hình hoặc upstream chết; 429 quá `AI_RATE_LIMIT_PER_MINUTE` (20/IP); lỗi giữa chừng `event: error`; hết `AI_STREAM_TIMEOUT_SEC` (120) thì `event: error` rồi đóng. Phản hồi không phải SSE của upstream (vd 4xx) được chuyển nguyên. Gateway không chứa logic mô hình |
+
+Vai trò `dev` (ADR-40): toàn bộ `/admin/ops/*` (đọc, điều tra, đề xuất, xem lại, duyệt, thực thi, ghi kết quả), `GET /admin/system/health` và `GET /admin/analytics/data-health`; **không** có báo cáo/doanh thu (`/admin/analytics/*` còn lại), đơn hàng, thanh toán, danh mục (403). Người tạo đề xuất không tự duyệt/thực thi, kể cả dev. Cột role "A, dev" ở các route ops nghĩa là cả hai vai trò gọi được.
+
 ## 10. Admin khác
 
 | Method & path | Ghi chú |
 |---|---|
+| GET `/admin/accounts?role=&q=&limit=` | danh sách tài khoản (mọi role, không có mật khẩu); chỉ `admin` |
+| POST `/admin/accounts` | tạo tài khoản `admin` hoặc `dev`: `{username, password (≥8), role}`; trùng username → 409 |
+| DELETE `/admin/accounts/:id` | xoá hẳn tài khoản admin/dev và thu hồi token; không xoá chính mình, không xoá admin cuối cùng (422), buyer/seller → 403 |
+| POST `/admin/accounts/:id/reset-password` | `{new_password}`; đặt lại mật khẩu admin/dev (không cần mật khẩu cũ), thu hồi token cũ; không áp dụng cho chính mình |
 | GET `/admin/categories` | gồm cả danh mục `active=false` |
 | POST `/admin/categories` | **201**; `{parent_id, name (1-100), slug (tự sinh từ name nếu trống; a-z0-9 và `-`), sort, active (mặc định true)}`; tối đa **3 cấp**; slug trùng/vòng lặp → 400; cha không tồn tại → 404 |
 | PUT `/admin/categories/:id` | 200, thay toàn bộ |

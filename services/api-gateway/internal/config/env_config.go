@@ -28,6 +28,14 @@ type EnvConfig struct {
 	// OpsServiceURL and OpsAPIToken: where /admin/ops/* is proxied (ops-service). An empty token disables the routes (503).
 	OpsServiceURL string
 	OpsAPIToken   string
+	// AI (ADR-40): feature flags reported by GET /config/features and the upstream of POST /ai/chat (the agent service,
+	// built separately). Off by default; the gateway only streams, it contains no model logic.
+	FeatureAIChat bool
+	FeatureAIOps  bool
+	AIServiceURL  string
+	// AIStreamTimeout caps one chat stream; AIRateLimit is the per-minute POST /ai/chat limit per client IP (0 disables it).
+	AIStreamTimeout time.Duration
+	AIRateLimit     int
 }
 
 // InitJWTSecret load env about jwt
@@ -47,6 +55,14 @@ func envStr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func envBool(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(key))) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
 
 func envInt(key string, def int) int {
@@ -104,6 +120,11 @@ func NewEnvConfig() (*EnvConfig, error) {
 		IPHashSecret:    os.Getenv("IP_HASH_SECRET"),
 		OpsServiceURL:   envStr("OPS_SERVICE_URL", "http://ops-service:8080"),
 		OpsAPIToken:     os.Getenv("OPS_API_TOKEN"),
+		FeatureAIChat:   envBool("FEATURE_AI_CHAT"),
+		FeatureAIOps:    envBool("FEATURE_AI_OPS"),
+		AIServiceURL:    strings.TrimRight(os.Getenv("AI_SERVICE_URL"), "/"),
+		AIStreamTimeout: time.Duration(envInt("AI_STREAM_TIMEOUT_SEC", 120)) * time.Second,
+		AIRateLimit:     envInt("AI_RATE_LIMIT_PER_MINUTE", 20),
 		SystemTargets: envPairs("SYSTEM_HEALTH_TARGETS", map[string]string{
 			"api-gateway":       "http://localhost:8081", // this replica only
 			"auth-service":      "http://auth-service:8081",

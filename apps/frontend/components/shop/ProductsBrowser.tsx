@@ -12,6 +12,7 @@ import { EmptyBlock, ErrorBlock, LoadingBlock } from '../ui/StateBlock';
 import { Pagination } from '../ui/Pagination';
 import { CategoryNav } from './CategoryNav';
 import { SearchBar } from './SearchBar';
+import { PageTitle } from '../layout/PageTitle';
 
 const PAGE_SIZE = 12;
 
@@ -153,7 +154,7 @@ export function ProductsBrowser({ categorySlug }: Props) {
       <section className="grid content-start gap-5">
         <header className="card grid gap-4">
           <div className="grid gap-1">
-            <h1 className="text-2xl font-bold text-text">{fixed ? fixed.name : q ? `Kết quả cho “${q}”` : 'Danh sách sản phẩm'}</h1>
+            <PageTitle icon="package">{fixed ? fixed.name : q ? `Kết quả cho “${q}”` : 'Danh sách sản phẩm'}</PageTitle>
             <p className="text-sm text-muted" aria-live="polite">
               {result.loading ? 'Đang tìm…' : `${total} sản phẩm`}
             </p>

@@ -11,6 +11,7 @@ import { ErrorBlock, LoadingBlock } from '../../components/ui/StateBlock';
 import { countOrdersRequest, getLowStockRequest } from '../../lib/api';
 import { parseSummary, rangeParams, type RangeValue } from '../../lib/analytics';
 import { useApiData } from '../../lib/hooks';
+import { PageTitle } from '../../components/layout/PageTitle';
 
 export function SellerOverviewClient() {
   const [range, setRange] = useState<RangeValue>({ period: '7d' });
@@ -30,7 +31,7 @@ export function SellerOverviewClient() {
   return (
     <div className="grid gap-6">
       <header className="card grid gap-3">
-        <h1 className="text-2xl font-bold text-text">Tổng quan cửa hàng</h1>
+        <PageTitle icon="home">Tổng quan cửa hàng</PageTitle>
         <DateRangePicker value={range} onChange={setRange} />
       </header>
 

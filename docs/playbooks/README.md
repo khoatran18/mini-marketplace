@@ -10,6 +10,10 @@ Viết lại các mục của [RUNBOOK](../instruction/03_RUNBOOK.md) thành YAM
 | [analytics-data.yml](analytics-data.yml) | AnalyticsRowsDropped, ReconcileDrift, ReconcileStale | §8, §12 |
 | [resource-pressure.yml](resource-pressure.yml) | ContainerNearMemoryLimit | §10 |
 | [ops-service.yml](ops-service.yml) | OpsPollerStale, OpsProposalsWaiting | §14 |
+| [observability-down.yml](observability-down.yml) | InfraTargetDown | §15 |
+| [slow-database.yml](slow-database.yml) | GatewayLatencyHigh, DBPoolWaiting | §15, §10 |
+| [resource-trend.yml](resource-trend.yml) | ContainerMemoryGrowing, DiskFillingUp | §15, §8, §10 |
+| [multiple-faults.yml](multiple-faults.yml) | nhiều cảnh báo cùng lúc (dùng chung cảnh báo của playbook khác) | §15, §1, §5 |
 
 ## Lược đồ
 ```yaml
@@ -51,4 +55,4 @@ Kiểm tính nhất quán: `scripts/check-playbooks.sh` (cảnh báo tồn tại
 ## Ground truth (đáp án đúng để đo agent)
 `scripts/e2e/resilience.sh` ghi mỗi lần tiêm lỗi vào `~/mm-ground-truth/resilience.jsonl` (`fault_start` / `fault_end`: kịch bản, thành phần, loại lỗi, playbook đúng, cảnh báo mong đợi, tín hiệu mong đợi). Nhãn do script biết chắc vì chính nó gây lỗi. `GT_HOLD=<giây>` giữ lỗi lâu hơn để cảnh báo (có `for:`) kịp bắn. `scripts/e2e/ground_truth_check.sh` so cảnh báo mong đợi với cảnh báo Prometheus thực sự đã bắn. Đã kiểm: kịch bản C (payment-service về 0, giữ 100 s) bắn đúng `ServiceDown`.
 
-**V7 đã xử lý:** `ServiceMissing` (`absent(up{...})`, test bằng `promtool test rules deploy/prometheus/alerts_test.yml`) bắn khi target biến mất (DNS trả NXDOMAIN); `ServiceDown` bắn khi target còn nhưng `up == 0` (máy local có DNS nhà mạng trả IP giả). Đáp án ground truth ghi `ServiceDown/ServiceMissing` (một trong hai).
+**V7 đã xử lý:** `ServiceMissing` (`absent(up{...})`, test bằng `promtool test rules deploy/prometheus/alerts_test.yml`) bắn khi target biến mất (DNS trả NXDOMAIN); `ServiceDown` bắn khi target còn nhưng `up == 0` (máy local có DNS nhà mạng trả IP giả). Đáp án ground truth ghi `ServiceDown/ServiceMissing` (một trong hai). Kiểm thật 2026-11-13 với DNS trả NXDOMAIN: Prometheus giữ target cũ khi DNS lỗi nên **`ServiceDown`** bắn (đáng tin), `ServiceMissing` chỉ bắn nếu target biến mất hẳn.

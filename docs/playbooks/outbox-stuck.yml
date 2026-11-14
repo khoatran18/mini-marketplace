@@ -36,6 +36,9 @@ causes:
   - id: poison-row
     when: "có DEAD, last_error cùng một lỗi (vd payload quá lớn); hàng key khác vẫn đi"
     fix: [inspect-then-requeue]
+  - id: corrupt-payload
+    when: "DEAD có last_error về dữ liệu (JSON không đọc được, thiếu trường, key/topic sai) thay vì lỗi kết nối; requeue sẽ lại thất bại y như cũ"
+    fix: [report-corrupt-row]
   - id: worker-stalled
     when: "pending tăng, Kafka ổn, log worker không có hoạt động"
     fix: [force-restart-owner]
@@ -46,6 +49,12 @@ actions:
     command: "docker service scale marketplace-infra_broker<1|2|3>=1  (broker nào đang 0/1)"
     verify: "mm_outbox_pending về 0 trong vài phút"
     rollback: "không cần"
+  - id: report-corrupt-row
+    risk: observe
+    approval: none
+    command: "báo người kèm id, topic, last_error, request_id của hàng DEAD; KHÔNG requeue"
+    precondition: "last_error là lỗi dữ liệu, không phải lỗi kết nối Kafka"
+    verify: "người sửa dữ liệu nguồn hoặc loại bỏ hàng có chủ đích, rồi quyết định requeue"
   - id: force-restart-owner
     risk: low
     approval: confirm

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import './globals.css';
 import { Providers } from '../components/Providers';
-import { NavBar } from '../components/NavBar';
+import { PageFrame } from '../components/layout/PageFrame';
 import { THEME_COOKIE, themeInitScript } from '../lib/theme';
 
 export const metadata: Metadata = {
@@ -28,8 +28,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-bg font-sans text-text antialiased">
         <Providers>
-          <NavBar />
-          <main className="w-full">{children}</main>
+          <PageFrame>{children}</PageFrame>
         </Providers>
       </body>
     </html>

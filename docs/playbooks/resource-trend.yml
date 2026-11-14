@@ -1,0 +1,55 @@
+id: resource-trend
+title: "Bộ nhớ tăng đều (nghi rò rỉ) hoặc đĩa sắp đầy"
+triggers:
+  alerts: [ContainerMemoryGrowing, DiskFillingUp]
+runbook: "§15, §8, §10"
+diagnose:
+  - id: growth
+    tool: prometheus
+    query: 'deriv(container_memory_working_set_bytes{container_label_com_docker_swarm_service_name="<service>"}[1h])'
+    read_only: true
+    interpret: "dương ổn định không theo tải = rò rỉ; tăng theo request = tải. So sánh với rate(mm_http_requests_total[1h])"
+  - id: time-to-limit
+    tool: prometheus
+    query: '(container_spec_memory_limit_bytes - container_memory_working_set_bytes) / deriv(container_memory_working_set_bytes[1h])'
+    read_only: true
+    interpret: "số giây còn lại tới khi chạm giới hạn (OOM-kill)"
+  - id: disk-usage
+    tool: prometheus
+    query: '1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"}'
+    read_only: true
+    interpret: "> 0.9 là nguy hiểm"
+  - id: docker-df
+    tool: shell
+    query: "docker system df -v | head -40"
+    read_only: true
+    interpret: "volume/image/log nào chiếm nhiều nhất (clickhouse-data, kafka, loki, prometheus)"
+  - id: analytics-buffer
+    tool: prometheus
+    query: 'mm_ch_buffer_rows, mm_ch_spool_bytes, increase(mm_ch_rows_dropped_total[10m])'
+    read_only: true
+    interpret: "ClickHouse không ghi được (đầy đĩa): đệm/spool tăng, rồi bắt đầu rớt dòng"
+causes:
+  - id: leak
+    when: "bộ nhớ tăng đều bất kể tải, service không trạng thái"
+    fix: [force-restart, escalate-to-dev]
+  - id: clickhouse-disk-full
+    when: "đĩa chứa clickhouse-data < 10% trống, mm_ch_insert_failures_total tăng, buffer/spool tăng"
+    fix: [escalate-to-dev]
+  - id: log-or-image-bloat
+    when: "docker system df cho thấy image/log cũ chiếm nhiều"
+    fix: [escalate-to-dev]
+actions:
+  - id: force-restart
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace_<service>"
+    precondition: "service không trạng thái; KHÔNG dùng cho postgres/clickhouse/kafka"
+    verify: "bộ nhớ về mức thấp; ghi lại để báo dev (restart chỉ che triệu chứng)"
+    rollback: "không cần"
+  - id: escalate-to-dev
+    risk: observe
+    approval: none
+    command: "báo người kèm biểu đồ bộ nhớ/đĩa, volume lớn nhất, trạng thái đệm analytics"
+escalate: "Đĩa < 10%: báo người ngay. Không tự xoá dữ liệu, không prune volume. Rò rỉ: restart chỉ là tạm thời."
+ground_truth: []

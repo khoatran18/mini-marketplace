@@ -5,6 +5,8 @@ import { EmptyBlock, ErrorBlock, LoadingBlock, Notice } from '../../../component
 import { getAdminCategoriesRequest, saveCategoryRequest } from '../../../lib/api';
 import { useApiData, useAuthedAction } from '../../../lib/hooks';
 import type { Category } from '../../../lib/types';
+import { Icon } from '../../../components/layout/Icon';
+import { PageTitle } from '../../../components/layout/PageTitle';
 
 interface Draft {
   id?: number;
@@ -55,8 +57,14 @@ export function AdminCategoriesClient() {
   };
 
   const row = (category: Category, nested: boolean) => (
-    <tr key={category.id} className="border-t border-line">
-      <td className={`px-3 py-2 text-text ${nested ? 'pl-8' : 'font-semibold'}`}>{category.name}</td>
+    <tr key={category.id} className={`border-t border-line ${nested ? '' : 'bg-brand-soft/60'}`}>
+      <td className={`px-3 py-2 ${nested ? 'pl-8 text-text' : 'text-base font-bold text-brand'}`}>
+        <span className="inline-flex items-center gap-2">
+          <Icon name={nested ? 'child' : 'folder'} className={nested ? 'h-4 w-4 text-muted' : 'h-[18px] w-[18px]'} />
+          {category.name}
+          {nested ? null : <span className="chip">Danh mục chính</span>}
+        </span>
+      </td>
       <td className="px-3 py-2 font-mono text-xs text-muted">{category.slug}</td>
       <td className="px-3 py-2 text-right text-text">{category.sort}</td>
       <td className="px-3 py-2 text-right text-text">{category.product_count}</td>
@@ -75,7 +83,7 @@ export function AdminCategoriesClient() {
     <div className="grid gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="grid gap-1">
-          <h1 className="text-2xl font-bold text-text">Danh mục</h1>
+          <PageTitle icon="tag">Danh mục</PageTitle>
           <p className="text-sm text-muted">Danh mục cha/con; danh mục ẩn không xuất hiện với khách.</p>
         </div>
         <button type="button" className="btn-primary" onClick={() => setDraft({ ...blank })}>

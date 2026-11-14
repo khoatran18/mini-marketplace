@@ -16,7 +16,7 @@ Quản trị:         /admin  ·  /admin/system (CPU/RAM/health)  ·  /admin/ana
                   /admin/users  ·  /admin/stores  ·  /admin/categories  ·  /admin/audit  ·  /admin/data-health
 Dev (ENV=dev):    /dev/tracking (event realtime)  ·  /dev/payments (ép trạng thái)
 ```
-`NavBar`: bảng cấu hình route→role ở một nơi; thêm `admin` vào `Role` (`lib/types.ts`); `/dashboard` cũ chuyển hướng theo role. Layout: `(shop)`, `(seller)`, `(admin)`; seller/admin dùng **ConsoleLayout** (sidebar + bộ chọn khoảng thời gian + nút đổi giao diện sáng/tối).
+`NavBar`: bảng cấu hình route→role ở một nơi; thêm `admin` vào `Role` (`lib/types.ts`); `/dashboard` cũ chuyển hướng theo role. Layout: `(shop)`, `(seller)`, `(admin)`; seller/admin dùng **AppShell** (thanh trên + sidebar thu gọn được + nút đổi giao diện sáng/tối duy nhất; ADR-41); `dev` thấy console với mục Hệ thống.
 
 ## 3. Wireframe chính
 ### 3.1 Checkout & thanh toán mô phỏng
@@ -62,7 +62,7 @@ Bảng giao dịch (lọc status/method/thời gian), chi tiết (attempts, webh
 
 ## 4. Component & thư viện
 ```
-components/layout/   ConsoleLayout · RoleGuard · FeatureGate · ThemeToggle (sáng/tối/theo hệ thống)
+components/layout/   AppShell · PageFrame · Icon · RoleGuard · FeatureGate · ThemeToggle (sáng/tối/theo hệ thống)
 components/shop/     ProductCard(+impression/click) · ProductGallery · StockBadge · CategoryNav · SearchBar(+suggest) · FilterPanel · ReviewList
 components/checkout/ AddressPicker · PaymentMethodPicker · OrderSummary · MockPayForm · CountdownTimer · OrderTimeline
 components/seller/   OrderTable · ShipDialog · ProductForm · ImageUploader · InventoryTable
@@ -80,7 +80,7 @@ Token localStorage là nợ đã ghi (05_SECURITY.md) → chuyển cookie httpOn
 
 ## 7. Dark mode & token thiết kế
 - **Tailwind `darkMode: 'class'`**; màu định nghĩa bằng **biến CSS** (`--bg`, `--surface`, `--text`, `--muted`, `--border`, `--brand`, `--success/--warning/--danger/--info`) ở `:root` và `.dark`; component dùng class ánh xạ biến (`bg-surface text-text`) thay vì hardcode `slate-*` (code hiện tại đang dùng `text-slate-900` ở nhiều nơi → cần chuyển dần).
-- Chế độ: **Sáng / Tối / Theo hệ thống** (mặc định theo `prefers-color-scheme`); lưu lựa chọn ở `localStorage` **và cookie `mm_theme`** để server render đúng class `<html class="dark">` ngay (tránh nháy trắng); `ThemeToggle` nằm ở NavBar/ConsoleLayout.
+- Chế độ: **Sáng / Tối / Theo hệ thống** (mặc định theo `prefers-color-scheme`); lưu lựa chọn ở `localStorage` **và cookie `mm_theme`** để server render đúng class `<html class="dark">` ngay (tránh nháy trắng); `ThemeToggle` nằm ở NavBar (trang bán hàng) hoặc thanh trên của AppShell (console), mỗi nơi một nút.
 - Biểu đồ (Recharts): palette riêng cho từng theme (lưới/ trục/ tooltip theo biến CSS); kỳ trước nét đứt xám; kiểm tra độ tương phản ≥ 4.5:1 cho chữ, ≥ 3:1 cho thành phần đồ hoạ ở cả hai theme.
 - Ảnh sản phẩm nền trong suốt: nền khung `surface`; logo/ icon dùng `currentColor`.
 - Trạng thái đơn/ thanh toán/ tồn kho: một bảng ánh xạ duy nhất `lib/status.ts` → token màu (có biến thể sáng/tối).
