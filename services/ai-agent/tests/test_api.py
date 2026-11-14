@@ -40,9 +40,16 @@ async def test_health_and_chat_stream():
         assert evs[0][0] == "start" and evs[-1][0] == "done" and "conversation_id" in evs[0][1]
 
 
+@pytest.mark.parametrize("role", ["admin", "dev"])
+async def test_admin_and_dev_personas_are_enabled(role):
+    async with client() as c:
+        r = await c.post("/chat", json={"message": "x"}, headers=hdr(role=role))
+        assert r.status_code == 200, r.text
+
+
 @pytest.mark.parametrize("headers,body,status", [
     ({}, {"message": "x"}, 401),                                           # không token
-    (hdr(role="admin"), {"message": "x"}, 403),                            # role chưa có persona
+    (hdr(role="nobody"), {"message": "x"}, 403),                           # role chưa có persona
     (hdr(), {"message": "  "}, 422),
     (hdr(), {"message": "x" * 5000}, 413),
     (hdr(), {"message": "x", "conversation_id": "not-a-uuid"}, 422),
