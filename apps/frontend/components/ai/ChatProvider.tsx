@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { stubTransport, type ChatContext, type ChatMessage, type ChatTransport } from '../../lib/ai-chat';
+import { useAuth } from '../auth/AuthProvider';
+import { AI_UI_PREVIEW, confirmProposal, sseTransport, stubTransport, type ChatEvent, type ChatMessage, type ChatProposal, type ChatTransport } from '../../lib/ai-chat';
 
 interface ChatState {
   open: boolean;
@@ -18,6 +19,9 @@ interface ChatState {
   draft: string;
   clearDraft: () => void;
   send: (text: string) => Promise<void>;
+  /** user pressed Confirm / Cancel on a proposal card */
+  confirm: (messageId: string, proposalId: string) => Promise<void>;
+  dismiss: (messageId: string, proposalId: string) => void;
   stop: () => void;
   reset: () => void;
 }
@@ -26,8 +30,53 @@ const ChatContextValue = createContext<ChatState | null>(null);
 
 const newId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
-export function ChatProvider({ children, transport = stubTransport }: { children: ReactNode; transport?: ChatTransport }) {
+const ERROR_TEXT: Record<string, string> = {
+  session_expired: 'Phiên làm việc của trợ lý đã hết hạn. Hãy hỏi lại.',
+  busy: 'Trợ lý đang xử lý câu hỏi trước của bạn, đợi một chút.',
+  timeout: 'Câu hỏi mất quá lâu nên đã dừng. Hãy thử hỏi gọn hơn.',
+  budget: 'Câu hỏi này dùng quá nhiều tài nguyên nên đã dừng. Hãy hỏi cụ thể hơn.',
+  unavailable: 'Trợ lý tạm thời không khả dụng.'
+};
+
+/** Applies one SSE event to the assistant message `id`. */
+function applyEvent(m: ChatMessage, e: ChatEvent): ChatMessage {
+  switch (e.event) {
+    case 'token':
+      return { ...m, content: m.content + e.data.text, status: undefined };
+    case 'tool_call':
+      return { ...m, status: e.data.label };
+    case 'tool_result':
+      return { ...m, status: undefined };
+    case 'card':
+      return { ...m, cards: [...(m.cards ?? []), { tool: e.data.tool, data: e.data.data }] };
+    case 'citation':
+      return (m.sources ?? []).includes(e.data.label) ? m : { ...m, sources: [...(m.sources ?? []), e.data.label] };
+    case 'action_proposal': {
+      const proposal: ChatProposal = {
+        id: e.data.id,
+        token: e.data.proposal,
+        summary: e.data.summary,
+        expiresAt: e.data.expires_at ? Date.parse(e.data.expires_at) : Date.now() + 5 * 60 * 1000,
+        request: e.data.request,
+        state: 'pending'
+      };
+      return { ...m, status: undefined, proposals: [...(m.proposals ?? []), proposal] };
+    }
+    case 'error':
+      return { ...m, status: undefined, error: ERROR_TEXT[e.data.code] ?? e.data.message ?? 'Có lỗi khi trả lời.' };
+    default:
+      return m;
+  }
+}
+
+export function ChatProvider({ children, transport }: { children: ReactNode; transport?: ChatTransport }) {
   const pathname = usePathname();
+  const { getValidAccessToken } = useAuth();
+  const conversationRef = useRef<string | undefined>(undefined);
+  const activeTransport = useMemo<ChatTransport>(
+    () => transport ?? (AI_UI_PREVIEW ? stubTransport : sseTransport(getValidAccessToken)),
+    [transport, getValidAccessToken]
+  );
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
@@ -52,16 +101,20 @@ export function ChatProvider({ children, transport = stubTransport }: { children
       setBusy(true);
       const controller = new AbortController();
       abortRef.current = controller;
-      const context: ChatContext = { path: pathname, service };
       try {
-        await transport.send(history, context, (delta) => {
-          setMessages((current) => current.map((m) => (m.id === reply.id ? { ...m, content: m.content + delta } : m)));
-        }, controller.signal);
+        await activeTransport.send(
+          { message: content, conversationId: conversationRef.current, clientMessageId: user.id, context: { path: pathname, service } },
+          (event) => {
+            if (event.event === 'start' || event.event === 'done') conversationRef.current = event.data.conversation_id ?? conversationRef.current;
+            setMessages((current) => current.map((m) => (m.id === reply.id ? applyEvent(m, event) : m)));
+          },
+          controller.signal
+        );
       } catch (err) {
         const aborted = (err as Error).name === 'AbortError';
         setMessages((current) =>
           current.map((m) =>
-            m.id === reply.id ? { ...m, content: m.content || (aborted ? '(đã dừng)' : 'Không gửi được câu hỏi, thử lại sau.') } : m
+            m.id === reply.id ? { ...m, status: undefined, content: m.content || (aborted ? '(đã dừng)' : ''), error: aborted ? m.error : (err as Error).message || 'Không gửi được câu hỏi, thử lại sau.' } : m
           )
         );
       } finally {
@@ -70,8 +123,35 @@ export function ChatProvider({ children, transport = stubTransport }: { children
         setBusy(false);
       }
     },
-    [pathname, service, transport]
+    [pathname, service, activeTransport]
   );
+
+  const patchProposal = useCallback((messageId: string, proposalId: string, patch: Partial<ChatProposal>) => {
+    setMessages((current) =>
+      current.map((m) => (m.id === messageId ? { ...m, proposals: m.proposals?.map((p) => (p.id === proposalId ? { ...p, ...patch } : p)) } : m))
+    );
+  }, []);
+
+  const confirm = useCallback(
+    async (messageId: string, proposalId: string) => {
+      const proposal = messagesRef.current.find((m) => m.id === messageId)?.proposals?.find((p) => p.id === proposalId);
+      if (!proposal || proposal.state !== 'pending') return;
+      if (Date.now() > proposal.expiresAt) {
+        patchProposal(messageId, proposalId, { state: 'failed', error: 'Đề xuất đã hết hạn. Hãy yêu cầu lại.' });
+        return;
+      }
+      patchProposal(messageId, proposalId, { state: 'confirming', error: undefined });
+      try {
+        await confirmProposal(proposal, await getValidAccessToken());
+        patchProposal(messageId, proposalId, { state: 'done' });
+      } catch (err) {
+        patchProposal(messageId, proposalId, { state: 'failed', error: (err as Error).message || 'Không thực hiện được.' });
+      }
+    },
+    [getValidAccessToken, patchProposal]
+  );
+
+  const dismiss = useCallback((messageId: string, proposalId: string) => patchProposal(messageId, proposalId, { state: 'dismissed' }), [patchProposal]);
 
   const value = useMemo<ChatState>(
     () => ({
@@ -89,13 +169,16 @@ export function ChatProvider({ children, transport = stubTransport }: { children
       draft,
       clearDraft: () => setDraft(''),
       send,
+      confirm,
+      dismiss,
       stop,
       reset: () => {
         abortRef.current?.abort();
+        conversationRef.current = undefined;
         setMessages([]);
       }
     }),
-    [open, messages, busy, service, draft, send, stop]
+    [open, messages, busy, service, draft, send, confirm, dismiss, stop]
   );
 
   return <ChatContextValue.Provider value={value}>{children}</ChatContextValue.Provider>;

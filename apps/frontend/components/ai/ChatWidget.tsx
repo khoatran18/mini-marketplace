@@ -5,6 +5,8 @@ import { useAuth } from '../auth/AuthProvider';
 import { audienceOf, suggestionsFor, AI_BACKEND_READY } from '../../lib/ai-chat';
 import { useFeatureFlags } from '../../lib/features';
 import { Icon } from '../layout/Icon';
+import { ChatCards } from './ChatCards';
+import { ChatProposals } from './ChatProposals';
 import { useChat } from './ChatProvider';
 
 /** True when the signed-in user may see the assistant (flag on for their audience). The gateway enforces access anyway. */
@@ -46,7 +48,7 @@ export function AssistantButton() {
 
 function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
   const { role } = useAuth();
-  const { messages, busy, send, stop, reset, closeChat, draft, clearDraft, service } = useChat();
+  const { messages, busy, send, stop, reset, closeChat, draft, clearDraft, service, confirm, dismiss } = useChat();
   const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -92,7 +94,7 @@ function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
           </span>
           <div className="leading-tight">
             <p className="text-sm font-bold">Trợ lý AI</p>
-            <p className="text-xs text-muted">{service ? `Đang xem: ${service}` : 'Sắp ra mắt'}</p>
+            <p className="text-xs text-muted">{service ? `Đang xem: ${service}` : 'Hỏi đáp và tra cứu'}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -110,7 +112,7 @@ function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
         {messages.length === 0 ? (
           <div className="grid gap-3">
-            <p className="text-sm text-muted">Xin chào! Hỏi mình bất cứ điều gì. Phần trả lời thật đang được xây dựng, nên hiện tại bạn chỉ thấy thông báo &quot;sắp ra mắt&quot;.</p>
+            <p className="text-sm text-muted">Xin chào! Hỏi mình về đơn hàng, sản phẩm hoặc số liệu của bạn. Mình chỉ tra cứu và giải thích, không tự thực hiện thao tác thay bạn.</p>
             {suggestions.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {suggestions.map((s) => (
@@ -123,14 +125,29 @@ function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
           </div>
         ) : (
           messages.map((m) => (
-            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <p
-                className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
-                  m.role === 'user' ? 'rounded-br-md bg-brand-solid text-white' : 'rounded-bl-md bg-surface2 text-text'
-                }`}
-              >
-                {m.content || (m.streaming ? <span className="inline-flex gap-1" aria-label="Đang trả lời"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:120ms]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:240ms]" /></span> : null)}
-              </p>
+            <div key={m.id} className={`flex flex-col gap-2 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+              {m.role === 'user' || m.content || m.streaming || m.status ? (
+                <p
+                  className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                    m.role === 'user' ? 'rounded-br-md bg-brand-solid text-white' : 'rounded-bl-md bg-surface2 text-text'
+                  }`}
+                >
+                  {m.content || (m.status ? <span className="text-muted">{m.status}</span> : m.streaming ? <span className="inline-flex gap-1" aria-label="Đang trả lời"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:120ms]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:240ms]" /></span> : null)}
+                  {m.content && m.status ? <span className="mt-1 block text-xs text-muted">{m.status}</span> : null}
+                </p>
+              ) : null}
+              {m.cards && m.cards.length > 0 ? (
+                <div className="w-full max-w-[95%]">
+                  <ChatCards cards={m.cards} />
+                </div>
+              ) : null}
+              {m.proposals && m.proposals.length > 0 ? (
+                <div className="w-full max-w-[95%]">
+                  <ChatProposals proposals={m.proposals} onConfirm={(id) => void confirm(m.id, id)} onDismiss={(id) => dismiss(m.id, id)} />
+                </div>
+              ) : null}
+              {m.sources && m.sources.length > 0 && !m.streaming ? <p className="text-[11px] text-muted">Nguồn: {m.sources.join(', ')}</p> : null}
+              {m.error ? <p className="max-w-[85%] rounded-lg border border-danger/30 bg-danger/10 px-3 py-1.5 text-xs text-danger">{m.error}</p> : null}
             </div>
           ))
         )}

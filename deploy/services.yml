@@ -142,7 +142,7 @@ services:
       USER_SERVICE_ADDR: ${USER_SERVICE_ADDR:-user-service:50054}
       ANALYTICS_SERVICE_ADDR: ${ANALYTICS_SERVICE_ADDR:-analytics-service:50055}
       PAYMENT_SERVICE_ADDR: ${PAYMENT_SERVICE_ADDR:-payment-service:50057}
-      # ADR-38: /admin/ops/* được gateway chuyển tới ops-service bằng token này (trống = các route trả 503)
+      # ADR-38: /ops/* được gateway chuyển tới ops-service bằng token này (trống = các route trả 503)
       OPS_SERVICE_URL: ${OPS_SERVICE_URL:-http://ops-service:8080}
       OPS_API_TOKEN: ${OPS_API_TOKEN:-}
       # ADR-40: AI chat stream (the agent service is built separately). Off by default; GET /config/features reports the flags.
@@ -151,6 +151,9 @@ services:
       AI_SERVICE_URL: ${AI_SERVICE_URL:-}
       AI_STREAM_TIMEOUT_SEC: ${AI_STREAM_TIMEOUT_SEC:-120}
       AI_RATE_LIMIT_PER_MINUTE: ${AI_RATE_LIMIT_PER_MINUTE:-20}
+      AI_USER_RATE_LIMIT_PER_MINUTE: ${AI_USER_RATE_LIMIT_PER_MINUTE:-10}
+      AI_PROPOSAL_RATE_LIMIT_PER_MINUTE: ${AI_PROPOSAL_RATE_LIMIT_PER_MINUTE:-30}
+      AGENT_TOKEN_KEYS: ${AGENT_TOKEN_KEYS:-}   # ADR-42: kid:secret,kid:secret (first signs); empty = agent tokens/proposals off
     # liveness only (never depends on other services); readiness (/ready) is used by Traefik below
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
@@ -302,6 +305,40 @@ services:
       restart_policy: {condition: on-failure, delay: 10s}
       resources:
         limits: {memory: 256M}
+
+  # Tầng agent (docs/ai/08): chỉ gateway gọi (cổng 8090, KHÔNG publish ra ngoài; ai-agent không có khoá ký nên phải ở mạng nội bộ).
+  # Cần FEATURE_AI_CHAT=true và AI_SERVICE_URL=http://ai-agent:8090 ở gateway. Không có AGENT_TOKEN_KEYS ở đây: khoá ký chỉ gateway giữ.
+  ai-agent:
+    logging: *logging
+    image: marketplace/ai-agent:latest
+    hostname: ai-agent
+    networks: [marketplace]
+    environment:
+      APP_ENV: ${AI_AGENT_ENV:-prod}
+      GATEWAY_URL: ${AI_AGENT_GATEWAY_URL:-http://api-gateway:8080}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
+      OPENCODE_BASE_URL: ${OPENCODE_BASE_URL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Kho lịch sử chat (bảng ai_*, giữ 30 ngày, tự tạo bảng lúc khởi động)
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8090/health', timeout=3).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    stop_grace_period: 30s
+    deploy:
+      update_config: *update_stop_first
+      rollback_config: *rollback
+      replicas: 1
+      restart_policy: {condition: on-failure, delay: 10s}
+      resources:
+        limits: {memory: 512M}
 
   # ADR-38: incidents từ cảnh báo Prometheus + nhật ký bất biến; chỉ gateway gọi (cổng 8080, không publish ra ngoài)
   ops-service:

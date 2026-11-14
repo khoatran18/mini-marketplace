@@ -19,7 +19,7 @@ export interface TopoNode {
   desc: string;
   /** Prometheus `job` label for infrastructure nodes (query `infra_up`). */
   job?: string;
-  /** true for the 8 Go services reported by /admin/system/health and scraped as job mm-services. */
+  /** true for the 8 Go services reported by /ops/system/health and scraped as job mm-services. */
   app?: boolean;
 }
 

@@ -449,7 +449,7 @@ export interface AnalyticsEnvelope<T = unknown> {
 
 export type OrdersScope = 'buyer' | 'seller' | 'admin';
 
-// GET /admin/system/health
+// GET /ops/system/health
 export type ServiceStatus = 'ready' | 'degraded' | 'not_ready' | 'unreachable';
 
 export interface ServiceHealth {
@@ -467,7 +467,7 @@ export interface SystemHealthOutput {
   services: ServiceHealth[];
 }
 
-/** One row of a named read-only query (POST /admin/ops/queries/{name}). */
+/** One row of a named read-only query (POST /ops/queries/{name}). */
 export interface OpsSeries {
   labels: Record<string, string>;
   value: string;

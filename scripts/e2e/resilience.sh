@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tiêm lỗi trên stack Docker Swarm đang chạy: dừng/khôi phục từng thành phần bằng `docker service scale`, rồi kiểm tra
 # hệ thống suy giảm đúng cách và tự hồi phục. Cần deploy trước (scripts/deploy.sh), image marketplace/frontend:latest (có node)
-# và ADMIN_BOOTSTRAP_* (để kiểm /admin/system/health; không có thì bỏ qua phần đó).
+# và ADMIN_BOOTSTRAP_* (để kiểm /ops/system/health; không có thì bỏ qua phần đó).
 #
 # Usage: scripts/e2e/resilience.sh [A B C ... M]      (mặc định chạy tất cả; mỗi chữ là một kịch bản)
 #   A ClickHouse down   B Kafka down (cả 3 broker)   C payment-service down   D product-service down
@@ -21,7 +21,7 @@ state="$(mktemp -d)"
 fails=0
 want=" ${*:-A B C D E F G H I J K L M} "
 
-# Tài khoản admin (cho /admin/system/health): lấy từ biến môi trường, không có thì đọc ADMIN_BOOTSTRAP_* trong deploy/.env
+# Tài khoản admin (cho /ops/system/health): lấy từ biến môi trường, không có thì đọc ADMIN_BOOTSTRAP_* trong deploy/.env
 envval() { [ -f "$root/deploy/.env" ] && grep -E "^$1=" "$root/deploy/.env" | tail -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' || true; }
 ADMIN_USERNAME="${ADMIN_USERNAME:-${ADMIN_BOOTSTRAP_USERNAME:-$(envval ADMIN_BOOTSTRAP_USERNAME)}}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-${ADMIN_BOOTSTRAP_PASSWORD:-$(envval ADMIN_BOOTSTRAP_PASSWORD)}}"
@@ -89,7 +89,7 @@ gt_meta() { # gt_meta <scenario> -> "fault|playbook|alerts(,)|signals"
     I) echo "postgres_restart|service-unavailable||thoáng qua; không cảnh báo" ;;
     J) echo "one_kafka_broker_down|kafka-consumer-dlq||RF=3 min ISR=2 vẫn ghi được; không cảnh báo" ;;
     K) echo "loki_down|observability-down|InfraTargetDown:loki|không có log mới trong Loki; cửa hàng vẫn chạy bình thường (InfraTargetDown cần lỗi > 2 phút: dùng GT_HOLD>=120)" ;;
-    L) echo "two_services_down|multiple-faults,service-unavailable|ServiceDown/ServiceMissing:payment-service+order-service|hai service cùng down; /admin/system/health liệt kê cả hai; đặt đơn 503 (order-service down)" ;;
+    L) echo "two_services_down|multiple-faults,service-unavailable|ServiceDown/ServiceMissing:payment-service+order-service|hai service cùng down; /ops/system/health liệt kê cả hai; đặt đơn 503 (order-service down)" ;;
     M) echo "postgres_table_lock|slow-database|GatewayLatencyHigh:api-gateway|truy vấn tới bảng products bị chặn bởi khoá ACCESS EXCLUSIVE: catalog/đặt đơn chậm hoặc 5xx tới khi nhả khoá (cần giữ > 5 phút và có lưu lượng: GT_HOLD>=300). DBPoolWaiting có thể bắn nhưng không bảo đảm" ;;
   esac
 }
@@ -309,7 +309,7 @@ echo "[M] Khoá bảng products trong Postgres (ACCESS EXCLUSIVE): hệ thống 
 fi
 
 if [ "$has_admin" = 1 ]; then
-  echo "[cuối] /admin/system/health sau toàn bộ kịch bản"
+  echo "[cuối] /ops/system/health sau toàn bộ kịch bản"
   wait_step health status ready step health; expect "toàn bộ service ready" "$?"
 fi
 
