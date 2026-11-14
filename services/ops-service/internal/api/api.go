@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"ops-service/internal/approval"
+	"ops-service/internal/playbooks"
 	"ops-service/internal/queries"
 	"ops-service/internal/store"
 )
@@ -37,6 +38,8 @@ type API struct {
 	ActionsEnabled bool
 	ExecLimits     store.ExecLimits
 	Runner         Runner
+	// Playbooks: đáp án chuẩn của sự cố (docs/playbooks), chỉ đọc; nil = danh sách rỗng.
+	Playbooks *playbooks.Library
 	// Outbox đọc hàng DEAD của outbox từng service (chỉ đọc); nil = 503.
 	Outbox OutboxReader
 
@@ -71,6 +74,8 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /queries", a.listQueries)
 	mux.HandleFunc("POST /queries/{name}", a.runQuery)
 	mux.HandleFunc("GET /outbox/{service}/dead", a.outboxDead)
+	mux.HandleFunc("GET /playbooks", a.listPlaybooks)
+	mux.HandleFunc("GET /playbooks/{id}", a.getPlaybook)
 	return a.auth(mux)
 }
 

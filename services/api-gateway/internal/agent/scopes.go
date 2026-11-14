@@ -159,12 +159,15 @@ var opsQueryNames = []string{
 	"grpc_error_rate", "circuit_state", "outbox_pending", "outbox_oldest_age", "outbox_dead", "gateway_5xx_ratio", "dlq_increase",
 	"memory_ratio", "kafka_consumer_lag", "gateway_latency_p95", "grpc_latency_p95", "db_pool_wait", "disk_free_ratio", "memory_growth",
 	"infra_up", "logs_errors", "logs_by_request",
+	"frontend_request_rate", "frontend_5xx_ratio", "frontend_latency_p95",
+	"ai_runs_rate", "ai_tokens_rate", "ai_tool_errors", "ai_llm_latency_p95", "ai_rejected",
 }
 
 const opsQueryHelp = "Run one named metrics/log lookup (Prometheus, Loki). Latency: gateway_latency_p95 (per route), grpc_latency_p95 (per service) - " +
 	"use these for 'which service is slowest'. Errors: gateway_5xx_ratio, grpc_error_rate, logs_errors(service). Load: gateway_request_rate, grpc_request_rate. " +
 	"State: alerts_firing, service_up/service_ready(service), service_replicas(_up), circuit_state, infra_up. Data flow: outbox_pending, outbox_oldest_age, " +
-	"outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id)."
+	"outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id). " +
+	"Frontend (measured at Traefik): frontend_request_rate, frontend_5xx_ratio, frontend_latency_p95. The AI assistant itself: ai_runs_rate, ai_tokens_rate, ai_tool_errors, ai_llm_latency_p95, ai_rejected."
 
 // opsTools: read-only view of the platform's health, shared by admin and operator (system data only, no business figures).
 var opsTools = []Tool{
@@ -192,6 +195,12 @@ var opsTools = []Tool{
 		{Name: "service", In: "query", Type: "string", Enum: opsServices, Description: "needed by service_up, service_ready, logs_errors"},
 		{Name: "window", In: "query", Type: "string", Enum: []string{"5m", "15m", "1h"}, Description: "look-back window; each query has its own default"},
 		{Name: "request_id", In: "query", Type: "string", Description: "only for logs_by_request: the X-Request-ID to follow across services"},
+	}},
+	{Name: "ops_list_playbooks", Method: "GET", Path: "/ops/playbooks", Description: "Incident playbooks (ground truth): which alerts each covers. Pass alert=<AlertName> to find the playbook of a firing alert. Read the playbook BEFORE proposing a cause.", Params: []ToolParam{
+		{Name: "alert", In: "query", Type: "string", Description: "alert name, e.g. OutboxDeadRows (from alerts_firing or an incident)"},
+	}},
+	{Name: "ops_get_playbook", Method: "GET", Path: "/ops/playbooks/:id", Description: "One playbook: diagnose steps (read-only queries to run with ops_metrics_query), causes with the evidence that points to each, and the safe actions with their risk level. The actions are for the human to carry out; you cannot run them.", Params: []ToolParam{
+		{Name: "id", In: "path", Type: "string", Required: true, Description: "playbook id from ops_list_playbooks, e.g. outbox-stuck"},
 	}},
 	{Name: "ops_system_health", Method: "GET", Path: "/ops/system/health", Description: "Live health of every service."},
 	{Name: "data_health", Method: "GET", Path: "/admin/analytics/data-health", Description: "Analytics pipeline lag and reconcile state (not business figures)."},

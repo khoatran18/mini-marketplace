@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+import os
+
+from fastapi import APIRouter, Response
+
+from ai_agent import metrics
 
 
 def create_router(personas) -> APIRouter:
@@ -14,6 +18,11 @@ def create_router(personas) -> APIRouter:
     @router.get("/ready")
     @router.get("/readyz")
     async def ready():
-        return {"status": "ok", "personas": sorted(personas)}
+        return {"status": "ready", "personas": sorted(personas), "version": os.environ.get("SERVICE_VERSION", "dev")}
+
+    @router.get("/metrics")
+    async def prom():
+        body, ctype = metrics.render()
+        return Response(content=body, media_type=ctype)
 
     return router

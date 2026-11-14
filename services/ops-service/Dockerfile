@@ -16,6 +16,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/web ./c
 FROM alpine:3.20
 RUN addgroup -S app && adduser -S -G app app
 COPY --from=builder /out/web /usr/local/bin/web
+# Đáp án chuẩn của sự cố cho agent đọc qua GET /playbooks (docs/ nằm trong .dockerignore, chỉ docs/playbooks được mở lại)
+COPY docs/playbooks /app/playbooks
 ARG SERVICE_VERSION=dev
 ARG GIT_COMMIT=unknown
 ARG BUILD_TIME=unknown

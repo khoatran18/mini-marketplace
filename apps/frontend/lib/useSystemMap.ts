@@ -68,7 +68,7 @@ export function useSystemMap(): SystemMapData & { reload: () => void } {
       const token = await getValidAccessToken();
       if (!token) throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
       const q = (name: string, params: Record<string, string> = {}) => runOpsQueryRequest(token, name, params);
-      const [health, replicas, replicasUp, grpcRate, grpcErr, grpcP95, gwRate, infra, incidents] = await Promise.allSettled([
+      const [health, replicas, replicasUp, grpcRate, grpcErr, grpcP95, gwRate, infra, incidents, feRate, feErr, feP95, aiRuns, aiLlm] = await Promise.allSettled([
         getSystemHealthRequest(token),
         q('service_replicas'),
         q('service_replicas_up'),
@@ -77,7 +77,12 @@ export function useSystemMap(): SystemMapData & { reload: () => void } {
         q('grpc_latency_p95'),
         q('gateway_request_rate'),
         q('infra_up'),
-        listOpsIncidentsRequest(token, 'open')
+        listOpsIncidentsRequest(token, 'open'),
+        q('frontend_request_rate'),
+        q('frontend_5xx_ratio'),
+        q('frontend_latency_p95'),
+        q('ai_runs_rate'),
+        q('ai_llm_latency_p95')
       ]);
 
       if (health.status === 'rejected') throw health.reason;
@@ -100,6 +105,27 @@ export function useSystemMap(): SystemMapData & { reload: () => void } {
           errorRate: err[name],
           p95: p95[name]
         };
+      }
+
+      // frontend has no metrics of its own: Traefik measures what it serves (empty series = no traffic in the window)
+      const one = (r: PromiseSettledResult<OpsQueryResult>) => {
+        const v = r.status === 'fulfilled' ? Number(r.value.series?.[0]?.value) : NaN;
+        return Number.isFinite(v) ? v : undefined;
+      };
+      const feRateV = one(feRate);
+      if (feRateV !== undefined) metrics.frontend = { rate: feRateV, errorRate: (one(feErr) ?? 0) * feRateV, p95: one(feP95) };
+      // ai-agent: chat runs/s (errors = every status but ok/cancelled), slowest model call p95
+      if (aiRuns.status === 'fulfilled') {
+        let total = 0;
+        let bad = 0;
+        for (const s of aiRuns.value.series ?? []) {
+          const v = Number(s.value);
+          if (!Number.isFinite(v)) continue;
+          total += v;
+          if (s.labels.status && !['ok', 'cancelled'].includes(s.labels.status)) bad += v;
+        }
+        const p95s = aiLlm.status === 'fulfilled' ? (aiLlm.value.series ?? []).map((s) => Number(s.value)).filter((v) => Number.isFinite(v)) : [];
+        metrics['ai-agent'] = { ...metrics['ai-agent'], rate: total, errorRate: bad, p95: p95s.length > 0 ? Math.max(...p95s) : undefined };
       }
 
       const infraUp: Record<string, boolean> = {};

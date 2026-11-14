@@ -327,7 +327,7 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 		{"GET", "/ops/incidents"}, {"GET", "/ops/incidents/1"}, {"POST", "/ops/incidents/1/investigate"}, {"GET", "/ops/audit"},
 		{"GET", "/ops/actions"}, {"GET", "/ops/proposals"}, {"POST", "/ops/proposals"}, {"GET", "/ops/proposals/1"},
 		{"POST", "/ops/proposals/1/review"}, {"POST", "/ops/proposals/1/decision"},
-		{"POST", "/ops/proposals/1/execute"}, {"POST", "/ops/proposals/1/executed"}, {"GET", "/ops/queries"}, {"GET", "/ops/queries/service_up"}, {"POST", "/ops/queries/service_up"}, {"GET", "/ops/outbox/order-service/dead"}, {"POST", "/ops/queries/gateway_latency_p95"},
+		{"POST", "/ops/proposals/1/execute"}, {"POST", "/ops/proposals/1/executed"}, {"GET", "/ops/queries"}, {"GET", "/ops/queries/service_up"}, {"POST", "/ops/queries/service_up"}, {"GET", "/ops/outbox/order-service/dead"}, {"GET", "/ops/playbooks"}, {"GET", "/ops/playbooks/outbox-stuck"}, {"POST", "/ops/queries/gateway_latency_p95"},
 	} {
 		if w := request(e, route.method, route.path, ""); w.Code != http.StatusUnauthorized {
 			t.Errorf("%s %s anonymous: %d, want 401", route.method, route.path, w.Code)

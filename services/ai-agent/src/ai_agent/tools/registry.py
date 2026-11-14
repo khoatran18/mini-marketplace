@@ -9,6 +9,7 @@ from typing import Any
 
 from langchain_core.tools import StructuredTool
 
+from ai_agent import metrics
 from ai_agent.config.logging import get_logger
 from ai_agent.runtime import events
 from ai_agent.runtime.context import current_run
@@ -42,10 +43,12 @@ def make_tool(spec: ToolSpec, gateway: GatewayClient, *, tool_timeout: float, ma
             ctx.cards.append(views.card_ref(spec, kwargs))
             await ctx.events.put(events.make(events.CITATION, ctx.run_id, tool=spec.name, label=events.source_label(spec.name)))
             await ctx.events.put(events.make(events.TOOL_RESULT, ctx.run_id, tool=spec.name, ok=True))
+            metrics.TOOL_CALLS.labels(spec.name, "ok").inc()
             logger.info("tool ok", extra={"tool": spec.name})
             return views.model_view(spec, raw, max_chars, max_items, reveal_route)
 
         msg = err.message if isinstance(err, GatewayError) else str(err)
+        metrics.TOOL_CALLS.labels(spec.name, "error").inc()
         logger.warning("tool failed", extra={"tool": spec.name, "status": getattr(err, "status", None)})
         await ctx.events.put(events.make(events.TOOL_RESULT, ctx.run_id, tool=spec.name, ok=False))
         if isinstance(err, GatewayError) and err.fatal:

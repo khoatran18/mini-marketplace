@@ -3,7 +3,9 @@ package api
 import (
 	"net/http"
 	"net/http/httptest"
+	"ops-service/internal/playbooks"
 	"ops-service/internal/queries"
+	"strings"
 	"testing"
 )
 
@@ -118,5 +120,32 @@ func TestAgentActorIsForcedAndIgnoresHeader(t *testing.T) {
 		if got != c.want {
 			t.Errorf("token %s header %q: actor %q, muốn %q", c.token, c.header, got, c.want)
 		}
+	}
+}
+
+func TestPlaybooksEndpoints(t *testing.T) {
+	lib, err := playbooks.Load("../../../../docs/playbooks")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := (&API{Token: "t", AgentToken: "agent", Playbooks: lib}).Handler()
+	if w := do(h, "GET", "/playbooks", ""); w.Code != 401 {
+		t.Fatalf("playbooks không token: %d", w.Code)
+	}
+	w := do(h, "GET", "/playbooks?alert=OutboxDeadRows", "Bearer agent") // token phạm vi agent đọc được
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "outbox-stuck") || strings.Contains(w.Body.String(), "service-unavailable") {
+		t.Fatalf("lọc theo alert: %d %s", w.Code, w.Body.String())
+	}
+	w = do(h, "GET", "/playbooks/outbox-stuck", "Bearer agent")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "poison-row") || strings.Contains(w.Body.String(), "ground_truth") {
+		t.Fatalf("get: %d %s", w.Code, w.Body.String())
+	}
+	for path, want := range map[string]int{"/playbooks/nope": 404, "/playbooks/..%2Fetc": 400, "/playbooks/Bad_ID": 400} {
+		if w := do(h, "GET", path, "Bearer agent"); w.Code != want {
+			t.Errorf("%s: %d want %d", path, w.Code, want)
+		}
+	}
+	if w := do((&API{Token: "t"}).Handler(), "GET", "/playbooks", "Bearer t"); w.Code != 200 || !strings.Contains(w.Body.String(), `"playbooks":[]`) {
+		t.Fatalf("thiếu thư viện = danh sách rỗng: %d %s", w.Code, w.Body.String())
 	}
 }

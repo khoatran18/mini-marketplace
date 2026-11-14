@@ -10,6 +10,12 @@ export function nodeStatus(node: TopoNode, data: Snapshot): NodeStatus {
     const health = data.health[node.id];
     return health ? health.status : 'unknown';
   }
+  if (node.id === 'frontend') {
+    // no probe of its own: judged by what Traefik measured (served traffic with many 5xx = degraded)
+    const f = data.metrics.frontend;
+    if (!f || f.rate === undefined) return 'unknown';
+    return f.rate > 0 && (f.errorRate ?? 0) / f.rate > 0.05 ? 'degraded' : 'ready';
+  }
   const key = node.job ?? (node.id === 'prometheus' ? 'prometheus' : undefined);
   if (key && key in data.infraUp) return data.infraUp[key] ? 'ready' : 'not_ready';
   return 'unknown';

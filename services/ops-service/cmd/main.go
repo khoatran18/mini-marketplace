@@ -21,6 +21,7 @@ import (
 	"ops-service/internal/executor"
 	"ops-service/internal/migrate"
 	"ops-service/internal/notify"
+	"ops-service/internal/playbooks"
 	"ops-service/internal/poller"
 	"ops-service/internal/queries"
 	"ops-service/internal/store"
@@ -94,6 +95,7 @@ func main() {
 		ExecLimits:     store.ExecLimits{MaxPerHour: envInt("OPS_MAX_EXEC_PER_HOUR", 5), Cooldown: envMinutes("OPS_EXEC_COOLDOWN_MIN", 5), Window: envMinutes("OPS_EXEC_WINDOW_MIN", 60)},
 		Runner:         execHTTP,
 		Outbox:         execHTTP,
+		Playbooks:      loadPlaybooks(logger),
 		Queries:        &queries.Runner{PrometheusURL: promURL, LokiURL: env("LOKI_URL", "http://loki:3100")}}).Handler()
 	// đề xuất PENDING quá hạn chuyển EXPIRED (mỗi phút)
 	// lần thực thi EXECUTING bị bỏ dở (tiến trình chết) -> FAILED, không tự chạy lại
@@ -158,4 +160,21 @@ func main() {
 	if err := adm.ServeHTTPMain(srv); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
+}
+
+// loadPlaybooks nạp docs/playbooks đã COPY vào image (PLAYBOOK_DIR). Lỗi (thiếu hoặc sai lược đồ) chỉ cảnh báo: cả ops-service
+// không được chết vì tài liệu, nhưng agent sẽ thấy danh sách rỗng.
+func loadPlaybooks(logger *zap.Logger) *playbooks.Library {
+	dir := env("PLAYBOOK_DIR", "/app/playbooks")
+	lib, err := playbooks.Load(dir)
+	if err != nil {
+		logger.Warn("playbooks: không nạp được, GET /playbooks sẽ trả rỗng", zap.String("dir", dir), zap.Error(err))
+		return nil
+	}
+	if n := len(lib.List("")); n == 0 {
+		logger.Warn("playbooks: thư mục rỗng hoặc không tồn tại", zap.String("dir", dir))
+	} else {
+		logger.Info("playbooks loaded", zap.Int("count", n))
+	}
+	return lib
 }

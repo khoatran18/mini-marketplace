@@ -77,6 +77,7 @@ export function SystemHealthClient() {
                 <i className="inline-block h-0.5 w-5 bg-success" /> bình thường
                 <i className="inline-block h-0.5 w-5 bg-warning" /> chậm
                 <i className="inline-block h-0.5 w-5 bg-danger" /> lỗi
+                <i className="inline-block h-0.5 w-5 bg-muted/50" /> không có lưu lượng (5 phút qua)
               </span>
             </div>
             <SystemMap data={data} layers={layers} selectedId={selected} onSelect={setSelected} />

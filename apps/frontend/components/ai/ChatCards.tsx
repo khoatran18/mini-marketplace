@@ -11,7 +11,7 @@ const TITLES: Record<string, string> = {
   analytics_top_products: 'Sản phẩm bán chạy', analytics_funnel: 'Phễu bán hàng', analytics_low_stock: 'Tồn kho thấp',
   admin_list_orders: 'Đơn hàng toàn sàn', admin_get_order: 'Chi tiết đơn hàng', admin_list_payments: 'Thanh toán', admin_get_payment: 'Chi tiết thanh toán',
   admin_list_categories: 'Danh mục', ops_list_incidents: 'Sự cố', ops_get_incident: 'Chi tiết sự cố', ops_list_audit: 'Nhật ký kiểm toán', ops_outbox_dead: 'Sự kiện outbox lỗi',
-  ops_list_proposals: 'Đề xuất vận hành', ops_get_proposal: 'Chi tiết đề xuất vận hành', ops_metrics_query: 'Số liệu hệ thống', ops_system_health: 'Sức khoẻ hệ thống', data_health: 'Luồng dữ liệu'
+  ops_list_proposals: 'Đề xuất vận hành', ops_get_proposal: 'Chi tiết đề xuất vận hành', ops_list_playbooks: 'Playbook sự cố', ops_get_playbook: 'Playbook sự cố', ops_metrics_query: 'Số liệu hệ thống', ops_system_health: 'Sức khoẻ hệ thống', data_health: 'Luồng dữ liệu'
 };
 
 const titleOf = (tool: string) => TITLES[tool] ?? (tool.startsWith('admin_analytics_') ? 'Báo cáo toàn sàn' : 'Dữ liệu');

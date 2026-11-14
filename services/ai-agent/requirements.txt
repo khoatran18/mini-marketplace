@@ -13,4 +13,5 @@ PyYAML==6.0.3
 python-dotenv==1.2.4
 fastapi~=0.115
 uvicorn[standard]~=0.34
+prometheus-client==0.26.0   # GET /metrics (xem src/ai_agent/metrics.py)
 asyncpg~=0.32           # kho lịch sử chat trong Postgres (store.backend: postgres)

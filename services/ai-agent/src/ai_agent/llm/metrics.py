@@ -8,6 +8,7 @@ from typing import Any
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.language_models.chat_models import BaseChatModel
 
+from ai_agent import metrics as _prom
 from ai_agent.config.logging import get_logger
 
 logger = get_logger("ai_agent.llm.metrics")
@@ -36,6 +37,8 @@ class LLMMetrics(BaseCallbackHandler):
             usage = dict(getattr(msg, "usage_metadata", None) or {})
         except (IndexError, AttributeError):
             pass
+        if t0:
+            _prom.LLM_SECONDS.labels(self.profile).observe(time.monotonic() - t0)
         logger.info("llm call", extra={
             "profile": self.profile, "e2e_ms": round((time.monotonic() - t0) * 1000) if t0 else None,
             "ttft_ms": round((first - t0) * 1000) if (t0 and first) else None,
@@ -45,6 +48,7 @@ class LLMMetrics(BaseCallbackHandler):
     def on_llm_error(self, error, *, run_id, **kwargs) -> None:
         self._start.pop(run_id, None)
         self._first.pop(run_id, None)
+        _prom.LLM_ERRORS.labels(self.profile).inc()
         logger.warning("llm error", extra={"profile": self.profile, "error": type(error).__name__})
 
 

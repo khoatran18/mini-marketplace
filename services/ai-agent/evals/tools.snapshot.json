@@ -1,0 +1,2414 @@
+{
+ "actions": {
+  "admin": [
+   {
+    "name": "cancel_order",
+    "method": "POST",
+    "path": "/admin/orders/:id/cancel",
+    "description": "Cancel any order.",
+    "summary": "Huỷ đơn #{id} (quản trị)",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "order id"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "description": "reason given by the user, in their own words (max 300 characters)"
+     }
+    ]
+   },
+   {
+    "name": "refund_payment",
+    "method": "POST",
+    "path": "/admin/payments/:id/refund",
+    "description": "Refund part or all of a payment; amount_minor is in 1/100 VND.",
+    "summary": "Hoàn {amount_minor} (đơn vị nhỏ nhất) cho thanh toán #{id}",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "payment id"
+     },
+     {
+      "name": "amount_minor",
+      "in": "body",
+      "type": "integer",
+      "required": true,
+      "description": "positive amount in 1/100 VND"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "description": "reason given by the user, in their own words (max 300 characters)"
+     }
+    ]
+   }
+  ],
+  "buyer": [
+   {
+    "name": "cancel_order",
+    "method": "POST",
+    "path": "/orders/:id/cancel",
+    "description": "Cancel one of the user's own orders (only while it is not shipped yet).",
+    "summary": "Huỷ đơn hàng #{id}",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "order id"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "description": "reason given by the user, in their own words (max 300 characters)"
+     }
+    ]
+   },
+   {
+    "name": "request_return",
+    "method": "POST",
+    "path": "/orders/:id/return",
+    "description": "Ask to return a delivered order inside the return window.",
+    "summary": "Yêu cầu trả hàng cho đơn #{id}",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "order id"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "required": true,
+      "description": "reason given by the user, in their own words (max 300 characters); ask the user if missing"
+     }
+    ]
+   }
+  ],
+  "seller_admin": [
+   {
+    "name": "cancel_order",
+    "method": "POST",
+    "path": "/seller/orders/:id/cancel",
+    "description": "Cancel one of the store's orders.",
+    "summary": "Huỷ đơn #{id} của shop",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "order id"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "description": "reason given by the user, in their own words (max 300 characters)"
+     }
+    ]
+   },
+   {
+    "name": "approve_return",
+    "method": "POST",
+    "path": "/seller/orders/:id/return/approve",
+    "description": "Approve a buyer's return request for one of the store's orders.",
+    "summary": "Duyệt trả hàng cho đơn #{id} (hoàn tiền cho người mua)",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "order id"
+     }
+    ]
+   },
+   {
+    "name": "reject_return",
+    "method": "POST",
+    "path": "/seller/orders/:id/return/reject",
+    "description": "Reject a buyer's return request.",
+    "summary": "Từ chối trả hàng cho đơn #{id}",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "order id"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "required": true,
+      "description": "reason given by the user, in their own words (max 300 characters); ask the user if missing"
+     }
+    ]
+   },
+   {
+    "name": "adjust_inventory",
+    "method": "POST",
+    "path": "/seller/products/:id/inventory/adjust",
+    "description": "Manual stock correction of one of the store's products; delta is a signed whole number (+5 adds, -2 removes).",
+    "summary": "Điều chỉnh tồn kho sản phẩm #{id}: {delta}",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "product id"
+     },
+     {
+      "name": "delta",
+      "in": "body",
+      "type": "integer",
+      "required": true,
+      "description": "signed change in units, not zero"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "required": true,
+      "description": "reason given by the user, in their own words (max 300 characters); ask the user if missing"
+     }
+    ]
+   }
+  ],
+  "seller_employee": [
+   {
+    "name": "cancel_order",
+    "method": "POST",
+    "path": "/seller/orders/:id/cancel",
+    "description": "Cancel one of the store's orders.",
+    "summary": "Huỷ đơn #{id} của shop",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "order id"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "description": "reason given by the user, in their own words (max 300 characters)"
+     }
+    ]
+   },
+   {
+    "name": "approve_return",
+    "method": "POST",
+    "path": "/seller/orders/:id/return/approve",
+    "description": "Approve a buyer's return request for one of the store's orders.",
+    "summary": "Duyệt trả hàng cho đơn #{id} (hoàn tiền cho người mua)",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "order id"
+     }
+    ]
+   },
+   {
+    "name": "reject_return",
+    "method": "POST",
+    "path": "/seller/orders/:id/return/reject",
+    "description": "Reject a buyer's return request.",
+    "summary": "Từ chối trả hàng cho đơn #{id}",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "order id"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "required": true,
+      "description": "reason given by the user, in their own words (max 300 characters); ask the user if missing"
+     }
+    ]
+   },
+   {
+    "name": "adjust_inventory",
+    "method": "POST",
+    "path": "/seller/products/:id/inventory/adjust",
+    "description": "Manual stock correction of one of the store's products; delta is a signed whole number (+5 adds, -2 removes).",
+    "summary": "Điều chỉnh tồn kho sản phẩm #{id}: {delta}",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true,
+      "description": "product id"
+     },
+     {
+      "name": "delta",
+      "in": "body",
+      "type": "integer",
+      "required": true,
+      "description": "signed change in units, not zero"
+     },
+     {
+      "name": "reason",
+      "in": "body",
+      "type": "string",
+      "required": true,
+      "description": "reason given by the user, in their own words (max 300 characters); ask the user if missing"
+     }
+    ]
+   }
+  ]
+ },
+ "scopes": {
+  "admin": [
+   {
+    "name": "admin_list_orders",
+    "method": "GET",
+    "path": "/admin/orders",
+    "description": "Orders of every store, newest first by default. Filter instead of paging: status, payment method/status, date range, total range, one store, sort. The result's total says how many orders match.",
+    "params": [
+     {
+      "name": "status",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "PENDING",
+       "AWAITING_PAYMENT",
+       "CONFIRMED",
+       "PAID",
+       "SHIPPED",
+       "DELIVERED",
+       "REFUND_REQUESTED",
+       "REFUNDED",
+       "CANCELED",
+       "EXPIRED",
+       "FAILED"
+      ]
+     },
+     {
+      "name": "payment_method",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "COD",
+       "MOCK_CARD",
+       "MOCK_WALLET",
+       "MOCK_BANK_TRANSFER"
+      ]
+     },
+     {
+      "name": "payment_status",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "UNPAID",
+       "PAID",
+       "REFUNDED"
+      ]
+     },
+     {
+      "name": "created_from",
+      "in": "query",
+      "type": "string",
+      "description": "orders created on or after this day, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339"
+     },
+     {
+      "name": "created_to",
+      "in": "query",
+      "type": "string",
+      "description": "orders created up to and including this day, YYYY-MM-DD or RFC3339"
+     },
+     {
+      "name": "min_total",
+      "in": "query",
+      "type": "number",
+      "description": "order total at least this, in VND"
+     },
+     {
+      "name": "max_total",
+      "in": "query",
+      "type": "number",
+      "description": "order total at most this, in VND"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "description": "default newest; total_desc = biggest orders first",
+      "enum": [
+       "newest",
+       "oldest",
+       "total_desc",
+       "total_asc"
+      ]
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer",
+      "description": "default 20, max 100; use 5 for top-N questions"
+     },
+     {
+      "name": "store_id",
+      "in": "query",
+      "type": "integer",
+      "description": "only this store's orders"
+     }
+    ]
+   },
+   {
+    "name": "admin_get_order",
+    "method": "GET",
+    "path": "/admin/orders/:id",
+    "description": "One order of any store.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "admin_list_payments",
+    "method": "GET",
+    "path": "/admin/payments",
+    "description": "Payments (simulated), newest first by default. Filter instead of paging: status, method, date range, amount range, sort. The result's total says how many payments match.",
+    "params": [
+     {
+      "name": "status",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "REQUIRES_ACTION",
+       "PROCESSING",
+       "SUCCEEDED",
+       "FAILED",
+       "CANCELED",
+       "EXPIRED",
+       "PARTIALLY_REFUNDED",
+       "REFUNDED"
+      ]
+     },
+     {
+      "name": "method",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "MOCK_CARD",
+       "MOCK_WALLET",
+       "MOCK_BANK_TRANSFER"
+      ]
+     },
+     {
+      "name": "created_from",
+      "in": "query",
+      "type": "string",
+      "description": "created on or after this day, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339"
+     },
+     {
+      "name": "created_to",
+      "in": "query",
+      "type": "string",
+      "description": "created up to and including this day, YYYY-MM-DD or RFC3339"
+     },
+     {
+      "name": "min_amount",
+      "in": "query",
+      "type": "number",
+      "description": "amount at least this, in VND"
+     },
+     {
+      "name": "max_amount",
+      "in": "query",
+      "type": "number",
+      "description": "amount at most this, in VND"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "newest",
+       "oldest",
+       "amount_desc",
+       "amount_asc"
+      ]
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer",
+      "description": "default 20, max 100; use 5 for top-N questions"
+     }
+    ]
+   },
+   {
+    "name": "admin_get_payment",
+    "method": "GET",
+    "path": "/admin/payments/:id",
+    "description": "One payment with its attempts and refunds.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "admin_list_categories",
+    "method": "GET",
+    "path": "/admin/categories",
+    "description": "All categories, including inactive ones."
+   },
+   {
+    "name": "admin_analytics_summary",
+    "method": "GET",
+    "path": "/admin/analytics/summary",
+    "description": "Platform KPIs for a period. Includes as_of and source.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "admin_analytics_timeseries",
+    "method": "GET",
+    "path": "/admin/analytics/timeseries",
+    "description": "Platform revenue/orders over time.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "admin_analytics_top_products",
+    "method": "GET",
+    "path": "/admin/analytics/top-products",
+    "description": "Products across the platform ranked by revenue (default), units, views, conversion, or viewed_unsold (many views, no sale).",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "description": "ranking; default revenue",
+      "enum": [
+       "revenue",
+       "units",
+       "views",
+       "conversion",
+       "viewed_unsold"
+      ]
+     }
+    ]
+   },
+   {
+    "name": "admin_analytics_funnel",
+    "method": "GET",
+    "path": "/admin/analytics/funnel",
+    "description": "View -\u003e cart -\u003e order funnel.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "admin_analytics_low_stock",
+    "method": "GET",
+    "path": "/admin/analytics/low-stock",
+    "description": "Low-stock report across stores.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "admin_analytics_traffic",
+    "method": "GET",
+    "path": "/admin/analytics/traffic",
+    "description": "Visits and sources.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "admin_analytics_payments",
+    "method": "GET",
+    "path": "/admin/analytics/payments",
+    "description": "Payment success/failure by method.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "admin_analytics_search_terms",
+    "method": "GET",
+    "path": "/admin/analytics/search-terms",
+    "description": "Most searched terms and those with no result.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "ops_list_incidents",
+    "method": "GET",
+    "path": "/ops/incidents",
+    "description": "Incidents raised from alerts, newest first.",
+    "params": [
+     {
+      "name": "state",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "open",
+       "investigating",
+       "resolved"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer",
+      "description": "max rows"
+     }
+    ]
+   },
+   {
+    "name": "ops_get_incident",
+    "method": "GET",
+    "path": "/ops/incidents/:id",
+    "description": "One incident with its runbook and suggested action.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "ops_list_audit",
+    "method": "GET",
+    "path": "/ops/audit",
+    "description": "Append-only audit log of ops decisions. subject_type and subject_id go together.",
+    "params": [
+     {
+      "name": "subject_type",
+      "in": "query",
+      "type": "string"
+     },
+     {
+      "name": "subject_id",
+      "in": "query",
+      "type": "string"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer",
+      "description": "max rows"
+     }
+    ]
+   },
+   {
+    "name": "ops_outbox_dead",
+    "method": "GET",
+    "path": "/ops/outbox/:service/dead",
+    "description": "Outbox events that failed for good in one service (order, product or payment).",
+    "params": [
+     {
+      "name": "service",
+      "in": "path",
+      "type": "string",
+      "required": true,
+      "description": "service name, e.g. order-service"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer",
+      "description": "max rows"
+     }
+    ]
+   },
+   {
+    "name": "ops_list_proposals",
+    "method": "GET",
+    "path": "/ops/proposals",
+    "description": "Ops proposals (actions waiting for a human review/approval, or already decided). Read only: nobody can approve or run one through the agent.",
+    "params": [
+     {
+      "name": "state",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "pending",
+       "accepted",
+       "rejected",
+       "needs_review",
+       "alternative",
+       "expired"
+      ]
+     },
+     {
+      "name": "incident_id",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer",
+      "description": "max rows"
+     }
+    ]
+   },
+   {
+    "name": "ops_get_proposal",
+    "method": "GET",
+    "path": "/ops/proposals/:id",
+    "description": "One ops proposal with its reasoning, review notes and decision.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "ops_metrics_query",
+    "method": "GET",
+    "path": "/ops/queries/:name",
+    "description": "Run one named metrics/log lookup (Prometheus, Loki). Latency: gateway_latency_p95 (per route), grpc_latency_p95 (per service) - use these for 'which service is slowest'. Errors: gateway_5xx_ratio, grpc_error_rate, logs_errors(service). Load: gateway_request_rate, grpc_request_rate. State: alerts_firing, service_up/service_ready(service), service_replicas(_up), circuit_state, infra_up. Data flow: outbox_pending, outbox_oldest_age, outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id). Frontend (measured at Traefik): frontend_request_rate, frontend_5xx_ratio, frontend_latency_p95. The AI assistant itself: ai_runs_rate, ai_tokens_rate, ai_tool_errors, ai_llm_latency_p95, ai_rejected.",
+    "params": [
+     {
+      "name": "name",
+      "in": "path",
+      "type": "string",
+      "required": true,
+      "description": "which named query to run",
+      "enum": [
+       "alerts_firing",
+       "service_up",
+       "service_ready",
+       "service_replicas",
+       "service_replicas_up",
+       "gateway_request_rate",
+       "grpc_request_rate",
+       "grpc_error_rate",
+       "circuit_state",
+       "outbox_pending",
+       "outbox_oldest_age",
+       "outbox_dead",
+       "gateway_5xx_ratio",
+       "dlq_increase",
+       "memory_ratio",
+       "kafka_consumer_lag",
+       "gateway_latency_p95",
+       "grpc_latency_p95",
+       "db_pool_wait",
+       "disk_free_ratio",
+       "memory_growth",
+       "infra_up",
+       "logs_errors",
+       "logs_by_request",
+       "frontend_request_rate",
+       "frontend_5xx_ratio",
+       "frontend_latency_p95",
+       "ai_runs_rate",
+       "ai_tokens_rate",
+       "ai_tool_errors",
+       "ai_llm_latency_p95",
+       "ai_rejected"
+      ]
+     },
+     {
+      "name": "service",
+      "in": "query",
+      "type": "string",
+      "description": "needed by service_up, service_ready, logs_errors",
+      "enum": [
+       "api-gateway",
+       "auth-service",
+       "user-service",
+       "product-service",
+       "order-service",
+       "payment-service",
+       "analytics-service",
+       "ops-service"
+      ]
+     },
+     {
+      "name": "window",
+      "in": "query",
+      "type": "string",
+      "description": "look-back window; each query has its own default",
+      "enum": [
+       "5m",
+       "15m",
+       "1h"
+      ]
+     },
+     {
+      "name": "request_id",
+      "in": "query",
+      "type": "string",
+      "description": "only for logs_by_request: the X-Request-ID to follow across services"
+     }
+    ]
+   },
+   {
+    "name": "ops_list_playbooks",
+    "method": "GET",
+    "path": "/ops/playbooks",
+    "description": "Incident playbooks (ground truth): which alerts each covers. Pass alert=\u003cAlertName\u003e to find the playbook of a firing alert. Read the playbook BEFORE proposing a cause.",
+    "params": [
+     {
+      "name": "alert",
+      "in": "query",
+      "type": "string",
+      "description": "alert name, e.g. OutboxDeadRows (from alerts_firing or an incident)"
+     }
+    ]
+   },
+   {
+    "name": "ops_get_playbook",
+    "method": "GET",
+    "path": "/ops/playbooks/:id",
+    "description": "One playbook: diagnose steps (read-only queries to run with ops_metrics_query), causes with the evidence that points to each, and the safe actions with their risk level. The actions are for the human to carry out; you cannot run them.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "string",
+      "required": true,
+      "description": "playbook id from ops_list_playbooks, e.g. outbox-stuck"
+     }
+    ]
+   },
+   {
+    "name": "ops_system_health",
+    "method": "GET",
+    "path": "/ops/system/health",
+    "description": "Live health of every service."
+   },
+   {
+    "name": "data_health",
+    "method": "GET",
+    "path": "/admin/analytics/data-health",
+    "description": "Analytics pipeline lag and reconcile state (not business figures)."
+   }
+  ],
+  "buyer": [
+   {
+    "name": "search_products",
+    "method": "GET",
+    "path": "/search",
+    "description": "Search active products by keyword, optionally by category.",
+    "params": [
+     {
+      "name": "q",
+      "in": "query",
+      "type": "string",
+      "description": "keywords"
+     },
+     {
+      "name": "category_id",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "price_min",
+      "in": "query",
+      "type": "number"
+     },
+     {
+      "name": "price_max",
+      "in": "query",
+      "type": "number"
+     },
+     {
+      "name": "brand",
+      "in": "query",
+      "type": "string"
+     },
+     {
+      "name": "in_stock",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "true",
+       "false"
+      ]
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "relevance",
+       "price_asc",
+       "price_desc",
+       "newest",
+       "best_selling"
+      ]
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer",
+      "description": "max 50"
+     }
+    ]
+   },
+   {
+    "name": "get_product",
+    "method": "GET",
+    "path": "/products/:id",
+    "description": "Details of one product.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "get_product_stock",
+    "method": "GET",
+    "path": "/products/:id/stock",
+    "description": "Available quantity of one product.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "list_categories",
+    "method": "GET",
+    "path": "/categories",
+    "description": "Product categories."
+   },
+   {
+    "name": "get_cart",
+    "method": "GET",
+    "path": "/cart",
+    "description": "The user's own cart with totals."
+   },
+   {
+    "name": "list_my_orders",
+    "method": "GET",
+    "path": "/orders",
+    "description": "The user's own orders, newest first by default. Filter instead of paging: status, payment method/status, date range, total range, sort. The result's total says how many orders match.",
+    "params": [
+     {
+      "name": "status",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "PENDING",
+       "AWAITING_PAYMENT",
+       "CONFIRMED",
+       "PAID",
+       "SHIPPED",
+       "DELIVERED",
+       "REFUND_REQUESTED",
+       "REFUNDED",
+       "CANCELED",
+       "EXPIRED",
+       "FAILED"
+      ]
+     },
+     {
+      "name": "payment_method",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "COD",
+       "MOCK_CARD",
+       "MOCK_WALLET",
+       "MOCK_BANK_TRANSFER"
+      ]
+     },
+     {
+      "name": "payment_status",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "UNPAID",
+       "PAID",
+       "REFUNDED"
+      ]
+     },
+     {
+      "name": "created_from",
+      "in": "query",
+      "type": "string",
+      "description": "orders created on or after this day, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339"
+     },
+     {
+      "name": "created_to",
+      "in": "query",
+      "type": "string",
+      "description": "orders created up to and including this day, YYYY-MM-DD or RFC3339"
+     },
+     {
+      "name": "min_total",
+      "in": "query",
+      "type": "number",
+      "description": "order total at least this, in VND"
+     },
+     {
+      "name": "max_total",
+      "in": "query",
+      "type": "number",
+      "description": "order total at most this, in VND"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "description": "default newest; total_desc = biggest orders first",
+      "enum": [
+       "newest",
+       "oldest",
+       "total_desc",
+       "total_asc"
+      ]
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer",
+      "description": "default 20, max 100; use 5 for top-N questions"
+     }
+    ]
+   },
+   {
+    "name": "count_my_orders",
+    "method": "GET",
+    "path": "/orders/summary",
+    "description": "Number of the user's own orders per status."
+   },
+   {
+    "name": "get_my_order",
+    "method": "GET",
+    "path": "/orders/:id",
+    "description": "One of the user's own orders (the service refuses other people's orders).",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "get_shop_rules",
+    "method": "GET",
+    "path": "/shop/rules",
+    "description": "The order rules in force right now: minutes to pay an online order, days to request a return after delivery, days until a shipped order counts as delivered, shipping fee per store order and the subtotal from which shipping is free (whole VND; 0 = never). Use it for EVERY number about these rules."
+   },
+   {
+    "name": "list_payment_methods",
+    "method": "GET",
+    "path": "/payments/methods",
+    "description": "Payment methods the shop offers (information only)."
+   }
+  ],
+  "operator": [
+   {
+    "name": "ops_list_incidents",
+    "method": "GET",
+    "path": "/ops/incidents",
+    "description": "Incidents raised from alerts, newest first.",
+    "params": [
+     {
+      "name": "state",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "open",
+       "investigating",
+       "resolved"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer",
+      "description": "max rows"
+     }
+    ]
+   },
+   {
+    "name": "ops_get_incident",
+    "method": "GET",
+    "path": "/ops/incidents/:id",
+    "description": "One incident with its runbook and suggested action.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "ops_list_audit",
+    "method": "GET",
+    "path": "/ops/audit",
+    "description": "Append-only audit log of ops decisions. subject_type and subject_id go together.",
+    "params": [
+     {
+      "name": "subject_type",
+      "in": "query",
+      "type": "string"
+     },
+     {
+      "name": "subject_id",
+      "in": "query",
+      "type": "string"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer",
+      "description": "max rows"
+     }
+    ]
+   },
+   {
+    "name": "ops_outbox_dead",
+    "method": "GET",
+    "path": "/ops/outbox/:service/dead",
+    "description": "Outbox events that failed for good in one service (order, product or payment).",
+    "params": [
+     {
+      "name": "service",
+      "in": "path",
+      "type": "string",
+      "required": true,
+      "description": "service name, e.g. order-service"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer",
+      "description": "max rows"
+     }
+    ]
+   },
+   {
+    "name": "ops_list_proposals",
+    "method": "GET",
+    "path": "/ops/proposals",
+    "description": "Ops proposals (actions waiting for a human review/approval, or already decided). Read only: nobody can approve or run one through the agent.",
+    "params": [
+     {
+      "name": "state",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "pending",
+       "accepted",
+       "rejected",
+       "needs_review",
+       "alternative",
+       "expired"
+      ]
+     },
+     {
+      "name": "incident_id",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer",
+      "description": "max rows"
+     }
+    ]
+   },
+   {
+    "name": "ops_get_proposal",
+    "method": "GET",
+    "path": "/ops/proposals/:id",
+    "description": "One ops proposal with its reasoning, review notes and decision.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "ops_metrics_query",
+    "method": "GET",
+    "path": "/ops/queries/:name",
+    "description": "Run one named metrics/log lookup (Prometheus, Loki). Latency: gateway_latency_p95 (per route), grpc_latency_p95 (per service) - use these for 'which service is slowest'. Errors: gateway_5xx_ratio, grpc_error_rate, logs_errors(service). Load: gateway_request_rate, grpc_request_rate. State: alerts_firing, service_up/service_ready(service), service_replicas(_up), circuit_state, infra_up. Data flow: outbox_pending, outbox_oldest_age, outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id). Frontend (measured at Traefik): frontend_request_rate, frontend_5xx_ratio, frontend_latency_p95. The AI assistant itself: ai_runs_rate, ai_tokens_rate, ai_tool_errors, ai_llm_latency_p95, ai_rejected.",
+    "params": [
+     {
+      "name": "name",
+      "in": "path",
+      "type": "string",
+      "required": true,
+      "description": "which named query to run",
+      "enum": [
+       "alerts_firing",
+       "service_up",
+       "service_ready",
+       "service_replicas",
+       "service_replicas_up",
+       "gateway_request_rate",
+       "grpc_request_rate",
+       "grpc_error_rate",
+       "circuit_state",
+       "outbox_pending",
+       "outbox_oldest_age",
+       "outbox_dead",
+       "gateway_5xx_ratio",
+       "dlq_increase",
+       "memory_ratio",
+       "kafka_consumer_lag",
+       "gateway_latency_p95",
+       "grpc_latency_p95",
+       "db_pool_wait",
+       "disk_free_ratio",
+       "memory_growth",
+       "infra_up",
+       "logs_errors",
+       "logs_by_request",
+       "frontend_request_rate",
+       "frontend_5xx_ratio",
+       "frontend_latency_p95",
+       "ai_runs_rate",
+       "ai_tokens_rate",
+       "ai_tool_errors",
+       "ai_llm_latency_p95",
+       "ai_rejected"
+      ]
+     },
+     {
+      "name": "service",
+      "in": "query",
+      "type": "string",
+      "description": "needed by service_up, service_ready, logs_errors",
+      "enum": [
+       "api-gateway",
+       "auth-service",
+       "user-service",
+       "product-service",
+       "order-service",
+       "payment-service",
+       "analytics-service",
+       "ops-service"
+      ]
+     },
+     {
+      "name": "window",
+      "in": "query",
+      "type": "string",
+      "description": "look-back window; each query has its own default",
+      "enum": [
+       "5m",
+       "15m",
+       "1h"
+      ]
+     },
+     {
+      "name": "request_id",
+      "in": "query",
+      "type": "string",
+      "description": "only for logs_by_request: the X-Request-ID to follow across services"
+     }
+    ]
+   },
+   {
+    "name": "ops_list_playbooks",
+    "method": "GET",
+    "path": "/ops/playbooks",
+    "description": "Incident playbooks (ground truth): which alerts each covers. Pass alert=\u003cAlertName\u003e to find the playbook of a firing alert. Read the playbook BEFORE proposing a cause.",
+    "params": [
+     {
+      "name": "alert",
+      "in": "query",
+      "type": "string",
+      "description": "alert name, e.g. OutboxDeadRows (from alerts_firing or an incident)"
+     }
+    ]
+   },
+   {
+    "name": "ops_get_playbook",
+    "method": "GET",
+    "path": "/ops/playbooks/:id",
+    "description": "One playbook: diagnose steps (read-only queries to run with ops_metrics_query), causes with the evidence that points to each, and the safe actions with their risk level. The actions are for the human to carry out; you cannot run them.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "string",
+      "required": true,
+      "description": "playbook id from ops_list_playbooks, e.g. outbox-stuck"
+     }
+    ]
+   },
+   {
+    "name": "ops_system_health",
+    "method": "GET",
+    "path": "/ops/system/health",
+    "description": "Live health of every service."
+   },
+   {
+    "name": "data_health",
+    "method": "GET",
+    "path": "/admin/analytics/data-health",
+    "description": "Analytics pipeline lag and reconcile state (not business figures)."
+   }
+  ],
+  "seller_admin": [
+   {
+    "name": "get_shop_rules",
+    "method": "GET",
+    "path": "/shop/rules",
+    "description": "The order rules in force right now: minutes to pay an online order, days to request a return after delivery, days until a shipped order counts as delivered, shipping fee per store order and the subtotal from which shipping is free (whole VND; 0 = never). Use it for EVERY number about these rules."
+   },
+   {
+    "name": "list_my_products",
+    "method": "GET",
+    "path": "/seller/products",
+    "description": "Products of the seller's own store, every status. For 'most/least stocked', 'best selling', 'newest' or 'cheapest' questions use sort with a small page_size (5) instead of paging through everything; the result's total tells how many products exist.",
+    "params": [
+     {
+      "name": "q",
+      "in": "query",
+      "type": "string"
+     },
+     {
+      "name": "category_id",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "brand",
+      "in": "query",
+      "type": "string"
+     },
+     {
+      "name": "price_min",
+      "in": "query",
+      "type": "number"
+     },
+     {
+      "name": "price_max",
+      "in": "query",
+      "type": "number"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "description": "stock_desc = most available stock first",
+      "enum": [
+       "stock_desc",
+       "stock_asc",
+       "best_selling",
+       "newest",
+       "price_asc",
+       "price_desc"
+      ]
+     },
+     {
+      "name": "in_stock",
+      "in": "query",
+      "type": "string",
+      "description": "only products with stock above 0",
+      "enum": [
+       "true"
+      ]
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer",
+      "description": "default 20, max 50; use 5 for top-N questions"
+     }
+    ]
+   },
+   {
+    "name": "get_product",
+    "method": "GET",
+    "path": "/products/:id",
+    "description": "Details of one product.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "get_inventory_ledger",
+    "method": "GET",
+    "path": "/seller/products/:id/inventory/ledger",
+    "description": "Stock movements of one of the store's products, newest first.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "list_low_stock",
+    "method": "GET",
+    "path": "/seller/inventory/low-stock",
+    "description": "The store's products at or below their low-stock threshold.",
+    "params": [
+     {
+      "name": "threshold",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "list_store_orders",
+    "method": "GET",
+    "path": "/seller/orders",
+    "description": "Orders of the seller's own store, newest first by default. Filter instead of paging: status, payment method/status, date range, total range, sort. The result's total says how many orders match.",
+    "params": [
+     {
+      "name": "status",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "PENDING",
+       "AWAITING_PAYMENT",
+       "CONFIRMED",
+       "PAID",
+       "SHIPPED",
+       "DELIVERED",
+       "REFUND_REQUESTED",
+       "REFUNDED",
+       "CANCELED",
+       "EXPIRED",
+       "FAILED"
+      ]
+     },
+     {
+      "name": "payment_method",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "COD",
+       "MOCK_CARD",
+       "MOCK_WALLET",
+       "MOCK_BANK_TRANSFER"
+      ]
+     },
+     {
+      "name": "payment_status",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "UNPAID",
+       "PAID",
+       "REFUNDED"
+      ]
+     },
+     {
+      "name": "created_from",
+      "in": "query",
+      "type": "string",
+      "description": "orders created on or after this day, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339"
+     },
+     {
+      "name": "created_to",
+      "in": "query",
+      "type": "string",
+      "description": "orders created up to and including this day, YYYY-MM-DD or RFC3339"
+     },
+     {
+      "name": "min_total",
+      "in": "query",
+      "type": "number",
+      "description": "order total at least this, in VND"
+     },
+     {
+      "name": "max_total",
+      "in": "query",
+      "type": "number",
+      "description": "order total at most this, in VND"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "description": "default newest; total_desc = biggest orders first",
+      "enum": [
+       "newest",
+       "oldest",
+       "total_desc",
+       "total_asc"
+      ]
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer",
+      "description": "default 20, max 100; use 5 for top-N questions"
+     }
+    ]
+   },
+   {
+    "name": "count_store_orders",
+    "method": "GET",
+    "path": "/seller/orders/summary",
+    "description": "Number of the store's orders per status."
+   },
+   {
+    "name": "get_store_order",
+    "method": "GET",
+    "path": "/seller/orders/:id",
+    "description": "One order of the store.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "analytics_summary",
+    "method": "GET",
+    "path": "/seller/analytics/summary",
+    "description": "Store KPIs for a period (revenue, orders...). Includes as_of and source.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "analytics_timeseries",
+    "method": "GET",
+    "path": "/seller/analytics/timeseries",
+    "description": "Store revenue/orders over time.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "analytics_top_products",
+    "method": "GET",
+    "path": "/seller/analytics/top-products",
+    "description": "Products of the store ranked by revenue (default), units, views, conversion, or viewed_unsold (many views, no sale).",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "description": "ranking; default revenue",
+      "enum": [
+       "revenue",
+       "units",
+       "views",
+       "conversion",
+       "viewed_unsold"
+      ]
+     }
+    ]
+   },
+   {
+    "name": "analytics_funnel",
+    "method": "GET",
+    "path": "/seller/analytics/funnel",
+    "description": "View -\u003e cart -\u003e order funnel of the store.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "analytics_low_stock",
+    "method": "GET",
+    "path": "/seller/analytics/low-stock",
+    "description": "Low-stock report from analytics (may lag Postgres; prefer list_low_stock for exact stock).",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   }
+  ],
+  "seller_employee": [
+   {
+    "name": "get_shop_rules",
+    "method": "GET",
+    "path": "/shop/rules",
+    "description": "The order rules in force right now: minutes to pay an online order, days to request a return after delivery, days until a shipped order counts as delivered, shipping fee per store order and the subtotal from which shipping is free (whole VND; 0 = never). Use it for EVERY number about these rules."
+   },
+   {
+    "name": "list_my_products",
+    "method": "GET",
+    "path": "/seller/products",
+    "description": "Products of the seller's own store, every status. For 'most/least stocked', 'best selling', 'newest' or 'cheapest' questions use sort with a small page_size (5) instead of paging through everything; the result's total tells how many products exist.",
+    "params": [
+     {
+      "name": "q",
+      "in": "query",
+      "type": "string"
+     },
+     {
+      "name": "category_id",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "brand",
+      "in": "query",
+      "type": "string"
+     },
+     {
+      "name": "price_min",
+      "in": "query",
+      "type": "number"
+     },
+     {
+      "name": "price_max",
+      "in": "query",
+      "type": "number"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "description": "stock_desc = most available stock first",
+      "enum": [
+       "stock_desc",
+       "stock_asc",
+       "best_selling",
+       "newest",
+       "price_asc",
+       "price_desc"
+      ]
+     },
+     {
+      "name": "in_stock",
+      "in": "query",
+      "type": "string",
+      "description": "only products with stock above 0",
+      "enum": [
+       "true"
+      ]
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer",
+      "description": "default 20, max 50; use 5 for top-N questions"
+     }
+    ]
+   },
+   {
+    "name": "get_product",
+    "method": "GET",
+    "path": "/products/:id",
+    "description": "Details of one product.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "get_inventory_ledger",
+    "method": "GET",
+    "path": "/seller/products/:id/inventory/ledger",
+    "description": "Stock movements of one of the store's products, newest first.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "list_low_stock",
+    "method": "GET",
+    "path": "/seller/inventory/low-stock",
+    "description": "The store's products at or below their low-stock threshold.",
+    "params": [
+     {
+      "name": "threshold",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "list_store_orders",
+    "method": "GET",
+    "path": "/seller/orders",
+    "description": "Orders of the seller's own store, newest first by default. Filter instead of paging: status, payment method/status, date range, total range, sort. The result's total says how many orders match.",
+    "params": [
+     {
+      "name": "status",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "PENDING",
+       "AWAITING_PAYMENT",
+       "CONFIRMED",
+       "PAID",
+       "SHIPPED",
+       "DELIVERED",
+       "REFUND_REQUESTED",
+       "REFUNDED",
+       "CANCELED",
+       "EXPIRED",
+       "FAILED"
+      ]
+     },
+     {
+      "name": "payment_method",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "COD",
+       "MOCK_CARD",
+       "MOCK_WALLET",
+       "MOCK_BANK_TRANSFER"
+      ]
+     },
+     {
+      "name": "payment_status",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "UNPAID",
+       "PAID",
+       "REFUNDED"
+      ]
+     },
+     {
+      "name": "created_from",
+      "in": "query",
+      "type": "string",
+      "description": "orders created on or after this day, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339"
+     },
+     {
+      "name": "created_to",
+      "in": "query",
+      "type": "string",
+      "description": "orders created up to and including this day, YYYY-MM-DD or RFC3339"
+     },
+     {
+      "name": "min_total",
+      "in": "query",
+      "type": "number",
+      "description": "order total at least this, in VND"
+     },
+     {
+      "name": "max_total",
+      "in": "query",
+      "type": "number",
+      "description": "order total at most this, in VND"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "description": "default newest; total_desc = biggest orders first",
+      "enum": [
+       "newest",
+       "oldest",
+       "total_desc",
+       "total_asc"
+      ]
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "type": "integer",
+      "description": "default 20, max 100; use 5 for top-N questions"
+     }
+    ]
+   },
+   {
+    "name": "count_store_orders",
+    "method": "GET",
+    "path": "/seller/orders/summary",
+    "description": "Number of the store's orders per status."
+   },
+   {
+    "name": "get_store_order",
+    "method": "GET",
+    "path": "/seller/orders/:id",
+    "description": "One order of the store.",
+    "params": [
+     {
+      "name": "id",
+      "in": "path",
+      "type": "integer",
+      "required": true
+     }
+    ]
+   },
+   {
+    "name": "analytics_summary",
+    "method": "GET",
+    "path": "/seller/analytics/summary",
+    "description": "Store KPIs for a period (revenue, orders...). Includes as_of and source.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "analytics_timeseries",
+    "method": "GET",
+    "path": "/seller/analytics/timeseries",
+    "description": "Store revenue/orders over time.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "analytics_top_products",
+    "method": "GET",
+    "path": "/seller/analytics/top-products",
+    "description": "Products of the store ranked by revenue (default), units, views, conversion, or viewed_unsold (many views, no sale).",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "type": "string",
+      "description": "ranking; default revenue",
+      "enum": [
+       "revenue",
+       "units",
+       "views",
+       "conversion",
+       "viewed_unsold"
+      ]
+     }
+    ]
+   },
+   {
+    "name": "analytics_funnel",
+    "method": "GET",
+    "path": "/seller/analytics/funnel",
+    "description": "View -\u003e cart -\u003e order funnel of the store.",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   },
+   {
+    "name": "analytics_low_stock",
+    "method": "GET",
+    "path": "/seller/analytics/low-stock",
+    "description": "Low-stock report from analytics (may lag Postgres; prefer list_low_stock for exact stock).",
+    "params": [
+     {
+      "name": "from",
+      "in": "query",
+      "type": "string",
+      "description": "start, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "type": "string",
+      "description": "end, RFC3339 or YYYY-MM-DD"
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "type": "string",
+      "enum": [
+       "hour",
+       "day",
+       "week",
+       "month"
+      ]
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "type": "integer"
+     }
+    ]
+   }
+  ]
+ }
+}

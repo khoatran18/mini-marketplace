@@ -94,3 +94,17 @@ async def test_no_daily_limit_configured_means_unlimited():
         for i in range(3):
             r = await cl.post("/chat", json={"message": "đơn của tôi"}, headers=hdr(jti=f"run-bbbb-000{i}"))
             assert r.status_code == 200
+
+
+async def test_metrics_endpoint_counts_runs_and_tools():
+    """/metrics phơi số lượt chat, token và tool; nhãn không chứa user hay nội dung."""
+    from ai_agent import metrics
+    before = metrics.RUNS.labels("buyer", "ok")._value.get()
+    async with client() as c:
+        r = await c.post("/chat", json={"message": "đơn của tôi"}, headers=hdr())
+        assert r.status_code == 200
+        m = await c.get("/metrics")
+    assert m.status_code == 200
+    assert "mm_ai_runs_total" in m.text and "mm_ai_tokens_total" in m.text
+    assert metrics.RUNS.labels("buyer", "ok")._value.get() == before + 1
+    assert "run-0000" not in m.text and "đơn của tôi" not in m.text

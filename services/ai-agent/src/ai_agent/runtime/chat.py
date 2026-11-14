@@ -3,11 +3,13 @@ từ hàm bọc tool), áp timeout cả lượt, và luôn kết thúc bằng `d
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage
 
+from ai_agent import metrics
 from ai_agent.config.logging import get_logger, request_id_var, run_id_var
 from ai_agent.guard.leak import LeakFilter
 from ai_agent.personas.base import Persona
@@ -38,6 +40,7 @@ def _error(ctx: RunContext, code: str, message: str) -> dict[str, Any]:
 async def run_turn(rt: AgentRuntime, store: Store, persona: Persona, ctx: RunContext, turn: Turn, text: str) -> AsyncIterator[dict[str, Any]]:
     limits = rt.cfg.limits
     status, answer, usage = "error", "", PumpResult()
+    started = time.monotonic()
     ctx.conversation_id = turn.conversation_id
     run_tok = set_run(ctx)
     run_id_var.set(ctx.run_id)
@@ -110,6 +113,10 @@ async def run_turn(rt: AgentRuntime, store: Store, persona: Persona, ctx: RunCon
             if not task.done():
                 task.cancel()
             await asyncio.gather(task, return_exceptions=True)  # đợi tác vụ dọn xong (đóng stream mô hình)
+        metrics.RUNS.labels(persona.name, status).inc()
+        metrics.RUN_SECONDS.labels(persona.name).observe(time.monotonic() - started)
+        metrics.TOKENS.labels(persona.name, "input").inc(usage.input_tokens or 0)
+        metrics.TOKENS.labels(persona.name, "output").inc(usage.output_tokens or 0)
         try:
             await asyncio.shield(store.end_turn(turn, status=status, answer=answer, cards=ctx.cards, tool_calls=ctx.tool_calls,
                                                 input_tokens=usage.input_tokens, output_tokens=usage.output_tokens))

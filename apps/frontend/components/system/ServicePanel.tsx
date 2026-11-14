@@ -99,14 +99,22 @@ export function ServicePanel({ id, data, onClose }: { id: string; data: SystemMa
       </div>
       <p className="text-sm text-muted">{node.desc}</p>
 
+      {id === 'frontend' ? (
+        <dl className="grid grid-cols-2 gap-2">
+          <Stat label="Request/giây" value={formatRate(m?.rate)} hint="đo ở Traefik" />
+          <Stat label="Độ trễ p95" value={formatMs(m?.p95)} hint="Traefik, cửa sổ 5 phút" />
+          <Stat label="5xx/giây" value={formatRate(m?.errorRate)} />
+        </dl>
+      ) : null}
+
       {node.app ? (
         <>
           <dl className="grid grid-cols-2 gap-2">
             <Stat label="Replica sẵn sàng" value={m?.replicas !== undefined ? `${m.replicasUp ?? 0}/${m.replicas}` : '–'} hint="số target scrape được / tổng target (Prometheus)" />
             <Stat label="Uptime" value={formatUptime(health?.uptime_s)} />
-            <Stat label={id === 'api-gateway' ? 'Request/giây' : 'Gọi/giây từ gateway'} value={formatRate(m?.rate)} />
-            <Stat label="Độ trễ p95" value={id === 'api-gateway' ? '–' : formatMs(m?.p95)} hint="gRPC gateway → service, cửa sổ 5 phút" />
-            <Stat label="Lỗi/giây" value={id === 'api-gateway' ? '–' : formatRate(m?.errorRate)} />
+            <Stat label={id === 'api-gateway' ? 'Request/giây' : id === 'ai-agent' ? 'Lượt chat/giây' : 'Gọi/giây từ gateway'} value={formatRate(m?.rate)} />
+            <Stat label={id === 'ai-agent' ? 'Gọi mô hình p95' : 'Độ trễ p95'} value={id === 'api-gateway' ? '–' : formatMs(m?.p95)} hint={id === 'ai-agent' ? 'một lần gọi mô hình, cửa sổ 15 phút' : 'gRPC gateway → service, cửa sổ 5 phút'} />
+            <Stat label={id === 'ai-agent' ? 'Lượt lỗi/giây' : 'Lỗi/giây'} value={id === 'api-gateway' ? '–' : formatRate(m?.errorRate)} />
             <Stat label="Ping /ready" value={health ? `${health.latency_ms} ms` : '–'} />
             <Stat label="Phiên bản" value={health?.version ?? '–'} />
           </dl>

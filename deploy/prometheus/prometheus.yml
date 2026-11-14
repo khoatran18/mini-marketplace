@@ -39,6 +39,17 @@ scrape_configs:
         target_label: swarm_service
         replacement: $1
 
+  # ai-agent (Python): GET /metrics on its single HTTP port 8090, reachable only inside the overlay (gateway does not proxy it)
+  - job_name: ai-agent
+    dns_sd_configs:
+      - {names: [tasks.ai-agent], type: A, port: 8090, refresh_interval: 15s}
+    relabel_configs:
+      # same label as job mm-services, so the replica queries of the system map cover the agent too
+      - source_labels: [__meta_dns_name]
+        regex: tasks\.(.*)
+        target_label: swarm_service
+        replacement: $1
+
   - job_name: cadvisor
     dns_sd_configs:
       - {names: [tasks.cadvisor], type: A, port: 8080, refresh_interval: 15s}

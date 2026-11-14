@@ -19,7 +19,7 @@ export interface TopoNode {
   desc: string;
   /** Prometheus `job` label for infrastructure nodes (query `infra_up`). */
   job?: string;
-  /** true for the 8 Go services reported by /ops/system/health and scraped as job mm-services. */
+  /** true for the services reported by /ops/system/health: the 8 Go services (job mm-services) and ai-agent (job ai-agent). */
   app?: boolean;
 }
 
@@ -35,8 +35,9 @@ export interface TopoEdge {
 export const NODES: TopoNode[] = [
   { id: 'browser', label: 'Trình duyệt', kind: 'client', x: 0, y: 270, desc: 'Người dùng cuối. Gọi frontend và gateway qua Traefik.' },
   { id: 'traefik', label: 'traefik', kind: 'edge', x: 230, y: 270, job: 'traefik', desc: 'Reverse proxy / TLS. Định tuyến theo host tới frontend và api-gateway.' },
-  { id: 'frontend', label: 'frontend', kind: 'edge', x: 470, y: 130, desc: 'Next.js. Chỉ nói chuyện với gateway; không có metric riêng.' },
+  { id: 'frontend', label: 'frontend', kind: 'edge', x: 470, y: 130, desc: 'Next.js. Chỉ nói chuyện với gateway. Không có metric riêng: request, 5xx và p95 lấy từ Traefik.' },
   { id: 'api-gateway', label: 'api-gateway', kind: 'gateway', x: 470, y: 360, app: true, desc: 'REST (gin) → gRPC. JWT, RBAC, rate limit, circuit breaker, proxy /ai/chat.' },
+  { id: 'ai-agent', label: 'ai-agent', kind: 'service', x: 740, y: 595, app: true, desc: 'Trợ lý AI (Python). Gateway chuyển /ai/chat tới đây; agent gọi lại gateway bằng token riêng, chỉ đọc hoặc đề xuất. Số liệu: lượt chat, token, độ trễ mô hình.' },
   { id: 'auth-service', label: 'auth-service', kind: 'service', x: 740, y: 0, app: true, desc: 'Tài khoản, mật khẩu, cấp và làm mới JWT.' },
   { id: 'user-service', label: 'user-service', kind: 'service', x: 740, y: 85, app: true, desc: 'Hồ sơ người mua/bán, địa chỉ giao hàng.' },
   { id: 'product-service', label: 'product-service', kind: 'service', x: 740, y: 170, app: true, desc: 'Danh mục, tìm kiếm, tồn kho (available / reserved / sold).' },
@@ -64,6 +65,7 @@ export const EDGES: TopoEdge[] = [
   grpc('order-service'),
   grpc('payment-service'),
   grpc('analytics-service'),
+  { id: 'api-gateway>ai-agent', from: 'api-gateway', to: 'ai-agent', protocol: 'http', layer: 'sync', label: '/ai/chat (SSE)' },
   { id: 'api-gateway>ops-service', from: 'api-gateway', to: 'ops-service', protocol: 'http', layer: 'sync' },
 
   // asynchronous (Kafka, transactional outbox)
@@ -83,6 +85,7 @@ export const EDGES: TopoEdge[] = [
   { id: 'order-service>postgres', from: 'order-service', to: 'postgres', protocol: 'sql', layer: 'data' },
   { id: 'payment-service>postgres', from: 'payment-service', to: 'postgres', protocol: 'sql', layer: 'data' },
   { id: 'ops-service>postgres', from: 'ops-service', to: 'postgres', protocol: 'sql', layer: 'data' },
+  { id: 'ai-agent>postgres', from: 'ai-agent', to: 'postgres', protocol: 'sql', layer: 'data', label: 'ai_*' },
   { id: 'analytics-service>clickhouse', from: 'analytics-service', to: 'clickhouse', protocol: 'sql', layer: 'data' },
   { id: 'ops-service>prometheus', from: 'ops-service', to: 'prometheus', protocol: 'metrics', layer: 'data' },
   { id: 'ops-service>loki', from: 'ops-service', to: 'loki', protocol: 'metrics', layer: 'data' }

@@ -165,6 +165,11 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	for name, url := range envConfig.SystemTargets {
 		systemTargets = append(systemTargets, handler.SystemTarget{Name: name, URL: url})
 	}
+	if envConfig.AIServiceURL != "" { // the agent serves /ready on its single HTTP port, not on :8081
+		if _, ok := envConfig.SystemTargets["ai-agent"]; !ok {
+			systemTargets = append(systemTargets, handler.SystemTarget{Name: "ai-agent", URL: envConfig.AIServiceURL})
+		}
+	}
 	systemHandler := handler.NewSystemHandler(systemTargets, serviceConfig.ZapLogger)
 	adminRoute := router.Group("/admin", authenticated, middleware.AuthorizationMiddleware([]string{"admin"}, serviceConfig.ZapLogger))
 	{
@@ -191,6 +196,8 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		opsAgentRead.GET("/audit", opsHandler.Proxy("/audit"))
 		opsAgentRead.GET("/outbox/:service/dead", opsHandler.Proxy("/outbox/:service/dead"))
 		opsAgentRead.GET("/system/health", systemHandler.Health)
+		opsAgentRead.GET("/playbooks", opsHandler.Proxy("/playbooks"))
+		opsAgentRead.GET("/playbooks/:id", opsHandler.Proxy("/playbooks/:id"))
 		opsAgentRead.GET("/proposals", opsHandler.Proxy("/proposals"))
 		opsAgentRead.GET("/proposals/:id", opsHandler.Proxy("/proposals/:id"))
 		opsAgentRead.GET("/queries/:name", opsHandler.Query())

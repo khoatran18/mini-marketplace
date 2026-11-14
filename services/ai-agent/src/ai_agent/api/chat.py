@@ -9,6 +9,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from ai_agent import metrics
 from ai_agent.api.auth import AuthError, parse_agent_token
 from ai_agent.config.logging import get_logger
 from ai_agent.personas import persona_for_role
@@ -74,6 +75,7 @@ def create_router(rt, store, personas) -> APIRouter:
         if cap:
             used = await store.tokens_used_today(ident.user_id)
             if used >= cap:
+                metrics.REJECTED.labels(persona.name, "daily_token_limit").inc()
                 logger.info("daily token limit reached", extra={"user_id": ident.user_id, "role": ident.role, "used": used, "limit": cap})
                 return _err(429, "Bạn đã dùng hết hạn mức trợ lý hôm nay. Hạn mức làm mới lúc 00:00 (giờ Việt Nam).",
                             code="daily_token_limit", limit=cap, used=used)
