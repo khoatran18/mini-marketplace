@@ -82,7 +82,9 @@ Tài liệu: [../ai/README.md](../ai/README.md), [../dataset/README.md](../datas
 |---|---|
 | Gateway cho agent: token agent (khoá xoay), gói đề xuất ký (8 route), cột `agent_run_id` ở order/payment/product, bảng route đọc cho buyer và seller + `GET /ai/tools`, rate limit AI theo người dùng (fail-closed), không chuyển JWT người dùng sang agent | ✅ có test (2026-11-14) |
 | `services/ai-agent` (config yaml, LLM profile/role/factory, persona buyer + seller, tool từ gateway, `POST /chat` SSE, giới hạn vòng/thời gian/token, kho trong bộ nhớ, Dockerfile, mục trong `deploy/services.yml`) | 🟡 45 test đạt trên Python 3.12 (có `create_agent` thật + FastAPI) và một lượt thật với OpenCode (buyer, seller; gateway giả; stream từng token). Đã có tool đề xuất (huỷ đơn, trả hàng, tồn kho) + thẻ xác nhận ở UI và kho chat Postgres (64 test, Postgres 16 thật). **Chưa thử trên Swarm/trình duyệt**. Xem roadmap §16.5-16.7, ADR-43 |
-| Kho Postgres của agent, `/metrics`, tool đề xuất hành động, bộ câu hỏi vàng (`evals/`), chính sách buyer, persona admin/dev, RCA | ❌ |
+| Kho Postgres của agent, `/metrics`, tool đề xuất hành động, bộ câu hỏi vàng (`evals/`), chính sách buyer, RCA | ❌ |
 
 ## 6. Phiên 2026-10-25
 Chi tiết đã đổi gì, kiểm chứng gì và việc tiếp theo: [02_SESSION_LOG_2026-10-25.md](02_SESSION_LOG_2026-10-25.md).
+
+- Persona admin/dev (chỉ đọc: đơn/thanh toán/báo cáo toàn sàn cho admin; sự cố, audit, outbox, health, đề xuất vận hành, số liệu Prometheus/Loki có tên cho cả hai), chính sách buyer/seller trong `personas/*/policy.md`: đã code và test, chưa chạy thử thật trên Swarm (docs/ai/08 §16.8).
