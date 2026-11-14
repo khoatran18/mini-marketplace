@@ -20,7 +20,7 @@ type SearchParams struct {
 	Brand              string
 	SellerID           uint64
 	InStockOnly        bool
-	Sort               string // relevance | price_asc | price_desc | newest | best_selling
+	Sort               string // relevance | price_asc | price_desc | newest | best_selling | stock_desc | stock_asc
 	Page, PageSize     uint64
 	IncludeAllStatuses bool
 }
@@ -32,6 +32,8 @@ const (
 	SortPriceDesc   = "price_desc"
 	SortNewest      = "newest"
 	SortBestSelling = "best_selling"
+	SortStockDesc   = "stock_desc" // most available stock first (inventory = available quantity)
+	SortStockAsc    = "stock_asc"
 )
 
 // tsQuery turns free text into a prefix tsquery ("áo khoác" -> "ao:* & khoac:*"); only letters and digits survive,
@@ -101,6 +103,10 @@ func (r *ProductRepository) SearchProducts(ctx context.Context, p SearchParams) 
 		q = q.Order("created_at DESC, id DESC")
 	case p.Sort == SortBestSelling:
 		q = q.Order("sold DESC, id ASC")
+	case p.Sort == SortStockDesc:
+		q = q.Order("inventory DESC, id ASC")
+	case p.Sort == SortStockAsc:
+		q = q.Order("inventory ASC, id ASC")
 	case ts != "":
 		// relevance: name matches first, then ts_rank, then best sellers
 		q = q.Order(clause.Expr{SQL: "(mm_unaccent(name) LIKE '%' || mm_unaccent(?) || '%') DESC, ts_rank_cd(to_tsvector('simple', " + searchDocument + "), to_tsquery('simple', mm_unaccent(?))) DESC, sold DESC, id ASC", Vars: []interface{}{strings.TrimSpace(p.Query), ts}})

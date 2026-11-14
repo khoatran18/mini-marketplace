@@ -21,9 +21,14 @@ func (s *ProductService) SearchProducts(ctx context.Context, p repository.Search
 		return nil, 0, status.Error(codes.InvalidArgument, "query is too long")
 	}
 	switch p.Sort {
-	case "", repository.SortRelevance, repository.SortPriceAsc, repository.SortPriceDesc, repository.SortNewest, repository.SortBestSelling:
+	case "", repository.SortRelevance, repository.SortPriceAsc, repository.SortPriceDesc, repository.SortNewest, repository.SortBestSelling,
+		repository.SortStockDesc, repository.SortStockAsc:
 	default:
 		return nil, 0, status.Error(codes.InvalidArgument, "unknown sort")
+	}
+	// Stock is masked ("20+") for everyone but the store's own people; letting a public search rank by it would leak the real order.
+	if (p.Sort == repository.SortStockDesc || p.Sort == repository.SortStockAsc) && !p.IncludeAllStatuses {
+		return nil, 0, status.Error(codes.PermissionDenied, "sorting by stock is only for the store that owns the products")
 	}
 	if p.PriceMax > 0 && p.PriceMin > p.PriceMax {
 		return nil, 0, status.Error(codes.InvalidArgument, "price_min must not be greater than price_max")

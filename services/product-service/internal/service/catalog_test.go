@@ -470,3 +470,31 @@ func TestGetProductByIDNotFoundIsNotFound(t *testing.T) {
 		t.Fatalf("want NotFound, got %v", err)
 	}
 }
+
+func TestSearchSortsByAvailableStock(t *testing.T) {
+	s := testService(t)
+	ctx := context.Background()
+	ao := categoryID(t, s, "ao")
+	create(t, s, dto.CreateProductInput{Name: "Áo ít hàng", Price: 100, SellerID: 1, Inventory: 2, CategoryID: ao})
+	create(t, s, dto.CreateProductInput{Name: "Áo nhiều hàng", Price: 100, SellerID: 1, Inventory: 90, CategoryID: ao})
+	create(t, s, dto.CreateProductInput{Name: "Áo vừa", Price: 100, SellerID: 1, Inventory: 30, CategoryID: ao})
+	create(t, s, dto.CreateProductInput{Name: "Áo của shop khác", Price: 100, SellerID: 2, Inventory: 500, CategoryID: ao})
+
+	if _, _, err := s.SearchProducts(ctx, repository.SearchParams{SellerID: 1, Sort: repository.SortStockDesc}); status.Code(err) != codes.PermissionDenied {
+		t.Errorf("a public search must not rank by the masked stock: %v", err)
+	}
+	got, _, err := s.SearchProducts(ctx, repository.SearchParams{SellerID: 1, Sort: repository.SortStockDesc, PageSize: 2, IncludeAllStatuses: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names(got) != "Áo nhiều hàng|Áo vừa" {
+		t.Errorf("stock_desc, page of 2: %q", names(got))
+	}
+	got, _, err = s.SearchProducts(ctx, repository.SearchParams{SellerID: 1, Sort: repository.SortStockAsc, PageSize: 1, IncludeAllStatuses: true})
+	if err != nil || names(got) != "Áo ít hàng" {
+		t.Errorf("stock_asc: %q err=%v", names(got), err)
+	}
+	if _, _, err := s.SearchProducts(ctx, repository.SearchParams{Sort: "stock_sideways"}); err == nil {
+		t.Error("unknown sort must still be rejected")
+	}
+}
