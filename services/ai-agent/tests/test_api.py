@@ -40,8 +40,8 @@ async def test_health_and_chat_stream():
         assert evs[0][0] == "start" and evs[-1][0] == "done" and "conversation_id" in evs[0][1]
 
 
-@pytest.mark.parametrize("role", ["admin", "dev"])
-async def test_admin_and_dev_personas_are_enabled(role):
+@pytest.mark.parametrize("role", ["admin", "operator"])
+async def test_admin_and_operator_personas_are_enabled(role):
     async with client() as c:
         r = await c.post("/chat", json={"message": "x"}, headers=hdr(role=role))
         assert r.status_code == 200, r.text
@@ -58,3 +58,39 @@ async def test_admin_and_dev_personas_are_enabled(role):
 async def test_chat_rejections(headers, body, status):
     async with client() as c:
         assert (await c.post("/chat", json=body, headers=headers)).status_code == status
+
+
+def _capped(limit, role="buyer"):
+    c = cfg()
+    d = c.to_dict(masked=False)
+    d["limits"]["daily_tokens"] = {role: limit}
+    from ai_agent.config import Config
+
+    cc = Config(d)
+    return cc, create_app(cc, runtime=AgentRuntime(cc, mock_gateway(), agent_builder=fake_builder))
+
+
+async def test_daily_token_limit_blocks_before_the_model_and_only_that_user():
+    cc, app = _capped(50)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://ai") as c:
+        r = await c.post("/chat", json={"message": "đơn của tôi"}, headers=hdr(user_id=42, jti="run-aaaa-0001"))
+        assert r.status_code == 200 and parse(r.text)[-1][0] == "done"        # dưới hạn mức: chạy bình thường
+        used = parse(r.text)[-1][1]["input_tokens"] + parse(r.text)[-1][1]["output_tokens"]
+        assert used >= 50, "lượt mẫu phải vượt hạn mức 50 để test này có nghĩa"
+        r = await c.post("/chat", json={"message": "tiếp"}, headers=hdr(user_id=42, jti="run-aaaa-0002"))
+        assert r.status_code == 429
+        body = r.json()
+        assert body["code"] == "daily_token_limit" and body["limit"] == 50 and body["used"] >= 50 and "hạn mức" in body["error"]
+        r = await c.post("/chat", json={"message": "đơn của tôi"}, headers=hdr(user_id=43, jti="run-aaaa-0003"))
+        assert r.status_code == 200                                              # người dùng khác không bị ảnh hưởng
+        r = await c.post("/chat", json={"message": "tiếp"}, headers=hdr(user_id=42, role="seller_admin", jti="run-aaaa-0004"))
+        assert r.status_code == 200                                              # persona khác không có hạn mức này
+
+
+async def test_no_daily_limit_configured_means_unlimited():
+    c = cfg()
+    app = create_app(c, runtime=AgentRuntime(c, mock_gateway(), agent_builder=fake_builder))
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://ai") as cl:
+        for i in range(3):
+            r = await cl.post("/chat", json={"message": "đơn của tôi"}, headers=hdr(jti=f"run-bbbb-000{i}"))
+            assert r.status_code == 200

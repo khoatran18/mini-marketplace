@@ -129,6 +129,12 @@ class PostgresStore:
             await con.execute("UPDATE ai_conversations SET active_run_id = NULL, active_since = NULL, updated_at = now() "
                               "WHERE id = $1 AND active_run_id = $2", conv_id, turn.run_id)
 
+    async def tokens_used_today(self, user_id: int) -> int:
+        """Token (vào + ra) của người dùng từ 00:00 hôm nay theo giờ nền tảng (Asia/Ho_Chi_Minh). Lượt đang chạy chưa tính."""
+        return int(await self._pool.fetchval(
+            "SELECT COALESCE(SUM(input_tokens + output_tokens), 0) FROM ai_runs WHERE user_id = $1 "
+            "AND started_at >= date_trunc('day', now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh'", user_id))
+
     async def purge(self) -> int:
         """Xoá cuộc chat không hoạt động quá retention_days (kéo theo tin và lượt chạy). Trả số cuộc đã xoá."""
         res = await self._pool.execute("DELETE FROM ai_conversations WHERE updated_at < now() - make_interval(days => $1)", int(self.retention_days))

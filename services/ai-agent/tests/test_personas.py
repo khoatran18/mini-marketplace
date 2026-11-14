@@ -1,4 +1,4 @@
-"""Persona theo role trong token: admin và dev có persona riêng, chỉ đọc; không role nào rơi về persona của role khác."""
+"""Persona theo role trong token: admin và operator có persona riêng, chỉ đọc; không role nào rơi về persona của role khác."""
 from ai_agent.personas import load_personas, persona_for_role
 from ai_agent.runtime import events
 
@@ -7,17 +7,17 @@ from test_chat_flow import collect, make
 
 def test_every_gateway_role_has_exactly_one_persona():
     personas = load_personas()
-    for role, name in {"buyer": "buyer", "seller_admin": "seller", "seller_employee": "seller", "admin": "admin", "dev": "dev"}.items():
+    for role, name in {"buyer": "buyer", "seller_admin": "seller", "seller_employee": "seller", "admin": "admin", "operator": "operator"}.items():
         assert persona_for_role(personas, role).name == name
     assert persona_for_role(personas, "nobody") is None
 
 
-def test_admin_and_dev_prompts_are_read_only_and_dev_has_no_business_data():
+def test_admin_and_operator_prompts_are_read_only_and_operator_has_no_business_data():
     personas = load_personas()
-    for name in ("admin", "dev"):
+    for name in ("admin", "operator"):
         p = personas[name].prompt
         assert "CHỈ ĐỌC" in p and "propose_" not in p and "{policy}" not in p
-    assert "không có dữ liệu kinh doanh" in personas["dev"].prompt
+    assert "không có dữ liệu kinh doanh" in personas["operator"].prompt
 
 
 async def test_admin_turn_runs_with_the_admin_persona():
@@ -58,3 +58,9 @@ def test_every_persona_is_enabled_and_has_an_llm_role_in_every_config():
         for name, persona in load_personas().items():
             assert c.personas.get(name, {}).get("enabled") is True, f"{env}: persona {name} chưa bật trong personas:"
             assert persona.llm_role in c._data["llm"]["roles"], f"{env}: llm.roles thiếu {persona.llm_role}"
+
+
+def test_prompts_tell_agents_to_filter_instead_of_paging():
+    p = load_personas()
+    for name in ("buyer", "seller", "admin"):
+        assert "MỘT lần gọi" in p[name].prompt, name

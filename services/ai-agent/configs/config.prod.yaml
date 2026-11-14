@@ -70,7 +70,7 @@ llm:
     buyer: "opencode_deepseek_flash"
     seller: "opencode_deepseek_flash"
     admin: "opencode_deepseek_flash"
-    dev: "opencode_deepseek_flash"
+    operator: "opencode_deepseek_flash"
     summarizer: "opencode_deepseek_flash"   # chưa dùng
 
 # Giới hạn cứng cho MỘT lượt chat (không phải cả cuộc trò chuyện). Hết giới hạn thì dừng và báo, không âm thầm hạ chất lượng.
@@ -83,12 +83,19 @@ limits:
   max_message_chars: 2000     # độ dài tối đa một tin người dùng
   max_history_messages: 20    # số tin cũ nạp lại cho mô hình
   token_budget_per_turn: 20000  # tổng token (vào + ra) tối đa một lượt; cần usage_metadata từ mô hình
+  # Hạn mức token MỖI NGÀY cho mỗi người dùng, theo persona (vào + ra, ngày tính theo giờ Việt Nam, làm mới 00:00). 0 hoặc thiếu = không giới hạn.
+  # Một lượt tối đa token_budget_per_turn nên hạn mức có thể vượt tối đa một lượt. Hết hạn mức: 429 code=daily_token_limit, không gọi mô hình.
+  daily_tokens:
+    buyer: 150000
+    seller: 200000
+    admin: 400000
+    operator: 400000
 
 personas:
   buyer: {enabled: true}
   seller: {enabled: true}
   admin: {enabled: true}
-  dev: {enabled: true}
+  operator: {enabled: true}
 
 # Kho lịch sử chat (xem store/postgres.py). Bảng ai_* nằm cùng cụm Postgres với các service khác.
 store:

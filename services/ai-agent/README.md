@@ -12,7 +12,7 @@ Tầng agent của Mini Marketplace (Python 3.12, FastAPI, LangChain). Kế ho�
 - Kho lịch sử **trong bộ nhớ** (mất khi restart).
 
 ## Chưa có (làm tiếp)
-Kho Postgres, `/metrics`, tool đề xuất hành động (`/ai/proposals`, bước 5), provider thật đã chạy thử (chưa gọi mô hình thật nào), persona admin/dev, RCA, bộ vàng (`evals/`), tóm tắt lịch sử dài.
+Kho Postgres, `/metrics`, tool đề xuất hành động (`/ai/proposals`, bước 5), provider thật đã chạy thử (chưa gọi mô hình thật nào), persona admin/operator, RCA, bộ vàng (`evals/`), tóm tắt lịch sử dài.
 
 ## Trạng thái kiểm thử
 45 test đạt trên Python 3.12 (có `create_agent` + middleware thật và lớp FastAPI), và một lượt thật với OpenCode (buyer, seller; gateway giả) stream từng token, đếm token đúng. **Python 3.10 không stream token** trong LangGraph async (cần >= 3.11): dùng 3.12. Chưa chạy qua gateway thật trên Swarm. Chi tiết: [docs/ai/08_AGENT_BUILD_ROADMAP.md](../../docs/ai/08_AGENT_BUILD_ROADMAP.md) §16.5.

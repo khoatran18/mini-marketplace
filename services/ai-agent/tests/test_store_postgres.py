@@ -142,3 +142,21 @@ async def test_app_with_postgres_backend_stores_a_real_chat_turn():
     finally:
         await admin.execute(f'DROP DATABASE "{name}" WITH (FORCE)')
         await admin.close()
+
+
+async def test_tokens_used_today_counts_this_user_and_this_platform_day_only(store):
+    t1 = await begin(store, user_id=7)
+    await store.end_turn(t1, status="ok", answer="a", cards=[], tool_calls=1, input_tokens=1000, output_tokens=500)
+    t2 = await begin(store, user_id=7)
+    await store.end_turn(t2, status="ok", answer="b", cards=[], tool_calls=0, input_tokens=200, output_tokens=100)
+    other = await begin(store, user_id=8)
+    await store.end_turn(other, status="ok", answer="c", cards=[], tool_calls=0, input_tokens=9999, output_tokens=1)
+    running = await begin(store, user_id=7)   # chưa kết thúc: chưa có token
+    assert running.run_id
+    assert await store.tokens_used_today(7) == 1800
+    assert await store.tokens_used_today(8) == 10000
+    assert await store.tokens_used_today(99) == 0
+
+    # một lượt từ hôm qua (theo giờ nền tảng) không tính
+    await store._pool.execute("UPDATE ai_runs SET started_at = started_at - interval '2 days' WHERE run_id = $1", t1.run_id)
+    assert await store.tokens_used_today(7) == 300

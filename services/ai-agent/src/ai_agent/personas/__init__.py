@@ -13,7 +13,7 @@ def load_personas() -> dict[str, Persona]:
         "buyer": Persona.load("buyer", "buyer", ("buyer",), _HERE / "buyer", hide_internals=True),
         "seller": Persona.load("seller", "seller", ("seller_admin", "seller_employee"), _HERE / "seller", hide_internals=True),
         "admin": Persona.load("admin", "admin", ("admin",), _HERE / "admin"),
-        "dev": Persona.load("dev", "dev", ("dev",), _HERE / "dev"),
+        "operator": Persona.load("operator", "operator", ("operator",), _HERE / "operator"),
     }
 
 

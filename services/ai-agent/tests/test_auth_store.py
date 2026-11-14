@@ -42,3 +42,21 @@ async def test_store_ownership_busy_duplicate_and_history():
         await _begin(s, conversation_id="00000000-0000-0000-0000-000000000000", run_id="r5")
     t2 = await _begin(s, conversation_id=t1.conversation_id, run_id="r6", text="tiếp")
     assert t2.history == [("user", "hi"), ("assistant", "chào")]
+
+
+async def test_memory_store_counts_tokens_per_user_for_today_only():
+    import time
+
+    from ai_agent.store import MemoryStore
+
+    st = MemoryStore()
+    a = await st.begin_turn(user_id=1, conversation_id=None, client_message_id=None, run_id="r1", role="buyer", text="x", max_history=5)
+    await st.end_turn(a, status="ok", answer="", cards=[], tool_calls=0, input_tokens=100, output_tokens=50)
+    b = await st.begin_turn(user_id=1, conversation_id=None, client_message_id=None, run_id="r2", role="buyer", text="x", max_history=5)
+    await st.end_turn(b, status="ok", answer="", cards=[], tool_calls=0, input_tokens=10, output_tokens=5)
+    c = await st.begin_turn(user_id=2, conversation_id=None, client_message_id=None, run_id="r3", role="buyer", text="x", max_history=5)
+    await st.end_turn(c, status="ok", answer="", cards=[], tool_calls=0, input_tokens=1000, output_tokens=0)
+    assert await st.tokens_used_today(1) == 165
+    assert await st.tokens_used_today(2) == 1000
+    st.runs["r1"]["started"] = time.time() - 2 * 86400          # hôm kia
+    assert await st.tokens_used_today(1) == 15

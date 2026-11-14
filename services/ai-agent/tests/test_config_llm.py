@@ -15,7 +15,7 @@ def test_dev_and_prod_load_and_roles_resolve():
     for env in ("dev", "prod"):
         c = cfg(env)
         assert c.app.env == env
-        for role in ("buyer", "seller", "admin", "dev", "summarizer"):
+        for role in ("buyer", "seller", "admin", "operator", "summarizer"):
             assert c.llm.roles[role] in c.llm.profiles
 
 

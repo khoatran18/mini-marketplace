@@ -1,4 +1,4 @@
-"""Buyer/seller không được nghe agent kể đường dẫn API hay tên công cụ; admin/dev thì được. Cộng với lọc chuỗi nhạy cảm trong text tự do."""
+"""Buyer/seller không được nghe agent kể đường dẫn API hay tên công cụ; admin/operator thì được. Cộng với lọc chuỗi nhạy cảm trong text tự do."""
 import pytest
 
 from ai_agent.config import Config
@@ -53,7 +53,7 @@ def test_model_view_hides_the_route_for_buyer_and_shows_it_for_ops():
 def test_persona_flags():
     p = load_personas()
     assert p["buyer"].hide_internals and p["seller"].hide_internals
-    assert not p["admin"].hide_internals and not p["dev"].hide_internals
+    assert not p["admin"].hide_internals and not p["operator"].hide_internals
     for name in ("buyer", "seller"):
         assert "đường dẫn" in p[name].prompt and "bạn đã gọi API nào" in p[name].prompt
 

@@ -6,7 +6,7 @@ import time
 import uuid
 from typing import Any
 
-from ai_agent.store.base import Busy, Duplicate, NotFound, Turn
+from ai_agent.store.base import Busy, Duplicate, NotFound, Turn, day_start
 
 
 class MemoryStore:
@@ -49,3 +49,9 @@ class MemoryStore:
             if run is not None:
                 run.update(status=status, finished=time.time(), cards=cards, tool_calls=tool_calls,
                            input_tokens=input_tokens, output_tokens=output_tokens)
+
+    async def tokens_used_today(self, user_id: int) -> int:
+        since = day_start()
+        async with self._lock:
+            return sum(int(r.get("input_tokens", 0)) + int(r.get("output_tokens", 0))
+                       for r in self.runs.values() if r["user_id"] == user_id and r["started"] >= since)

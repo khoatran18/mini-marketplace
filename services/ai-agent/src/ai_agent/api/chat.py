@@ -33,6 +33,12 @@ def _err(status: int, msg: str, **extra: Any) -> JSONResponse:
     return JSONResponse({"error": msg, **extra}, status_code=status)
 
 
+def _daily_cap(limits, persona_name: str) -> int:
+    """Hạn mức token mỗi ngày cho MỘT người dùng của persona này (limits.daily_tokens.<persona>). Thiếu hoặc 0 = không giới hạn."""
+    table = limits.get("daily_tokens")
+    return int(table.get(persona_name, 0) or 0) if table is not None else 0
+
+
 async def _sse(gen: AsyncIterator[dict[str, Any]]) -> AsyncIterator[str]:
     try:
         async for ev in gen:
@@ -64,6 +70,13 @@ def create_router(rt, store, personas) -> APIRouter:
             return _err(422, "conversation_id không hợp lệ")
         if body.client_message_id is not None and not _CLIENT_ID.match(body.client_message_id):
             return _err(422, "client_message_id không hợp lệ")
+        cap = _daily_cap(limits, persona.name)
+        if cap:
+            used = await store.tokens_used_today(ident.user_id)
+            if used >= cap:
+                logger.info("daily token limit reached", extra={"user_id": ident.user_id, "role": ident.role, "used": used, "limit": cap})
+                return _err(429, "Bạn đã dùng hết hạn mức trợ lý hôm nay. Hạn mức làm mới lúc 00:00 (giờ Việt Nam).",
+                            code="daily_token_limit", limit=cap, used=used)
         try:
             turn = await store.begin_turn(
                 user_id=ident.user_id, conversation_id=body.conversation_id, client_message_id=body.client_message_id,
