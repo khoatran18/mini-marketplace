@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"google.golang.org/grpc/backoff"
 	"log"
+	"mini-marketplace/shared/reqctx"
 	"mini-marketplace/shared/tracing"
 	"sync"
 	"time"
@@ -58,6 +59,7 @@ func newServiceClient[T any](name, addr string, createClient func(conn *grpc.Cli
 		// Thứ tự: requestid -> breaker -> deadline -> retry -> metrics (mỗi lần thử đều được đếm trong mm_grpc_client_*).
 		grpc.WithChainUnaryInterceptor(
 			requestid.UnaryClientInterceptor(),
+			reqctx.AgentRunClientInterceptor(), // ADR-42: run id of a confirmed agent proposal -> x-agent-run-id
 			BreakerInterceptor(NewBreaker(name, loadBreakerPolicy())),
 			DeadlineInterceptor(loadCallPolicy()),
 			RetryInterceptor(name, loadCallPolicy()),

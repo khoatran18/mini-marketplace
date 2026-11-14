@@ -1946,7 +1946,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/system/health": {
+        "/ops/system/health": {
             "get": {
                 "description": "Quyen: admin.",
                 "consumes": [

@@ -136,7 +136,7 @@ func main() {
 	adm.GaugeFunc("mm_outbox_pending", "Unpublished outbox rows.", map[string]string{"table": events.Table()}, func() float64 { n, _ := backlog(); return n })
 	adm.GaugeFunc("mm_outbox_oldest_age_seconds", "Age of the oldest unpublished outbox row.", map[string]string{"table": events.Table()}, func() float64 { _, a := backlog(); return a })
 	events.Register(adm.Registry(), "product-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
-	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), reqctx.AgentRunServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	productpb.RegisterProductServiceServer(s, &productServer)
 	log.Printf("Product Server Listen at %v", lis.Addr())
 

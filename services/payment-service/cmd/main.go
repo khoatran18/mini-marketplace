@@ -125,7 +125,7 @@ func main() {
 	events.Register(adm.Registry(), "payment-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
 	adm.GaugeFunc("mm_worker_last_tick_timestamp_seconds", "Unix time of the last worker round.", map[string]string{"worker": "payment_workers"}, func() float64 { return float64(lastTick.Load()) })
 
-	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), reqctx.AgentRunServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	paymentpb.RegisterPaymentServiceServer(s, &server.PaymentServer{Service: svc})
 	reflection.Register(s)
 

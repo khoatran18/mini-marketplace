@@ -71,12 +71,27 @@ return count
 // RateLimitingMiddleware limits requests per client IP within a period.
 // scope separates counters (e.g. "global", "auth") so different limits do not share a key.
 func RateLimitingMiddleware(scope string, limit int, period time.Duration, logger *zap.Logger, rdb *redis.Client) gin.HandlerFunc {
+	return RateLimitByKey(scope, limit, period, logger, rdb, func(c *gin.Context) string { return c.ClientIP() }, false)
+}
+
+// RateLimitByKey is the counter behind every limiter. keyFn picks who is counted (IP, user id...); an empty key falls back to
+// the client IP. failClosed=false lets requests through when Redis is down (a cache outage must not take the API down);
+// failClosed=true answers 503 instead, for routes where a request costs real money (AI).
+func RateLimitByKey(scope string, limit int, period time.Duration, logger *zap.Logger, rdb *redis.Client, keyFn func(*gin.Context) string, failClosed bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		key := fmt.Sprintf("rate_limit:%s:%s", scope, c.ClientIP())
+		who := keyFn(c)
+		if who == "" {
+			who = c.ClientIP()
+		}
+		key := fmt.Sprintf("rate_limit:%s:%s", scope, who)
 		count, err := rateLimitScript.Run(c.Request.Context(), rdb, []string{key}, period.Milliseconds()).Int64()
 		if err != nil {
-			// Fail open on Redis errors so a cache outage does not take the API down.
 			logger.Error("Middleware: error incrementing rate limit", zap.Error(err))
+			if failClosed {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "temporarily unavailable, retry"})
+				c.Abort()
+				return
+			}
 			c.Next()
 			return
 		}
@@ -102,6 +117,21 @@ func RateLimitingMiddleware(scope string, limit int, period time.Duration, logge
 		c.Writer.Header().Set("X-RateLimit-Remaining", strconv.Itoa(limit-int(count)))
 		c.Next()
 	}
+}
+
+// UserKey counts per authenticated user: the JWT user (userID) or, on agent routes, the subject of the agent token.
+func UserKey(c *gin.Context) string {
+	if id, ok := c.Get("userID"); ok {
+		if n, ok := id.(uint64); ok && n != 0 {
+			return fmt.Sprintf("u%d", n)
+		}
+	}
+	if v, ok := c.Get("agentClaims"); ok {
+		if cl, ok := v.(interface{ UserID() uint64 }); ok && cl.UserID() != 0 {
+			return fmt.Sprintf("u%d", cl.UserID())
+		}
+	}
+	return ""
 }
 
 // AuthMiddleware solve problem about jwt
@@ -155,6 +185,7 @@ func AuthMiddleware(logger *zap.Logger, redisClient *redis.Client, jwtSecret str
 			c.Set("userID", claims.UserID)
 			c.Set("userRole", claims.Role)
 			c.Set("username", claims.Username)
+			c.Set("pwdVersion", claims.PwdVersion)
 
 			// Revocation after a password change (Redis fast path, database as source of truth; see pwdversion.go)
 			if err := checker.verify(c.Request.Context(), claims.UserID, int64(claims.PwdVersion)); err != nil {

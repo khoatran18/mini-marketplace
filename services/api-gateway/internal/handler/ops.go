@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// OpsHandler proxies /admin/ops/* to ops-service. The gateway has already verified the JWT and the admin role; ops-service
+// OpsHandler proxies /ops/* to ops-service. The gateway has already verified the JWT and the admin role; ops-service
 // trusts only the shared bearer token, so it must never be reachable from outside the overlay network.
 type OpsHandler struct {
 	BaseURL string

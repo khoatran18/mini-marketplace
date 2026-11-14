@@ -1,6 +1,7 @@
 package config
 
 import (
+	"api-gateway/internal/agent"
 	"errors"
 	"os"
 	"strconv"
@@ -25,7 +26,7 @@ type EnvConfig struct {
 	EventsRateLimit int
 	// IPHashSecret keys the daily-rotating HMAC of client IPs stored with tracking events (raw IPs are never kept).
 	IPHashSecret string
-	// OpsServiceURL and OpsAPIToken: where /admin/ops/* is proxied (ops-service). An empty token disables the routes (503).
+	// OpsServiceURL and OpsAPIToken: where /ops/* is proxied (ops-service). An empty token disables the routes (503).
 	OpsServiceURL string
 	OpsAPIToken   string
 	// AI (ADR-40): feature flags reported by GET /config/features and the upstream of POST /ai/chat (the agent service,
@@ -36,6 +37,13 @@ type EnvConfig struct {
 	// AIStreamTimeout caps one chat stream; AIRateLimit is the per-minute POST /ai/chat limit per client IP (0 disables it).
 	AIStreamTimeout time.Duration
 	AIRateLimit     int
+	// AIUserRateLimit: POST /ai/chat per minute per user (JWT subject); AIProposalRateLimit: POST /ai/proposals and GET /ai/tools
+	// per minute per agent-token subject. Both count the user, not the IP, and refuse when Redis is down (0 disables).
+	AIUserRateLimit     int
+	AIProposalRateLimit int
+	// AgentKeys is "kid:secret,kid:secret" (first = signing key, the rest only verify; ADR-42, runbook §18). AGENT_TOKEN_SECRET
+	// (one secret, kid "k1") is accepted as the simple form. Empty = no agent tokens, no proposals.
+	AgentKeys string
 }
 
 // InitJWTSecret load env about jwt
@@ -108,23 +116,30 @@ func NewEnvConfig() (*EnvConfig, error) {
 		return nil, err
 	}
 
+	if _, err := agent.ParseKeyRing(agentKeysFromEnv()); err != nil {
+		return nil, err // a mistyped key must stop the start, not silently turn the feature off
+	}
+
 	return &EnvConfig{
-		JWTSecret:       jwtSecret,
-		JWTExpireTime:   time.Duration(envInt("JWT_EXPIRE_TIME", 5)) * time.Minute,
-		AllowedOrigins:  envList("ALLOWED_ORIGINS", []string{"http://localhost:3000"}),
-		RateLimit:       envInt("RATE_LIMIT_PER_MINUTE", 300),
-		AuthRateLimit:   envInt("AUTH_RATE_LIMIT_PER_MINUTE", 20),
-		TrustedProxies:  envList("TRUSTED_PROXIES", nil),
-		MaxBodyBytes:    int64(envInt("MAX_BODY_BYTES", 1<<20)),
-		EventsRateLimit: envInt("EVENTS_RATE_LIMIT_PER_MINUTE", 120),
-		IPHashSecret:    os.Getenv("IP_HASH_SECRET"),
-		OpsServiceURL:   envStr("OPS_SERVICE_URL", "http://ops-service:8080"),
-		OpsAPIToken:     os.Getenv("OPS_API_TOKEN"),
-		FeatureAIChat:   envBool("FEATURE_AI_CHAT"),
-		FeatureAIOps:    envBool("FEATURE_AI_OPS"),
-		AIServiceURL:    strings.TrimRight(os.Getenv("AI_SERVICE_URL"), "/"),
-		AIStreamTimeout: time.Duration(envInt("AI_STREAM_TIMEOUT_SEC", 120)) * time.Second,
-		AIRateLimit:     envInt("AI_RATE_LIMIT_PER_MINUTE", 20),
+		JWTSecret:           jwtSecret,
+		JWTExpireTime:       time.Duration(envInt("JWT_EXPIRE_TIME", 5)) * time.Minute,
+		AllowedOrigins:      envList("ALLOWED_ORIGINS", []string{"http://localhost:3000"}),
+		RateLimit:           envInt("RATE_LIMIT_PER_MINUTE", 300),
+		AuthRateLimit:       envInt("AUTH_RATE_LIMIT_PER_MINUTE", 20),
+		TrustedProxies:      envList("TRUSTED_PROXIES", nil),
+		MaxBodyBytes:        int64(envInt("MAX_BODY_BYTES", 1<<20)),
+		EventsRateLimit:     envInt("EVENTS_RATE_LIMIT_PER_MINUTE", 120),
+		IPHashSecret:        os.Getenv("IP_HASH_SECRET"),
+		OpsServiceURL:       envStr("OPS_SERVICE_URL", "http://ops-service:8080"),
+		OpsAPIToken:         os.Getenv("OPS_API_TOKEN"),
+		FeatureAIChat:       envBool("FEATURE_AI_CHAT"),
+		FeatureAIOps:        envBool("FEATURE_AI_OPS"),
+		AIServiceURL:        strings.TrimRight(os.Getenv("AI_SERVICE_URL"), "/"),
+		AIStreamTimeout:     time.Duration(envInt("AI_STREAM_TIMEOUT_SEC", 120)) * time.Second,
+		AIRateLimit:         envInt("AI_RATE_LIMIT_PER_MINUTE", 20),
+		AIUserRateLimit:     envInt("AI_USER_RATE_LIMIT_PER_MINUTE", 10),
+		AIProposalRateLimit: envInt("AI_PROPOSAL_RATE_LIMIT_PER_MINUTE", 30),
+		AgentKeys:           agentKeysFromEnv(),
 		SystemTargets: envPairs("SYSTEM_HEALTH_TARGETS", map[string]string{
 			"api-gateway":       "http://localhost:8081", // this replica only
 			"auth-service":      "http://auth-service:8081",
@@ -136,4 +151,15 @@ func NewEnvConfig() (*EnvConfig, error) {
 			"ops-service":       "http://ops-service:8081",
 		}),
 	}, nil
+}
+
+// agentKeysFromEnv reads AGENT_TOKEN_KEYS, or the single AGENT_TOKEN_SECRET as key "k1".
+func agentKeysFromEnv() string {
+	if v := strings.TrimSpace(os.Getenv("AGENT_TOKEN_KEYS")); v != "" {
+		return v
+	}
+	if v := strings.TrimSpace(os.Getenv("AGENT_TOKEN_SECRET")); v != "" {
+		return "k1:" + v
+	}
+	return ""
 }

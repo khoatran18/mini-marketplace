@@ -78,6 +78,9 @@ type Event struct {
 	// RequestID is the X-Request-ID of the request that caused the event (ADR-36); the publisher sends it as the
 	// Kafka header "x-request-id". NULL for rows written before the column existed or outside a request.
 	RequestID *string `gorm:"column:request_id"`
+	// AgentRunID is set when the action was confirmed by the user from an AI agent proposal (ADR-42): the id of that chat
+	// run. NULL = the user acted directly (or the row predates the column).
+	AgentRunID *string `gorm:"column:agent_run_id"`
 }
 
 // TableName is the service's own outbox table (see SetTable).
@@ -94,6 +97,9 @@ func Emit(tx *gorm.DB, topic, key string, payload any) error {
 	// tx.Statement.Context is the ctx the transaction was opened with (db.WithContext(ctx).Transaction ...).
 	if id := reqctx.Get(tx.Statement.Context); id != "" {
 		e.RequestID = &id
+	}
+	if id := reqctx.AgentRun(tx.Statement.Context); id != "" {
+		e.AgentRunID = &id
 	}
 	return tx.Table(Table()).Create(e).Error
 }

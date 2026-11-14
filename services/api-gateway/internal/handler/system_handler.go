@@ -52,7 +52,7 @@ type systemHealth struct {
 // @Tags admin
 // @Security BearerAuth
 // @Success 200 {object} systemHealth
-// @Router /admin/system/health [get]
+// @Router /ops/system/health [get]
 func (h *SystemHandler) Health(c *gin.Context) {
 	results := make([]serviceHealth, len(h.Targets))
 	var wg sync.WaitGroup

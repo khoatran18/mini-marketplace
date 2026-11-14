@@ -112,3 +112,23 @@ func (c *pwdChecker) verify(ctx context.Context, userID uint64, tokenVersion int
 	}
 	return nil
 }
+
+// PwdVerifier checks a token's password version the same way AuthMiddleware does (Redis fast path, database fallback).
+type PwdVerifier struct{ c *pwdChecker }
+
+// NewPwdVerifier builds a verifier with the same options as AuthMiddleware, for tokens that are not user JWTs (agent token).
+func NewPwdVerifier(logger *zap.Logger, rdb *redis.Client, opts ...AuthOption) *PwdVerifier {
+	c := &pwdChecker{rdb: rdb, now: time.Now, logger: logger}
+	for _, o := range opts {
+		o(c)
+	}
+	return &PwdVerifier{c: c}
+}
+
+// Verify returns nil when version is current; ErrPwdChanged when the password changed; any other error = cannot tell.
+func (v *PwdVerifier) Verify(ctx context.Context, userID uint64, version int64) error {
+	return v.c.verify(ctx, userID, version)
+}
+
+// IsPwdChanged tells "password changed" apart from "could not verify".
+func IsPwdChanged(err error) bool { return errors.Is(err, errPwdChanged) }

@@ -156,15 +156,15 @@ func TestAdminSystemHealthIsAdminOnly(t *testing.T) {
 		c.SystemTargets = map[string]string{"order-service": ready.URL, "product-service": degraded.URL, "ghost": "http://127.0.0.1:1"}
 	})
 
-	if w := request(e, "GET", "/admin/system/health", ""); w.Code != http.StatusUnauthorized {
+	if w := request(e, "GET", "/ops/system/health", ""); w.Code != http.StatusUnauthorized {
 		t.Errorf("no token: %d", w.Code)
 	}
 	for _, role := range []string{"buyer", "seller_admin", "seller_employee"} {
-		if w := request(e, "GET", "/admin/system/health", token(t, role)); w.Code != http.StatusForbidden {
+		if w := request(e, "GET", "/ops/system/health", token(t, role)); w.Code != http.StatusForbidden {
 			t.Errorf("%s must be forbidden, got %d", role, w.Code)
 		}
 	}
-	w := request(e, "GET", "/admin/system/health", token(t, "admin"))
+	w := request(e, "GET", "/ops/system/health", token(t, "admin"))
 	if w.Code != 200 {
 		t.Fatalf("admin: %d %s", w.Code, w.Body.String())
 	}
@@ -324,10 +324,10 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 	defer up.Close()
 	e := newEngineEnv(t, func(c *config.EnvConfig) { c.OpsServiceURL, c.OpsAPIToken = up.URL, "ops-secret" })
 	for _, route := range []struct{ method, path string }{
-		{"GET", "/admin/ops/incidents"}, {"GET", "/admin/ops/incidents/1"}, {"POST", "/admin/ops/incidents/1/investigate"}, {"GET", "/admin/ops/audit"},
-		{"GET", "/admin/ops/actions"}, {"GET", "/admin/ops/proposals"}, {"POST", "/admin/ops/proposals"}, {"GET", "/admin/ops/proposals/1"},
-		{"POST", "/admin/ops/proposals/1/review"}, {"POST", "/admin/ops/proposals/1/decision"},
-		{"POST", "/admin/ops/proposals/1/execute"}, {"POST", "/admin/ops/proposals/1/executed"}, {"GET", "/admin/ops/queries"}, {"POST", "/admin/ops/queries/service_up"}, {"GET", "/admin/ops/outbox/order-service/dead"}, {"POST", "/admin/ops/queries/gateway_latency_p95"},
+		{"GET", "/ops/incidents"}, {"GET", "/ops/incidents/1"}, {"POST", "/ops/incidents/1/investigate"}, {"GET", "/ops/audit"},
+		{"GET", "/ops/actions"}, {"GET", "/ops/proposals"}, {"POST", "/ops/proposals"}, {"GET", "/ops/proposals/1"},
+		{"POST", "/ops/proposals/1/review"}, {"POST", "/ops/proposals/1/decision"},
+		{"POST", "/ops/proposals/1/execute"}, {"POST", "/ops/proposals/1/executed"}, {"GET", "/ops/queries"}, {"POST", "/ops/queries/service_up"}, {"GET", "/ops/outbox/order-service/dead"}, {"POST", "/ops/queries/gateway_latency_p95"},
 	} {
 		if w := request(e, route.method, route.path, ""); w.Code != http.StatusUnauthorized {
 			t.Errorf("%s %s anonymous: %d, want 401", route.method, route.path, w.Code)
@@ -343,10 +343,10 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 		method, path string
 		want         int
 	}{
-		{"GET", "/admin/ops/incidents", 200}, {"GET", "/admin/ops/proposals", 200}, {"POST", "/admin/ops/proposals", 200},
-		{"POST", "/admin/ops/queries/service_up", 200}, {"POST", "/admin/ops/incidents/1/investigate", 200}, {"GET", "/admin/system/health", -1},
-		{"POST", "/admin/ops/proposals/1/review", 200}, {"POST", "/admin/ops/proposals/1/decision", 200},
-		{"POST", "/admin/ops/proposals/1/execute", 200}, {"POST", "/admin/ops/proposals/1/executed", 200}, {"GET", "/admin/analytics/data-health", -1},
+		{"GET", "/ops/incidents", 200}, {"GET", "/ops/proposals", 200}, {"POST", "/ops/proposals", 200},
+		{"POST", "/ops/queries/service_up", 200}, {"POST", "/ops/incidents/1/investigate", 200}, {"GET", "/ops/system/health", -1},
+		{"POST", "/ops/proposals/1/review", 200}, {"POST", "/ops/proposals/1/decision", 200},
+		{"POST", "/ops/proposals/1/execute", 200}, {"POST", "/ops/proposals/1/executed", 200}, {"GET", "/admin/analytics/data-health", -1},
 		{"GET", "/admin/analytics/summary", 403}, {"GET", "/admin/analytics/traffic", 403}, {"GET", "/admin/payments", 403}, {"GET", "/admin/orders", 403},
 		{"GET", "/admin/categories", 403}, {"GET", "/admin/accounts", 403}, {"POST", "/admin/accounts", 403}, {"DELETE", "/admin/accounts/1", 403}, {"POST", "/admin/orders/1/cancel", 403}, {"POST", "/admin/payments/1/refund", 403},
 	} {
@@ -359,11 +359,11 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 			t.Errorf("dev %s %s: %d, want %d", route.method, route.path, w.Code, route.want)
 		}
 	}
-	request(e, "GET", "/admin/ops/incidents", token(t, "dev"))
+	request(e, "GET", "/ops/incidents", token(t, "dev"))
 	if !strings.HasPrefix(gotActor, "dev:") {
 		t.Errorf("actor for dev: %q", gotActor)
 	}
-	if w := request(e, "GET", "/admin/ops/incidents?state=open", token(t, "admin")); w.Code != 200 || gotPath != "/incidents?state=open" || gotAuth != "Bearer ops-secret" || !strings.HasPrefix(gotActor, "admin:") {
+	if w := request(e, "GET", "/ops/incidents?state=open", token(t, "admin")); w.Code != 200 || gotPath != "/incidents?state=open" || gotAuth != "Bearer ops-secret" || !strings.HasPrefix(gotActor, "admin:") {
 		t.Fatalf("proxy: %d path=%q auth=%q actor=%q", w.Code, gotPath, gotAuth, gotActor)
 	}
 	// POST body is forwarded as JSON
@@ -376,14 +376,14 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 	}))
 	defer up2.Close()
 	e3 := newEngineEnv(t, func(c *config.EnvConfig) { c.OpsServiceURL, c.OpsAPIToken = up2.URL, "ops-secret" })
-	req := httptest.NewRequest("POST", "/admin/ops/proposals/5/decision", strings.NewReader(`{"decision":"accept"}`))
+	req := httptest.NewRequest("POST", "/ops/proposals/5/decision", strings.NewReader(`{"decision":"accept"}`))
 	req.Header.Set("Authorization", "Bearer "+token(t, "admin"))
 	rec := httptest.NewRecorder()
 	e3.ServeHTTP(rec, req)
 	if rec.Code != 201 || gotBody != `{"decision":"accept"}` || gotCT != "application/json" {
 		t.Errorf("body forward: %d body=%q ct=%q", rec.Code, gotBody, gotCT)
 	}
-	big := httptest.NewRequest("POST", "/admin/ops/proposals", strings.NewReader(strings.Repeat("x", 70<<10)))
+	big := httptest.NewRequest("POST", "/ops/proposals", strings.NewReader(strings.Repeat("x", 70<<10)))
 	big.Header.Set("Authorization", "Bearer "+token(t, "admin"))
 	rec = httptest.NewRecorder()
 	e3.ServeHTTP(rec, big)
@@ -392,19 +392,19 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 	}
 	// query names may contain digits (p95); anything outside [a-z0-9_] is rejected before reaching the upstream
 	gotPath = ""
-	if w := request(e, "POST", "/admin/ops/queries/gateway_latency_p95", token(t, "admin")); w.Code != 200 || gotPath != "/queries/gateway_latency_p95" {
+	if w := request(e, "POST", "/ops/queries/gateway_latency_p95", token(t, "admin")); w.Code != 200 || gotPath != "/queries/gateway_latency_p95" {
 		t.Errorf("query name with digits: %d path=%q", w.Code, gotPath)
 	}
-	if w := request(e, "POST", "/admin/ops/queries/Bad-Name", token(t, "admin")); w.Code != http.StatusBadRequest {
+	if w := request(e, "POST", "/ops/queries/Bad-Name", token(t, "admin")); w.Code != http.StatusBadRequest {
 		t.Errorf("bad query name: %d, want 400", w.Code)
 	}
-	if w := request(e, "GET", "/admin/ops/incidents/abc", token(t, "admin")); w.Code != http.StatusBadRequest {
+	if w := request(e, "GET", "/ops/incidents/abc", token(t, "admin")); w.Code != http.StatusBadRequest {
 		t.Errorf("non numeric id: %d, want 400", w.Code)
 	}
 	// without a token the proxy is off: the upstream is never called
 	e2 := newEngineEnv(t, func(c *config.EnvConfig) { c.OpsServiceURL, c.OpsAPIToken = up.URL, "" })
 	gotPath = ""
-	if w := request(e2, "GET", "/admin/ops/incidents", token(t, "admin")); w.Code != http.StatusServiceUnavailable || gotPath != "" {
+	if w := request(e2, "GET", "/ops/incidents", token(t, "admin")); w.Code != http.StatusServiceUnavailable || gotPath != "" {
 		t.Errorf("disabled proxy: %d path=%q", w.Code, gotPath)
 	}
 }

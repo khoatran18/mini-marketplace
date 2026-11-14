@@ -35,7 +35,8 @@ CREATE TABLE domain_events (
   next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_error TEXT,
   dead_at TIMESTAMPTZ,
-  request_id TEXT
+  request_id TEXT,
+  agent_run_id TEXT
 );
 CREATE INDEX idx_domain_events_unpublished ON domain_events (id) WHERE status IN ('PENDING', 'FAILED');`
 
@@ -381,5 +382,20 @@ func TestAdminMountRequiresTokenWhenConfigured(t *testing.T) {
 		if rec.Code != want {
 			t.Errorf("auth %q: %d want %d", hdr, rec.Code, want)
 		}
+	}
+}
+
+func TestAgentRunIDStoredOnlyWhenConfirmedFromAgent(t *testing.T) {
+	db := testDB(t)
+	ctx := reqctx.WithAgentRun(context.Background(), "run-0123456789")
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error { return Emit(tx, "t", "agent", map[string]int{"v": 1}) }); err != nil {
+		t.Fatal(err)
+	}
+	emit(t, db, "direct") // the user acted directly
+	if e := rowByKey(t, db, "agent"); e.AgentRunID == nil || *e.AgentRunID != "run-0123456789" {
+		t.Fatalf("agent_run_id not stored: %+v", e)
+	}
+	if e := rowByKey(t, db, "direct"); e.AgentRunID != nil {
+		t.Fatalf("direct action must have NULL agent_run_id, got %v", *e.AgentRunID)
 	}
 }

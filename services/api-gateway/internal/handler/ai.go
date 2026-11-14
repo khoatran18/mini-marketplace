@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"api-gateway/internal/agent"
 	"bytes"
 	"context"
 	"errors"
@@ -24,14 +25,15 @@ func (h FeaturesHandler) Get(c *gin.Context) {
 }
 
 // AIHandler streams POST /ai/chat to the agent service (Server-Sent Events) without buffering. The gateway only authenticates
-// the caller and forwards identity; model logic lives upstream. The agent calls the normal REST API with the caller's own JWT
-// (forwarded as Authorization), so the existing RBAC/ownership checks still apply to every tool call.
+// the caller and forwards identity; model logic lives upstream. The agent calls the normal REST API with its own agent token (ADR-42; the
+// user's JWT is forwarded only when no agent keys are set), so the existing RBAC/ownership checks still apply to every tool call.
 type AIHandler struct {
 	Enabled     bool
 	BaseURL     string
 	MaxDuration time.Duration // cap for one stream (client disconnect cancels earlier)
 	Client      *http.Client  // no overall Timeout: a stream outlives any fixed request timeout
 	Logger      *zap.Logger
+	Signer      *agent.Signer // ADR-42: issues the short-lived agent token sent in X-Agent-Token (nil/no keys = not sent)
 }
 
 // NewAIHandler builds the handler. Disabled (flag off) answers 404; enabled without an upstream URL answers 503.
@@ -74,11 +76,30 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 	// Identity comes only from the verified JWT (set by the auth middleware), never from the request.
-	req.Header.Set("Authorization", c.GetHeader("Authorization"))
 	req.Header.Set("X-User-ID", fmt.Sprint(c.Value("userID")))
 	req.Header.Set("X-User-Role", fmt.Sprint(c.Value("userRole")))
 	if rid, ok := c.Get("requestID"); ok {
 		req.Header.Set("X-Request-ID", fmt.Sprint(rid))
+	}
+	// ADR-42: a token made for the agent (own key, ~150 s, bound to this user/role, jti = run id). When it is issued the
+	// user's JWT is NOT forwarded: the agent reads only the routes in agent/scopes.go with this token. Without agent keys the
+	// old behaviour stays (the user's Authorization is forwarded) so a deployment without keys keeps working.
+	if h.Signer == nil || !h.Signer.Keys.Enabled() {
+		req.Header.Set("Authorization", c.GetHeader("Authorization"))
+	} else {
+		uid, _ := c.Get("userID")
+		id, _ := uid.(uint64)
+		pv, _ := c.Get("pwdVersion")
+		pwdV, _ := pv.(int64)
+		tok, jti, terr := h.Signer.IssueAgentToken(id, fmt.Sprint(c.Value("username")), fmt.Sprint(c.Value("userRole")), pwdV, h.MaxDuration+30*time.Second)
+		if terr != nil {
+			h.Logger.Error("AIHandler: cannot issue agent token", zap.Error(terr))
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai service is unavailable"})
+			return
+		}
+		req.Header.Set("X-Agent-Token", tok)
+		req.Header.Set("X-Agent-Run-ID", jti)
+		h.Logger.Info("agent run started", zap.String("agent_run_id", jti), zap.Uint64("user_id", id), zap.String("request_id", fmt.Sprint(c.Value("requestID"))))
 	}
 	resp, err := h.Client.Do(req)
 	if err != nil {

@@ -149,7 +149,7 @@ func main() {
 	events.Register(adm.Registry(), "order-service", serviceConfig.PostgresDB) // mm_outbox_dead, *_total
 	adm.GaugeFunc("mm_worker_last_tick_timestamp_seconds", "Unix time of the last timers round.", map[string]string{"worker": "order_timers"}, func() float64 { return float64(lastTick.Load()) })
 
-	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
+	s := grpc.NewServer(tracing.ServerOption(), grpc.ChainUnaryInterceptor(requestid.UnaryServerInterceptor(), reqctx.AgentRunServerInterceptor(), adm.UnaryInterceptor()), grpc.ChainStreamInterceptor(adm.StreamInterceptor()))
 	orderpb.RegisterOrderServiceServer(s, &server.OrderServer{
 		OrderService: orderService,
 		ZapLogger:    serviceConfig.ZapLogger,
