@@ -120,6 +120,10 @@ func NewEnvConfig() (*EnvConfig, error) {
 		return nil, err // a mistyped key must stop the start, not silently turn the feature off
 	}
 
+	if err := checkAIConfig(envBool("FEATURE_AI_CHAT") || envBool("FEATURE_AI_OPS"), strings.TrimRight(os.Getenv("AI_SERVICE_URL"), "/"), agentKeysFromEnv()); err != nil {
+		return nil, err
+	}
+
 	return &EnvConfig{
 		JWTSecret:           jwtSecret,
 		JWTExpireTime:       time.Duration(envInt("JWT_EXPIRE_TIME", 5)) * time.Minute,
@@ -151,6 +155,21 @@ func NewEnvConfig() (*EnvConfig, error) {
 			"ops-service":       "http://ops-service:8081",
 		}),
 	}, nil
+}
+
+// checkAIConfig stops the start when an AI feature is switched on but cannot work: without AI_SERVICE_URL every chat would answer
+// 503, and without agent keys the agent has no token to call the API with. Both used to fail only when someone chatted.
+func checkAIConfig(featureOn bool, serviceURL, agentKeys string) error {
+	if !featureOn {
+		return nil
+	}
+	if serviceURL == "" {
+		return errors.New("FEATURE_AI_CHAT/FEATURE_AI_OPS is on but AI_SERVICE_URL is empty")
+	}
+	if agentKeys == "" {
+		return errors.New("FEATURE_AI_CHAT/FEATURE_AI_OPS is on but AGENT_TOKEN_KEYS is empty (see docs/instruction/01_QUICKSTART.md, \"Sinh token cho AI và ops\")")
+	}
+	return nil
 }
 
 // agentKeysFromEnv reads AGENT_TOKEN_KEYS, or the single AGENT_TOKEN_SECRET as key "k1".

@@ -302,7 +302,7 @@ func TestEventsRoutes(t *testing.T) {
 
 func TestPublicRoutesNeedNoToken(t *testing.T) {
 	e := newEngine(t)
-	for _, path := range []string{"/search", "/categories", "/products", "/products/1", "/products/1/stock", "/payments/methods", "/health", "/healthz"} {
+	for _, path := range []string{"/search", "/categories", "/products", "/products/1", "/products/1/stock", "/payments/methods", "/shop/rules", "/health", "/healthz"} {
 		if w := request(e, "GET", path, ""); w.Code == http.StatusUnauthorized || w.Code == http.StatusForbidden {
 			t.Errorf("GET %s anonymous: %d, must be public", path, w.Code)
 		}
@@ -327,7 +327,7 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 		{"GET", "/ops/incidents"}, {"GET", "/ops/incidents/1"}, {"POST", "/ops/incidents/1/investigate"}, {"GET", "/ops/audit"},
 		{"GET", "/ops/actions"}, {"GET", "/ops/proposals"}, {"POST", "/ops/proposals"}, {"GET", "/ops/proposals/1"},
 		{"POST", "/ops/proposals/1/review"}, {"POST", "/ops/proposals/1/decision"},
-		{"POST", "/ops/proposals/1/execute"}, {"POST", "/ops/proposals/1/executed"}, {"GET", "/ops/queries"}, {"POST", "/ops/queries/service_up"}, {"GET", "/ops/outbox/order-service/dead"}, {"POST", "/ops/queries/gateway_latency_p95"},
+		{"POST", "/ops/proposals/1/execute"}, {"POST", "/ops/proposals/1/executed"}, {"GET", "/ops/queries"}, {"GET", "/ops/queries/service_up"}, {"POST", "/ops/queries/service_up"}, {"GET", "/ops/outbox/order-service/dead"}, {"POST", "/ops/queries/gateway_latency_p95"},
 	} {
 		if w := request(e, route.method, route.path, ""); w.Code != http.StatusUnauthorized {
 			t.Errorf("%s %s anonymous: %d, want 401", route.method, route.path, w.Code)
@@ -344,7 +344,7 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 		want         int
 	}{
 		{"GET", "/ops/incidents", 200}, {"GET", "/ops/proposals", 200}, {"POST", "/ops/proposals", 200},
-		{"POST", "/ops/queries/service_up", 200}, {"POST", "/ops/incidents/1/investigate", 200}, {"GET", "/ops/system/health", -1},
+		{"POST", "/ops/queries/service_up", 200}, {"GET", "/ops/queries/service_up", 200}, {"POST", "/ops/incidents/1/investigate", 200}, {"GET", "/ops/system/health", -1},
 		{"POST", "/ops/proposals/1/review", 200}, {"POST", "/ops/proposals/1/decision", 200},
 		{"POST", "/ops/proposals/1/execute", 200}, {"POST", "/ops/proposals/1/executed", 200}, {"GET", "/admin/analytics/data-health", -1},
 		{"GET", "/admin/analytics/summary", 403}, {"GET", "/admin/analytics/traffic", 403}, {"GET", "/admin/payments", 403}, {"GET", "/admin/orders", 403},

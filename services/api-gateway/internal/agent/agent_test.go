@@ -180,12 +180,30 @@ func TestAllowsActionIsPerRole(t *testing.T) {
 		{"seller_admin", "POST", "/orders/12/cancel", false},
 		{"buyer", "POST", "/orders/12x/cancel", false},
 		{"buyer", "GET", "/orders/12/cancel", false},
-		{"admin", "POST", "/admin/orders/12/cancel", true},
+		{"admin", "POST", "/admin/orders/12/cancel", true}, // the table keeps the row; CanPropose refuses read-only roles
 		{"buyer", "POST", "/admin/payments/12/refund", false},
 	}
 	for _, c := range cases {
 		if got := AllowsAction(c.role, c.method, c.path); got != c.want {
 			t.Errorf("AllowsAction(%s,%s,%s) = %v, want %v", c.role, c.method, c.path, got, c.want)
+		}
+	}
+}
+
+func TestAdminAndDevAreReadOnly(t *testing.T) {
+	for _, role := range []string{"admin", "dev"} {
+		if len(ActionsFor(role)) != 0 || CanPropose(role, "POST", "/admin/orders/12/cancel") {
+			t.Errorf("%s must have no proposable actions", role)
+		}
+		for _, tool := range DefaultScopes[role] {
+			if tool.Method != "GET" || strings.Contains(tool.Path, "/accounts") || strings.HasPrefix(tool.Path, "/auth") {
+				t.Errorf("%s: %s %s must be a read outside accounts/auth", role, tool.Method, tool.Path)
+			}
+		}
+	}
+	for _, tool := range DefaultScopes["dev"] {
+		if strings.HasPrefix(tool.Path, "/admin/") && tool.Path != "/admin/analytics/data-health" {
+			t.Errorf("dev must not see business data: %s", tool.Path)
 		}
 	}
 }

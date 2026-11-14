@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -73,31 +74,63 @@ func (h *OpsHandler) Proxy(upstreamPath string) gin.HandlerFunc {
 			}
 			body = bytes.NewReader(b)
 		}
-		req, err := http.NewRequestWithContext(c.Request.Context(), c.Request.Method, url, body)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		h.forward(c, c.Request.Method, url, body)
+	}
+}
+
+// forward sends one request to ops-service with the shared token and the caller's identity, and relays the answer.
+func (h *OpsHandler) forward(c *gin.Context, method, url string, body io.Reader) {
+	req, err := http.NewRequestWithContext(c.Request.Context(), method, url, body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("Authorization", "Bearer "+h.Token)
+	role := "admin"
+	if r, ok := c.Value("userRole").(string); ok && r != "" {
+		role = r
+	}
+	req.Header.Set("X-Actor", fmt.Sprintf("%s:%v", role, c.Value("userID")))
+	if rid, ok := c.Get("requestID"); ok {
+		req.Header.Set("X-Request-ID", fmt.Sprint(rid))
+	}
+	resp, err := h.Client.Do(req)
+	if err != nil {
+		h.Logger.Warn("OpsHandler: upstream unavailable", zap.Error(err))
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ops service is unavailable"})
+		return
+	}
+	defer resp.Body.Close()
+	out, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+	c.Data(resp.StatusCode, "application/json", out)
+}
+
+// queryParams are the only inputs a named query takes (ops-service validates each against its catalog).
+var queryParams = []string{"service", "window", "request_id"}
+
+// Query serves GET /ops/queries/:name as a read: it turns the query string into the {"params":{...}} body ops-service expects
+// for its POST /queries/:name. The query catalog is a fixed allowlist of Prometheus/Loki lookups, so nothing here can write.
+func (h *OpsHandler) Query() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if h.Token == "" || h.BaseURL == "" {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ops service is not configured"})
 			return
 		}
-		if body != nil {
-			req.Header.Set("Content-Type", "application/json")
-		}
-		req.Header.Set("Authorization", "Bearer "+h.Token)
-		role := "admin"
-		if r, ok := c.Value("userRole").(string); ok && r != "" {
-			role = r
-		}
-		req.Header.Set("X-Actor", fmt.Sprintf("%s:%v", role, c.Value("userID")))
-		if rid, ok := c.Get("requestID"); ok {
-			req.Header.Set("X-Request-ID", fmt.Sprint(rid))
-		}
-		resp, err := h.Client.Do(req)
-		if err != nil {
-			h.Logger.Warn("OpsHandler: upstream unavailable", zap.Error(err))
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ops service is unavailable"})
+		name := c.Param("name")
+		if name == "" || len(name) > 64 || strings.Trim(name, "abcdefghijklmnopqrstuvwxyz0123456789_") != "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query name"})
 			return
 		}
-		defer resp.Body.Close()
-		out, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
-		c.Data(resp.StatusCode, "application/json", out)
+		params := map[string]string{}
+		for _, k := range queryParams {
+			if v := c.Query(k); v != "" {
+				params[k] = v
+			}
+		}
+		b, _ := json.Marshal(map[string]any{"params": params})
+		h.forward(c, http.MethodPost, h.BaseURL+"/queries/"+name, bytes.NewReader(b))
 	}
 }

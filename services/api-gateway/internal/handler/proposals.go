@@ -37,7 +37,7 @@ func (h ProposalHandler) Create(c *gin.Context) {
 	}
 	req.Method = strings.ToUpper(strings.TrimSpace(req.Method))
 	req.Summary = strings.TrimSpace(req.Summary)
-	if !agent.Proposable(req.Method, req.Path) || !agent.AllowsAction(claims.Role, req.Method, req.Path) {
+	if !agent.Proposable(req.Method, req.Path) || !agent.CanPropose(claims.Role, req.Method, req.Path) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "this action cannot be proposed by the agent"})
 		return
 	}

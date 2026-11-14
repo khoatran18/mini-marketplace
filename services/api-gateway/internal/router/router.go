@@ -137,6 +137,9 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	aiHandler := handler.NewAIHandler(envConfig.FeatureAIChat, envConfig.AIServiceURL, envConfig.AIStreamTimeout, serviceConfig.ZapLogger)
 	// ADR-42: agent tokens and signed action proposals, keys only here (never JWT_SECRET). No keys = both off.
 	aiHandler.Signer = signer
+	if serviceConfig.RedisClient != nil {
+		aiHandler.Slots = handler.RedisSlots{RDB: serviceConfig.RedisClient} // one running chat stream per user, across replicas
+	}
 	if keyRing.Enabled() {
 		serviceConfig.ZapLogger.Info("agent token keys loaded", zap.Strings("kids", keyRing.IDs())) // ids only, never secrets
 	}
@@ -170,41 +173,46 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		// Reports, revenue and every /admin route stay admin only (except pipeline data-health below). The creator of a proposal still cannot approve or run it.
 		adminOrDev := middleware.AuthorizationMiddleware([]string{"admin", "dev"}, serviceConfig.ZapLogger)
 		opsRead := router.Group("/ops", authenticated, adminOrDev)
-		opsRead.GET("/incidents", opsHandler.Proxy("/incidents"))
-		opsRead.GET("/incidents/:id", opsHandler.Proxy("/incidents/:id"))
 		opsRead.POST("/incidents/:id/investigate", opsHandler.Proxy("/incidents/:id/investigate"))
-		opsRead.GET("/audit", opsHandler.Proxy("/audit"))
-		opsRead.GET("/outbox/:service/dead", opsHandler.Proxy("/outbox/:service/dead"))
 		opsRead.GET("/actions", opsHandler.Proxy("/actions"))
 		opsRead.GET("/queries", opsHandler.Proxy("/queries"))
 		opsRead.POST("/queries/:name", opsHandler.Proxy("/queries/:name"))
-		opsRead.GET("/proposals", opsHandler.Proxy("/proposals"))
 		opsRead.POST("/proposals", opsHandler.Proxy("/proposals"))
-		opsRead.GET("/proposals/:id", opsHandler.Proxy("/proposals/:id"))
 		opsRead.POST("/proposals/:id/review", opsHandler.Proxy("/proposals/:id/review"))
 		opsRead.POST("/proposals/:id/decision", opsHandler.Proxy("/proposals/:id/decision"))
 		opsRead.POST("/proposals/:id/execute", opsHandler.Proxy("/proposals/:id/execute"))
 		opsRead.POST("/proposals/:id/executed", opsHandler.Proxy("/proposals/:id/executed"))
-		opsRead.GET("/system/health", systemHandler.Health)
 		// pipeline health (lag, reconcile), not business figures: stays under /admin/analytics, open to dev as well
-		router.Group("/admin", authenticated, adminOrDev).GET("/analytics/data-health", h.AnalyticsHandler.Admin("data-health"))
+		// Reads the admin/dev agent may call (agent.DefaultScopes) sit in groups with agentOr: a group-level `authenticated`
+		// would reject the agent token before it is checked. Writes stay on adminRoute/opsRead with the user's own JWT.
+		opsAgentRead := router.Group("/ops", agentOr(authenticated), adminOrDev)
+		opsAgentRead.GET("/incidents", opsHandler.Proxy("/incidents"))
+		opsAgentRead.GET("/incidents/:id", opsHandler.Proxy("/incidents/:id"))
+		opsAgentRead.GET("/audit", opsHandler.Proxy("/audit"))
+		opsAgentRead.GET("/outbox/:service/dead", opsHandler.Proxy("/outbox/:service/dead"))
+		opsAgentRead.GET("/system/health", systemHandler.Health)
+		opsAgentRead.GET("/proposals", opsHandler.Proxy("/proposals"))
+		opsAgentRead.GET("/proposals/:id", opsHandler.Proxy("/proposals/:id"))
+		opsAgentRead.GET("/queries/:name", opsHandler.Query())
+		router.Group("/admin", agentOr(authenticated), adminOrDev).GET("/analytics/data-health", h.AnalyticsHandler.Admin("data-health"))
+		adminAgentRead := router.Group("/admin", agentOr(authenticated), middleware.AuthorizationMiddleware([]string{"admin"}, serviceConfig.ZapLogger))
 		for _, r := range []string{"summary", "timeseries", "top-products", "funnel", "low-stock", "traffic", "payments", "search-terms"} {
-			adminRoute.GET("/analytics/"+r, h.AnalyticsHandler.Admin(r))
+			adminAgentRead.GET("/analytics/"+r, h.AnalyticsHandler.Admin(r))
 		}
+		adminAgentRead.GET("/categories", h.CatalogHandler.AdminCategories)
+		adminAgentRead.GET("/payments", h.PaymentHandler.AdminList)
+		adminAgentRead.GET("/payments/:id", h.PaymentHandler.AdminGet)
+		adminAgentRead.GET("/orders", h.OrderHandler.ListAllOrders())
+		adminAgentRead.GET("/orders/:id", h.OrderHandler.GetAnyOrder())
 		adminRoute.GET("/accounts", h.AuthHandler.ListAccounts)
 		adminRoute.POST("/accounts", h.AuthHandler.CreateStaffAccount)
 		adminRoute.DELETE("/accounts/:id", h.AuthHandler.DeleteStaffAccount)
 		adminRoute.POST("/accounts/:id/reset-password", h.AuthHandler.ResetStaffPassword)
-		adminRoute.GET("/categories", h.CatalogHandler.AdminCategories)
 		adminRoute.POST("/categories", h.CatalogHandler.CreateCategory)
 		adminRoute.PUT("/categories/:id", h.CatalogHandler.UpdateCategory)
 		adminRoute.PATCH("/products/:id/status", h.CatalogHandler.AdminSetStatus)
-		adminRoute.GET("/payments", h.PaymentHandler.AdminList)
-		adminRoute.GET("/payments/:id", h.PaymentHandler.AdminGet)
 		adminRoute.POST("/payments/:id/refund", confirm, h.PaymentHandler.AdminRefund)
 		adminRoute.POST("/dev/payments/:id/force", h.PaymentHandler.AdminForce)
-		adminRoute.GET("/orders", h.OrderHandler.ListAllOrders())
-		adminRoute.GET("/orders/:id", h.OrderHandler.GetAnyOrder())
 		adminRoute.POST("/orders/:id/cancel", confirm, h.OrderHandler.AdminCancel())
 		adminRoute.POST("/orders/:id/deliver", h.OrderHandler.AdminDeliver())
 		adminRoute.POST("/orders/:id/return/approve", h.OrderHandler.AdminApproveReturn())
@@ -251,6 +259,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 
 	// Payments (SIMULATED provider): a buyer pays only their own payments
 	router.GET("/payments/methods", h.PaymentHandler.Methods)
+	router.GET("/shop/rules", h.OrderHandler.ShopRules) // public: order rules in force (also read by the assistant)
 	paymentRoute := router.Group("/payments", authenticated, buyerRoles)
 	{
 		paymentRoute.GET("/:id", h.PaymentHandler.Get)

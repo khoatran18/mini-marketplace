@@ -42,14 +42,15 @@ type ToolParam struct {
 // Scopes maps role -> tools.
 type Scopes map[string][]Tool
 
-// DefaultScopes is the table in use: buyer and seller so far; admin/dev rows are added with their steps
-// (docs/ai/08_AGENT_BUILD_ROADMAP.md §5). Every row is a GET: writes are never reachable with an agent token, they go
+// DefaultScopes is the table in use: buyer, seller, admin and dev (docs/ai/08_AGENT_BUILD_ROADMAP.md §5). Every row is a GET: writes are never reachable with an agent token, they go
 // through a signed proposal and the user's own token. There is deliberately no row for /auth/*, /users/*, addresses,
 // /payments/:id or any /admin route.
 var DefaultScopes = Scopes{
 	"buyer":           buyerTools,
 	"seller_admin":    sellerTools,
 	"seller_employee": sellerTools,
+	"admin":           adminTools,
+	"dev":             devTools,
 }
 
 var buyerTools = []Tool{
@@ -81,6 +82,7 @@ var buyerTools = []Tool{
 	{Name: "get_my_order", Method: "GET", Path: "/orders/:id", Description: "One of the user's own orders (the service refuses other people's orders).", Params: []ToolParam{
 		{Name: "id", In: "path", Type: "integer", Required: true},
 	}},
+	{Name: "get_shop_rules", Method: "GET", Path: "/shop/rules", Description: "The order rules in force right now: minutes to pay an online order, days to request a return after delivery, days until a shipped order counts as delivered, shipping fee per store order and the subtotal from which shipping is free (whole VND; 0 = never). Use it for EVERY number about these rules."},
 	{Name: "list_payment_methods", Method: "GET", Path: "/payments/methods", Description: "Payment methods the shop offers (information only)."},
 }
 
@@ -94,6 +96,7 @@ var analyticsParams = []ToolParam{
 // sellerTools: the shop's own data only. The store comes from the token's user (auth-service lookup), never from a
 // parameter, so none of these takes a store id. Product browsing tools are the public ones (no owner data).
 var sellerTools = []Tool{
+	{Name: "get_shop_rules", Method: "GET", Path: "/shop/rules", Description: "The order rules in force right now: minutes to pay an online order, days to request a return after delivery, days until a shipped order counts as delivered, shipping fee per store order and the subtotal from which shipping is free (whole VND; 0 = never). Use it for EVERY number about these rules."},
 	{Name: "list_my_products", Method: "GET", Path: "/seller/products", Description: "Products of the seller's own store, every status.", Params: []ToolParam{
 		{Name: "q", In: "query", Type: "string"},
 		{Name: "page", In: "query", Type: "integer"},
@@ -125,6 +128,78 @@ var sellerTools = []Tool{
 	{Name: "analytics_funnel", Method: "GET", Path: "/seller/analytics/funnel", Description: "View -> cart -> order funnel of the store.", Params: analyticsParams},
 	{Name: "analytics_low_stock", Method: "GET", Path: "/seller/analytics/low-stock", Description: "Low-stock report from analytics (may lag Postgres; prefer list_low_stock for exact stock).", Params: analyticsParams},
 }
+
+var limitParam = ToolParam{Name: "limit", In: "query", Type: "integer", Description: "max rows"}
+var pageParams = []ToolParam{{Name: "page", In: "query", Type: "integer"}, {Name: "page_size", In: "query", Type: "integer"}}
+
+var opsServices = []string{"api-gateway", "auth-service", "user-service", "product-service", "order-service", "payment-service", "analytics-service", "ops-service"}
+
+// opsQueryNames mirrors the catalog in ops-service (internal/queries): fixed Prometheus/Loki lookups, the agent never writes PromQL/LogQL.
+var opsQueryNames = []string{
+	"alerts_firing", "service_up", "service_ready", "service_replicas", "service_replicas_up", "gateway_request_rate", "grpc_request_rate",
+	"grpc_error_rate", "circuit_state", "outbox_pending", "outbox_oldest_age", "outbox_dead", "gateway_5xx_ratio", "dlq_increase",
+	"memory_ratio", "kafka_consumer_lag", "gateway_latency_p95", "grpc_latency_p95", "db_pool_wait", "disk_free_ratio", "memory_growth",
+	"infra_up", "logs_errors", "logs_by_request",
+}
+
+const opsQueryHelp = "Run one named metrics/log lookup (Prometheus, Loki). Latency: gateway_latency_p95 (per route), grpc_latency_p95 (per service) - " +
+	"use these for 'which service is slowest'. Errors: gateway_5xx_ratio, grpc_error_rate, logs_errors(service). Load: gateway_request_rate, grpc_request_rate. " +
+	"State: alerts_firing, service_up/service_ready(service), service_replicas(_up), circuit_state, infra_up. Data flow: outbox_pending, outbox_oldest_age, " +
+	"outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id)."
+
+// opsTools: read-only view of the platform's health, shared by admin and dev (system data only, no business figures).
+var opsTools = []Tool{
+	{Name: "ops_list_incidents", Method: "GET", Path: "/ops/incidents", Description: "Incidents raised from alerts, newest first.", Params: []ToolParam{
+		{Name: "state", In: "query", Type: "string", Enum: []string{"open", "investigating", "resolved"}}, limitParam,
+	}},
+	{Name: "ops_get_incident", Method: "GET", Path: "/ops/incidents/:id", Description: "One incident with its runbook and suggested action.", Params: []ToolParam{
+		{Name: "id", In: "path", Type: "integer", Required: true},
+	}},
+	{Name: "ops_list_audit", Method: "GET", Path: "/ops/audit", Description: "Append-only audit log of ops decisions. subject_type and subject_id go together.", Params: []ToolParam{
+		{Name: "subject_type", In: "query", Type: "string"}, {Name: "subject_id", In: "query", Type: "string"}, limitParam,
+	}},
+	{Name: "ops_outbox_dead", Method: "GET", Path: "/ops/outbox/:service/dead", Description: "Outbox events that failed for good in one service (order, product or payment).", Params: []ToolParam{
+		{Name: "service", In: "path", Type: "string", Required: true, Description: "service name, e.g. order-service"}, limitParam,
+	}},
+	{Name: "ops_list_proposals", Method: "GET", Path: "/ops/proposals", Description: "Ops proposals (actions waiting for a human review/approval, or already decided). Read only: nobody can approve or run one through the agent.", Params: []ToolParam{
+		{Name: "state", In: "query", Type: "string", Enum: []string{"pending", "accepted", "rejected", "needs_review", "alternative", "expired"}},
+		{Name: "incident_id", In: "query", Type: "integer"}, limitParam,
+	}},
+	{Name: "ops_get_proposal", Method: "GET", Path: "/ops/proposals/:id", Description: "One ops proposal with its reasoning, review notes and decision.", Params: []ToolParam{
+		{Name: "id", In: "path", Type: "integer", Required: true},
+	}},
+	{Name: "ops_metrics_query", Method: "GET", Path: "/ops/queries/:name", Description: opsQueryHelp, Params: []ToolParam{
+		{Name: "name", In: "path", Type: "string", Required: true, Enum: opsQueryNames, Description: "which named query to run"},
+		{Name: "service", In: "query", Type: "string", Enum: opsServices, Description: "needed by service_up, service_ready, logs_errors"},
+		{Name: "window", In: "query", Type: "string", Enum: []string{"5m", "15m", "1h"}, Description: "look-back window; each query has its own default"},
+		{Name: "request_id", In: "query", Type: "string", Description: "only for logs_by_request: the X-Request-ID to follow across services"},
+	}},
+	{Name: "ops_system_health", Method: "GET", Path: "/ops/system/health", Description: "Live health of every service."},
+	{Name: "data_health", Method: "GET", Path: "/admin/analytics/data-health", Description: "Analytics pipeline lag and reconcile state (not business figures)."},
+}
+
+// devTools: the system only. A dev must not see business data, same rule as the gateway routes.
+var devTools = opsTools
+
+var adminReportParams = append([]ToolParam{}, analyticsParams...)
+
+// adminTools: platform-wide reads (every store) plus the ops view. No accounts, no password or user routes.
+var adminTools = append([]Tool{
+	{Name: "admin_list_orders", Method: "GET", Path: "/admin/orders", Description: "Orders of every store, newest first.", Params: append([]ToolParam{{Name: "status", In: "query", Type: "string"}}, pageParams...)},
+	{Name: "admin_get_order", Method: "GET", Path: "/admin/orders/:id", Description: "One order of any store.", Params: []ToolParam{{Name: "id", In: "path", Type: "integer", Required: true}}},
+	{Name: "admin_list_payments", Method: "GET", Path: "/admin/payments", Description: "Payments (simulated), newest first.", Params: append([]ToolParam{
+		{Name: "status", In: "query", Type: "string"}, {Name: "method", In: "query", Type: "string"}}, pageParams...)},
+	{Name: "admin_get_payment", Method: "GET", Path: "/admin/payments/:id", Description: "One payment with its attempts and refunds.", Params: []ToolParam{{Name: "id", In: "path", Type: "integer", Required: true}}},
+	{Name: "admin_list_categories", Method: "GET", Path: "/admin/categories", Description: "All categories, including inactive ones."},
+	{Name: "admin_analytics_summary", Method: "GET", Path: "/admin/analytics/summary", Description: "Platform KPIs for a period. Includes as_of and source.", Params: adminReportParams},
+	{Name: "admin_analytics_timeseries", Method: "GET", Path: "/admin/analytics/timeseries", Description: "Platform revenue/orders over time.", Params: adminReportParams},
+	{Name: "admin_analytics_top_products", Method: "GET", Path: "/admin/analytics/top-products", Description: "Best-selling products across the platform.", Params: adminReportParams},
+	{Name: "admin_analytics_funnel", Method: "GET", Path: "/admin/analytics/funnel", Description: "View -> cart -> order funnel.", Params: adminReportParams},
+	{Name: "admin_analytics_low_stock", Method: "GET", Path: "/admin/analytics/low-stock", Description: "Low-stock report across stores.", Params: adminReportParams},
+	{Name: "admin_analytics_traffic", Method: "GET", Path: "/admin/analytics/traffic", Description: "Visits and sources.", Params: adminReportParams},
+	{Name: "admin_analytics_payments", Method: "GET", Path: "/admin/analytics/payments", Description: "Payment success/failure by method.", Params: adminReportParams},
+	{Name: "admin_analytics_search_terms", Method: "GET", Path: "/admin/analytics/search-terms", Description: "Most searched terms and those with no result.", Params: adminReportParams},
+}, opsTools...)
 
 // Tools returns the tools of a role (nil for an unknown role: no tools, no access).
 func (s Scopes) Tools(role string) []Tool { return s[role] }
@@ -191,8 +266,22 @@ var sellerActions = []Action{
 	}},
 }
 
-// ActionsFor returns the actions of a role (nil for an unknown role).
-func ActionsFor(role string) []Action { return DefaultActions[role] }
+// readOnlyRoles get read tools only: no propose_ tools are served and /ai/proposals refuses them, although DefaultActions keeps
+// the admin rows so the proposable list and its confirm gate stay covered by tests. Remove a role here to let its agent propose.
+var readOnlyRoles = map[string]bool{"admin": true, "dev": true}
+
+// ActionsFor returns the actions of a role's agent (nil for an unknown or read-only role).
+func ActionsFor(role string) []Action {
+	if readOnlyRoles[role] {
+		return nil
+	}
+	return DefaultActions[role]
+}
+
+// CanPropose is the check /ai/proposals makes: the role's agent may propose, and this action is one of its own.
+func CanPropose(role, method, path string) bool {
+	return !readOnlyRoles[role] && AllowsAction(role, method, path)
+}
 
 func actionRegexp(pattern string) *regexp.Regexp {
 	return regexp.MustCompile("^" + strings.ReplaceAll(regexp.QuoteMeta(pattern), `:id`, `\d+`) + "$")

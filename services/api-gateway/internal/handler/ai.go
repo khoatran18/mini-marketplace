@@ -33,6 +33,7 @@ type AIHandler struct {
 	MaxDuration time.Duration // cap for one stream (client disconnect cancels earlier)
 	Client      *http.Client  // no overall Timeout: a stream outlives any fixed request timeout
 	Logger      *zap.Logger
+	Slots       SlotStore     // one running stream per user (nil = no limit); an unreachable store refuses the chat
 	Signer      *agent.Signer // ADR-42: issues the short-lived agent token sent in X-Agent-Token (nil/no keys = not sent)
 }
 
@@ -68,6 +69,24 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), h.MaxDuration)
 	defer cancel()
+	if h.Slots != nil {
+		uid := fmt.Sprint(c.Value("userID"))
+		token, ok, serr := h.Slots.Acquire(ctx, uid, h.MaxDuration+10*time.Second)
+		if serr != nil {
+			h.Logger.Warn("AIHandler: cannot check the per-user slot", zap.Error(serr))
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai service is unavailable"})
+			return
+		}
+		if !ok {
+			c.JSON(http.StatusConflict, gin.H{"error": "busy", "message": "a previous question is still being answered"})
+			return
+		}
+		defer func() {
+			rctx, rcancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer rcancel()
+			h.Slots.Release(rctx, uid, token)
+		}()
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.BaseURL+"/chat", bytes.NewReader(body))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})

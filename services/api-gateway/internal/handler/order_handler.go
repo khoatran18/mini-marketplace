@@ -435,6 +435,23 @@ func (h *OrderHandler) countOrders(kind string) gin.HandlerFunc {
 	}
 }
 
+// ShopRules serves GET /shop/rules: the order rules in force (payment window, return window, auto-deliver, shipping fee).
+// Public and read-only; the numbers come from order-service so they always match what it enforces.
+func (h *OrderHandler) ShopRules(c *gin.Context) {
+	oc, ctx, cancel, ok := h.order(c)
+	if !ok {
+		return
+	}
+	defer cancel()
+	res, err := oc.GetShopRules(ctx, &orderpb.ShopRulesRequest{})
+	if err != nil {
+		respondError(c, h.Logger, "OrderHandler: GetShopRules", err)
+		return
+	}
+	c.Header("Cache-Control", "public, max-age=60")
+	writeProto(c, http.StatusOK, res)
+}
+
 // Buyer views.
 func (h *OrderHandler) ListMyOrders() gin.HandlerFunc     { return h.listOrders("buyer") }
 func (h *OrderHandler) GetMyOrder() gin.HandlerFunc       { return h.getOrder("buyer") }

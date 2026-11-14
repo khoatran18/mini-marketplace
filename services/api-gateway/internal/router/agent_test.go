@@ -90,7 +90,7 @@ func TestAgentTokenCannotCallNormalRoutes(t *testing.T) {
 	for _, r := range [][2]string{
 		{"POST", "/orders/5/cancel"}, {"POST", "/orders"}, {"DELETE", "/cart"}, {"POST", "/auth/change-password"},
 		{"GET", "/admin/accounts"}, {"GET", "/users/me/addresses"}, {"GET", "/payments/5"}, {"POST", "/seller/orders/5/ship"},
-		{"GET", "/admin/orders"}, {"POST", "/ai/chat"},
+		{"POST", "/ai/chat"},
 	} {
 		if w := do(e, r[0], r[1], at, "", ""); w.Code != http.StatusUnauthorized {
 			t.Errorf("%s %s with an agent token: %d, want 401 (not signed with JWT_SECRET)", r[0], r[1], w.Code)
@@ -194,10 +194,54 @@ func TestToolsEndpoint(t *testing.T) {
 		t.Errorf("unexpected list: %+v", out)
 	}
 	// a role with no row gets an empty list (never null), no access
-	at2, _, _ := s.IssueAgentToken(1, "u", "admin", 0, time.Minute)
+	at2, _, _ := s.IssueAgentToken(1, "u", "nobody", 0, time.Minute)
 	w = do(e, "GET", "/ai/tools", at2, "", "")
 	if w.Code != 200 || !strings.Contains(w.Body.String(), `"tools":[]`) {
-		t.Errorf("admin: %d %s", w.Code, w.Body.String())
+		t.Errorf("unknown role: %d %s", w.Code, w.Body.String())
+	}
+	// admin and dev get read tools and no propose_ actions
+	for _, role := range []string{"admin", "dev"} {
+		at3, _, _ := s.IssueAgentToken(1, "u", role, 0, time.Minute)
+		w = do(e, "GET", "/ai/tools", at3, "", "")
+		if w.Code != 200 || !strings.Contains(w.Body.String(), `"actions":[]`) || strings.Contains(w.Body.String(), `"tools":[]`) {
+			t.Errorf("%s: want tools and no actions, got %d", role, w.Code)
+		}
+	}
+}
+
+// dev sees the system only; admin sees business data too; nobody reaches accounts, and /ops writes stay out of reach.
+func TestAdminAndDevAgentScopes(t *testing.T) {
+	e, s := agentEngine(t)
+	tok := func(role string) string { at, _, _ := s.IssueAgentToken(1, "u", role, 0, time.Minute); return at }
+	for _, c := range []struct {
+		role, method, path string
+		allowed            bool
+	}{
+		{"admin", "GET", "/admin/orders", true}, {"admin", "GET", "/admin/payments/1", true}, {"admin", "GET", "/ops/incidents", true},
+		{"dev", "GET", "/ops/incidents", true}, {"dev", "GET", "/ops/system/health", true}, {"dev", "GET", "/ops/queries/gateway_latency_p95", true},
+		{"admin", "GET", "/ops/proposals", true}, {"dev", "GET", "/ops/proposals/1", true}, {"dev", "POST", "/ops/queries/gateway_latency_p95", false},
+		{"dev", "POST", "/ops/proposals", false}, {"admin", "POST", "/ops/proposals/1/decision", false}, {"dev", "GET", "/admin/analytics/data-health", true},
+		{"dev", "GET", "/admin/orders", false}, {"dev", "GET", "/admin/analytics/summary", false}, {"dev", "GET", "/admin/payments", false},
+		{"admin", "GET", "/admin/accounts", false}, {"dev", "GET", "/admin/accounts", false},
+		{"admin", "POST", "/ops/incidents/1/investigate", false}, {"dev", "POST", "/ops/proposals/1/execute", false},
+		{"admin", "POST", "/admin/orders/1/cancel", false}, {"admin", "POST", "/admin/payments/1/refund", false},
+		{"admin", "GET", "/orders", false}, {"admin", "GET", "/seller/orders", false},
+	} {
+		w := do(e, c.method, c.path, tok(c.role), "", "")
+		refused := w.Code == http.StatusUnauthorized || w.Code == http.StatusForbidden
+		if c.allowed && refused {
+			t.Errorf("%s %s %s: refused (%d), want allowed", c.role, c.method, c.path, w.Code)
+		}
+		if !c.allowed && !refused {
+			t.Errorf("%s %s %s: %d, want refused", c.role, c.method, c.path, w.Code)
+		}
+	}
+	// the read-only roles cannot even get a proposal signed
+	for _, role := range []string{"admin", "dev"} {
+		w := do(e, "POST", "/ai/proposals", tok(role), "", `{"method":"POST","path":"/admin/orders/5/cancel","summary":"x","body":null}`)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("%s proposal: %d, want 403", role, w.Code)
+		}
 	}
 }
 
@@ -268,7 +312,6 @@ func TestEveryProposableRouteHasTheConfirmGate(t *testing.T) {
 		{"buyer", "/orders/5/cancel"}, {"buyer", "/orders/5/return"},
 		{"seller_admin", "/seller/orders/5/cancel"}, {"seller_admin", "/seller/orders/5/return/approve"},
 		{"seller_admin", "/seller/orders/5/return/reject"}, {"seller_admin", "/seller/products/5/inventory/adjust"},
-		{"admin", "/admin/orders/5/cancel"}, {"admin", "/admin/payments/5/refund"},
 	} {
 		p := proposeAs(t, e, s, c.role, 1, "POST", c.path, `{"n":1}`)
 		if w := do(e, "POST", c.path, token(t, c.role), p, `{"n":2}`); w.Code != http.StatusForbidden {
