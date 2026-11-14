@@ -1,0 +1,48 @@
+"""Persona theo role trong token: admin và dev có persona riêng, chỉ đọc; không role nào rơi về persona của role khác."""
+from ai_agent.personas import load_personas, persona_for_role
+from ai_agent.runtime import events
+
+from test_chat_flow import collect, make
+
+
+def test_every_gateway_role_has_exactly_one_persona():
+    personas = load_personas()
+    for role, name in {"buyer": "buyer", "seller_admin": "seller", "seller_employee": "seller", "admin": "admin", "dev": "dev"}.items():
+        assert persona_for_role(personas, role).name == name
+    assert persona_for_role(personas, "nobody") is None
+
+
+def test_admin_and_dev_prompts_are_read_only_and_dev_has_no_business_data():
+    personas = load_personas()
+    for name in ("admin", "dev"):
+        p = personas[name].prompt
+        assert "CHỈ ĐỌC" in p and "propose_" not in p and "{policy}" not in p
+    assert "không có dữ liệu kinh doanh" in personas["dev"].prompt
+
+
+async def test_admin_turn_runs_with_the_admin_persona():
+    rt, store, personas = make()
+    evs, _ = await collect(rt, store, personas["admin"], role="admin")
+    assert evs[0]["event"] == events.START and evs[-1]["event"] == events.DONE
+
+
+def test_admin_tool_labels_are_friendly():
+    assert events.label_for("admin_analytics_funnel") == "Đang xem báo cáo toàn sàn…"
+    assert events.source_label("ops_list_incidents") == "Sự cố"
+    assert "/" not in events.source_label("admin_analytics_traffic")
+
+
+def test_policy_numbers_come_from_the_tool_not_from_the_text():
+    personas = load_personas()
+    for name in ("buyer", "seller"):
+        p = personas[name].prompt
+        assert "{policy}" not in p and "chưa có tài liệu chính sách" not in p and "TODO" not in p
+        assert "get_shop_rules" in p
+        # no hard-coded rule values: they would go stale when the order-service settings change
+        for stale in ("30.000", "500.000", "15 phút", "7 ngày"):
+            assert stale not in p, f"{name}: {stale!r} must come from get_shop_rules"
+
+
+def test_ops_tools_have_friendly_labels():
+    for tool in ("ops_metrics_query", "ops_list_proposals", "ops_get_proposal", "get_shop_rules"):
+        assert events.label_for(tool) != "Đang tra cứu…" and "/" not in events.source_label(tool)

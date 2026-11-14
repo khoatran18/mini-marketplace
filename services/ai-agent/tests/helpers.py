@@ -29,7 +29,7 @@ def agent_token(user_id: int = 42, role: str = "buyer", jti: str = "run-0000-111
 def cfg(env: str = "dev"):
     """Cấu hình thật của env, nhưng role LLM trỏ về mô hình giả: test không được phụ thuộc key hay mạng."""
     c = load_config(env, CONFIG_DIR)
-    c._data["llm"]["roles"].update(buyer="fake_buyer", seller="fake_seller", summarizer="fake_text")
+    c._data["llm"]["roles"].update(buyer="fake_buyer", seller="fake_seller", admin="fake_seller", dev="fake_seller", summarizer="fake_text")
     c._data["store"]["backend"] = "memory"   # test không cần Postgres (test_store_postgres.py tự dựng kết nối riêng)
     return c
 
