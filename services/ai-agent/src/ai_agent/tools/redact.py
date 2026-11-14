@@ -12,12 +12,21 @@ _DROP_KEY = re.compile(r"(address|phone|mobile|email|receiver|recipient|password
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _PHONE = re.compile(r"(?<!\d)(?:\+?84|0)(?:[\s.-]?\d){8,10}(?!\d)")
 
+_JWT = re.compile(r"\beyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]*")
+_BEARER = re.compile(r"\b(?:Bearer|Basic)\s+[\w.~+/=-]{8,}", re.I)
+_SECRET_KV = re.compile(r"\b(?:password|passwd|secret|token|api[_-]?key|authorization)\b\s*[=:]\s*\S+", re.I)
+_IPV4 = re.compile(r"(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])")
+
 MASK = "[đã ẩn]"
 
 
 def mask_text(s: str) -> str:
-    """Che email và số điện thoại (kiểu Việt Nam) lọt vào văn bản tự do (mô tả, ghi chú)."""
-    return _PHONE.sub(MASK, _EMAIL.sub(MASK, s))
+    """Che những thứ không được vào ngữ cảnh mô hình khi lọt vào văn bản tự do (mô tả, ghi chú, dòng log): email, số điện thoại (kiểu
+    Việt Nam), JWT, "Bearer ...", "password=..."/"token: ...", địa chỉ IPv4. Tên người và địa chỉ nhà viết thành chữ thì regex không bắt được:
+    dữ liệu nào chứa chúng phải bị bỏ theo tên khoá (_DROP_KEY) hoặc không được cấp cho tool."""
+    for rx in (_JWT, _BEARER, _SECRET_KV, _EMAIL, _IPV4, _PHONE):
+        s = rx.sub(MASK, s)
+    return s
 
 
 def redact(obj: Any, max_items: int = 20, max_str: int = 500, _depth: int = 0) -> Any:

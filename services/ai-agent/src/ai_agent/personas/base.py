@@ -12,12 +12,13 @@ class Persona:
     llm_role: str                # khoá trong llm.roles
     token_roles: tuple[str, ...] # role trong token agent được dùng persona này
     prompt: str
+    hide_internals: bool = False  # True: người dùng cuối (buyer/seller) không được thấy đường dẫn API hay tên công cụ
 
     @staticmethod
-    def load(name: str, llm_role: str, token_roles: tuple[str, ...], directory: Path) -> "Persona":
+    def load(name: str, llm_role: str, token_roles: tuple[str, ...], directory: Path, hide_internals: bool = False) -> "Persona":
         text = (directory / "prompt.md").read_text(encoding="utf-8")
         policy_file = directory / "policy.md"
         policy = policy_file.read_text(encoding="utf-8").strip() if policy_file.is_file() else ""
         if not policy or policy.startswith("TODO"):
             policy = "(Chưa có tài liệu chính sách. Khi được hỏi về chính sách, nói rõ bạn chưa có thông tin chính thức và gợi ý liên hệ cửa hàng.)"
-        return Persona(name, llm_role, token_roles, text.replace("{policy}", policy))
+        return Persona(name, llm_role, token_roles, text.replace("{policy}", policy), hide_internals)

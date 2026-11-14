@@ -46,3 +46,15 @@ def test_policy_numbers_come_from_the_tool_not_from_the_text():
 def test_ops_tools_have_friendly_labels():
     for tool in ("ops_metrics_query", "ops_list_proposals", "ops_get_proposal", "get_shop_rules"):
         assert events.label_for(tool) != "Đang tra cứu…" and "/" not in events.source_label(tool)
+
+
+def test_every_persona_is_enabled_and_has_an_llm_role_in_every_config():
+    """Persona nằm ở code, config.*.yaml và bảng quyền của gateway: quên một nơi thì chỉ lộ khi chạy thật ("vai trò này chưa được hỗ trợ")."""
+    from helpers import CONFIG_DIR
+    from ai_agent.config import load_config
+
+    for env in ("dev", "prod"):
+        c = load_config(env, CONFIG_DIR)
+        for name, persona in load_personas().items():
+            assert c.personas.get(name, {}).get("enabled") is True, f"{env}: persona {name} chưa bật trong personas:"
+            assert persona.llm_role in c._data["llm"]["roles"], f"{env}: llm.roles thiếu {persona.llm_role}"

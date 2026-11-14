@@ -41,6 +41,11 @@ class AgentRuntime:
         self._specs[ctx.role] = (now + float(self.cfg.gateway.tools_cache_ttl_sec), specs, actions)
         return specs, actions
 
+    def tool_names(self, role: str) -> list[str]:
+        """Tên mọi tool (đọc + đề xuất) của role, đã lấy ở specs_for. Dùng cho bộ lọc lộ tên công cụ."""
+        hit = self._specs.get(role)
+        return [t.name for t in (*hit[1], *hit[2])] if hit else []
+
     def _model(self, llm_role: str):
         if llm_role not in self._models:
             self._models[llm_role] = self._llm_factory(self.cfg, llm_role)  # lỗi cấu hình báo ở đây, kèm tên profile
@@ -55,7 +60,7 @@ class AgentRuntime:
             limits = self.cfg.limits
             tools = [
                 make_tool(s, self.gateway, tool_timeout=float(self.cfg.gateway.timeout_sec),
-                          max_chars=int(limits.tool_result_max_chars), max_items=int(limits.tool_result_max_items))
+                          max_chars=int(limits.tool_result_max_chars), max_items=int(limits.tool_result_max_items), reveal_route=not persona.hide_internals)
                 for s in specs
             ]
             tools += [make_action_tool(a, self.gateway, tool_timeout=float(self.cfg.gateway.timeout_sec)) for a in actions]

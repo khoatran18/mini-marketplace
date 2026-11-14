@@ -9,6 +9,7 @@ from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage
 
 from ai_agent.config.logging import get_logger, request_id_var, run_id_var
+from ai_agent.guard.leak import LeakFilter
 from ai_agent.personas.base import Persona
 from ai_agent.runtime import events
 from ai_agent.runtime.agent_factory import AgentRuntime
@@ -51,12 +52,13 @@ async def run_turn(rt: AgentRuntime, store: Store, persona: Persona, ctx: RunCon
             yield _error(ctx, "unavailable", "Trợ lý tạm thời không khả dụng.")
             return
 
+        leak = LeakFilter(rt.tool_names(ctx.role)) if persona.hide_internals else None
         msgs = [HumanMessage(t) if r == "user" else AIMessage(t) for r, t in turn.history] + [HumanMessage(text)]
 
         async def drive() -> None:
             try:
                 stream = agent.astream({"messages": msgs}, stream_mode=["messages", "updates"], config={"recursion_limit": 40})
-                res = await pump(stream, ctx, int(limits.token_budget_per_turn))
+                res = await pump(stream, ctx, int(limits.token_budget_per_turn), leak)
                 await ctx.events.put(_Final(res))
             except asyncio.CancelledError:
                 raise

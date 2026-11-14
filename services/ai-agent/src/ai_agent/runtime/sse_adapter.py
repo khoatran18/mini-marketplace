@@ -12,6 +12,7 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, AIMessageChunk
 
+from ai_agent.guard.leak import LeakFilter
 from ai_agent.runtime import events
 from ai_agent.runtime.context import RunContext
 
@@ -38,7 +39,7 @@ def text_of(content: Any) -> str:
     return ""
 
 
-async def pump(stream: AsyncIterator[Any], ctx: RunContext, token_budget: int = 0) -> PumpResult:
+async def pump(stream: AsyncIterator[Any], ctx: RunContext, token_budget: int = 0, leak: LeakFilter | None = None) -> PumpResult:
     """Đọc hết stream, đẩy sự kiện `token` vào ctx.events, cộng token, áp trần. Trả câu trả lời cuối."""
     res = PumpResult()
     streamed = False
@@ -49,8 +50,12 @@ async def pump(stream: AsyncIterator[Any], ctx: RunContext, token_budget: int = 
             if not isinstance(chunk, AIMessageChunk) or (meta or {}).get("langgraph_node") not in MODEL_NODES:
                 continue
             text = text_of(chunk.content)
-            if text:
+            if text and leak is not None:
+                text = leak.feed(text)  # có thể rỗng: phần đuôi đang được giữ lại
                 streamed = True
+            elif text:
+                streamed = True
+            if text:
                 await ctx.events.put(events.make(events.TOKEN, ctx.run_id, text=text))
             u = chunk.usage_metadata
             if u:
@@ -64,6 +69,11 @@ async def pump(stream: AsyncIterator[Any], ctx: RunContext, token_budget: int = 
                     msgs = [m for m in upd.get("messages", []) if isinstance(m, AIMessage)]
                     if msgs:
                         res.answer = text_of(msgs[-1].content)
+    if leak is not None:
+        tail = leak.flush()
+        if tail:
+            await ctx.events.put(events.make(events.TOKEN, ctx.run_id, text=tail))
+        res.answer = leak.scrub(res.answer)  # bản lưu vào kho cũng không chứa chi tiết nội bộ
     if res.answer and not streamed:  # nhà cung cấp không stream: gửi một lần để UI vẫn thấy chữ
         await ctx.events.put(events.make(events.TOKEN, ctx.run_id, text=res.answer))
     return res

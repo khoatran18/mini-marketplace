@@ -23,7 +23,8 @@ class TurnAborted(Exception):
     """Dừng cả lượt (token agent hết hạn)."""
 
 
-def make_tool(spec: ToolSpec, gateway: GatewayClient, *, tool_timeout: float, max_chars: int, max_items: int) -> StructuredTool:
+def make_tool(spec: ToolSpec, gateway: GatewayClient, *, tool_timeout: float, max_chars: int, max_items: int,
+              reveal_route: bool = True) -> StructuredTool:
     async def run(**kwargs: Any) -> str:
         ctx = current_run()
         ctx.tool_calls += 1
@@ -42,7 +43,7 @@ def make_tool(spec: ToolSpec, gateway: GatewayClient, *, tool_timeout: float, ma
             await ctx.events.put(events.make(events.CITATION, ctx.run_id, tool=spec.name, label=events.source_label(spec.name)))
             await ctx.events.put(events.make(events.TOOL_RESULT, ctx.run_id, tool=spec.name, ok=True))
             logger.info("tool ok", extra={"tool": spec.name})
-            return views.model_view(spec, raw, max_chars, max_items)
+            return views.model_view(spec, raw, max_chars, max_items, reveal_route)
 
         msg = err.message if isinstance(err, GatewayError) else str(err)
         logger.warning("tool failed", extra={"tool": spec.name, "status": getattr(err, "status", None)})
