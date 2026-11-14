@@ -160,6 +160,15 @@ func (s *OrderServer) CountOrders(ctx context.Context, req *orderpb.CountOrdersR
 	return &orderpb.CountOrdersResponse{ByStatus: m}, nil
 }
 
+// GetShopRules returns the business rules in force (payment window, return window, auto-deliver, shipping fee). Public data.
+func (s *OrderServer) GetShopRules(_ context.Context, _ *orderpb.ShopRulesRequest) (*orderpb.ShopRules, error) {
+	r := s.OrderService.Settings.Rules()
+	return &orderpb.ShopRules{
+		PaymentTtlMinutes: r.PaymentTTLMinutes, ReturnWindowDays: r.ReturnWindowDays, AutoDeliverDays: r.AutoDeliverDays,
+		ShippingFlatFee: r.ShippingFlatFee, FreeShipOver: r.FreeShipOver,
+	}, nil
+}
+
 // ApplyAction performs a user action on an order.
 func (s *OrderServer) ApplyAction(ctx context.Context, req *orderpb.ActionRequest) (*orderpb.Order, error) {
 	v, err := s.OrderService.ApplyAction(ctx, &service.ActionInput{

@@ -26,6 +26,7 @@ const (
 	OrderService_ListOrders_FullMethodName      = "/order_service.pkg.pb.OrderService/ListOrders"
 	OrderService_CountOrders_FullMethodName     = "/order_service.pkg.pb.OrderService/CountOrders"
 	OrderService_ApplyAction_FullMethodName     = "/order_service.pkg.pb.OrderService/ApplyAction"
+	OrderService_GetShopRules_FullMethodName    = "/order_service.pkg.pb.OrderService/GetShopRules"
 	OrderService_GetCart_FullMethodName         = "/order_service.pkg.pb.OrderService/GetCart"
 	OrderService_SetCartItem_FullMethodName     = "/order_service.pkg.pb.OrderService/SetCartItem"
 	OrderService_ClearCart_FullMethodName       = "/order_service.pkg.pb.OrderService/ClearCart"
@@ -43,6 +44,7 @@ type OrderServiceClient interface {
 	ListOrders(ctx context.Context, in *ListOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error)
 	CountOrders(ctx context.Context, in *CountOrdersRequest, opts ...grpc.CallOption) (*CountOrdersResponse, error)
 	ApplyAction(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*Order, error)
+	GetShopRules(ctx context.Context, in *ShopRulesRequest, opts ...grpc.CallOption) (*ShopRules, error)
 	GetCart(ctx context.Context, in *GetCartRequest, opts ...grpc.CallOption) (*CartResponse, error)
 	SetCartItem(ctx context.Context, in *SetCartItemRequest, opts ...grpc.CallOption) (*CartResponse, error)
 	ClearCart(ctx context.Context, in *ClearCartRequest, opts ...grpc.CallOption) (*CartResponse, error)
@@ -127,6 +129,16 @@ func (c *orderServiceClient) ApplyAction(ctx context.Context, in *ActionRequest,
 	return out, nil
 }
 
+func (c *orderServiceClient) GetShopRules(ctx context.Context, in *ShopRulesRequest, opts ...grpc.CallOption) (*ShopRules, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ShopRules)
+	err := c.cc.Invoke(ctx, OrderService_GetShopRules_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *orderServiceClient) GetCart(ctx context.Context, in *GetCartRequest, opts ...grpc.CallOption) (*CartResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CartResponse)
@@ -178,6 +190,7 @@ type OrderServiceServer interface {
 	ListOrders(context.Context, *ListOrdersRequest) (*ListOrdersResponse, error)
 	CountOrders(context.Context, *CountOrdersRequest) (*CountOrdersResponse, error)
 	ApplyAction(context.Context, *ActionRequest) (*Order, error)
+	GetShopRules(context.Context, *ShopRulesRequest) (*ShopRules, error)
 	GetCart(context.Context, *GetCartRequest) (*CartResponse, error)
 	SetCartItem(context.Context, *SetCartItemRequest) (*CartResponse, error)
 	ClearCart(context.Context, *ClearCartRequest) (*CartResponse, error)
@@ -212,6 +225,9 @@ func (UnimplementedOrderServiceServer) CountOrders(context.Context, *CountOrders
 }
 func (UnimplementedOrderServiceServer) ApplyAction(context.Context, *ActionRequest) (*Order, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyAction not implemented")
+}
+func (UnimplementedOrderServiceServer) GetShopRules(context.Context, *ShopRulesRequest) (*ShopRules, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetShopRules not implemented")
 }
 func (UnimplementedOrderServiceServer) GetCart(context.Context, *GetCartRequest) (*CartResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCart not implemented")
@@ -372,6 +388,24 @@ func _OrderService_ApplyAction_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrderService_GetShopRules_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ShopRulesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).GetShopRules(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_GetShopRules_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).GetShopRules(ctx, req.(*ShopRulesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OrderService_GetCart_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetCartRequest)
 	if err := dec(in); err != nil {
@@ -478,6 +512,10 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApplyAction",
 			Handler:    _OrderService_ApplyAction_Handler,
+		},
+		{
+			MethodName: "GetShopRules",
+			Handler:    _OrderService_GetShopRules_Handler,
 		},
 		{
 			MethodName: "GetCart",

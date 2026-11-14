@@ -36,6 +36,23 @@ func SettingsFromEnv() Settings {
 	}
 }
 
+// ShopRules are the settings as people-facing numbers (whole VND, minutes, days).
+type ShopRules struct {
+	PaymentTTLMinutes, ReturnWindowDays, AutoDeliverDays int32
+	ShippingFlatFee, FreeShipOver                        int64
+}
+
+// Rules reports the rules in force, for GetShopRules.
+func (s Settings) Rules() ShopRules {
+	return ShopRules{
+		PaymentTTLMinutes: int32(s.PaymentTTL / time.Minute),
+		ReturnWindowDays:  int32(s.ReturnWindow / (24 * time.Hour)),
+		AutoDeliverDays:   int32(s.AutoDeliverAfter / (24 * time.Hour)),
+		ShippingFlatFee:   s.ShippingFlatMinor / 100,
+		FreeShipOver:      s.FreeShipOverMinor / 100,
+	}
+}
+
 func envInt(key string, def int) int {
 	if v, err := strconv.Atoi(os.Getenv(key)); err == nil && v >= 0 {
 		return v

@@ -1864,6 +1864,120 @@ func (x *MergeCartRequest) GetItems() []*CheckoutItem {
 	return nil
 }
 
+// ShopRules are the order rules in force right now (from the order-service settings), so what the UI or the assistant tells
+// people always matches what the service enforces. Money is whole VND.
+type ShopRulesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ShopRulesRequest) Reset() {
+	*x = ShopRulesRequest{}
+	mi := &file_order_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ShopRulesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShopRulesRequest) ProtoMessage() {}
+
+func (x *ShopRulesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_order_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShopRulesRequest.ProtoReflect.Descriptor instead.
+func (*ShopRulesRequest) Descriptor() ([]byte, []int) {
+	return file_order_proto_rawDescGZIP(), []int{23}
+}
+
+type ShopRules struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	PaymentTtlMinutes int32                  `protobuf:"varint,1,opt,name=payment_ttl_minutes,json=paymentTtlMinutes,proto3" json:"payment_ttl_minutes,omitempty"` // unpaid online orders expire after this
+	ReturnWindowDays  int32                  `protobuf:"varint,2,opt,name=return_window_days,json=returnWindowDays,proto3" json:"return_window_days,omitempty"`    // return allowed this long after delivery
+	AutoDeliverDays   int32                  `protobuf:"varint,3,opt,name=auto_deliver_days,json=autoDeliverDays,proto3" json:"auto_deliver_days,omitempty"`       // shipped orders become delivered after this (0 = never)
+	ShippingFlatFee   int64                  `protobuf:"varint,4,opt,name=shipping_flat_fee,json=shippingFlatFee,proto3" json:"shipping_flat_fee,omitempty"`       // per store order
+	FreeShipOver      int64                  `protobuf:"varint,5,opt,name=free_ship_over,json=freeShipOver,proto3" json:"free_ship_over,omitempty"`                // subtotal at or above which shipping is free (0 = never free)
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ShopRules) Reset() {
+	*x = ShopRules{}
+	mi := &file_order_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ShopRules) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShopRules) ProtoMessage() {}
+
+func (x *ShopRules) ProtoReflect() protoreflect.Message {
+	mi := &file_order_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShopRules.ProtoReflect.Descriptor instead.
+func (*ShopRules) Descriptor() ([]byte, []int) {
+	return file_order_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ShopRules) GetPaymentTtlMinutes() int32 {
+	if x != nil {
+		return x.PaymentTtlMinutes
+	}
+	return 0
+}
+
+func (x *ShopRules) GetReturnWindowDays() int32 {
+	if x != nil {
+		return x.ReturnWindowDays
+	}
+	return 0
+}
+
+func (x *ShopRules) GetAutoDeliverDays() int32 {
+	if x != nil {
+		return x.AutoDeliverDays
+	}
+	return 0
+}
+
+func (x *ShopRules) GetShippingFlatFee() int64 {
+	if x != nil {
+		return x.ShippingFlatFee
+	}
+	return 0
+}
+
+func (x *ShopRules) GetFreeShipOver() int64 {
+	if x != nil {
+		return x.FreeShipOver
+	}
+	return 0
+}
+
 var File_order_proto protoreflect.FileDescriptor
 
 const file_order_proto_rawDesc = "" +
@@ -2053,7 +2167,14 @@ const file_order_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\x04R\x06userId\"e\n" +
 	"\x10MergeCartRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x04R\x06userId\x128\n" +
-	"\x05items\x18\x02 \x03(\v2\".order_service.pkg.pb.CheckoutItemR\x05items2\xf4\a\n" +
+	"\x05items\x18\x02 \x03(\v2\".order_service.pkg.pb.CheckoutItemR\x05items\"\x12\n" +
+	"\x10ShopRulesRequest\"\xe7\x01\n" +
+	"\tShopRules\x12.\n" +
+	"\x13payment_ttl_minutes\x18\x01 \x01(\x05R\x11paymentTtlMinutes\x12,\n" +
+	"\x12return_window_days\x18\x02 \x01(\x05R\x10returnWindowDays\x12*\n" +
+	"\x11auto_deliver_days\x18\x03 \x01(\x05R\x0fautoDeliverDays\x12*\n" +
+	"\x11shipping_flat_fee\x18\x04 \x01(\x03R\x0fshippingFlatFee\x12$\n" +
+	"\x0efree_ship_over\x18\x05 \x01(\x03R\ffreeShipOver2\xcd\b\n" +
 	"\fOrderService\x12Y\n" +
 	"\bCheckout\x12%.order_service.pkg.pb.CheckoutRequest\x1a&.order_service.pkg.pb.CheckoutResponse\x12^\n" +
 	"\x0fPreviewCheckout\x12$.order_service.pkg.pb.PreviewRequest\x1a%.order_service.pkg.pb.PreviewResponse\x12_\n" +
@@ -2062,7 +2183,8 @@ const file_order_proto_rawDesc = "" +
 	"\n" +
 	"ListOrders\x12'.order_service.pkg.pb.ListOrdersRequest\x1a(.order_service.pkg.pb.ListOrdersResponse\x12b\n" +
 	"\vCountOrders\x12(.order_service.pkg.pb.CountOrdersRequest\x1a).order_service.pkg.pb.CountOrdersResponse\x12O\n" +
-	"\vApplyAction\x12#.order_service.pkg.pb.ActionRequest\x1a\x1b.order_service.pkg.pb.Order\x12S\n" +
+	"\vApplyAction\x12#.order_service.pkg.pb.ActionRequest\x1a\x1b.order_service.pkg.pb.Order\x12W\n" +
+	"\fGetShopRules\x12&.order_service.pkg.pb.ShopRulesRequest\x1a\x1f.order_service.pkg.pb.ShopRules\x12S\n" +
 	"\aGetCart\x12$.order_service.pkg.pb.GetCartRequest\x1a\".order_service.pkg.pb.CartResponse\x12[\n" +
 	"\vSetCartItem\x12(.order_service.pkg.pb.SetCartItemRequest\x1a\".order_service.pkg.pb.CartResponse\x12W\n" +
 	"\tClearCart\x12&.order_service.pkg.pb.ClearCartRequest\x1a\".order_service.pkg.pb.CartResponse\x12W\n" +
@@ -2080,7 +2202,7 @@ func file_order_proto_rawDescGZIP() []byte {
 	return file_order_proto_rawDescData
 }
 
-var file_order_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_order_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_order_proto_goTypes = []any{
 	(*OrderItem)(nil),           // 0: order_service.pkg.pb.OrderItem
 	(*StatusHistory)(nil),       // 1: order_service.pkg.pb.StatusHistory
@@ -2105,21 +2227,23 @@ var file_order_proto_goTypes = []any{
 	(*SetCartItemRequest)(nil),  // 20: order_service.pkg.pb.SetCartItemRequest
 	(*ClearCartRequest)(nil),    // 21: order_service.pkg.pb.ClearCartRequest
 	(*MergeCartRequest)(nil),    // 22: order_service.pkg.pb.MergeCartRequest
-	nil,                         // 23: order_service.pkg.pb.CountOrdersResponse.ByStatusEntry
-	(*structpb.Struct)(nil),     // 24: google.protobuf.Struct
+	(*ShopRulesRequest)(nil),    // 23: order_service.pkg.pb.ShopRulesRequest
+	(*ShopRules)(nil),           // 24: order_service.pkg.pb.ShopRules
+	nil,                         // 25: order_service.pkg.pb.CountOrdersResponse.ByStatusEntry
+	(*structpb.Struct)(nil),     // 26: google.protobuf.Struct
 }
 var file_order_proto_depIdxs = []int32{
-	24, // 0: order_service.pkg.pb.Order.shipping_address:type_name -> google.protobuf.Struct
+	26, // 0: order_service.pkg.pb.Order.shipping_address:type_name -> google.protobuf.Struct
 	0,  // 1: order_service.pkg.pb.Order.items:type_name -> order_service.pkg.pb.OrderItem
 	1,  // 2: order_service.pkg.pb.Order.history:type_name -> order_service.pkg.pb.StatusHistory
 	3,  // 3: order_service.pkg.pb.CheckoutRequest.items:type_name -> order_service.pkg.pb.CheckoutItem
-	24, // 4: order_service.pkg.pb.CheckoutRequest.shipping_address:type_name -> google.protobuf.Struct
+	26, // 4: order_service.pkg.pb.CheckoutRequest.shipping_address:type_name -> google.protobuf.Struct
 	2,  // 5: order_service.pkg.pb.CheckoutResponse.orders:type_name -> order_service.pkg.pb.Order
 	7,  // 6: order_service.pkg.pb.PreviewGroup.lines:type_name -> order_service.pkg.pb.PreviewLine
 	3,  // 7: order_service.pkg.pb.PreviewRequest.items:type_name -> order_service.pkg.pb.CheckoutItem
 	8,  // 8: order_service.pkg.pb.PreviewResponse.groups:type_name -> order_service.pkg.pb.PreviewGroup
 	2,  // 9: order_service.pkg.pb.ListOrdersResponse.orders:type_name -> order_service.pkg.pb.Order
-	23, // 10: order_service.pkg.pb.CountOrdersResponse.by_status:type_name -> order_service.pkg.pb.CountOrdersResponse.ByStatusEntry
+	25, // 10: order_service.pkg.pb.CountOrdersResponse.by_status:type_name -> order_service.pkg.pb.CountOrdersResponse.ByStatusEntry
 	17, // 11: order_service.pkg.pb.CartResponse.lines:type_name -> order_service.pkg.pb.CartLine
 	3,  // 12: order_service.pkg.pb.MergeCartRequest.items:type_name -> order_service.pkg.pb.CheckoutItem
 	4,  // 13: order_service.pkg.pb.OrderService.Checkout:input_type -> order_service.pkg.pb.CheckoutRequest
@@ -2129,23 +2253,25 @@ var file_order_proto_depIdxs = []int32{
 	12, // 17: order_service.pkg.pb.OrderService.ListOrders:input_type -> order_service.pkg.pb.ListOrdersRequest
 	14, // 18: order_service.pkg.pb.OrderService.CountOrders:input_type -> order_service.pkg.pb.CountOrdersRequest
 	16, // 19: order_service.pkg.pb.OrderService.ApplyAction:input_type -> order_service.pkg.pb.ActionRequest
-	19, // 20: order_service.pkg.pb.OrderService.GetCart:input_type -> order_service.pkg.pb.GetCartRequest
-	20, // 21: order_service.pkg.pb.OrderService.SetCartItem:input_type -> order_service.pkg.pb.SetCartItemRequest
-	21, // 22: order_service.pkg.pb.OrderService.ClearCart:input_type -> order_service.pkg.pb.ClearCartRequest
-	22, // 23: order_service.pkg.pb.OrderService.MergeCart:input_type -> order_service.pkg.pb.MergeCartRequest
-	5,  // 24: order_service.pkg.pb.OrderService.Checkout:output_type -> order_service.pkg.pb.CheckoutResponse
-	10, // 25: order_service.pkg.pb.OrderService.PreviewCheckout:output_type -> order_service.pkg.pb.PreviewResponse
-	5,  // 26: order_service.pkg.pb.OrderService.GetCheckout:output_type -> order_service.pkg.pb.CheckoutResponse
-	2,  // 27: order_service.pkg.pb.OrderService.GetOrder:output_type -> order_service.pkg.pb.Order
-	13, // 28: order_service.pkg.pb.OrderService.ListOrders:output_type -> order_service.pkg.pb.ListOrdersResponse
-	15, // 29: order_service.pkg.pb.OrderService.CountOrders:output_type -> order_service.pkg.pb.CountOrdersResponse
-	2,  // 30: order_service.pkg.pb.OrderService.ApplyAction:output_type -> order_service.pkg.pb.Order
-	18, // 31: order_service.pkg.pb.OrderService.GetCart:output_type -> order_service.pkg.pb.CartResponse
-	18, // 32: order_service.pkg.pb.OrderService.SetCartItem:output_type -> order_service.pkg.pb.CartResponse
-	18, // 33: order_service.pkg.pb.OrderService.ClearCart:output_type -> order_service.pkg.pb.CartResponse
-	18, // 34: order_service.pkg.pb.OrderService.MergeCart:output_type -> order_service.pkg.pb.CartResponse
-	24, // [24:35] is the sub-list for method output_type
-	13, // [13:24] is the sub-list for method input_type
+	23, // 20: order_service.pkg.pb.OrderService.GetShopRules:input_type -> order_service.pkg.pb.ShopRulesRequest
+	19, // 21: order_service.pkg.pb.OrderService.GetCart:input_type -> order_service.pkg.pb.GetCartRequest
+	20, // 22: order_service.pkg.pb.OrderService.SetCartItem:input_type -> order_service.pkg.pb.SetCartItemRequest
+	21, // 23: order_service.pkg.pb.OrderService.ClearCart:input_type -> order_service.pkg.pb.ClearCartRequest
+	22, // 24: order_service.pkg.pb.OrderService.MergeCart:input_type -> order_service.pkg.pb.MergeCartRequest
+	5,  // 25: order_service.pkg.pb.OrderService.Checkout:output_type -> order_service.pkg.pb.CheckoutResponse
+	10, // 26: order_service.pkg.pb.OrderService.PreviewCheckout:output_type -> order_service.pkg.pb.PreviewResponse
+	5,  // 27: order_service.pkg.pb.OrderService.GetCheckout:output_type -> order_service.pkg.pb.CheckoutResponse
+	2,  // 28: order_service.pkg.pb.OrderService.GetOrder:output_type -> order_service.pkg.pb.Order
+	13, // 29: order_service.pkg.pb.OrderService.ListOrders:output_type -> order_service.pkg.pb.ListOrdersResponse
+	15, // 30: order_service.pkg.pb.OrderService.CountOrders:output_type -> order_service.pkg.pb.CountOrdersResponse
+	2,  // 31: order_service.pkg.pb.OrderService.ApplyAction:output_type -> order_service.pkg.pb.Order
+	24, // 32: order_service.pkg.pb.OrderService.GetShopRules:output_type -> order_service.pkg.pb.ShopRules
+	18, // 33: order_service.pkg.pb.OrderService.GetCart:output_type -> order_service.pkg.pb.CartResponse
+	18, // 34: order_service.pkg.pb.OrderService.SetCartItem:output_type -> order_service.pkg.pb.CartResponse
+	18, // 35: order_service.pkg.pb.OrderService.ClearCart:output_type -> order_service.pkg.pb.CartResponse
+	18, // 36: order_service.pkg.pb.OrderService.MergeCart:output_type -> order_service.pkg.pb.CartResponse
+	25, // [25:37] is the sub-list for method output_type
+	13, // [13:25] is the sub-list for method input_type
 	13, // [13:13] is the sub-list for extension type_name
 	13, // [13:13] is the sub-list for extension extendee
 	0,  // [0:13] is the sub-list for field type_name
@@ -2162,7 +2288,7 @@ func file_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_order_proto_rawDesc), len(file_order_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   24,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

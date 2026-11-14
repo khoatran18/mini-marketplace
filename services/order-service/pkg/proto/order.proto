@@ -205,6 +205,17 @@ message MergeCartRequest {
   repeated CheckoutItem items = 2; // guest cart (localStorage) merged after login
 }
 
+// ShopRules are the order rules in force right now (from the order-service settings), so what the UI or the assistant tells
+// people always matches what the service enforces. Money is whole VND.
+message ShopRulesRequest {}
+message ShopRules {
+  int32 payment_ttl_minutes = 1;  // unpaid online orders expire after this
+  int32 return_window_days = 2;   // return allowed this long after delivery
+  int32 auto_deliver_days = 3;    // shipped orders become delivered after this (0 = never)
+  int64 shipping_flat_fee = 4;    // per store order
+  int64 free_ship_over = 5;       // subtotal at or above which shipping is free (0 = never free)
+}
+
 service OrderService {
   rpc Checkout(CheckoutRequest) returns (CheckoutResponse);
   rpc PreviewCheckout(PreviewRequest) returns (PreviewResponse);
@@ -214,6 +225,7 @@ service OrderService {
   rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
   rpc CountOrders(CountOrdersRequest) returns (CountOrdersResponse);
   rpc ApplyAction(ActionRequest) returns (Order);
+  rpc GetShopRules(ShopRulesRequest) returns (ShopRules);
 
   rpc GetCart(GetCartRequest) returns (CartResponse);
   rpc SetCartItem(SetCartItemRequest) returns (CartResponse);
