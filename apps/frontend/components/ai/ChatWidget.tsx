@@ -84,7 +84,7 @@ function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
   const frame =
     mode === 'drawer'
       ? 'fixed bottom-0 right-0 top-14 z-40 w-full border-l sm:w-[400px]'
-      : 'fixed bottom-20 right-4 z-40 h-[560px] max-h-[calc(100vh-7rem)] w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl sm:w-[380px]';
+      : 'fixed bottom-20 right-4 z-40 h-[840px] max-h-[calc(100vh-7rem)] w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl sm:w-[456px]';
 
   return (
     <section aria-label="Trợ lý AI" data-chat-ui className={`${frame} flex flex-col border-line bg-surface text-text`}>
