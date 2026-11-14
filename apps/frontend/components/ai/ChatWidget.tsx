@@ -6,6 +6,7 @@ import { audienceOf, suggestionsFor, AI_BACKEND_READY } from '../../lib/ai-chat'
 import { useFeatureFlags } from '../../lib/features';
 import { Icon } from '../layout/Icon';
 import { ChatCards } from './ChatCards';
+import { ChatMarkdown } from './ChatMarkdown';
 import { ChatProposals } from './ChatProposals';
 import { useChat } from './ChatProvider';
 
@@ -127,14 +128,14 @@ function Panel({ mode }: { mode: 'drawer' | 'floating' }) {
           messages.map((m) => (
             <div key={m.id} className={`flex flex-col gap-2 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
               {m.role === 'user' || m.content || m.streaming || m.status ? (
-                <p
-                  className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
-                    m.role === 'user' ? 'rounded-br-md bg-brand-solid text-white' : 'rounded-bl-md bg-surface2 text-text'
+                <div
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                    m.role === 'user' ? 'whitespace-pre-wrap rounded-br-md bg-brand-solid text-white' : 'rounded-bl-md bg-surface2 text-text'
                   }`}
                 >
-                  {m.content || (m.status ? <span className="text-muted">{m.status}</span> : m.streaming ? <span className="inline-flex gap-1" aria-label="Đang trả lời"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:120ms]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:240ms]" /></span> : null)}
+                  {m.content ? (m.role === 'user' ? m.content : <ChatMarkdown text={m.content} />) : (m.status ? <span className="text-muted">{m.status}</span> : m.streaming ? <span className="inline-flex gap-1" aria-label="Đang trả lời"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:120ms]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:240ms]" /></span> : null)}
                   {m.content && m.status ? <span className="mt-1 block text-xs text-muted">{m.status}</span> : null}
-                </p>
+                </div>
               ) : null}
               {m.cards && m.cards.length > 0 ? (
                 <div className="w-full max-w-[95%]">

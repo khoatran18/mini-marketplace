@@ -121,6 +121,7 @@ export async function* parseSse(body: ReadableStream<Uint8Array>): AsyncGenerato
 const HTTP_MESSAGES: Record<number, string> = {
   401: 'Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.',
   404: 'Trợ lý AI đang tắt.',
+  409: 'Trợ lý đang xử lý câu hỏi trước của bạn, đợi một chút.',
   429: 'Bạn hỏi hơi nhanh, đợi một chút rồi thử lại.',
   503: 'Trợ lý tạm thời không khả dụng.'
 };
@@ -219,9 +220,9 @@ export function audienceOf(role: Role | null): AssistantAudience | null {
 export function suggestionsFor(role: Role | null): string[] {
   switch (role) {
     case 'admin':
-      return ['Hệ thống đang có sự cố nào mở?', 'Tóm tắt tình trạng các service', 'Đề xuất nào đang chờ duyệt?'];
+      return ['Hệ thống đang có sự cố nào mở?', 'Tóm tắt tình trạng các service', 'Doanh thu 7 ngày qua thế nào?'];
     case 'dev':
-      return ['Service nào đang chậm nhất?', 'Có dòng outbox DEAD không?', 'Tóm tắt cảnh báo đang bắn'];
+      return ['Service nào đang không khoẻ?', 'Có sự kiện outbox lỗi (DEAD) không?', 'Sự cố nào đang mở?'];
     case 'seller_admin':
     case 'seller_employee':
       return ['Sản phẩm nào sắp hết hàng?', 'Tóm tắt doanh thu hôm nay', 'Đơn nào cần giao trước?'];
