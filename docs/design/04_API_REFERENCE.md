@@ -40,7 +40,7 @@ Ký hiệu cột **Ai**: 🌐 công khai · 👁 token tuỳ chọn (có token n
 |---|---|---|
 | GET `/health`, `/healthz` | 🌐 | liveness của gateway `{"status":"ok"}` |
 | GET `/ops/system/health` | A | gom `/ready` của mọi service (`SYSTEM_HEALTH_TARGETS`, mặc định 7 service): `{as_of, status, services:[{name,status,latency_ms,version,uptime_s,checks}]}`; `status` = tệ nhất của `ready<degraded<not_ready<unreachable`. Mỗi probe timeout 2 s |
-| GET `/ops/incidents?state=&limit=` | A, dev | sự cố từ cảnh báo Prometheus (ADR-38): `{incidents:[{id,dedupe_key,alert_name,severity,component,labels,summary,runbook,action,state,fire_count,first_seen,last_seen,resolved_at?}]}`; `state` = open\|investigating\|resolved; 400 `state` sai; 503 khi `OPS_API_TOKEN` chưa cấu hình |
+| GET `/ops/incidents?state=&limit=` | A, operator | sự cố từ cảnh báo Prometheus (ADR-38): `{incidents:[{id,dedupe_key,alert_name,severity,component,labels,summary,runbook,action,state,fire_count,first_seen,last_seen,resolved_at?}]}`; `state` = open\|investigating\|resolved; 400 `state` sai; 503 khi `OPS_API_TOKEN` chưa cấu hình |
 | GET `/ops/incidents/{id}` | A | `{incident, audit:[…]}` (nhật ký của sự cố); 404 |
 | POST `/ops/incidents/{id}/investigate` | A | open sang investigating, ghi nhật ký với `actor=admin:<id>`; 409 nếu không đang open, 404 |
 | GET `/ops/audit?subject_type=&subject_id=&limit=` | A | nhật ký bất biến mới nhất trước (`subject_type` và `subject_id` đi cùng nhau) |
@@ -52,10 +52,10 @@ Ký hiệu cột **Ai**: 🌐 công khai · 👁 token tuỳ chọn (có token n
 | POST `/ops/proposals/{id}/decision` | A | `{decision: accept\|reject\|needs_review\|alternative, reason, approval_token, alternative?:{action_id, params}}`. 403 mã sai / hết hạn / không phải người đã xem, hoặc người tạo tự quyết; 400 thiếu `reason` (bắt buộc trừ accept hành động không phải high), alternative sai hoặc giống gốc; 409 không còn PENDING hoặc hết hạn |
 | POST `/ops/proposals/{id}/execute` | A | tự chạy hành động đã duyệt (chỉ mode `http`, hiện là `requeue_outbox`). 403 khi `OPS_ACTIONS_ENABLED=false` hoặc người gọi là người tạo; 409 chưa duyệt / đã thực thi / duyệt quá `OPS_EXEC_WINDOW_MIN` / hành động không tự chạy; 429 quá hạn mức hoặc cooldown; 422 chạy lỗi (tiền điều kiện hỏng…). → `{exec_state: EXECUTED\|FAILED, result}` |
 | POST `/ops/proposals/{id}/executed` | A | người ghi kết quả sau khi tự chạy lệnh (mode `command`/`manual`): `{outcome: success\|failed, note ≤2000}`; người tạo không được ghi. `GET /proposals/{id}` trả thêm `command` (lệnh để chạy) khi đã ACCEPTED/ALTERNATIVE |
-| GET `/ops/queries` | A, dev | catalog truy vấn đọc có tên (Prometheus/Loki; 24 truy vấn, gồm `service_replicas`, `service_replicas_up`, `gateway_request_rate`, `grpc_request_rate`, `grpc_error_rate` cho bản đồ hệ thống), mỗi truy vấn kèm tham số (enum hoặc regex) |
-| GET `/ops/queries/{name}?service=&window=&request_id=` | A, dev | Cùng truy vấn nhưng dạng đọc cho token agent: gateway đổi query string thành body của POST bên dưới. Chỉ ba tham số trên được chuyển tiếp |
+| GET `/ops/queries` | A, operator | catalog truy vấn đọc có tên (Prometheus/Loki; 24 truy vấn, gồm `service_replicas`, `service_replicas_up`, `gateway_request_rate`, `grpc_request_rate`, `grpc_error_rate` cho bản đồ hệ thống), mỗi truy vấn kèm tham số (enum hoặc regex) |
+| GET `/ops/queries/{name}?service=&window=&request_id=` | A, operator | Cùng truy vấn nhưng dạng đọc cho token agent: gateway đổi query string thành body của POST bên dưới. Chỉ ba tham số trên được chuyển tiếp |
 | POST `/ops/queries/{name}` | A | `{params:{…}}` → `{query, params, backend, expr, series\|lines, total, truncated, untrusted?}`. 400 tên/tham số sai (thông báo liệt kê giá trị hợp lệ); kết quả cắt 50 chuỗi / 100 dòng; log luôn `untrusted: true`; mỗi lần chạy ghi audit `query.run` |
-| GET `/ops/outbox/{service}/dead?limit=` | A, dev | hàng outbox DEAD của `order-service`\|`product-service`\|`payment-service` (chỉ đọc, không payload): `{dead_total, rows:[{id,topic,attempts,last_error,request_id,…}]}`; 400 service lạ; ghi audit `outbox.read` |
+| GET `/ops/outbox/{service}/dead?limit=` | A, operator | hàng outbox DEAD của `order-service`\|`product-service`\|`payment-service` (chỉ đọc, không payload): `{dead_total, rows:[{id,topic,attempts,last_error,request_id,…}]}`; 400 service lạ; ghi audit `outbox.read` |
 | GET `/ready`, `/readyz`, `/metrics`, `/version` | nội bộ `:8081` | **không** nằm trên cổng công khai 8080 (xem [platform/02](platform/02_HEALTH_READY_METRICS.md)) |
 
 ## 2. Xác thực & tài khoản
@@ -150,7 +150,7 @@ Quy tắc: `Idempotency-Key` 1–64 ký tự `[A-Za-z0-9_-]`, duy nhất theo (b
 
 | Method & path | Ai | Ghi chú |
 |---|---|---|
-| GET `/orders?status=&page=&page_size=` | B | `{orders[],total}` mới nhất trước; `status` sai → 400; `buyer_id` trong query bị bỏ qua |
+| GET `/orders?status=&payment_method=&payment_status=&created_from=&created_to=&min_total=&max_total=&sort=&page=&page_size=` | B | `{orders[],total}` mới nhất trước. Mọi bộ lọc tuỳ chọn, bỏ trống = không lọc, cộng dồn (AND). `status`, `payment_method` (`COD\|MOCK_CARD\|MOCK_WALLET\|MOCK_BANK_TRANSFER`), `payment_status` (`UNPAID\|PAID\|REFUNDED`), `sort` (`newest\|oldest\|total_desc\|total_asc`) sai giá trị → 400 (không bị bỏ qua); `created_from`/`created_to` là `YYYY-MM-DD` (múi giờ Asia/Ho_Chi_Minh, `created_to` gồm cả ngày đó) hoặc RFC 3339; `min_total`/`max_total` tính bằng VND, min > max → 400. `buyer_id`/`store_id` trong query bị bỏ qua |
 | GET `/orders/summary` | B | `{by_status:{PAID:2,…}}` |
 | GET `/orders/:id` | B | đơn của người khác → **404** |
 | POST `/orders/:id/cancel` · DELETE `/orders/:id` (alias cũ) | B | body tuỳ chọn `{reason}`; chỉ khi `AWAITING_PAYMENT/CONFIRMED/PAID`; 422 nếu đã SHIPPED… |
@@ -162,7 +162,7 @@ Không có `PUT /orders/:id` (cố ý: cho phép sửa trạng thái/giá).
 
 | Method & path | Ghi chú |
 |---|---|
-| GET `/seller/orders?status=&page=&page_size=` · GET `/seller/orders/summary` · GET `/seller/orders/:id` | hộp thư đơn |
+| GET `/seller/orders` (cùng bộ lọc như `GET /orders`) · GET `/seller/orders/summary` · GET `/seller/orders/:id` | hộp thư đơn |
 | POST `/seller/orders/:id/ship` | `{carrier≤50, tracking_code≤64}` bắt buộc; `PAID\|CONFIRMED→SHIPPED` |
 | POST `/seller/orders/:id/deliver` | `SHIPPED→DELIVERED` (COD: ghi `payment_status=PAID`) |
 | POST `/seller/orders/:id/cancel` | `{reason}` bắt buộc |
@@ -171,7 +171,7 @@ Không có `PUT /orders/:id` (cố ý: cho phép sửa trạng thái/giá).
 Không có bước "seller xác nhận" riêng: đơn đã `PAID`/`CONFIRMED` đi thẳng sang `ship`.
 
 ### 6.3 Admin
-`GET /admin/orders` · `GET /admin/orders/:id` · `POST /admin/orders/:id/cancel` (`{reason}` bắt buộc) · `/deliver` · `/return/approve` · `/return/reject` (`{reason}` bắt buộc). Không có admin `/summary` và admin không `ship`.
+`GET /admin/orders` (cùng bộ lọc như `GET /orders`, thêm `store_id=` chỉ có ở danh sách admin) · `GET /admin/orders/:id` · `POST /admin/orders/:id/cancel` (`{reason}` bắt buộc) · `/deliver` · `/return/approve` · `/return/reject` (`{reason}` bắt buộc). Không có admin `/summary` và admin không `ship`.
 
 ### 6.4 Máy trạng thái đơn (`order-service/internal/repository/statemachine.go`)
 ```
@@ -224,7 +224,7 @@ Mỗi lần thất bại cộng `failed_count`; **5 lần** ⇒ `FAILED` (kết 
 
 | Method & path | Ghi chú |
 |---|---|
-| GET `/admin/payments?status=&method=&page=&page_size=` | `{payments[],total}` |
+| GET `/admin/payments?status=&method=&created_from=&created_to=&min_amount=&max_amount=&sort=&page=&page_size=` | `{payments[],total}`. Bộ lọc tuỳ chọn, cộng dồn. `status` (`REQUIRES_ACTION\|PROCESSING\|SUCCEEDED\|FAILED\|CANCELED\|EXPIRED\|PARTIALLY_REFUNDED\|REFUNDED`), `method`, `sort` (`newest\|oldest\|amount_desc\|amount_asc`) sai giá trị → 400; `min_amount`/`max_amount` bằng VND (gateway đổi sang 1/100 VND); ngày như `/orders` |
 | GET `/admin/payments/:id` | kèm `attempts[]`, `refunds[]` |
 | POST `/admin/payments/:id/refund` | `{amount_minor>0, reason}` – hoàn ngay (mô phỏng); 422 nếu vượt số đã thu / chưa thanh toán. Khi payment đã hoàn **toàn bộ**, các đơn `PAID` của checkout được đặt `payment_status=REFUNDED` (bất đồng bộ qua `payment.refunded`); hoàn một phần thì đơn giữ `PAID` |
 | POST `/admin/dev/payments/:id/force` | `{status: SUCCEEDED\|FAILED\|EXPIRED}`; **chỉ khi `ENV=dev`** (nếu không 403). `FAILED` kết thúc luôn payment |
@@ -274,26 +274,26 @@ Lỗi: ClickHouse/analytics-service down → **503** (`analytics store error` / 
 | Route | Role | Mô tả |
 |---|---|---|
 | GET `/config/features` | công khai | `{"features":{"ai_chat":bool,"ai_ops":bool}}`, `Cache-Control: no-store`. Chỉ true khi cờ (`FEATURE_AI_CHAT`, `FEATURE_AI_OPS`) bật **và** `AI_SERVICE_URL` có giá trị. UI dùng để ẩn lối vào AI và quay về luồng thường |
-| POST `/ai/chat` | buyer, seller_admin, seller_employee, admin, dev | Mỗi người dùng chỉ có MỘT luồng chat đang chạy (khoá Redis `ai_slot:<user_id>`, TTL = `AI_STREAM_TIMEOUT_SEC`+10 s, chung cho mọi replica): luồng thứ hai khi luồng trước chưa xong trả **409** `{error:"busy"}`; Redis lỗi trả 503 (không cho qua). **SSE** (`Content-Type: text/event-stream`). Gateway chuyển body JSON (≤ 64 KB) tới `AI_SERVICE_URL/chat` và stream trả về không buffer. Khi có `AGENT_TOKEN_KEYS` **không** chuyển `Authorization` của người dùng, chỉ `X-Agent-Token`/`X-Agent-Run-ID` (không có khoá thì vẫn chuyển như cũ). Gửi kèm `X-User-ID`, `X-User-Role` (từ JWT), `X-Request-ID`, và khi có `AGENT_TOKEN_KEYS`: `X-Agent-Token` (token ngắn hạn ~150 s, `jti` = run id) + `X-Agent-Run-ID`. 404 cờ tắt; 503 chưa cấu hình hoặc upstream chết; 429 quá `AI_RATE_LIMIT_PER_MINUTE` (20/IP) hoặc `AI_USER_RATE_LIMIT_PER_MINUTE` (10/người dùng/phút); 503 khi Redis lỗi (đường AI từ chối thay vì cho qua); lỗi giữa chừng `event: error`; hết `AI_STREAM_TIMEOUT_SEC` (120) thì `event: error` rồi đóng. Phản hồi không phải SSE của upstream (vd 4xx) được chuyển nguyên. Gateway không chứa logic mô hình |
-| GET `/ai/tools` | **token agent** | ADR-42. Danh sách tool của role trong token, lấy từ bảng `agent.DefaultScopes` (cùng bảng gateway dùng để cho token agent đi qua). 200 `{role, tools:[{name, method, path, description, params:[{name, in, type, required?, enum?}]}]}`; role chưa có tool thì `tools: []`. 401 không phải token agent; 429 quá `AI_PROPOSAL_RATE_LIMIT_PER_MINUTE` (30/người dùng/phút, fail-closed). Từ 2026-11-14 trả thêm `actions` (hành động role đó được ĐỀ XUẤT: tên, route, tham số `path`/`body`, mẫu câu tóm tắt) từ `agent.DefaultActions`. Role `admin` và `dev` có tool đọc (`/admin/*` GET cho admin, `/ops/*` GET cho cả hai) và luôn `actions: []` (chỉ đọc) |
+| POST `/ai/chat` | buyer, seller_admin, seller_employee, admin, operator | Mỗi người dùng chỉ có MỘT luồng chat đang chạy (khoá Redis `ai_slot:<user_id>`, TTL = `AI_STREAM_TIMEOUT_SEC`+10 s, chung cho mọi replica): luồng thứ hai khi luồng trước chưa xong trả **409** `{error:"busy"}`; Redis lỗi trả 503 (không cho qua). **SSE** (`Content-Type: text/event-stream`). Gateway chuyển body JSON (≤ 64 KB) tới `AI_SERVICE_URL/chat` và stream trả về không buffer. Khi có `AGENT_TOKEN_KEYS` **không** chuyển `Authorization` của người dùng, chỉ `X-Agent-Token`/`X-Agent-Run-ID` (không có khoá thì vẫn chuyển như cũ). Gửi kèm `X-User-ID`, `X-User-Role` (từ JWT), `X-Request-ID`, và khi có `AGENT_TOKEN_KEYS`: `X-Agent-Token` (token ngắn hạn ~150 s, `jti` = run id) + `X-Agent-Run-ID`. 404 cờ tắt; 503 chưa cấu hình hoặc upstream chết; 429 quá `AI_RATE_LIMIT_PER_MINUTE` (20/IP) hoặc `AI_USER_RATE_LIMIT_PER_MINUTE` (10/người dùng/phút); 503 khi Redis lỗi (đường AI từ chối thay vì cho qua); lỗi giữa chừng `event: error`; hết `AI_STREAM_TIMEOUT_SEC` (120) thì `event: error` rồi đóng. **Hạn mức token mỗi ngày:** ai-agent đếm token (vào + ra) của người dùng từ 00:00 giờ Việt Nam và theo persona (`limits.daily_tokens` trong config của ai-agent); hết hạn mức thì lượt mới trả **429** `{error, code:"daily_token_limit", limit, used}` mà không gọi mô hình (khác 429 giới hạn tốc độ của gateway, không có `code`). Phản hồi không phải SSE của upstream (vd 4xx) được chuyển nguyên. Gateway không chứa logic mô hình |
+| GET `/ai/tools` | **token agent** | ADR-42. Danh sách tool của role trong token, lấy từ bảng `agent.DefaultScopes` (cùng bảng gateway dùng để cho token agent đi qua). 200 `{role, tools:[{name, method, path, description, params:[{name, in, type, required?, enum?}]}]}`; role chưa có tool thì `tools: []`. 401 không phải token agent; 429 quá `AI_PROPOSAL_RATE_LIMIT_PER_MINUTE` (30/người dùng/phút, fail-closed). Từ 2026-11-14 trả thêm `actions` (hành động role đó được ĐỀ XUẤT: tên, route, tham số `path`/`body`, mẫu câu tóm tắt) từ `agent.DefaultActions`. Role `admin` và `operator` có tool đọc (`/admin/*` GET cho admin, `/ops/*` GET cho cả hai) và luôn `actions: []` (chỉ đọc) |
 | POST `/ai/proposals` | **token agent** (header `Authorization: Bearer <X-Agent-Token>`, không phải JWT người dùng) | ADR-42. Agent xin gateway ký một đề xuất hành động ghi: body `{method, path, body?, summary (≤200)}`. Chỉ nhận route trong danh sách đề xuất được (huỷ đơn của buyer/seller/admin, trả hàng, hoàn tiền); route khác 403. Trả 201 `{proposal, id, run_id, expires_at, method, path, summary}`; `proposal` là gói ký, sống 5 phút, dùng một lần, gắn chặt người dùng + method + path + hash body. 401 token sai/hết hạn/ký bằng `JWT_SECRET`; 503 chưa cấu hình `AGENT_TOKEN_KEYS`. Từ 2026-11-14 còn kiểm vai trò (`AllowsAction`): buyer đề xuất route seller/admin thì 403 |
 
-Vai trò `dev` (ADR-40): toàn bộ `/ops/*` (đọc, điều tra, đề xuất, xem lại, duyệt, thực thi, ghi kết quả), `GET /ops/system/health` và `GET /admin/analytics/data-health`; **không** có báo cáo/doanh thu (`/admin/analytics/*` còn lại), đơn hàng, thanh toán, danh mục (403). Người tạo đề xuất không tự duyệt/thực thi, kể cả dev. Cột role "A, dev" ở các route ops nghĩa là cả hai vai trò gọi được.
+Vai trò `operator` (ADR-40): toàn bộ `/ops/*` (đọc, điều tra, đề xuất, xem lại, duyệt, thực thi, ghi kết quả), `GET /ops/system/health` và `GET /admin/analytics/data-health`; **không** có báo cáo/doanh thu (`/admin/analytics/*` còn lại), đơn hàng, thanh toán, danh mục (403). Người tạo đề xuất không tự duyệt/thực thi, kể cả operator. Cột role "A, operator" ở các route ops nghĩa là cả hai vai trò gọi được.
 
 ## 10. Admin khác
 
 | Method & path | Ghi chú |
 |---|---|
 | GET `/admin/accounts?role=&q=&limit=` | danh sách tài khoản (mọi role, không có mật khẩu); chỉ `admin` |
-| POST `/admin/accounts` | tạo tài khoản `admin` hoặc `dev`: `{username, password (≥8), role}`; trùng username → 409 |
-| DELETE `/admin/accounts/:id` | xoá hẳn tài khoản admin/dev và thu hồi token; không xoá chính mình, không xoá admin cuối cùng (422), buyer/seller → 403 |
-| POST `/admin/accounts/:id/reset-password` | `{new_password}`; đặt lại mật khẩu admin/dev (không cần mật khẩu cũ), thu hồi token cũ; không áp dụng cho chính mình |
+| POST `/admin/accounts` | tạo tài khoản `admin` hoặc `operator`: `{username, password (≥8), role}`; trùng username → 409 |
+| DELETE `/admin/accounts/:id` | xoá hẳn tài khoản admin/operator và thu hồi token; không xoá chính mình, không xoá admin cuối cùng (422), buyer/seller → 403 |
+| POST `/admin/accounts/:id/reset-password` | `{new_password}`; đặt lại mật khẩu admin/operator (không cần mật khẩu cũ), thu hồi token cũ; không áp dụng cho chính mình |
 | GET `/admin/categories` | gồm cả danh mục `active=false` |
 | POST `/admin/categories` | **201**; `{parent_id, name (1-100), slug (tự sinh từ name nếu trống; a-z0-9 và `-`), sort, active (mặc định true)}`; tối đa **3 cấp**; slug trùng/vòng lặp → 400; cha không tồn tại → 404 |
 | PUT `/admin/categories/:id` | 200, thay toàn bộ |
 | PATCH `/admin/products/:id/status` | `{status}` ∈ `draft\|active\|hidden\|banned` (chỉ admin được `banned`; seller không gỡ được) |
 | Thanh toán, đơn, analytics, `/ops/system/health` | §1, §6.3, §7, §9 |
-**Chưa làm**: `/ops/system/metrics` (proxy Prometheus), `/ops/system/outbox`, `/ops/system/kafka`, requeue outbox qua API, `/admin/users`, `/admin/stores`, `/admin/audit-log`, `/admin/dev` khác ngoài force-payment. Xem Grafana thay thế ([03_RUNBOOK.md](../instruction/03_RUNBOOK.md)).
+**Chưa làm**: `/ops/system/metrics` (proxy Prometheus), `/ops/system/outbox`, `/ops/system/kafka`, requeue outbox qua API, `/admin/users`, `/admin/stores`, `/admin/audit-log`, `/admin/operator` khác ngoài force-payment. Xem Grafana thay thế ([03_RUNBOOK.md](../instruction/03_RUNBOOK.md)).
 
 ---
 ## 11. Tracking (clickstream)

@@ -48,7 +48,7 @@ Ba biến này đều là chuỗi ngẫu nhiên nhưng **khác loại, không d�
 | Biến | Dạng | Dùng để |
 |---|---|---|
 | `OPS_API_TOKEN` | `<hex>` | bí mật gateway ↔ ops-service (route `/ops/*`) |
-| `OPS_AGENT_TOKEN` | `<hex>`, khác `OPS_API_TOKEN` | quyền hẹp cho agent dev gọi ops-service (đọc + tạo đề xuất, không duyệt/chạy) |
+| `OPS_AGENT_TOKEN` | `<hex>`, khác `OPS_API_TOKEN` | quyền hẹp cho agent operator gọi ops-service (đọc + tạo đề xuất, không duyệt/chạy) |
 | `AGENT_TOKEN_KEYS` | `kid:<hex>` (vd `k1:...`), secret ≥ 32 ký tự, khác `JWT_SECRET` | khoá **ký** token agent và gói đề xuất (ADR-42); khoá đầu ký, các khoá sau chỉ kiểm. Chỉ gateway giữ, ai-agent không có |
 
 Lệnh dưới chỉ điền biến **đang trống hoặc chưa có**, không ghi đè, không in giá trị ra màn hình (chạy ở thư mục gốc repo):
@@ -89,6 +89,7 @@ Hostname lấy từ `PUBLIC_HOST` (mặc định `marketplace.swarm.localhost`).
 | `buyer1` / `password` | `SEED_DEMO_DATA=true` | đặt hàng, thanh toán thử |
 | `seller1` / `password` | `SEED_DEMO_DATA=true` | seed **không tạo store**: đăng nhập seller rồi tạo store trước khi quản lý sản phẩm |
 | `admin` / `Admin12345` | `ADMIN_BOOTSTRAP_*` (đã điền sẵn trong `.env.example`) | không đăng ký công khai được; đổi mật khẩu rồi bỏ biến sau lần đăng nhập đầu |
+| `operator` (tên tuỳ bạn) | `OPERATOR_BOOTSTRAP_USERNAME` / `OPERATOR_BOOTSTRAP_PASSWORD` trong `deploy/.env` (trống mặc định = không tạo), hoặc admin tạo ở `/admin/accounts` (chọn role Operator) | vai trò **Operator (vận hành)**: tên 3–16 ký tự chữ/số/gạch dưới, mật khẩu ≥ 8; không đăng ký công khai được. Đăng nhập như thường (role lấy từ tài khoản). Vào `/admin/system` xem sức khoẻ, sự cố, đề xuất vận hành; **không** xem báo cáo, đơn, thanh toán. Chat AI của operator chỉ đọc số liệu hệ thống. Chi tiết: [03_RUNBOOK.md](03_RUNBOOK.md) §16 |
 | tài khoản mới | `/register` | chọn role buyer hoặc seller |
 
 ### Các trang chính của frontend
@@ -99,7 +100,7 @@ Hostname lấy từ `PUBLIC_HOST` (mặc định `marketplace.swarm.localhost`).
 | Buyer | `/cart`, `/checkout`, `/pay/[id]`, `/orders`, `/orders/[id]`, `/profile` |
 | Seller | `/seller` (tổng quan), `/seller/products`, `/seller/inventory`, `/seller/orders`, `/seller/analytics` |
 | Admin | `/admin`, `/admin/analytics`, `/admin/orders`, `/admin/payments`, `/admin/categories`, `/admin/system` |
-| Dev | `/dev/tracking` (chỉ hiện khi `NEXT_PUBLIC_APP_ENV=dev`) |
+| Dev (vai trò Vận hành) | `/admin`, `/admin/system` (chỉ phần hệ thống); `/dev/tracking` là công cụ dev của frontend, chỉ hiện khi `NEXT_PUBLIC_APP_ENV=dev`, không liên quan tài khoản operator |
 
 ### Thẻ test thanh toán (mô phỏng)
 

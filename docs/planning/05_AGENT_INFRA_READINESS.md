@@ -6,9 +6,9 @@
 
 | # | Câu hỏi | Đủ chưa | Vì sao ngắn gọn |
 |---|---|---|---|
-| 1 | Agent hỏi đáp / tương tác cho buyer, seller, admin, dev | **Đủ cho chỉ-đọc, chưa đủ cho hành động ghi và cho "dev"** | tool = REST gateway với JWT của chính người dùng đã dùng được; thiếu khung `action_proposal`, `audit_log`, feature flag, kênh stream; vai trò `dev` chưa tồn tại |
+| 1 | Agent hỏi đáp / tương tác cho buyer, seller, admin, operator | **Đủ cho chỉ-đọc, chưa đủ cho hành động ghi và cho "operator"** | tool = REST gateway với JWT của chính người dùng đã dùng được; thiếu khung `action_proposal`, `audit_log`, feature flag, kênh stream; vai trò `operator` chưa tồn tại |
 | 2 | Hệ thống tự phát hiện vấn đề rồi gọi agent ra xem | **Tín hiệu đã đủ, đường kích hoạt chưa có** | từ hôm nay có luật cảnh báo, circuit breaker, reconcile, trace, request-id; chưa có Alertmanager / webhook, chưa có nơi lưu "sự cố" |
-| 3 | Agent đề xuất để dev / admin chấp nhận, từ chối, xem lại, hoặc làm việc khác | **Chưa đủ** | chưa có bảng đề xuất, `audit_log`, kênh thông báo, và lớp thực thi có kiểm soát; mới có phân loại mức rủi ro trong cảnh báo |
+| 3 | Agent đề xuất để operator / admin chấp nhận, từ chối, xem lại, hoặc làm việc khác | **Chưa đủ** | chưa có bảng đề xuất, `audit_log`, kênh thông báo, và lớp thực thi có kiểm soát; mới có phân loại mức rủi ro trong cảnh báo |
 | 4 | Runbook đủ để agent tự tìm cách giải quyết | **Đủ để chẩn đoán và đề xuất, chưa đủ để tự giải quyết** | runbook viết cho người (văn xuôi, SQL, lệnh `docker`), chưa có dạng có cấu trúc, điều kiện trước / sau, rollback; nhiều bước sửa là SQL tay |
 
 ## Đã có (và dùng được ngay)
@@ -25,7 +25,7 @@
 | Công cụ xử lý có sẵn | requeue outbox qua API nội bộ (`/internal/outbox/*`), backup / verify Postgres, `backfill`, `docker service update` | nguyên liệu cho các "hành động" mà agent được phép đề xuất |
 | Kiểm thử hệ thống thật | `run.mjs` 377 kiểm tra, `resilience.sh` A–J (chèn lỗi thật), `load.mjs` | nguồn lỗi có nhãn để đo agent (cần thêm ghi nhãn, xem Q4) |
 
-## Q1. Hỏi đáp và tương tác cho buyer, seller, admin, dev
+## Q1. Hỏi đáp và tương tác cho buyer, seller, admin, operator
 
 **Đủ:** hỏi đáp chỉ-đọc cho ba vai trò đầu. Mọi tool là REST có sẵn, quyền do gateway ép; chưa cần dựng quyền riêng cho agent.
 
@@ -33,12 +33,12 @@
 
 | Thiếu | Vì sao quan trọng | Cỡ việc |
 |---|---|---|
-| Vai trò **`dev`** | không tồn tại: `validRoles` chỉ có `buyer`, `seller_admin`, `seller_employee`, và `admin` (tạo bằng bootstrap). Cần quyết định: `dev` là admin có thêm công cụ hệ thống, hay vai trò mới tách quyền (chỉ đọc hệ thống, không đọc dữ liệu khách) | S (quyết định) + M (code nếu tách vai trò) |
+| Vai trò **`operator`** | không tồn tại: `validRoles` chỉ có `buyer`, `seller_admin`, `seller_employee`, và `admin` (tạo bằng bootstrap). Cần quyết định: `operator` là admin có thêm công cụ hệ thống, hay vai trò mới tách quyền (chỉ đọc hệ thống, không đọc dữ liệu khách) | S (quyết định) + M (code nếu tách vai trò) |
 | Đường `POST /ai/chat` có **stream** | tool lặp tối đa 4 vòng, mỗi lượt tới 60 s; handler hiện dùng ngữ cảnh 15 s, deadline gRPC 3 s / 10 s (chỉ cho lời gọi unary). Cần route stream riêng và **kiểm thử SSE qua Traefik và gateway** (buffering, timeout): chưa kiểm | M |
 | **Giới hạn riêng cho AI** | rate limit theo IP hiện có; agent cần ngân sách theo người dùng và theo chi phí LLM | S |
 | **Feature flag** (`GET /config/features`) | công tắc tắt tính năng AI và đường lui không-AI; chưa có (gap I1) | S |
 | **`audit_log`** | mọi hành động agent đề xuất / thực thi phải truy được; chưa có bảng, chưa có service sở hữu (gap P2) | M |
-| Tool hệ thống cho admin / dev ở **gateway** | `system_metrics`, `kafka_lag`, `log_search`, `outbox_status` chưa có route; dữ liệu đã có (Prometheus, Loki, kafka-exporter, `/internal/outbox/dead`) nhưng đều ở mạng nội bộ không xác thực. **Không** cho agent chạm thẳng Prometheus / Loki: cần proxy có danh sách truy vấn cho phép | M |
+| Tool hệ thống cho admin / operator ở **gateway** | `system_metrics`, `kafka_lag`, `log_search`, `outbox_status` chưa có route; dữ liệu đã có (Prometheus, Loki, kafka-exporter, `/internal/outbox/dead`) nhưng đều ở mạng nội bộ không xác thực. **Không** cho agent chạm thẳng Prometheus / Loki: cần proxy có danh sách truy vấn cho phép | M |
 | Tìm kiếm ngữ nghĩa cho hỏi đáp sản phẩm | tìm kiếm hiện là SQL; hỏi đáp tự do về sản phẩm cần embedding + kho vector. Máy này có một container `qdrant` chạy riêng (ngoài các stack của dự án), chưa nối vào gì | M–L |
 | Khoá API LLM, đường ra Internet | không nằm trong stack; cần chỗ giữ khoá (không đưa vào `deploy/.env` chung) và kiểm soát egress | S |
 
@@ -141,7 +141,7 @@ Mỗi kịch bản có 3 phần: **gây lỗi** (`scripts/e2e/resilience.sh`, 10
 | Admin: hỏi đáp hệ thống | 8 | sức khoẻ, đơn lạ, doanh thu |
 | An toàn chéo vai trò | 10 | buyer xem đơn người khác, seller đòi hành động admin, câu ra lệnh nằm trong mô tả sản phẩm / log |
 
-Làm theo đợt: (1) dev/admin điều tra (đã có đáp án từ `resilience.sh`, chưa cần quyền ghi), (2) đề xuất / duyệt và an toàn chéo vai trò, (3) buyer / seller. Biết "đủ" khi thêm kịch bản mới không phát hiện thêm lỗi nào của agent; sự cố thật gặp phải thì thêm vào bộ. Các ca an toàn (không vượt quyền, không ghi khi chưa xác nhận) phải đạt **100%** mọi lần chạy.
+Làm theo đợt: (1) operator/admin điều tra (đã có đáp án từ `resilience.sh`, chưa cần quyền ghi), (2) đề xuất / duyệt và an toàn chéo vai trò, (3) buyer / seller. Biết "đủ" khi thêm kịch bản mới không phát hiện thêm lỗi nào của agent; sự cố thật gặp phải thì thêm vào bộ. Các ca an toàn (không vượt quyền, không ghi khi chưa xác nhận) phải đạt **100%** mọi lần chạy.
 
 ## Q6. Buyer / seller ra lệnh trong khung chat (huỷ đơn, mua hàng, giao hàng)
 **API đã đủ**, không cần route mới: buyer `POST /orders` (bắt buộc `Idempotency-Key`), `POST /checkout/preview`, `POST /orders/:id/cancel`, `POST /orders/:id/confirm-received`, `POST /orders/:id/return`, `POST /payments/:id/confirm` (mô phỏng); seller `POST /seller/orders/:id/ship|deliver|cancel|return/approve|return/reject`. Agent gọi bằng JWT của chính người dùng nên quyền và quyền sở hữu do gateway ép; thiệt hại tối đa bị chặn bởi quyền của người đó (vẫn cần chống prompt injection ở tầng agent, hạ tầng không thay được).
@@ -151,7 +151,7 @@ Làm theo đợt: (1) dev/admin điều tra (đã có đáp án từ `resilience
 |---|---|
 | **Xác nhận bằng UI, không bằng chữ "ok" trong chat** | mua, huỷ đơn đã trả tiền (kéo theo hoàn tiền), xác nhận thanh toán, trả hàng, giao hàng/huỷ của seller đều đổi tiền hoặc tồn kho. Agent chỉ tạo **đề xuất có xem trước** (`checkout/preview` cho tổng tiền, `GET /orders/:id` cho trạng thái); người bấm nút trong UI; mã đề xuất ký, có hạn ngắn, gắn người dùng ([../ai/06_AGENT_FEATURES.md](../ai/06_AGENT_FEATURES.md) §2) |
 | **Idempotency-Key sinh từ mã đề xuất** | bấm đúp hay retry không tạo hai đơn: `POST /orders` đã idempotent theo (buyer, key) và gateway retry `Checkout` an toàn; chỉ cần key ổn định theo đề xuất |
-| Bảng `proposals` / `audit_log` dùng chung cho hành động của người dùng | cùng cơ chế với đề xuất của dev/admin (Q3), thêm trường phạm vi `user` |
+| Bảng `proposals` / `audit_log` dùng chung cho hành động của người dùng | cùng cơ chế với đề xuất của operator/admin (Q3), thêm trường phạm vi `user` |
 | Hạn mức cho hành động qua chat | số tiền tối đa mỗi đơn qua chat, số hành động ghi mỗi phút theo người dùng; rate limit hiện theo IP |
 | Giải thích vì sao không huỷ được | máy trạng thái đơn đã trả lỗi theo trạng thái; agent chỉ cần đọc `GET /orders/:id` và lịch sử trạng thái trước khi đề xuất |
 | Feature flag tắt riêng các hành động ghi của agent | đường lui không-AI (xem Q1) |
@@ -224,21 +224,21 @@ Mỗi giai đoạn dùng được độc lập; dừng ở giai đoạn 2 đã c
 ## Danh sách việc hạ tầng còn lại và tiến độ (2026-11-13, ADR-40)
 Chỉ hạ tầng; logic agent, prompt và đánh giá agent là phần người dùng tự làm. **Không gọi API LLM** trong mọi bước kiểm.
 
-### Cho dev / admin (điều tra sự cố, đề xuất, duyệt)
+### Cho operator / admin (điều tra sự cố, đề xuất, duyệt)
 | # | Việc | Trạng thái | Ghi chú |
 |---|---|---|---|
 | D1 | Bật `OPS_ACTIONS_ENABLED=true` và kiểm thật `/execute` | ✅ 2026-11-13 | hàng DEAD thử (đã xoá) -> agent đề xuất -> admin duyệt -> `EXECUTED` (`dead_before 1`, `requeued 1`, `verified true`); chạy lần hai 409; agent / chưa duyệt bị chặn. Mặc định vẫn **tắt** trong `deploy/services.yml` |
 | D2 | Kiểm `ServiceMissing` khi DNS trả NXDOMAIN | ✅ kiểm xong, kết luận khác dự đoán | với Prometheus dùng DNS 8.8.8.8 (`docker service update --dns-add` tạm), service về 0 replica cho NXDOMAIN, nhưng Prometheus **giữ target cũ khi DNS lỗi** nên `up == 0` và `ServiceDown` bắn, `ServiceMissing` **không** bắn. `ServiceDown` là cảnh báo đáng tin cho ca này; `ServiceMissing` chỉ là lớp dự phòng (target biến mất thật). Chi tiết: [nhật ký 2026-11-13](../process/05_SESSION_LOG_2026-11-13.md) |
 | D3 | Playbook cho ca ngoài sách | ✅ kiểm thật K, L, M: cảnh báo mong đợi đều bắn | `observability-down`, `slow-database`, `resource-trend`, `multiple-faults`, nhánh `corrupt-payload`; 5 cảnh báo mới; RUNBOOK §15; kịch bản chèn lỗi K, L, M. ClickHouse đầy đĩa và rò bộ nhớ: có cảnh báo + playbook, **chưa chèn lỗi thật** |
 | D4 | Token dịch vụ phạm vi hẹp cho agent (gap I4) | ✅ | `OPS_AGENT_TOKEN`: đọc / truy vấn / điều tra / đề xuất; không duyệt, không thực thi; tác nhân luôn `agent`. Chưa tách quyền theo từng hành động |
-| D5 | Vai trò `dev` | ✅ | `DEV_BOOTSTRAP_*`; chạy cả luồng ops (đề xuất, duyệt, thực thi) và xem sức khoẻ hệ thống/pipeline; không xem báo cáo, doanh thu, đơn, thanh toán; `X-Actor` mang vai trò |
+| D5 | Vai trò `operator` | ✅ | `OPERATOR_BOOTSTRAP_*`; chạy cả luồng ops (đề xuất, duyệt, thực thi) và xem sức khoẻ hệ thống/pipeline; không xem báo cáo, doanh thu, đơn, thanh toán; `X-Actor` mang vai trò |
 
 ### Cho buyer / seller (chat AI)
 | # | Việc | Trạng thái | Vì sao cần |
 |---|---|---|---|
 | B1 | Route `POST /ai/chat` **stream (SSE)** qua gateway và Traefik | ✅ kiểm thật qua Traefik (`scripts/e2e/sse.sh`) | một câu trả lời của agent kéo dài hàng chục giây (tool lặp tới 4 vòng, mỗi lượt tới 60 s). Route thường có deadline 3-10 s và có thể bị buffer nên người dùng chỉ thấy câu trả lời sau khi xong (hoặc bị cắt). Cần route riêng không buffer, không bị `WriteTimeout`, huỷ upstream khi người dùng đóng tab |
 | B2 | Cờ tính năng `GET /config/features` | ✅ | công tắc tắt AI không cần deploy lại code; UI ẩn lối vào AI và dùng luồng thường khi AI lỗi/hết ngân sách (đường lui không-AI) |
-| B3 | Công cụ hệ thống cho admin/dev ở gateway | ✅ | 19 truy vấn allowlist + `GET /ops/outbox/{svc}/dead`; agent đọc được trạng thái hệ thống mà **không** có quyền chạm thẳng Prometheus/Loki/cổng admin |
+| B3 | Công cụ hệ thống cho admin/operator ở gateway | ✅ | 19 truy vấn allowlist + `GET /ops/outbox/{svc}/dead`; agent đọc được trạng thái hệ thống mà **không** có quyền chạm thẳng Prometheus/Loki/cổng admin |
 | B4, B5 | Kho vector (qdrant) cho hỏi đáp sản phẩm; xác nhận UI cho hành động ghi liên quan tiền | **bỏ** (người dùng quyết định) | không làm trong đợt này |
 
 ### Việc kỹ thuật tồn đọng (chưa làm)

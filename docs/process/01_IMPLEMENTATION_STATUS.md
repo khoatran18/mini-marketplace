@@ -87,4 +87,4 @@ Tài liệu: [../ai/README.md](../ai/README.md), [../dataset/README.md](../datas
 ## 6. Phiên 2026-10-25
 Chi tiết đã đổi gì, kiểm chứng gì và việc tiếp theo: [02_SESSION_LOG_2026-10-25.md](02_SESSION_LOG_2026-10-25.md).
 
-- Persona admin/dev (chỉ đọc: đơn/thanh toán/báo cáo toàn sàn cho admin; sự cố, audit, outbox, health, đề xuất vận hành, số liệu Prometheus/Loki có tên cho cả hai), chính sách buyer/seller trong `personas/*/policy.md`: đã code và test, chưa chạy thử thật trên Swarm (docs/ai/08 §16.8).
+- Persona admin/operator (chỉ đọc: đơn/thanh toán/báo cáo toàn sàn cho admin; sự cố, audit, outbox, health, đề xuất vận hành, số liệu Prometheus/Loki có tên cho cả hai), chính sách buyer/seller trong `personas/*/policy.md`: đã code và test, chưa chạy thử thật trên Swarm (docs/ai/08 §16.8).

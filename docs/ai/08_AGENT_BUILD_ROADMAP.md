@@ -1,15 +1,15 @@
-# Lộ trình xây agent (buyer, seller, dev, admin, vòng lặp RCA)
+# Lộ trình xây agent (buyer, seller, operator, admin, vòng lặp RCA)
 
 > **Trạng thái: kế hoạch cho phần chủ dự án tự xây (tầng LLM).** Không có dòng code agent nào trong repo. Tài liệu này gom lại: nền đã có, những gì cần **chốt trước khi viết code**, kiến trúc đề xuất, cấu trúc thư mục, thứ tự xây từng bước (mỗi bước có tiêu chí xong), và cách đo. Khái niệm (agent, tool, human-in-the-loop) xem [02_AGENT_ARCHITECTURE.md](02_AGENT_ARCHITECTURE.md) §0; danh mục tính năng theo persona: [06_AGENT_FEATURES.md](06_AGENT_FEATURES.md); điều tra sự cố: [07_COROOT_AND_INCIDENT_AGENT.md](07_COROOT_AND_INCIDENT_AGENT.md); an toàn token và xác nhận hành động: ADR-40, ADR-42 trong [../decisions/01_ADR_LOG.md](../decisions/01_ADR_LOG.md).
 > Khi tài liệu này khác file cũ hơn trong `docs/ai/`, tài liệu này đúng **ở các điểm đã ghi rõ** ở §1.3 (chủ yếu: giao thức gateway ↔ agent là HTTP SSE chứ không phải gRPC stream, và token agent riêng chứ không chuyển JWT người dùng).
 
 ## 0. Tóm tắt một trang
 
-- **Một dịch vụ `ai-agent`** (Python, FastAPI) với **bốn persona** chọn theo vai trò trong token: `buyer`, `seller`, `admin`, `dev`. Dùng chung một lõi (vòng lặp gọi tool, an toàn, ghi log lượt chat), mỗi persona chỉ khác prompt, bộ tool và chính sách.
+- **Một dịch vụ `ai-agent`** (Python, FastAPI) với **bốn persona** chọn theo vai trò trong token: `buyer`, `seller`, `admin`, `operator`. Dùng chung một lõi (vòng lặp gọi tool, an toàn, ghi log lượt chat), mỗi persona chỉ khác prompt, bộ tool và chính sách.
 - **Tool = REST của gateway** (không MCP trước mắt, không truy cập DB trực tiếp). Quyền nằm ở gateway, không ở prompt. Agent giữ token ngắn hạn do gateway cấp (ADR-42), không giữ JWT người dùng lâu dài.
 - **Hành động ghi chỉ là đề xuất.** Người dùng bấm xác nhận, UI gọi route thật bằng token thật kèm gói đã ký; DB ghi `agent_run_id` để phân biệt (đã có hạ tầng).
-- **Vòng lặp RCA (dev/admin)** chạy trên nền ops-service đã có: cảnh báo → incident → điều tra (chỉ đọc, truy vấn có tên) → giả thuyết xếp hạng → **đề xuất** hành động (catalog đóng) → người duyệt → thực thi → **kiểm tra lại**. Agent không có quyền duyệt hay thực thi.
-- **Thứ tự xây:** lõi + khung kiểm thử (0) → buyer chỉ đọc (1) → seller chỉ đọc (2) → admin chỉ đọc (3) → dev RCA chỉ đọc (4) → hành động ghi có xác nhận (5) → vòng lặp RCA khép kín có duyệt (6) → vận hành (7). Mỗi bước phát hành được độc lập, có cờ tắt.
+- **Vòng lặp RCA (operator/admin)** chạy trên nền ops-service đã có: cảnh báo → incident → điều tra (chỉ đọc, truy vấn có tên) → giả thuyết xếp hạng → **đề xuất** hành động (catalog đóng) → người duyệt → thực thi → **kiểm tra lại**. Agent không có quyền duyệt hay thực thi.
+- **Thứ tự xây:** lõi + khung kiểm thử (0) → buyer chỉ đọc (1) → seller chỉ đọc (2) → admin chỉ đọc (3) → operator RCA chỉ đọc (4) → hành động ghi có xác nhận (5) → vòng lặp RCA khép kín có duyệt (6) → vận hành (7). Mỗi bước phát hành được độc lập, có cờ tắt.
 
 ## 1. Đã có gì, còn thiếu gì
 
@@ -21,11 +21,11 @@
 | Token agent ngắn hạn (`X-Agent-Token`, `jti` = run id), khoá xoay `AGENT_TOKEN_KEYS` | gateway `internal/agent`, ADR-42 | Danh tính của agent khi gọi gateway |
 | `POST /ai/proposals` + header `X-Agent-Proposal` + cột `agent_run_id` (order, payment, product) | gateway, `shared/reqctx`, migrations | Hành động ghi có người xác nhận, phân biệt nguồn trong DB |
 | REST đọc cho buyer/seller/admin (đơn, sản phẩm, tồn kho, báo cáo analytics có `as_of`/`source`) | [../design/04_API_REFERENCE.md](../design/04_API_REFERENCE.md) | Tool đọc |
-| ops-service: incident từ cảnh báo, `investigate`, `queries` có tên, `outbox/<svc>/dead`, đề xuất → duyệt → thực thi → xác nhận đã chạy, audit log chỉ ghi thêm, catalog hành động đóng | `services/ops-service`, ADR-38/39/40 | Nền của vòng lặp RCA; agent dev dùng `OPS_AGENT_TOKEN` (đọc + tạo đề xuất, không duyệt/thực thi) |
+| ops-service: incident từ cảnh báo, `investigate`, `queries` có tên, `outbox/<svc>/dead`, đề xuất → duyệt → thực thi → xác nhận đã chạy, audit log chỉ ghi thêm, catalog hành động đóng | `services/ops-service`, ADR-38/39/40 | Nền của vòng lặp RCA; agent operator dùng `OPS_AGENT_TOKEN` (đọc + tạo đề xuất, không duyệt/thực thi) |
 | Playbook YAML cho 10 nhóm sự cố, có kiểm tra khớp `alerts.yml` | `docs/playbooks/` | Nguồn sự thật (ground truth) và bộ đề kiểm tra RCA |
 | Metrics, log (Loki), trace (Tempo), dashboard, `X-Request-ID` xuyên service | `deploy/`, ADR-33/36 | Nguồn bằng chứng cho RCA |
 | Bộ dữ liệu giả + backfill/reconcile ClickHouse | `scripts/datagen`, `docs/dataset/` | Dữ liệu cho hỏi đáp số liệu và đánh giá |
-| Vai trò `dev`, giao diện console, bong bóng chat (đang là bản xem trước, `NEXT_PUBLIC_AI_UI_PREVIEW`) | frontend | Chỗ gắn UI thật |
+| Vai trò `operator`, giao diện console, bong bóng chat (đang là bản xem trước, `NEXT_PUBLIC_AI_UI_PREVIEW`) | frontend | Chỗ gắn UI thật |
 
 ### 1.2 Còn thiếu (làm cùng lúc với agent, không phải trước)
 
@@ -43,7 +43,7 @@
 
 1. [02_AGENT_ARCHITECTURE.md](02_AGENT_ARCHITECTURE.md) §7 vẽ gateway → agent bằng gRPC stream. Thực tế đã làm (ADR-40) là **HTTP + SSE**: `POST AI_SERVICE_URL/chat`, body JSON ≤ 64 KB, trả `text/event-stream`. Giữ như đã làm.
 2. Tài liệu cũ ghi "REST kèm JWT của user". Theo ADR-42 agent dùng **token agent ngắn hạn do gateway cấp**; JWT người dùng không được giao cho agent về lâu dài.
-3. 06_AGENT_FEATURES gọi ba persona (`shopper`, `seller`, `admin`). Ở đây tách thêm `dev` vì vai trò `dev` đã có và có quyền khác (chỉ vận hành, không có dữ liệu kinh doanh).
+3. 06_AGENT_FEATURES gọi ba persona (`shopper`, `seller`, `admin`). Ở đây tách thêm `operator` vì vai trò `operator` đã có và có quyền khác (chỉ vận hành, không có dữ liệu kinh doanh).
 
 ## 2. Những thứ cần chốt TRƯỚC khi viết code
 
@@ -64,7 +64,7 @@ Mỗi mục là một câu hỏi cần một đáp án viết ra (ghi thành ADR
 
 | # | Câu hỏi | Đề xuất |
 |---|---|---|
-| M1 | Nhà cung cấp/mô hình nào cho từng persona? | Khai báo nhiều **profile LLM** và ánh xạ persona/role → profile trong yaml (§13), nên đổi nhà cung cấp chỉ sửa cấu hình. Bắt đầu với một profile. Buyer/seller: mô hình nhỏ-nhanh; admin/dev RCA: mô hình mạnh hơn. Chốt tên mô hình sau khi chạy bộ đánh giá §8, đừng chốt theo cảm tính |
+| M1 | Nhà cung cấp/mô hình nào cho từng persona? | Khai báo nhiều **profile LLM** và ánh xạ persona/role → profile trong yaml (§13), nên đổi nhà cung cấp chỉ sửa cấu hình. Bắt đầu với một profile. Buyer/seller: mô hình nhỏ-nhanh; admin/operator RCA: mô hình mạnh hơn. Chốt tên mô hình sau khi chạy bộ đánh giá §8, đừng chốt theo cảm tính |
 | M6 | Thư viện | LangChain: `create_agent` + middleware cho buyer/seller/admin, `langchain-core` cho mô hình; **LangGraph** chỉ cho RCA (bước 6); **LangSmith không bật** (§14) |
 | M2 | Gọi có cấu trúc (tool calling) hay tự parse? | Tool calling gốc của nhà cung cấp; schema sinh từ một nguồn duy nhất (§4.3) |
 | M3 | Ngân sách | Trần token/lượt, trần lượt/người/giờ, trần chi phí/ngày toàn hệ thống; vượt thì dừng và báo, không âm thầm hạ chất lượng |
@@ -85,7 +85,7 @@ Mỗi mục là một câu hỏi cần một đáp án viết ra (ghi thành ADR
 
 | # | Câu hỏi | Đề xuất |
 |---|---|---|
-| E1 | "Tốt" nghĩa là gì cho từng persona? | Buyer/seller: đúng số liệu và đúng quyền; admin: đúng số liệu; dev: top-3 nguyên nhân chứa nguyên nhân thật, đề xuất đúng catalog (§7.5) |
+| E1 | "Tốt" nghĩa là gì cho từng persona? | Buyer/seller: đúng số liệu và đúng quyền; admin: đúng số liệu; operator: top-3 nguyên nhân chứa nguyên nhân thật, đề xuất đúng catalog (§7.5) |
 | E2 | Ngưỡng cho phép phát hành | Viết số cụ thể trước khi chạy (ví dụ "đúng quyền 100%", "đúng số liệu ≥ 95% trên bộ vàng") |
 | E3 | Cách chấm | Kiểm tra tự động ở chỗ có đáp án cứng (số, route đã gọi, từ chối đúng); người chấm cho văn bản tự do; **không** dùng chính mô hình để chấm khi chưa kiểm chứng với người |
 
@@ -172,7 +172,7 @@ services/ai-agent/                     (Python 3.12, FastAPI; Dockerfile build t
 │   │   ├── buyer/        {prompt.md, tools.py, policy.py}
 │   │   ├── seller/       {prompt.md, tools.py, policy.py}
 │   │   ├── admin/        {prompt.md, tools.py, policy.py}
-│   │   └── dev/          {prompt.md, tools.py, policy.py}
+│   │   └── operator/          {prompt.md, tools.py, policy.py}
 │   ├── tools/
 │   │   ├── gateway.py                 (client REST: timeout 5 s, retry chỉ cho GET, ghi lại mọi lời gọi)
 │   │   ├── ops.py                     (client ops-service bằng OPS_AGENT_TOKEN)
@@ -198,7 +198,7 @@ services/ai-agent/                     (Python 3.12, FastAPI; Dockerfile build t
 │   │   ├── models.py                  (chat_runs, chat_messages, tool_calls)
 │   │   ├── repo.py
 │   │   └── migrations/                (Alembic hoặc SQL thuần theo đúng cách repo hiện làm)
-│   ├── rca/                           (bước 6; chỉ dev/admin)
+│   ├── rca/                           (bước 6; chỉ operator/admin)
 │   │   ├── state.py                   (trạng thái điều tra: bằng chứng, giả thuyết, hành động)
 │   │   ├── graph.py                   (các nút và cạnh, §7)
 │   │   ├── evidence.py                (gom bằng chứng: queries của ops, Prometheus, Loki, Tempo)
@@ -206,7 +206,7 @@ services/ai-agent/                     (Python 3.12, FastAPI; Dockerfile build t
 │   │   └── verify.py                  (kiểm tra lại sau khi chạy hành động)
 │   └── observability/                 (metrics Prometheus, log JSON có run_id, trace OTel)
 ├── evals/                             (harness kiểm thử, §8A)
-│   ├── golden/{buyer,seller,admin,dev}.jsonl   (câu hỏi + đáp án/route kỳ vọng)
+│   ├── golden/{buyer,seller,admin,operator}.jsonl   (câu hỏi + đáp án/route kỳ vọng)
 │   ├── scenarios/                     (kịch bản sự cố tái hiện: §8.2)
 │   ├── run_evals.py                   (chạy bộ vàng, in báo cáo, thoát lỗi nếu dưới ngưỡng)
 │   ├── replay.py                      (chạy lại một run_id đã lưu)
@@ -258,8 +258,8 @@ Mỗi bước: **làm gì**, **xong khi nào**. Không sang bước sau khi bư�
 - Tool: báo cáo nền tảng, đơn/thanh toán toàn hệ thống, `data-health`, danh mục. **Không** có tool tới `/admin/accounts` (không bao giờ: agent không quản lý tài khoản).
 - **Xong khi:** đúng số liệu; không tool nào chạm route quản lý tài khoản (test hợp đồng).
 
-### Bước 4. Dev, chỉ đọc + RCA một lượt
-- Persona `dev`: dùng `OPS_AGENT_TOKEN` tới ops-service: `/incidents`, `/incidents/{id}/investigate`, `/queries/{name}`, `/outbox/{svc}/dead`; thêm đọc Prometheus/Loki/Tempo **qua truy vấn có tên** (không cho mô hình tự viết PromQL/LogQL tuỳ ý ở phase này).
+### Bước 4. Operator, chỉ đọc + RCA một lượt
+- Persona `operator`: dùng `OPS_AGENT_TOKEN` tới ops-service: `/incidents`, `/incidents/{id}/investigate`, `/queries/{name}`, `/outbox/{svc}/dead`; thêm đọc Prometheus/Loki/Tempo **qua truy vấn có tên** (không cho mô hình tự viết PromQL/LogQL tuỳ ý ở phase này).
 - Đầu ra: báo cáo gồm bằng chứng (liên kết/truy vấn), top-3 giả thuyết có độ tin cậy, bước kiểm tra tiếp theo. Chưa đề xuất hành động.
 - **Xong khi:** chạy lại bộ kịch bản sự cố (§8.2) đạt ngưỡng E2 cho "top-3 chứa nguyên nhân thật"; mọi bằng chứng truy ngược được tới một lời gọi tool.
 
@@ -268,7 +268,7 @@ Mỗi bước: **làm gì**, **xong khi nào**. Không sang bước sau khi bư�
 - UI: thẻ hiển thị `summary`, tham số thật (số tiền, mã đơn), nút xác nhận/bỏ; sau xác nhận gọi route thật với `X-Agent-Proposal`; xử lý 401/403/409/503 (§ADR-42).
 - **Xong khi:** thử tấn công bộ test safety: sửa tham số sau khi ký, dùng lại gói, gói của người khác, bỏ header (chạy nhưng không có `agent_run_id`) đều cho kết quả đúng; truy vấn `agent_run_id` ra đúng hành động.
 
-### Bước 6. Vòng lặp RCA khép kín (dev, admin)
+### Bước 6. Vòng lặp RCA khép kín (operator, admin)
 Chi tiết §7. Thêm: tạo đề xuất vận hành tại ops-service, chờ người duyệt, theo dõi thực thi, kiểm tra lại, đóng incident.
 - **Xong khi:** trên kịch bản có hành động an toàn (ví dụ outbox kẹt, `docker service update --force`), vòng lặp đi hết từ cảnh báo đến đóng incident với một người duyệt; agent **không** có đường tự duyệt/tự chạy (test 403); kiểm tra lại phát hiện được trường hợp hành động không hiệu quả và không tự đóng incident.
 
@@ -279,7 +279,7 @@ Chi tiết §7. Thêm: tạo đề xuất vận hành tại ops-service, chờ n
 
 ## 6. Chi tiết từng persona
 
-| | buyer | seller | admin | dev |
+| | buyer | seller | admin | operator |
 |---|---|---|---|---|
 | Mục tiêu | tìm hàng, theo dõi đơn, hiểu chính sách | số liệu shop, tồn kho, xử lý đơn | số liệu nền tảng, khiếu nại, kiểm duyệt | điều tra và xử lý sự cố |
 | Dữ liệu đọc | sản phẩm công khai, giỏ + đơn của mình | shop của mình (từ `sub`) | toàn nền tảng (không tài khoản) | vận hành (incident, metric, log, trace), **không** dữ liệu kinh doanh |
@@ -291,7 +291,7 @@ Chi tiết §7. Thêm: tạo đề xuất vận hành tại ops-service, chờ n
 
 Quy tắc chung đã chốt ở [06_AGENT_FEATURES.md](06_AGENT_FEATURES.md) §1 (persona theo role trong token, dữ liệu ngoài là không tin cậy, không nhập dữ liệu thanh toán, `as_of`/`source`, giới hạn cứng) vẫn đúng và là điều kiện của mọi bước.
 
-## 7. Vòng lặp RCA đề xuất (dev/admin)
+## 7. Vòng lặp RCA đề xuất (operator/admin)
 
 ### 7.1 Hình dạng
 
@@ -395,7 +395,7 @@ Fake provider + test an toàn + khung `run_evals.py` thuộc **bước 0** (xong
 
 1. Quyền nằm ở gateway/ops-service, không ở prompt. Đổi prompt không bao giờ mở thêm quyền.
 2. Không có tool nào cho agent: tự thực thi route ghi, duyệt/thực thi đề xuất ops, quản lý tài khoản, đổi mật khẩu, chạy lệnh/SQL tự do, tải URL tuỳ ý.
-3. Mọi văn bản từ tool, sản phẩm, review, log, tin nhắn là **không tin cậy**: đánh dấu trong prompt, không bao giờ coi là chỉ thị. Log (Loki) có thể chứa dữ liệu do người dùng điền: coi như nguy cơ injection cho agent dev.
+3. Mọi văn bản từ tool, sản phẩm, review, log, tin nhắn là **không tin cậy**: đánh dấu trong prompt, không bao giờ coi là chỉ thị. Log (Loki) có thể chứa dữ liệu do người dùng điền: coi như nguy cơ injection cho agent operator.
 4. Secret không vào prompt, log chat, hay kho lượt chat. `redact.py` chạy cả chiều vào (kết quả tool) lẫn chiều ra (câu trả lời).
 5. Đề xuất ghi: gói ký, hạn ngắn, dùng một lần, gắn chặt tham số (đã có). Mô hình không bao giờ thấy hay tạo khoá.
 6. Giới hạn cứng ở server cho vòng, thời gian, token, tiền; vượt thì dừng.
@@ -413,7 +413,7 @@ Fake provider + test an toàn + khung `run_evals.py` thuộc **bước 0** (xong
 | Lộ dữ liệu qua kho lượt chat/nhà cung cấp | Che dữ liệu, thời hạn giữ, chỉ admin xem, đọc điều khoản nhà cung cấp |
 | Phụ thuộc một nhà cung cấp | Lớp `llm/provider.py`; đường lui không-AI |
 | Phình phạm vi (làm cả bốn persona cùng lúc) | Theo thứ tự §5; mỗi bước có tiêu chí xong |
-| Tài khoản `dev` bị chiếm → dùng agent để đọc vận hành | Persona dev chỉ chạm dữ liệu vận hành; đề xuất vẫn cần admin duyệt; khoá/xoá tài khoản dev đã có ở `/admin/accounts` |
+| Tài khoản `operator` bị chiếm → dùng agent để đọc vận hành | Persona operator chỉ chạm dữ liệu vận hành; đề xuất vẫn cần admin duyệt; khoá/xoá tài khoản operator đã có ở `/admin/accounts` |
 
 ## 11. Danh sách việc bước đầu (có thể bắt tay ngay)
 
@@ -423,7 +423,7 @@ Fake provider + test an toàn + khung `run_evals.py` thuộc **bước 0** (xong
 - [ ] Dựng harness kiểm thử (§8A.2): fake provider có kịch bản, `tests/safety/`, khung `run_evals.py`.
 - [ ] Viết `evals/golden/buyer.jsonl` (20–30 câu) và `tests/safety/` trước khi nối mô hình thật.
 - [ ] Nối mô hình thật cho buyer, chạy bộ vàng, chỉnh prompt/tool tới khi đạt ngưỡng.
-- [ ] Lặp lại cho seller, admin, dev theo §5.
+- [ ] Lặp lại cho seller, admin, operator theo §5.
 
 ## 12. Đầu việc theo service và các bước (bổ sung sau trao đổi 2026-11-14)
 
@@ -438,7 +438,7 @@ Fake provider + test an toàn + khung `run_evals.py` thuộc **bước 0** (xong
 ### 12.2 Việc theo service
 
 **api-gateway (hạ tầng, làm trước, không cần LLM)**
-- [x] (2026-11-14, chỉ role buyer; seller/admin/dev thêm cùng persona) `internal/agent/scopes.go`: bảng role → tool → (method, route), một nguồn sự thật; middleware nhận token agent ở route đọc theo bảng; từ chối ở `/auth/*`, route ghi, `/ai/chat`.
+- [x] (2026-11-14, chỉ role buyer; seller/admin/operator thêm cùng persona) `internal/agent/scopes.go`: bảng role → tool → (method, route), một nguồn sự thật; middleware nhận token agent ở route đọc theo bảng; từ chối ở `/auth/*`, route ghi, `/ai/chat`.
 - [x] `GET /ai/tools` trả cùng bảng cho `ai-agent`.
 - [x] (khi có `AGENT_TOKEN_KEYS`) Ngừng gửi `Authorization` của người dùng sang `ai-agent` sau khi route đọc nhận token agent.
 - [x] Rate limit `/ai/*` theo `sub` (fail-closed) và thu hồi token agent theo `pwd_version`. Còn: giới hạn đồng thời (2 lượt/người).
@@ -550,7 +550,7 @@ Câu hỏi "LangChain có stream không?": có. `llm.stream(...)` / `astream(...
 ### 14.2 Lựa chọn
 1. **Dùng LangChain (`langchain` + `langchain-core` + gói provider) cho lớp mô hình VÀ vòng lặp agent của buyer/seller/admin: dựng bằng `create_agent` + middleware** (đổi quyết định ngày 2026-11-14 theo yêu cầu chủ dự án; trước đó là vòng lặp tự viết). Lý do: đã quen, có sẵn stream, `bind_tools`, giới hạn gọi, tóm tắt, che PII, retry; đổi nhà cung cấp chỉ đổi profile (§13). Ghim phiên bản (API đổi nhanh: tên stream, middleware). **Mọi lời gọi tool vẫn đi qua một hàm bọc của mình** (kiểm quyền, kiểm tham số, che dữ liệu, ghi log), vì quyền thật ở gateway và điều này không phụ thuộc phiên bản thư viện.
 2. **Tự viết chỉ những phần LangChain không có:** bộ chuyển sự kiện sang SSE của mình (§14.4), nạp/lưu lịch sử từ Postgres của mình, ngân sách token, kiểm tra sở hữu cuộc chat. Không dùng `HumanInTheLoopMiddleware` cho buyer/seller/admin (bước duyệt nằm ngoài agent, ADR-42).
-3. **LangGraph cho RCA (bước 6) và dev (bước 4 nếu RCA nhiều nhánh):** cần nhánh (đủ chắc / cần thêm bằng chứng), quay lại có trần, **dừng chờ người duyệt rồi chạy tiếp, có thể sau nhiều giờ** (checkpoint + interrupt khớp đúng việc này), nên đáng dùng. Checkpoint lưu trong Postgres của `ai-agent`. Quyết định chốt ở đầu bước 6 sau khi thử vẽ đồ thị RCA; nếu hoá ra chỉ là vòng lặp có điều kiện thì không dùng.
+3. **LangGraph cho RCA (bước 6) và operator (bước 4 nếu RCA nhiều nhánh):** cần nhánh (đủ chắc / cần thêm bằng chứng), quay lại có trần, **dừng chờ người duyệt rồi chạy tiếp, có thể sau nhiều giờ** (checkpoint + interrupt khớp đúng việc này), nên đáng dùng. Checkpoint lưu trong Postgres của `ai-agent`. Quyết định chốt ở đầu bước 6 sau khi thử vẽ đồ thị RCA; nếu hoá ra chỉ là vòng lặp có điều kiện thì không dùng.
    **Vì sao buyer/seller/admin không cần checkpoint dù có "phê duyệt":** với họ, bước duyệt nằm **ngoài agent**: agent phát `action_proposal` rồi kết thúc lượt; người dùng bấm xác nhận trên UI và UI gọi route thật bằng token thật (ADR-42); nói tiếp thì là lượt chat mới, lịch sử lấy từ kho chat. Không có gì để "dừng rồi chạy tiếp". RCA khác: agent phải sống qua lúc chờ admin khác duyệt (có thể nhiều giờ) rồi chạy `verify`, nên cần checkpoint + interrupt (hoặc cách thay thế: mỗi giai đoạn là một lượt chạy riêng, trạng thái điều tra lưu ở incident của ops-service, ops-service gọi agent khi proposal được duyệt/thực thi). Dùng LangGraph cho cả bốn persona vẫn hợp lệ nếu muốn một cách viết thống nhất; đổi lại là code dài hơn vòng lặp tuyến tính, guard vẫn là code của mình, và phải học thêm khái niệm chưa cần. Quyết định hiện tại (tự viết cho ba persona đầu) có thể đổi.
 4. **LangSmith: không bật.** Trace chứa nội dung chat, tên, địa chỉ, đơn hàng của khách và gửi ra dịch vụ ngoài (M4, P4). Đã có kho lượt chat (`run_id`), `metrics.py`, `evals/` tự viết và Grafana. Nếu muốn dùng trong lúc phát triển thì chỉ với **dữ liệu giả** (`scripts/datagen`), và bảo đảm tracing tắt ở môi trường thật (kiểm biến `LANGSMITH_TRACING`/`LANGCHAIN_TRACING_V2` không được đặt trong `deploy/.env`; thêm kiểm tra lúc khởi động). Muốn có giao diện xem trace tự host thì cân nhắc công cụ mã nguồn mở khác sau.
 
@@ -707,7 +707,7 @@ Mỗi hành động thêm mới cần: một dòng trong `proposable`, `confirm`
 
 
 ### 16.4 OpenCode và đổi tên route vận hành (2026-11-14)
-- **Đổi route:** nhóm vận hành chuyển từ `/admin/ops/*` và `/admin/system/health` sang `/ops/*` và `/ops/system/health` (vẫn admin hoặc dev, ADR-40). `/admin/analytics/data-health` giữ nguyên chỗ cũ, vẫn mở cho dev. Gateway test pass; UI (`lib/api.ts`) và tài liệu đã đổi theo; log phiên cũ giữ nguyên.
+- **Đổi route:** nhóm vận hành chuyển từ `/admin/ops/*` và `/admin/system/health` sang `/ops/*` và `/ops/system/health` (vẫn admin hoặc operator, ADR-40). `/admin/analytics/data-health` giữ nguyên chỗ cũ, vẫn mở cho dev. Gateway test pass; UI (`lib/api.ts`) và tài liệu đã đổi theo; log phiên cũ giữ nguyên.
 - **Profile `opencode_deepseek_flash`** (dev, prod): OpenCode Go, `base_url` mặc định `https://opencode.ai/inference/go/openai/v1`, `model_id: deepseek-v4.1-flash` (theo [docs OpenCode Go](https://opencode.ai/docs/go/)). Docs yêu cầu User-Agent riêng và header `x-opencode-session` ổn định cho mỗi cuộc hội thoại: provider `openai` nay hỗ trợ khoá `session_header`, giá trị lấy từ `conversation_id` của lượt đang chạy lúc gửi request (hook httpx, đọc contextvar), nên một model dùng chung vẫn đúng phiên.
 - **Streaming: ĐÃ KIỂM (2026-11-14, curl với key thật, 3 request nhỏ).** Kết quả ở đoạn "Kết quả kiểm" bên dưới. Đoạn cũ:  Docs OpenCode (Go và Zen) không nói gì về `stream`, `stream_options` hay `tools`. Chỉ có bằng chứng gián tiếp: các endpoint `chat/completions` này dùng gói `@ai-sdk/openai-compatible` mà chính OpenCode gọi để stream. Muốn chắc: một request `curl` với `"stream": true, "stream_options": {"include_usage": true}` và một request có `tools`. Chưa gọi API nào.
 - Test mới (header phiên theo conversation) đã viết trong `tests/test_config_llm.py` nhưng **chưa chạy**.
@@ -744,17 +744,17 @@ Hệ quả: profile bật `extra_body: thinking disabled` (dev, prod). Chưa ki�
 - **Kho chat Postgres** (`store/postgres.py`, `store.backend: postgres`, dev và prod): bảng `ai_conversations`, `ai_messages`, `ai_runs` (cùng cụm Postgres, tự tạo lúc khởi động, khoá advisory nhiều bản sao). Lưu chữ người dùng và câu trả lời cuối đã che email/số điện thoại, trạng thái/số tool/token và tham chiếu card/đề xuất mỗi lượt; KHÔNG lưu kết quả tool, token agent, token đề xuất. Giữ 30 ngày (`retention_days`), dọn mỗi giờ. Lượt treo quá 180 s không khoá cuộc chat. Kết nối lỗi lúc khởi động thì dịch vụ không lên. 9 test cần `TEST_POSTGRES_DSN` (mỗi test tạo DB riêng), kiểm trên Postgres 16 thật: 64 đạt.
 - Chưa có: giao diện/API cho admin xem lại hội thoại (hiện xem bằng SQL), mở lại cuộc chat cũ trên UI, chặn đồng thời theo người dùng.
 
-### 16.8 Persona admin và dev, chỉ đọc (2026-11-14)
-- **Gateway** (`agent/scopes.go`): `DefaultScopes["admin"]` gồm đọc toàn sàn (`/admin/orders`, `/admin/orders/:id`, `/admin/payments`, `/admin/payments/:id`, `/admin/categories`, 8 báo cáo `/admin/analytics/*`) cộng bộ ops. `DefaultScopes["dev"]` chỉ có bộ ops: `/ops/incidents`, `/ops/incidents/:id`, `/ops/audit`, `/ops/outbox/:service/dead`, `/ops/system/health`, `/admin/analytics/data-health`. Dev không có dữ liệu kinh doanh (cùng luật với route). Không có `/admin/accounts`, `/auth/*`, `/users/*`.
+### 16.8 Persona admin và operator, chỉ đọc (2026-11-14)
+- **Gateway** (`agent/scopes.go`): `DefaultScopes["admin"]` gồm đọc toàn sàn (`/admin/orders`, `/admin/orders/:id`, `/admin/payments`, `/admin/payments/:id`, `/admin/categories`, 8 báo cáo `/admin/analytics/*`) cộng bộ ops. `DefaultScopes["operator"]` chỉ có bộ ops: `/ops/incidents`, `/ops/incidents/:id`, `/ops/audit`, `/ops/outbox/:service/dead`, `/ops/system/health`, `/admin/analytics/data-health`. Operator không có dữ liệu kinh doanh (cùng luật với route). Không có `/admin/accounts`, `/auth/*`, `/users/*`.
 - **Route:** các GET trên chuyển sang nhóm `agentOr(authenticated)` (`opsAgentRead`, `adminAgentRead`) để token agent đi qua; POST/PUT/DELETE vẫn ở nhóm cũ chỉ nhận JWT người dùng. Các route `/ops` ghi (`investigate`, `proposals/*`, `queries/:name`) không nằm trong bảng.
-- **Chỉ đọc thật sự:** `readOnlyRoles = {admin, dev}`: `GET /ai/tools` trả `actions: []` (agent không có tool `propose_`) và `/ai/proposals` từ chối (`CanPropose`). Hàng `DefaultActions["admin"]` giữ lại để test cổng xác nhận. Muốn admin được đề xuất sau này: bỏ role khỏi `readOnlyRoles`.
-- **ai-agent:** persona `admin` và `dev` (`personas/admin|dev/prompt.md`, role LLM `admin`/`dev` trong `llm.roles`, dev và prod), nhãn tool thân thiện. Prompt nói rõ chỉ đọc, dev không có dữ liệu kinh doanh.
-- **UI/cấu hình:** `FEATURE_AI_OPS=true` bật nút trợ lý ở mọi trang `/admin` cho admin và dev (cùng cờ `ai_ops`). Gợi ý câu hỏi của admin/dev đổi cho khớp tool có thật.
+- **Chỉ đọc thật sự:** `readOnlyRoles = {admin, operator}`: `GET /ai/tools` trả `actions: []` (agent không có tool `propose_`) và `/ai/proposals` từ chối (`CanPropose`). Hàng `DefaultActions["admin"]` giữ lại để test cổng xác nhận. Muốn admin được đề xuất sau này: bỏ role khỏi `readOnlyRoles`.
+- **ai-agent:** persona `admin` và `operator` (`personas/admin|operator/prompt.md`, role LLM `admin`/`operator` trong `llm.roles`, dev và prod), nhãn tool thân thiện. Prompt nói rõ chỉ đọc, operator không có dữ liệu kinh doanh.
+- **UI/cấu hình:** `FEATURE_AI_OPS=true` bật nút trợ lý ở mọi trang `/admin` cho admin và operator (cùng cờ `ai_ops`). Gợi ý câu hỏi của admin/operator đổi cho khớp tool có thật.
 - **Seller:** nền tảng có hai role `seller_admin` (chủ shop) và `seller_employee` (nhân viên); agent cho cả hai cùng một persona `seller` và cùng bộ tool, không phân biệt.
-- Chưa có: chạy thử thật với admin/dev trên Swarm.
+- Chưa có: chạy thử thật với admin/operator trên Swarm.
 
 ### 16.9 Số liệu hệ thống, đề xuất vận hành, chính sách (2026-11-14)
-- **Số liệu Prometheus/Loki cho admin và dev:** tool `ops_metrics_query` = `GET /ops/queries/:name?service=&window=&request_id=`. Route mới `OpsHandler.Query` đổi query string thành body `{"params":{...}}` rồi gọi `POST /queries/:name` của ops-service (đây là kho truy vấn có tên, cố định, chỉ đọc, ops-service kiểm enum/regex từng tham số, cắt kết quả 50 chuỗi/100 dòng log và ghi audit mỗi lần chạy với `X-Actor` là `admin:<id>` hoặc `dev:<id>`). Agent KHÔNG viết PromQL/LogQL. Danh sách tên nằm ở `agent.opsQueryNames` và phải khớp `services/ops-service/internal/queries/queries.go` (24 truy vấn; đã đối chiếu tay, chưa có test tự động vì hai module tách nhau). Hỏi "service nào chậm nhất" -> `grpc_latency_p95` và `gateway_latency_p95` (prompt hướng dẫn).
+- **Số liệu Prometheus/Loki cho admin và operator:** tool `ops_metrics_query` = `GET /ops/queries/:name?service=&window=&request_id=`. Route mới `OpsHandler.Query` đổi query string thành body `{"params":{...}}` rồi gọi `POST /queries/:name` của ops-service (đây là kho truy vấn có tên, cố định, chỉ đọc, ops-service kiểm enum/regex từng tham số, cắt kết quả 50 chuỗi/100 dòng log và ghi audit mỗi lần chạy với `X-Actor` là `admin:<id>` hoặc `dev:<id>`). Agent KHÔNG viết PromQL/LogQL. Danh sách tên nằm ở `agent.opsQueryNames` và phải khớp `services/ops-service/internal/queries/queries.go` (24 truy vấn; đã đối chiếu tay, chưa có test tự động vì hai module tách nhau). Hỏi "service nào chậm nhất" -> `grpc_latency_p95` và `gateway_latency_p95` (prompt hướng dẫn).
 - **Đề xuất vận hành:** `ops_list_proposals`, `ops_get_proposal` (chỉ GET; duyệt/chạy vẫn là việc người dùng ở trang Hệ thống). Các GET này chuyển sang nhóm `opsAgentRead`.
 - **Chính sách:** `personas/buyer/policy.md` (trước chỉ có TODO) và `personas/seller/policy.md` (prompt seller có thêm mục `{policy}`). Nội dung lấy từ mặc định thật của order-service (`ORDER_PAYMENT_TTL_MIN` 15, `RETURN_WINDOW_DAYS` 7, `AUTO_DELIVER_DAYS` 7, `SHIPPING_FLAT_FEE` 30000, `FREE_SHIP_OVER` 500000) và máy trạng thái đơn. Đã thay bằng tool `get_shop_rules`, xem §16.11 (không còn phải sửa tay khi đổi biến). Chỗ code chưa chứng minh (ngày giao dự kiến, hoàn tiền khi huỷ đơn đã trả online) ghi là "chưa có thông tin" để agent không hứa.
 - Test: `TestOpsQueryTurnsTheQueryStringIntoTheUpstreamBody`, mở rộng `TestAdminAndDevAgentScopes`, `test_personas.py` (policy thật, nhãn tool).
@@ -774,15 +774,41 @@ Hệ quả: profile bật `extra_body: thinking disabled` (dev, prod). Chưa ki�
 
 
 ### 16.12 Không lộ chi tiết nội bộ cho buyer/seller, bảng trong chat, smoke test (2026-11-14)
-- **Lỗi thấy khi chạy thật:** (1) hỏi "bạn đã gọi API nào" thì buyer/seller trả ra được tên công cụ và đường dẫn, vì kết quả tool đưa cho mô hình có `source: "GET /orders/:id"` và mô hình biết tên tool; (2) bảng markdown hiện thành dấu `|` thô và `**\`ready\`**` hiện dấu backtick; (3) persona admin/dev quên bật trong `config.*.yaml` nên chat trả 403 "vai trò này chưa được hỗ trợ".
+- **Lỗi thấy khi chạy thật:** (1) hỏi "bạn đã gọi API nào" thì buyer/seller trả ra được tên công cụ và đường dẫn, vì kết quả tool đưa cho mô hình có `source: "GET /orders/:id"` và mô hình biết tên tool; (2) bảng markdown hiện thành dấu `|` thô và `**\`ready\`**` hiện dấu backtick; (3) persona admin/operator quên bật trong `config.*.yaml` nên chat trả 403 "vai trò này chưa được hỗ trợ".
 - **Nguyên tắc:** biết tên route KHÔNG phải ranh giới bảo mật. Ranh giới thật là bảng `agent/scopes.go` ở gateway (token buyer gọi route admin vẫn 403). Phần này chỉ để người dùng cuối không thấy chi tiết kỹ thuật và để giảm bề mặt bị dò. Admin/dev cố ý vẫn thấy route (họ cần nó để đối chiếu).
 - **Ba lớp (`Persona.hide_internals` = true cho buyer, seller):** (a) `tools/views.py`: mô hình chỉ thấy nhãn nguồn ("Đơn hàng của bạn"), không thấy `GET /…`; (b) prompt quy tắc 6 dặn không nói về công cụ/API/đường dẫn và nêu câu trả lời mẫu; (c) `guard/leak.py` `LeakFilter` lọc TRÊN LUỒNG token (giữ đuôi 48 ký tự để bắt tên bị cắt giữa hai mẩu) và cả bản lưu vào kho: che "METHOD /path", đường dẫn chỉ có ở API (`/ai/`, `/ops/`, `/admin/`, `/auth/`, `/users/`, `/shop/rules`, có `:id`) và tên mọi tool của role (+ `propose_*`). Trang web như `/cart` không bị đụng. Đánh đổi: văn bản trễ tới 48 ký tự so với mô hình; tên tool vẫn nằm trong ngữ cảnh mô hình (function calling cần), nên lớp (c) là chốt chặn cuối chứ không thay cho (a), (b).
 - **Dữ liệu nhạy cảm trong text tự do (dòng log Loki, audit):** `redact.mask_text` che thêm JWT, `Bearer …`, `password=…`/`token: …`, IPv4 (đã có email, số điện thoại). Không bắt được tên người hay địa chỉ viết thành chữ: dữ liệu như vậy phải bị bỏ theo tên khoá hoặc không cấp cho tool.
 - **Frontend:** `ChatMarkdown` thêm bảng (`| a | b |` + dòng `|---|`, cuộn ngang khi hẹp), tiêu đề `#`, in đậm chứa mã. Vẫn chỉ dựng React element, không HTML thô.
 - **Canh lệch cấu hình:** `test_every_persona_is_enabled_and_has_an_llm_role_in_every_config`; `scripts/smoke-ai.sh` đăng nhập từng role, hỏi một câu và kiểm tra có `event: done` (gọi LLM thật; tài khoản qua biến `SMOKE_*`).
-- Test: `tests/test_guard_leak.py` (lọc, luồng bị cắt từng 1–7 ký tự, buyer bị che còn admin thì không, mask chuỗi nhạy cảm), `tests/test_api.py` (admin/dev được nhận).
+- Test: `tests/test_guard_leak.py` (lọc, luồng bị cắt từng 1–7 ký tự, buyer bị che còn admin thì không, mask chuỗi nhạy cảm), `tests/test_api.py` (admin/operator được nhận).
 
 ### 16.13 Gọi tool tiết kiệm: sắp xếp theo tồn kho và rút gọn danh sách (2026-11-14)
 - **Triệu chứng:** seller hỏi "sản phẩm nào của tôi tồn nhiều nhất" thì agent tải cả danh mục. **Hai nguyên nhân:** (1) API chỉ sắp xếp theo `relevance|price|newest|best_selling`, không có tồn kho, nên mô hình phải lật từng trang rồi tự so; (2) mỗi sản phẩm trong danh sách mang cả `description`, `attributes`, `image_urls`... nên 20 sản phẩm vượt `tool_result_max_chars` (6000), kết quả bị cắt và mô hình lật tiếp (trần `max_tool_calls` = 8).
 - **Sửa:** product-service thêm `sort=stock_desc|stock_asc` (`inventory` = tồn khả dụng; CHỈ cho chủ store, route công khai trả 403 vì số tồn của người khác bị che "20+" và xếp hạng sẽ làm lộ thứ tự thật; test `TestSearchSortsByAvailableStock`, chạy với Postgres thật); gateway `list_my_products` có tham số `sort` (enum), `in_stock`, mô tả `page_size` và lời dặn dùng sắp xếp + `page_size` 5 cho câu hỏi top-N; `redact` bỏ các trường nặng (`description`, `attributes`, `image_urls`, `tags`...) trong DANH SÁCH nhiều dòng (một mục như `get_product` vẫn đủ, thẻ UI vẫn đầy đủ); prompt seller thêm mục "Cách dùng công cụ (tiết kiệm)".
 - **Quy tắc chung khi thêm tool:** câu hỏi "nhất/top N" phải trả lời được bằng MỘT lần gọi có sắp xếp phía server, không bằng việc mô hình tải hết rồi so. Thiếu tham số sắp xếp ở API thì thêm ở API, đừng dạy mô hình lật trang.
+
+### 16.14 Bộ lọc cho mọi tool danh sách (2026-11-14)
+- **Nguyên tắc:** câu hỏi lọc/xếp hạng phải trả lời bằng MỘT lần gọi có tham số, không bằng việc mô hình lật trang rồi tự lọc/đếm. Bộ lọc nào bỏ trống = không lọc. Tool chỉ là một dòng ở `agent/scopes.go`; tham số chỉ có tác dụng nếu CẢ chuỗi (tool -> handler gateway -> gRPC -> service/repo) hỗ trợ, nên mỗi bộ lọc mới đi từ SQL lên tới tool.
+- **Kiểm kê (các tool danh sách):** đơn (`list_my_orders`, `list_store_orders`, `admin_list_orders`) chỉ lọc được `status`; thanh toán admin chỉ `status`, `method`; sản phẩm của seller thiếu danh mục/hãng/khoảng giá dù API có; top sản phẩm không chọn được cách xếp hạng dù analytics-service hỗ trợ 5 kiểu; danh sách ops (`/ops/*`) giữ nguyên (nhỏ, có `limit`, ops-service tự kiểm giá trị).
+- **Đã thêm:**
+  - Đơn (một chỗ chung cho buyer/seller/admin, `order-service ListOrdersFiltered`): `payment_method`, `payment_status`, `created_from`/`created_to`, `min_total`/`max_total`, `sort` (`newest|oldest|total_desc|total_asc`), và `store_id` CHỈ ở danh sách admin (buyer/seller: scope từ token, query này bị bỏ qua như `buyer_id` trước nay; service từ chối `StoreID` ngoài scope admin). Ngày `YYYY-MM-DD` đọc theo Asia/Ho_Chi_Minh, `created_to` gồm cả ngày đó.
+  - Thanh toán admin (`payment-service ListFiltered`): `created_from`/`created_to`, `min_amount`/`max_amount` (VND ở REST, gateway đổi sang 1/100 VND), `sort` (`newest|oldest|amount_desc|amount_asc`); `status` và `method` giờ có enum.
+  - `list_my_products`: `category_id`, `brand`, `price_min`, `price_max` (handler dùng chung `searchRequest` nên API đã hỗ trợ sẵn, chỉ thiếu khai báo tool).
+  - `analytics_top_products` / `admin_analytics_top_products`: `sort` (`revenue|units|views|conversion|viewed_unsold`).
+- **Giá trị sai bị từ chối (400), không bị bỏ qua:** status/method/sort/khoảng sai, min > max, from >= to. Một bộ lọc bị bỏ qua âm thầm sẽ khiến câu trả lời trông như đã lọc.
+- **Chốt chặn lệch:** `TestEveryQueryParamOfAToolIsReadByAHandler` (gateway) kiểm mọi tham số query của mọi tool có tên trong một handler (bỏ `/ops/*` vì ops-service tự kiểm). Giới hạn: test chỉ bắt tên tham số không ai đọc, không chứng minh bộ lọc lọc đúng; phần đó do test của service (`TestOrderListFiltersNarrowWithinTheCallersScope`, `TestPaymentListFiltersNarrowAndRejectTypos`) và handler (`TestOrderListFiltersReachTheOrderService`, `TestAdminPaymentListFiltersReachThePaymentService`).
+- **Chưa làm (cần quyết định):** lọc đơn theo mã sản phẩm hoặc người mua (người mua là dữ liệu cá nhân, cần cân nhắc quyền riêng tư), lọc danh sách ops theo service/mức độ (cần sửa ops-service), `get_inventory_ledger` theo loại biến động/khoảng ngày.
+
+### 16.15 Popup chat: không đóng khi bấm ra ngoài, giữ chữ đang gõ (2026-11-14)
+- Chat là việc kéo dài (người dùng vừa chat vừa đọc hoặc sao chép từ trang), nên popup chỉ đóng bằng nút ×, nút tròn hoặc Esc; bấm ra ngoài không còn đóng. Chữ đang gõ giờ nằm ở `ChatWidget` (luôn được gắn) nên đóng rồi mở lại vẫn còn.
+- Kích thước popup nổi: rộng 456px, cao `h-[700px]` (đã thử 840px nhưng quá cao), luôn bị chặn bởi `max-h-[calc(100vh-6rem)]` (chừa chỗ cho nút tròn 5rem + lề 1rem) nên cửa sổ thấp hơn khoảng 796px thì khung thấp theo cửa sổ.
+
+### 16.16 Hạn mức token mỗi ngày cho mỗi người dùng (2026-11-14)
+- **Vì sao:** trước đây chỉ có trần MỘT lượt (`token_budget_per_turn` 20000) và một luồng chat mỗi người, nên một người vẫn có thể gọi LLM không giới hạn trong ngày; RCA và admin dùng mô hình mạnh sẽ tốn hơn nữa.
+- **Cách làm:** `limits.daily_tokens.<persona>` (token vào + ra, mặc định buyer 150000, seller 200000, admin 400000, operator 400000; 0 hoặc thiếu = không giới hạn). Trước khi tạo lượt, `api/chat.py` hỏi `store.tokens_used_today(user_id)` (bảng `ai_runs`, từ 00:00 giờ Asia/Ho_Chi_Minh); đủ hạn mức thì trả **429** `{error, code:"daily_token_limit", limit, used}` và KHÔNG gọi mô hình. Giao diện hiện đúng câu của server (khác thông báo "hỏi hơi nhanh" của 429 giới hạn tốc độ).
+- **Giới hạn đã biết:** lượt đang chạy chưa được tính, nên hạn mức có thể vượt tối đa một lượt (≤ 20000); một người chỉ có một luồng chat cùng lúc (khoá Redis) nên không chạy song song để lách. Hạn mức theo người dùng, không phải theo tài khoản dùng chung; chưa có cảnh báo "sắp hết" ở UI và chưa có dashboard tổng chi phí (bước 7).
+- Test: `test_daily_token_limit_blocks_before_the_model_and_only_that_user`, `test_no_daily_limit_configured_means_unlimited`, `test_memory_store_counts_tokens_per_user_for_today_only`, `test_tokens_used_today_counts_this_user_and_this_platform_day_only` (Postgres thật).
+
+### 16.17 Đổi `dev` thành `operator`; dữ liệu tra cứu gấp lại trong khung chat (2026-11-14)
+- **Đổi tên vai trò** (ADR-44): toàn bộ định danh `dev` của vai trò thành `operator`, gồm persona `personas/operator/`, `llm.roles.operator`, `limits.daily_tokens.operator`, `personas.operator` trong config, `agent.DefaultScopes["operator"]`, `readOnlyRoles`. Môi trường `dev` (`APP_ENV`, `config.dev.yaml`, `ENV=dev`) KHÔNG đổi.
+- **Thẻ dữ liệu trong chat:** mỗi lần gọi tool, UI nhận sự kiện `card` kèm toàn bộ dữ liệu và vẽ ngay dưới câu trả lời. Với admin/operator, bảng sức khoẻ, bảng số liệu "Value" nối nhau làm câu trả lời bị đẩy khỏi tầm nhìn khi văn bản còn đang sinh. Nay các thẻ nằm trong một khối gấp "Dữ liệu đã tra cứu (N)", **đóng sẵn** cho admin/operator, **mở sẵn** cho buyer/seller (thẻ đơn hàng/sản phẩm của chính họ là phần chính của câu trả lời, và chứa chi tiết mô hình không được thấy). Trong lúc chạy tool, UI hiện nhãn "Đang tra cứu…" như trước. Thẻ rỗng không tính vào số đếm. Muốn đổi mặc định, sửa điều kiện `open` ở `ChatWidget.tsx`. Thêm tên thẻ thân thiện cho các tool admin/ops (trước đó hiện "Dữ liệu").
