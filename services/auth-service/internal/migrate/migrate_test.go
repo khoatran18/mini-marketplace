@@ -72,9 +72,9 @@ func TestRunEmptyDBAndIdempotent(t *testing.T) {
 	if err := db.Create(&model.Account{Username: "u", Password: "p", Role: "buyer"}).Error; err == nil {
 		t.Fatal("expected unique violation on (username, role)")
 	}
-	// R5: same username under another role is allowed.
-	if err := db.Create(&model.Account{Username: "u", Password: "p", Role: "seller"}).Error; err != nil {
-		t.Fatalf("same username other role should be allowed: %v", err)
+	// 00003: a username is bound to ONE role for life (login takes the role from the account), so another role is refused too.
+	if err := db.Create(&model.Account{Username: "u", Password: "p", Role: "seller"}).Error; err == nil {
+		t.Fatal("the same username under another role must be refused (uni_accounts_username)")
 	}
 }
 
@@ -94,5 +94,29 @@ func TestRunLegacyDBKeepsData(t *testing.T) {
 	db.Model(&model.Account{}).Where("username = ?", "old").Count(&n)
 	if n != 1 {
 		t.Fatalf("legacy row lost, n=%d", n)
+	}
+}
+
+// The "dev" role was renamed "operator": an account created before the rename keeps working after the migration.
+func TestRunRenamesTheDevRoleToOperator(t *testing.T) {
+	db, sqlDB := newDB(t)
+	if err := db.AutoMigrate(&model.Account{}, &outbox.PwdVersionEvent{}); err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range []model.Account{{Username: "ops1", Password: "p", Role: "dev"}, {Username: "boss", Password: "p", Role: "admin"}, {Username: "an", Password: "p", Role: "buyer"}} {
+		if err := db.Create(&a).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := Run(context.Background(), sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	role := func(username string) string {
+		var r string
+		db.Model(&model.Account{}).Where("username = ?", username).Select("role").Scan(&r)
+		return r
+	}
+	if role("ops1") != "operator" || role("boss") != "admin" || role("an") != "buyer" {
+		t.Fatalf("roles after migration: ops1=%q boss=%q an=%q", role("ops1"), role("boss"), role("an"))
 	}
 }

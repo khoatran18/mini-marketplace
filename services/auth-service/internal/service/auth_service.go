@@ -30,9 +30,9 @@ var validRoles = map[string]bool{"buyer": true, "seller_admin": true, "seller_em
 // RoleAdmin is the platform administrator role (cannot be self-registered).
 const RoleAdmin = "admin"
 
-// RoleDev is the operator role: it can read the system and propose ops actions but cannot approve or run them (ADR-40).
-// Like admin it cannot be self-registered; it is created by EnsureDev (DEV_BOOTSTRAP_* at start-up).
-const RoleDev = "dev"
+// RoleOperator is the operator role (stored as "operator"): it can read the system and propose ops actions but cannot approve or run them (ADR-40).
+// Like admin it cannot be self-registered; it is created by EnsureOperator (OPERATOR_BOOTSTRAP_* at start-up).
+const RoleOperator = "operator"
 
 // credentialPattern mirrors the login contract in auth.proto (username/password: 3-16 letters, digits, underscore).
 var credentialPattern = regexp.MustCompile(`^[a-zA-Z0-9_]{3,16}$`)
@@ -123,9 +123,9 @@ func (s *AuthService) EnsureAdmin(ctx context.Context, username, password string
 	return s.ensurePrivileged(ctx, RoleAdmin, username, password)
 }
 
-// EnsureDev does the same for the "dev" operator role (see RoleDev).
-func (s *AuthService) EnsureDev(ctx context.Context, username, password string) (created bool, err error) {
-	return s.ensurePrivileged(ctx, RoleDev, username, password)
+// EnsureOperator does the same for the "operator" role (see RoleOperator).
+func (s *AuthService) EnsureOperator(ctx context.Context, username, password string) (created bool, err error) {
+	return s.ensurePrivileged(ctx, RoleOperator, username, password)
 }
 
 func (s *AuthService) ensurePrivileged(ctx context.Context, role, username, password string) (created bool, err error) {

@@ -73,31 +73,31 @@ func TestAdminCanNeverBeRegisteredThroughTheAPI(t *testing.T) {
 	}
 }
 
-func TestDevRoleIsBootstrapOnlyAndLogsInWithRoleDev(t *testing.T) {
+func TestOperatorRoleIsBootstrapOnlyAndLogsInWithRoleOperator(t *testing.T) {
 	s := testService(t)
 	ctx := context.Background()
-	if err := register(t, s, "sneaky", "password123", "dev"); err == nil || !strings.Contains(err.Error(), "invalid role") {
-		t.Fatalf("registering dev must be rejected, got %v", err)
+	if err := register(t, s, "sneaky", "password123", "operator"); err == nil || !strings.Contains(err.Error(), "invalid role") {
+		t.Fatalf("registering operator must be rejected, got %v", err)
 	}
-	if created, err := s.EnsureDev(ctx, "ops_dev", "password123"); err != nil || !created {
-		t.Fatalf("EnsureDev: created=%v err=%v", created, err)
+	if created, err := s.EnsureOperator(ctx, "ops_operator", "password123"); err != nil || !created {
+		t.Fatalf("EnsureOperator: created=%v err=%v", created, err)
 	}
-	if created, err := s.EnsureDev(ctx, "ops_dev", "another_pass1"); err != nil || created {
-		t.Fatalf("EnsureDev must be idempotent: created=%v err=%v", created, err)
+	if created, err := s.EnsureOperator(ctx, "ops_operator", "another_pass1"); err != nil || created {
+		t.Fatalf("EnsureOperator must be idempotent: created=%v err=%v", created, err)
 	}
-	out, err := s.Login(ctx, &dto.LoginInput{Username: "ops_dev", Password: "password123", Role: "dev"})
+	out, err := s.Login(ctx, &dto.LoginInput{Username: "ops_operator", Password: "password123", Role: "operator"})
 	if err != nil {
-		t.Fatalf("dev login: %v", err)
+		t.Fatalf("operator login: %v", err)
 	}
 	claims := jwt.MapClaims{}
 	if _, err := jwt.ParseWithClaims(out.AccessToken, &claims, func(*jwt.Token) (any, error) { return []byte(testSecret), nil }); err != nil {
 		t.Fatal(err)
 	}
-	if claims["Role"] != "dev" {
+	if claims["Role"] != "operator" {
 		t.Errorf("unexpected claims: %v", claims)
 	}
-	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_dev", Password: "password123", Role: "admin"}); err == nil {
-		t.Error("dev credentials must not work for the admin role")
+	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_operator", Password: "password123", Role: "admin"}); err == nil {
+		t.Error("operator credentials must not work for the admin role")
 	}
 }
 
@@ -109,23 +109,23 @@ func TestStaffAccountManagement(t *testing.T) {
 	}
 	root, _ := s.AccountRepo.GetAccountByUsername(ctx, "root_admin")
 
-	if err := s.CreateStaffAccount(ctx, "ops_dev", "password123", "dev"); err != nil {
+	if err := s.CreateStaffAccount(ctx, "ops_operator", "password123", "operator"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.CreateStaffAccount(ctx, "ops_dev", "password123", "admin"); err == nil {
+	if err := s.CreateStaffAccount(ctx, "ops_operator", "password123", "admin"); err == nil {
 		t.Error("duplicate username must be refused")
 	}
 	if err := s.CreateStaffAccount(ctx, "shopper", "password123", "buyer"); err == nil {
 		t.Error("buyer is not a staff role")
 	}
-	if err := s.CreateStaffAccount(ctx, "short_pw", "short", "dev"); err == nil {
+	if err := s.CreateStaffAccount(ctx, "short_pw", "short", "operator"); err == nil {
 		t.Error("short password accepted")
 	}
-	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_dev", Password: "password123"}); err != nil {
-		t.Fatalf("new dev can not log in: %v", err)
+	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_operator", Password: "password123"}); err != nil {
+		t.Fatalf("new operator can not log in: %v", err)
 	}
 
-	dev, _ := s.AccountRepo.GetAccountByUsername(ctx, "ops_dev")
+	operator, _ := s.AccountRepo.GetAccountByUsername(ctx, "ops_operator")
 	// A buyer can never be removed through this path
 	_ = register(t, s, "alice", "password123", "buyer")
 	alice, _ := s.AccountRepo.GetAccountByUsername(ctx, "alice")
@@ -136,28 +136,28 @@ func TestStaffAccountManagement(t *testing.T) {
 	if err := s.DeleteStaffAccount(ctx, root.ID, root.ID); err == nil {
 		t.Error("admin deleted themselves")
 	}
-	if err := s.DeleteStaffAccount(ctx, root.ID, dev.ID); err == nil {
+	if err := s.DeleteStaffAccount(ctx, root.ID, operator.ID); err == nil {
 		t.Error("last admin deleted")
 	}
 
-	if err := s.ResetStaffPassword(ctx, dev.ID, root.ID, "newpassword1"); err != nil {
+	if err := s.ResetStaffPassword(ctx, operator.ID, root.ID, "newpassword1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_dev", Password: "password123"}); err == nil {
+	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_operator", Password: "password123"}); err == nil {
 		t.Error("old password still works after reset")
 	}
-	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_dev", Password: "newpassword1"}); err != nil {
+	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_operator", Password: "newpassword1"}); err != nil {
 		t.Errorf("new password rejected: %v", err)
 	}
 
-	if err := s.DeleteStaffAccount(ctx, dev.ID, root.ID); err != nil {
+	if err := s.DeleteStaffAccount(ctx, operator.ID, root.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_dev", Password: "newpassword1"}); err == nil {
+	if _, err := s.Login(ctx, &dto.LoginInput{Username: "ops_operator", Password: "newpassword1"}); err == nil {
 		t.Error("deleted account can still log in")
 	}
 	// The username is free again
-	if err := s.CreateStaffAccount(ctx, "ops_dev", "password123", "dev"); err != nil {
+	if err := s.CreateStaffAccount(ctx, "ops_operator", "password123", "operator"); err != nil {
 		t.Errorf("username not reusable after delete: %v", err)
 	}
 	accs, err := s.ListAccounts(ctx, "", "ops", 10)

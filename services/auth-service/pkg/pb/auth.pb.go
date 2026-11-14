@@ -1249,11 +1249,11 @@ const file_auth_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x127\n" +
 	"\busername\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\busername\x127\n" +
 	"\bpassword\x18\x03 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12?\n" +
-	"\x04role\x18\x04 \x01(\tB+\xbaH(r&R\x05buyerR\fseller_adminR\x0fseller_employeeR\x04role\"\xd0\x01\n" +
+	"\x04role\x18\x04 \x01(\tB+\xbaH(r&R\x05buyerR\fseller_adminR\x0fseller_employeeR\x04role\"\xd5\x01\n" +
 	"\fLoginRequest\x127\n" +
 	"\busername\x18\x01 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\busername\x127\n" +
-	"\bpassword\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12N\n" +
-	"\x04role\x18\x03 \x01(\tB:\xbaH7\xd8\x01\x01r2R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\x03devR\x04role\"\x8b\x01\n" +
+	"\bpassword\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12S\n" +
+	"\x04role\x18\x03 \x01(\tB?\xbaH<\xd8\x01\x01r7R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\boperatorR\x04role\"\x8b\x01\n" +
 	"\rLoginResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12#\n" +
@@ -1272,12 +1272,12 @@ const file_auth_proto_rawDesc = "" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\x12\x18\n" +
-	"\asuccess\x18\x04 \x01(\bR\asuccess\"\x89\x02\n" +
+	"\asuccess\x18\x04 \x01(\bR\asuccess\"\x8e\x02\n" +
 	"\x15ChangePasswordRequest\x12#\n" +
 	"\busername\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\busername\x12>\n" +
 	"\fold_password\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\voldPassword\x12>\n" +
-	"\fnew_password\x18\x03 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\vnewPassword\x12K\n" +
-	"\x04role\x18\x04 \x01(\tB7\xbaH4r2R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\x03devR\x04role\"L\n" +
+	"\fnew_password\x18\x03 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\vnewPassword\x12P\n" +
+	"\x04role\x18\x04 \x01(\tB<\xbaH9r7R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\boperatorR\x04role\"L\n" +
 	"\x16ChangePasswordResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\"\x90\x01\n" +
@@ -1305,17 +1305,17 @@ const file_auth_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x12\n" +
 	"\x04role\x18\x03 \x01(\tR\x04role\x12\x19\n" +
-	"\bstore_id\x18\x04 \x01(\x04R\astoreId\"\xa4\x01\n" +
-	"\x13ListAccountsRequest\x12N\n" +
-	"\x04role\x18\x01 \x01(\tB:\xbaH7\xd8\x01\x01r2R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\x03devR\x04role\x12\x1d\n" +
+	"\bstore_id\x18\x04 \x01(\x04R\astoreId\"\xa9\x01\n" +
+	"\x13ListAccountsRequest\x12S\n" +
+	"\x04role\x18\x01 \x01(\tB?\xbaH<\xd8\x01\x01r7R\x05buyerR\fseller_adminR\x0fseller_employeeR\x05adminR\boperatorR\x04role\x12\x1d\n" +
 	"\x05query\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18 R\x05query\x12\x1e\n" +
 	"\x05limit\x18\x03 \x01(\rB\b\xbaH\x05*\x03\x18\xc8\x01R\x05limit\"T\n" +
 	"\x14ListAccountsResponse\x12<\n" +
-	"\baccounts\x18\x01 \x03(\v2 .auth_service.pkb.pb.AccountInfoR\baccounts\"\xb4\x01\n" +
+	"\baccounts\x18\x01 \x03(\v2 .auth_service.pkb.pb.AccountInfoR\baccounts\"\xb9\x01\n" +
 	"\x19CreateStaffAccountRequest\x127\n" +
 	"\busername\x18\x01 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\busername\x127\n" +
-	"\bpassword\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12%\n" +
-	"\x04role\x18\x03 \x01(\tB\x11\xbaH\x0er\fR\x05adminR\x03devR\x04role\"\x95\x01\n" +
+	"\bpassword\x18\x02 \x01(\tB\x1b\xbaH\x18r\x162\x14^[a-zA-Z0-9_]{3,16}$R\bpassword\x12*\n" +
+	"\x04role\x18\x03 \x01(\tB\x16\xbaH\x13r\x11R\x05adminR\boperatorR\x04role\"\x95\x01\n" +
 	"\x13StaffAccountRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\x04B\a\xbaH\x042\x02 \x00R\x02id\x12\"\n" +
 	"\bactor_id\x18\x02 \x01(\x04B\a\xbaH\x042\x02 \x00R\aactorId\x12A\n" +

@@ -19,7 +19,7 @@ import (
 // Account management for the platform administrator. The gateway only lets role "admin" reach these calls; the rules
 // that protect the platform itself (no self-delete, never the last admin, staff roles only) live here.
 
-func isStaffRole(role string) bool { return role == RoleAdmin || role == RoleDev }
+func isStaffRole(role string) bool { return role == RoleAdmin || role == RoleOperator }
 
 // ListAccounts returns accounts (all roles) for the admin console.
 func (s *AuthService) ListAccounts(ctx context.Context, role, query string, limit int) ([]model.Account, error) {
@@ -29,10 +29,10 @@ func (s *AuthService) ListAccounts(ctx context.Context, role, query string, limi
 	return s.AccountRepo.ListAccounts(ctx, role, query, limit)
 }
 
-// CreateStaffAccount creates an admin or dev account.
+// CreateStaffAccount creates an admin or operator account.
 func (s *AuthService) CreateStaffAccount(ctx context.Context, username, password, role string) error {
 	if !isStaffRole(role) {
-		return status.Error(codes.InvalidArgument, "role must be admin or dev")
+		return status.Error(codes.InvalidArgument, "role must be admin or operator")
 	}
 	if !credentialPattern.MatchString(username) || !credentialPattern.MatchString(password) {
 		return status.Error(codes.InvalidArgument, "username/password must be 3-16 characters of letters, digits or underscore")
@@ -67,7 +67,7 @@ func (s *AuthService) staffTarget(ctx context.Context, id, actorID uint64, what 
 		return nil, err
 	}
 	if !isStaffRole(acc.Role) {
-		return nil, status.Errorf(codes.PermissionDenied, "only admin and dev accounts can be %s here", what)
+		return nil, status.Errorf(codes.PermissionDenied, "only admin and operator accounts can be %s here", what)
 	}
 	if acc.ID == actorID {
 		return nil, status.Errorf(codes.FailedPrecondition, "you can not %s your own account", map[string]string{"deleted": "delete", "reset": "reset the password of"}[what])
@@ -75,7 +75,7 @@ func (s *AuthService) staffTarget(ctx context.Context, id, actorID uint64, what 
 	return acc, nil
 }
 
-// DeleteStaffAccount deletes an admin or dev account. Never yourself, never the last admin.
+// DeleteStaffAccount deletes an admin or operator account. Never yourself, never the last admin.
 func (s *AuthService) DeleteStaffAccount(ctx context.Context, id, actorID uint64) error {
 	acc, err := s.staffTarget(ctx, id, actorID, "deleted")
 	if err != nil {
@@ -105,7 +105,7 @@ func (s *AuthService) DeleteStaffAccount(ctx context.Context, id, actorID uint64
 	return nil
 }
 
-// ResetStaffPassword sets a new password for an admin/dev account (the old one is not needed) and revokes its tokens.
+// ResetStaffPassword sets a new password for an admin/operator account (the old one is not needed) and revokes its tokens.
 func (s *AuthService) ResetStaffPassword(ctx context.Context, id, actorID uint64, newPassword string) error {
 	if len(newPassword) < minPasswordLength {
 		return status.Errorf(codes.InvalidArgument, "new password must be at least %d characters", minPasswordLength)
