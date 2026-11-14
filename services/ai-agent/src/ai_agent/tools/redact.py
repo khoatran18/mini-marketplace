@@ -9,6 +9,9 @@ from typing import Any
 
 # khoá bị BỎ hẳn (khớp một phần tên, không phân biệt hoa thường)
 _DROP_KEY = re.compile(r"(address|phone|mobile|email|receiver|recipient|password|secret|token|session|ip_hash|^ip$|lat$|lng$|longitude|latitude)", re.I)
+# Trong DANH SÁCH nhiều dòng, các trường nặng này bị bỏ khỏi bản cho mô hình (bản đầy đủ vẫn ở thẻ UI; hỏi chi tiết một sản phẩm thì get_product
+# vẫn trả đủ). Không bỏ thì 20 sản phẩm vượt ngưỡng ký tự, kết quả bị cắt và mô hình phải lật từng trang.
+_HEAVY_IN_LISTS = frozenset({"description", "attributes", "image_urls", "images", "tags", "weight_g", "version", "updated_at", "low_stock_threshold"})
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _PHONE = re.compile(r"(?<!\d)(?:\+?84|0)(?:[\s.-]?\d){8,10}(?!\d)")
 
@@ -36,7 +39,9 @@ def redact(obj: Any, max_items: int = 20, max_str: int = 500, _depth: int = 0) -
     if isinstance(obj, dict):
         return {k: redact(v, max_items, max_str, _depth + 1) for k, v in obj.items() if not _DROP_KEY.search(str(k))}
     if isinstance(obj, list):
-        out = [redact(v, max_items, max_str, _depth + 1) for v in obj[:max_items]]
+        slim = len(obj) > 1
+        out = [redact({k: v for k, v in x.items() if k not in _HEAVY_IN_LISTS} if slim and isinstance(x, dict) else x, max_items, max_str, _depth + 1)
+               for x in obj[:max_items]]
         if len(obj) > max_items:
             out.append({"_truncated": f"còn {len(obj) - max_items} mục nữa, hãy hỏi thu hẹp hoặc xem ở thẻ"})
         return out

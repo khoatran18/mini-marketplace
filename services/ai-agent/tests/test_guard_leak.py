@@ -90,3 +90,12 @@ def test_free_text_secrets_are_masked_before_reaching_the_model():
     for secret in ("a@b.com", "0901234567", "10.1.2.3", "abc.def-123456", jwt, "hunter2xx"):
         assert secret not in out, out
     assert MASK in out and out.startswith("login failed user")
+
+
+def test_lists_drop_heavy_fields_for_the_model_but_a_single_item_keeps_them():
+    product = {"id": 1, "name": "Áo", "inventory": 5, "description": "d" * 400, "image_urls": ["a", "b"], "attributes": {"k": "v"}, "tags": ["x"]}
+    many = redact({"products": [product, {**product, "id": 2}], "total": 40})
+    assert all(set(p) == {"id", "name", "inventory"} for p in many["products"]) and many["total"] == 40
+    one = redact({"product": product})
+    assert "description" in one["product"] and "image_urls" in one["product"]
+    assert "description" in redact({"products": [product]})["products"][0]   # danh sách một phần tử: giữ nguyên
