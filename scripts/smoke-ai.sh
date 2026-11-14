@@ -4,7 +4,7 @@
 # CÓ gọi LLM thật (mỗi role một câu ngắn). Tài khoản lấy từ biến môi trường, không có mật khẩu nào nằm trong file này:
 #   SMOKE_BUYER_USER/_PASS   (mặc định buyer1/password: tài khoản demo khi SEED_DEMO_DATA=true)
 #   SMOKE_SELLER_USER/_PASS  (mặc định seller1/password)
-#   SMOKE_ADMIN_USER/_PASS   và SMOKE_DEV_USER/_PASS (không có mặc định: role nào thiếu biến thì bị bỏ qua, in SKIP)
+#   SMOKE_ADMIN_USER/_PASS   và SMOKE_OPERATOR_USER/_PASS (không có mặc định: role nào thiếu biến thì bị bỏ qua, in SKIP)
 # Usage: scripts/smoke-ai.sh [base_url]     base_url mặc định $SMOKE_BASE_URL hoặc http://api.marketplace.swarm.localhost
 # Thoát 0 khi mọi role đã chạy đều đạt; 1 khi có role lỗi hoặc không role nào chạy.
 set -uo pipefail
@@ -31,7 +31,7 @@ check() { # role user pass question
 check buyer  "${SMOKE_BUYER_USER-buyer1}"   "${SMOKE_BUYER_PASS-password}"   "Chính sách đổi trả của cửa hàng thế nào?"
 check seller "${SMOKE_SELLER_USER-seller1}" "${SMOKE_SELLER_PASS-password}"   "Cho mình xem sản phẩm sắp hết hàng."
 check admin  "${SMOKE_ADMIN_USER-}"         "${SMOKE_ADMIN_PASS-}"            "Sức khoẻ hệ thống hiện giờ thế nào?"
-check dev    "${SMOKE_DEV_USER-}"           "${SMOKE_DEV_PASS-}"              "Service nào đang chậm nhất?"
+check operator "${SMOKE_OPERATOR_USER-}"           "${SMOKE_OPERATOR_PASS-}"              "Service nào đang chậm nhất?"
 
 [ "$ran" -eq 0 ] && { echo "Không role nào chạy được."; exit 1; }
 exit "$fail"

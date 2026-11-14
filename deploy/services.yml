@@ -193,9 +193,9 @@ services:
       # only auth-service needs these (never put the admin password in the shared env anchor)
       ADMIN_BOOTSTRAP_USERNAME: ${ADMIN_BOOTSTRAP_USERNAME:-}
       ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
-      # operator role "dev": reads the system and proposes ops actions, cannot approve or run them (ADR-40); empty = none
-      DEV_BOOTSTRAP_USERNAME: ${DEV_BOOTSTRAP_USERNAME:-}
-      DEV_BOOTSTRAP_PASSWORD: ${DEV_BOOTSTRAP_PASSWORD:-}
+      # operator role: reads the system and proposes ops actions, cannot approve or run them (ADR-40); empty = none
+      OPERATOR_BOOTSTRAP_USERNAME: ${OPERATOR_BOOTSTRAP_USERNAME:-}
+      OPERATOR_BOOTSTRAP_PASSWORD: ${OPERATOR_BOOTSTRAP_PASSWORD:-}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
       interval: 10s
