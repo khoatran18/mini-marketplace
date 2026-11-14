@@ -346,3 +346,32 @@ func TestAddressEndpointsBelongToTheCaller(t *testing.T) {
 		t.Errorf("list: %+v", users.listed)
 	}
 }
+
+func TestOrderListFiltersReachTheOrderService(t *testing.T) {
+	r, orders, _ := orderRouter("buyer", 0)
+	do(r, "GET", "/orders?status=paid&payment_method=COD&payment_status=PAID&created_from=2026-11-01&created_to=2026-11-30&min_total=100000&max_total=900000&sort=total_desc&store_id=99", "")
+	l := orders.list
+	if l.Status != "paid" || l.PaymentMethod != "COD" || l.PaymentStatus != "PAID" || l.MinTotal != 100000 || l.MaxTotal != 900000 || l.Sort != "total_desc" {
+		t.Errorf("filters not forwarded: %+v", l)
+	}
+	// 2026-11-01 00:00 and the end of 2026-11-30 (= 12-01 00:00) in Asia/Ho_Chi_Minh, as UTC
+	if l.CreatedFrom != "2026-10-31T17:00:00Z" || l.CreatedTo != "2026-11-30T17:00:00Z" {
+		t.Errorf("dates: %q .. %q", l.CreatedFrom, l.CreatedTo)
+	}
+	if l.FilterStoreId != 0 || l.BuyerId != callerID {
+		t.Errorf("a buyer must not choose a store: %+v", l)
+	}
+
+	r, orders, _ = orderRouter("admin", 0)
+	do(r, "GET", "/admin/orders?store_id=20&status=PAID", "")
+	if l := orders.list; !l.IsAdmin || l.FilterStoreId != 20 || l.Status != "PAID" {
+		t.Errorf("admin store filter: %+v", l)
+	}
+
+	for _, q := range []string{"created_from=yesterday", "created_to=2026-13-40", "min_total=abc", "max_total=-5"} {
+		r, orders, _ = orderRouter("buyer", 0)
+		if w := do(r, "GET", "/orders?"+q, ""); w.Code != http.StatusBadRequest || orders.list != nil {
+			t.Errorf("%s: %d (must be 400 and never reach order-service)", q, w.Code)
+		}
+	}
+}

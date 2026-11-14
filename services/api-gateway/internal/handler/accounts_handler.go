@@ -21,7 +21,7 @@ func (h *AuthHandler) ListAccounts(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-// CreateStaffAccount POST /admin/accounts (admin or dev accounts only)
+// CreateStaffAccount POST /admin/accounts (admin or operator accounts only)
 func (h *AuthHandler) CreateStaffAccount(c *gin.Context) {
 	var req dto.CreateStaffInput
 	if err := c.ShouldBindJSON(&req); err != nil {

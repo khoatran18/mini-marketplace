@@ -135,7 +135,7 @@ func TestScopeTableRowsAreRealRoutesAndAcceptTheAgentToken(t *testing.T) {
 
 func TestAgentTokenOfAnotherRoleIsRefusedOnScopedRoutes(t *testing.T) {
 	e, s := agentEngine(t)
-	for _, role := range []string{"seller_admin", "seller_employee", "admin", "dev", "nobody"} {
+	for _, role := range []string{"seller_admin", "seller_employee", "admin", "operator", "nobody"} {
 		at, _, _ := s.IssueAgentToken(1, "u", role, 0, time.Minute)
 		for _, p := range []string{"/cart", "/orders", "/orders/1", "/orders/summary"} {
 			if w := do(e, "GET", p, at, "", ""); w.Code != http.StatusForbidden {
@@ -199,8 +199,8 @@ func TestToolsEndpoint(t *testing.T) {
 	if w.Code != 200 || !strings.Contains(w.Body.String(), `"tools":[]`) {
 		t.Errorf("unknown role: %d %s", w.Code, w.Body.String())
 	}
-	// admin and dev get read tools and no propose_ actions
-	for _, role := range []string{"admin", "dev"} {
+	// admin and operator get read tools and no propose_ actions
+	for _, role := range []string{"admin", "operator"} {
 		at3, _, _ := s.IssueAgentToken(1, "u", role, 0, time.Minute)
 		w = do(e, "GET", "/ai/tools", at3, "", "")
 		if w.Code != 200 || !strings.Contains(w.Body.String(), `"actions":[]`) || strings.Contains(w.Body.String(), `"tools":[]`) {
@@ -209,7 +209,7 @@ func TestToolsEndpoint(t *testing.T) {
 	}
 }
 
-// dev sees the system only; admin sees business data too; nobody reaches accounts, and /ops writes stay out of reach.
+// operator sees the system only; admin sees business data too; nobody reaches accounts, and /ops writes stay out of reach.
 func TestAdminAndDevAgentScopes(t *testing.T) {
 	e, s := agentEngine(t)
 	tok := func(role string) string { at, _, _ := s.IssueAgentToken(1, "u", role, 0, time.Minute); return at }
@@ -218,12 +218,12 @@ func TestAdminAndDevAgentScopes(t *testing.T) {
 		allowed            bool
 	}{
 		{"admin", "GET", "/admin/orders", true}, {"admin", "GET", "/admin/payments/1", true}, {"admin", "GET", "/ops/incidents", true},
-		{"dev", "GET", "/ops/incidents", true}, {"dev", "GET", "/ops/system/health", true}, {"dev", "GET", "/ops/queries/gateway_latency_p95", true},
-		{"admin", "GET", "/ops/proposals", true}, {"dev", "GET", "/ops/proposals/1", true}, {"dev", "POST", "/ops/queries/gateway_latency_p95", false},
-		{"dev", "POST", "/ops/proposals", false}, {"admin", "POST", "/ops/proposals/1/decision", false}, {"dev", "GET", "/admin/analytics/data-health", true},
-		{"dev", "GET", "/admin/orders", false}, {"dev", "GET", "/admin/analytics/summary", false}, {"dev", "GET", "/admin/payments", false},
-		{"admin", "GET", "/admin/accounts", false}, {"dev", "GET", "/admin/accounts", false},
-		{"admin", "POST", "/ops/incidents/1/investigate", false}, {"dev", "POST", "/ops/proposals/1/execute", false},
+		{"operator", "GET", "/ops/incidents", true}, {"operator", "GET", "/ops/system/health", true}, {"operator", "GET", "/ops/queries/gateway_latency_p95", true},
+		{"admin", "GET", "/ops/proposals", true}, {"operator", "GET", "/ops/proposals/1", true}, {"operator", "POST", "/ops/queries/gateway_latency_p95", false},
+		{"operator", "POST", "/ops/proposals", false}, {"admin", "POST", "/ops/proposals/1/decision", false}, {"operator", "GET", "/admin/analytics/data-health", true},
+		{"operator", "GET", "/admin/orders", false}, {"operator", "GET", "/admin/analytics/summary", false}, {"operator", "GET", "/admin/payments", false},
+		{"admin", "GET", "/admin/accounts", false}, {"operator", "GET", "/admin/accounts", false},
+		{"admin", "POST", "/ops/incidents/1/investigate", false}, {"operator", "POST", "/ops/proposals/1/execute", false},
 		{"admin", "POST", "/admin/orders/1/cancel", false}, {"admin", "POST", "/admin/payments/1/refund", false},
 		{"admin", "GET", "/orders", false}, {"admin", "GET", "/seller/orders", false},
 	} {
@@ -237,7 +237,7 @@ func TestAdminAndDevAgentScopes(t *testing.T) {
 		}
 	}
 	// the read-only roles cannot even get a proposal signed
-	for _, role := range []string{"admin", "dev"} {
+	for _, role := range []string{"admin", "operator"} {
 		w := do(e, "POST", "/ai/proposals", tok(role), "", `{"method":"POST","path":"/admin/orders/5/cancel","summary":"x","body":null}`)
 		if w.Code != http.StatusForbidden {
 			t.Errorf("%s proposal: %d, want 403", role, w.Code)

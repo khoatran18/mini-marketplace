@@ -5,6 +5,7 @@ import (
 	"api-gateway/pkg/dto"
 	paymentpb "api-gateway/pkg/pb/paymentservice"
 	"context"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -179,18 +180,37 @@ func (h *PaymentHandler) Cancel(c *gin.Context) {
 	c.JSON(http.StatusOK, paymentJSON(res))
 }
 
-// AdminList lists payments (admin).
+// AdminList lists payments (admin). Optional filters: status, method, created_from/created_to (date or RFC 3339), min_amount/max_amount (VND), sort.
 func (h *PaymentHandler) AdminList(c *gin.Context) {
 	page, size, ok := pageParams(c)
 	if !ok {
 		return
 	}
+	req := &paymentpb.ListPaymentsRequest{Status: c.Query("status"), Method: c.Query("method"), Sort: c.Query("sort"), Page: page, PageSize: size}
+	if req.CreatedFrom, ok = parseWhen(c.Query("created_from"), false); !ok {
+		badRequest(c, "created_from must be YYYY-MM-DD or RFC 3339")
+		return
+	}
+	if req.CreatedTo, ok = parseWhen(c.Query("created_to"), true); !ok {
+		badRequest(c, "created_to must be YYYY-MM-DD or RFC 3339")
+		return
+	}
+	// min_amount / max_amount are in VND like every other price on the REST API; payment-service stores 1/100 VND
+	minAmount, ok := queryFloat(c, "min_amount")
+	if !ok {
+		return
+	}
+	maxAmount, ok := queryFloat(c, "max_amount")
+	if !ok {
+		return
+	}
+	req.MinAmountMinor, req.MaxAmountMinor = int64(math.Round(minAmount*100)), int64(math.Round(maxAmount*100))
 	pc, ctx, cancel, ok := h.payment(c)
 	if !ok {
 		return
 	}
 	defer cancel()
-	res, err := pc.ListPayments(ctx, &paymentpb.ListPaymentsRequest{Status: c.Query("status"), Method: c.Query("method"), Page: page, PageSize: size})
+	res, err := pc.ListPayments(ctx, req)
 	if err != nil {
 		respondError(c, h.Logger, "PaymentHandler: ListPayments", err)
 		return

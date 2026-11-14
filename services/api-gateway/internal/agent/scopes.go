@@ -42,7 +42,7 @@ type ToolParam struct {
 // Scopes maps role -> tools.
 type Scopes map[string][]Tool
 
-// DefaultScopes is the table in use: buyer, seller, admin and dev (docs/ai/08_AGENT_BUILD_ROADMAP.md §5). Every row is a GET: writes are never reachable with an agent token, they go
+// DefaultScopes is the table in use: buyer, seller, admin and operator (docs/ai/08_AGENT_BUILD_ROADMAP.md §5). Every row is a GET: writes are never reachable with an agent token, they go
 // through a signed proposal and the user's own token. There is deliberately no row for /auth/*, /users/*, addresses,
 // /payments/:id or any /admin route.
 var DefaultScopes = Scopes{
@@ -50,8 +50,29 @@ var DefaultScopes = Scopes{
 	"seller_admin":    sellerTools,
 	"seller_employee": sellerTools,
 	"admin":           adminTools,
-	"dev":             devTools,
+	"operator":        operatorTools,
 }
+
+// Filters of the order lists (one gateway handler serves buyer, seller and admin). Every filter is optional: leaving it out means "no filter".
+// A tool param exists only if the handler reads it (TestEveryQueryParamOfAToolIsReadByAHandler); values outside the enums are rejected by the
+// order-service with 400, never silently ignored.
+var (
+	orderStatuses = []string{"PENDING", "AWAITING_PAYMENT", "CONFIRMED", "PAID", "SHIPPED", "DELIVERED", "REFUND_REQUESTED", "REFUNDED", "CANCELED", "EXPIRED", "FAILED"}
+	orderFilters  = []ToolParam{
+		{Name: "status", In: "query", Type: "string", Enum: orderStatuses},
+		{Name: "payment_method", In: "query", Type: "string", Enum: []string{"COD", "MOCK_CARD", "MOCK_WALLET", "MOCK_BANK_TRANSFER"}},
+		{Name: "payment_status", In: "query", Type: "string", Enum: []string{"UNPAID", "PAID", "REFUNDED"}},
+		{Name: "created_from", In: "query", Type: "string", Description: "orders created on or after this day, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339"},
+		{Name: "created_to", In: "query", Type: "string", Description: "orders created up to and including this day, YYYY-MM-DD or RFC3339"},
+		{Name: "min_total", In: "query", Type: "number", Description: "order total at least this, in VND"},
+		{Name: "max_total", In: "query", Type: "number", Description: "order total at most this, in VND"},
+		{Name: "sort", In: "query", Type: "string", Enum: []string{"newest", "oldest", "total_desc", "total_asc"}, Description: "default newest; total_desc = biggest orders first"},
+		{Name: "page", In: "query", Type: "integer"},
+		{Name: "page_size", In: "query", Type: "integer", Description: "default 20, max 100; use 5 for top-N questions"},
+	}
+	// rankingParam: how analytics top-products ranks (analytics-service store.productSorts).
+	rankingParam = ToolParam{Name: "sort", In: "query", Type: "string", Enum: []string{"revenue", "units", "views", "conversion", "viewed_unsold"}, Description: "ranking; default revenue"}
+)
 
 var buyerTools = []Tool{
 	{Name: "search_products", Method: "GET", Path: "/search", Description: "Search active products by keyword, optionally by category.", Params: []ToolParam{
@@ -73,11 +94,7 @@ var buyerTools = []Tool{
 	}},
 	{Name: "list_categories", Method: "GET", Path: "/categories", Description: "Product categories."},
 	{Name: "get_cart", Method: "GET", Path: "/cart", Description: "The user's own cart with totals."},
-	{Name: "list_my_orders", Method: "GET", Path: "/orders", Description: "The user's own orders, newest first.", Params: []ToolParam{
-		{Name: "status", In: "query", Type: "string"},
-		{Name: "page", In: "query", Type: "integer"},
-		{Name: "page_size", In: "query", Type: "integer"},
-	}},
+	{Name: "list_my_orders", Method: "GET", Path: "/orders", Description: "The user's own orders, newest first by default. Filter instead of paging: status, payment method/status, date range, total range, sort. The result's total says how many orders match.", Params: orderFilters},
 	{Name: "count_my_orders", Method: "GET", Path: "/orders/summary", Description: "Number of the user's own orders per status."},
 	{Name: "get_my_order", Method: "GET", Path: "/orders/:id", Description: "One of the user's own orders (the service refuses other people's orders).", Params: []ToolParam{
 		{Name: "id", In: "path", Type: "integer", Required: true},
@@ -99,6 +116,10 @@ var sellerTools = []Tool{
 	{Name: "get_shop_rules", Method: "GET", Path: "/shop/rules", Description: "The order rules in force right now: minutes to pay an online order, days to request a return after delivery, days until a shipped order counts as delivered, shipping fee per store order and the subtotal from which shipping is free (whole VND; 0 = never). Use it for EVERY number about these rules."},
 	{Name: "list_my_products", Method: "GET", Path: "/seller/products", Description: "Products of the seller's own store, every status. For 'most/least stocked', 'best selling', 'newest' or 'cheapest' questions use sort with a small page_size (5) instead of paging through everything; the result's total tells how many products exist.", Params: []ToolParam{
 		{Name: "q", In: "query", Type: "string"},
+		{Name: "category_id", In: "query", Type: "integer"},
+		{Name: "brand", In: "query", Type: "string"},
+		{Name: "price_min", In: "query", Type: "number"},
+		{Name: "price_max", In: "query", Type: "number"},
 		{Name: "sort", In: "query", Type: "string", Enum: []string{"stock_desc", "stock_asc", "best_selling", "newest", "price_asc", "price_desc"}, Description: "stock_desc = most available stock first"},
 		{Name: "in_stock", In: "query", Type: "string", Enum: []string{"true"}, Description: "only products with stock above 0"},
 		{Name: "page", In: "query", Type: "integer"},
@@ -115,18 +136,14 @@ var sellerTools = []Tool{
 	{Name: "list_low_stock", Method: "GET", Path: "/seller/inventory/low-stock", Description: "The store's products at or below their low-stock threshold.", Params: []ToolParam{
 		{Name: "threshold", In: "query", Type: "integer"},
 	}},
-	{Name: "list_store_orders", Method: "GET", Path: "/seller/orders", Description: "Orders of the seller's own store.", Params: []ToolParam{
-		{Name: "status", In: "query", Type: "string"},
-		{Name: "page", In: "query", Type: "integer"},
-		{Name: "page_size", In: "query", Type: "integer"},
-	}},
+	{Name: "list_store_orders", Method: "GET", Path: "/seller/orders", Description: "Orders of the seller's own store, newest first by default. Filter instead of paging: status, payment method/status, date range, total range, sort. The result's total says how many orders match.", Params: orderFilters},
 	{Name: "count_store_orders", Method: "GET", Path: "/seller/orders/summary", Description: "Number of the store's orders per status."},
 	{Name: "get_store_order", Method: "GET", Path: "/seller/orders/:id", Description: "One order of the store.", Params: []ToolParam{
 		{Name: "id", In: "path", Type: "integer", Required: true},
 	}},
 	{Name: "analytics_summary", Method: "GET", Path: "/seller/analytics/summary", Description: "Store KPIs for a period (revenue, orders...). Includes as_of and source.", Params: analyticsParams},
 	{Name: "analytics_timeseries", Method: "GET", Path: "/seller/analytics/timeseries", Description: "Store revenue/orders over time.", Params: analyticsParams},
-	{Name: "analytics_top_products", Method: "GET", Path: "/seller/analytics/top-products", Description: "Best-selling products of the store.", Params: analyticsParams},
+	{Name: "analytics_top_products", Method: "GET", Path: "/seller/analytics/top-products", Description: "Products of the store ranked by revenue (default), units, views, conversion, or viewed_unsold (many views, no sale).", Params: append(append([]ToolParam{}, analyticsParams...), rankingParam)},
 	{Name: "analytics_funnel", Method: "GET", Path: "/seller/analytics/funnel", Description: "View -> cart -> order funnel of the store.", Params: analyticsParams},
 	{Name: "analytics_low_stock", Method: "GET", Path: "/seller/analytics/low-stock", Description: "Low-stock report from analytics (may lag Postgres; prefer list_low_stock for exact stock).", Params: analyticsParams},
 }
@@ -149,7 +166,7 @@ const opsQueryHelp = "Run one named metrics/log lookup (Prometheus, Loki). Laten
 	"State: alerts_firing, service_up/service_ready(service), service_replicas(_up), circuit_state, infra_up. Data flow: outbox_pending, outbox_oldest_age, " +
 	"outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id)."
 
-// opsTools: read-only view of the platform's health, shared by admin and dev (system data only, no business figures).
+// opsTools: read-only view of the platform's health, shared by admin and operator (system data only, no business figures).
 var opsTools = []Tool{
 	{Name: "ops_list_incidents", Method: "GET", Path: "/ops/incidents", Description: "Incidents raised from alerts, newest first.", Params: []ToolParam{
 		{Name: "state", In: "query", Type: "string", Enum: []string{"open", "investigating", "resolved"}}, limitParam,
@@ -180,22 +197,32 @@ var opsTools = []Tool{
 	{Name: "data_health", Method: "GET", Path: "/admin/analytics/data-health", Description: "Analytics pipeline lag and reconcile state (not business figures)."},
 }
 
-// devTools: the system only. A dev must not see business data, same rule as the gateway routes.
-var devTools = opsTools
+// operatorTools: the system only. An operator must not see business data, same rule as the gateway routes.
+var operatorTools = opsTools
 
 var adminReportParams = append([]ToolParam{}, analyticsParams...)
 
 // adminTools: platform-wide reads (every store) plus the ops view. No accounts, no password or user routes.
 var adminTools = append([]Tool{
-	{Name: "admin_list_orders", Method: "GET", Path: "/admin/orders", Description: "Orders of every store, newest first.", Params: append([]ToolParam{{Name: "status", In: "query", Type: "string"}}, pageParams...)},
+	{Name: "admin_list_orders", Method: "GET", Path: "/admin/orders", Description: "Orders of every store, newest first by default. Filter instead of paging: status, payment method/status, date range, total range, one store, sort. The result's total says how many orders match.", Params: append(append([]ToolParam{}, orderFilters...),
+		ToolParam{Name: "store_id", In: "query", Type: "integer", Description: "only this store's orders"})},
 	{Name: "admin_get_order", Method: "GET", Path: "/admin/orders/:id", Description: "One order of any store.", Params: []ToolParam{{Name: "id", In: "path", Type: "integer", Required: true}}},
-	{Name: "admin_list_payments", Method: "GET", Path: "/admin/payments", Description: "Payments (simulated), newest first.", Params: append([]ToolParam{
-		{Name: "status", In: "query", Type: "string"}, {Name: "method", In: "query", Type: "string"}}, pageParams...)},
+	{Name: "admin_list_payments", Method: "GET", Path: "/admin/payments", Description: "Payments (simulated), newest first by default. Filter instead of paging: status, method, date range, amount range, sort. The result's total says how many payments match.", Params: []ToolParam{
+		{Name: "status", In: "query", Type: "string", Enum: []string{"REQUIRES_ACTION", "PROCESSING", "SUCCEEDED", "FAILED", "CANCELED", "EXPIRED", "PARTIALLY_REFUNDED", "REFUNDED"}},
+		{Name: "method", In: "query", Type: "string", Enum: []string{"MOCK_CARD", "MOCK_WALLET", "MOCK_BANK_TRANSFER"}},
+		{Name: "created_from", In: "query", Type: "string", Description: "created on or after this day, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339"},
+		{Name: "created_to", In: "query", Type: "string", Description: "created up to and including this day, YYYY-MM-DD or RFC3339"},
+		{Name: "min_amount", In: "query", Type: "number", Description: "amount at least this, in VND"},
+		{Name: "max_amount", In: "query", Type: "number", Description: "amount at most this, in VND"},
+		{Name: "sort", In: "query", Type: "string", Enum: []string{"newest", "oldest", "amount_desc", "amount_asc"}},
+		{Name: "page", In: "query", Type: "integer"},
+		{Name: "page_size", In: "query", Type: "integer", Description: "default 20, max 100; use 5 for top-N questions"},
+	}},
 	{Name: "admin_get_payment", Method: "GET", Path: "/admin/payments/:id", Description: "One payment with its attempts and refunds.", Params: []ToolParam{{Name: "id", In: "path", Type: "integer", Required: true}}},
 	{Name: "admin_list_categories", Method: "GET", Path: "/admin/categories", Description: "All categories, including inactive ones."},
 	{Name: "admin_analytics_summary", Method: "GET", Path: "/admin/analytics/summary", Description: "Platform KPIs for a period. Includes as_of and source.", Params: adminReportParams},
 	{Name: "admin_analytics_timeseries", Method: "GET", Path: "/admin/analytics/timeseries", Description: "Platform revenue/orders over time.", Params: adminReportParams},
-	{Name: "admin_analytics_top_products", Method: "GET", Path: "/admin/analytics/top-products", Description: "Best-selling products across the platform.", Params: adminReportParams},
+	{Name: "admin_analytics_top_products", Method: "GET", Path: "/admin/analytics/top-products", Description: "Products across the platform ranked by revenue (default), units, views, conversion, or viewed_unsold (many views, no sale).", Params: append(append([]ToolParam{}, adminReportParams...), rankingParam)},
 	{Name: "admin_analytics_funnel", Method: "GET", Path: "/admin/analytics/funnel", Description: "View -> cart -> order funnel.", Params: adminReportParams},
 	{Name: "admin_analytics_low_stock", Method: "GET", Path: "/admin/analytics/low-stock", Description: "Low-stock report across stores.", Params: adminReportParams},
 	{Name: "admin_analytics_traffic", Method: "GET", Path: "/admin/analytics/traffic", Description: "Visits and sources.", Params: adminReportParams},
@@ -270,7 +297,7 @@ var sellerActions = []Action{
 
 // readOnlyRoles get read tools only: no propose_ tools are served and /ai/proposals refuses them, although DefaultActions keeps
 // the admin rows so the proposable list and its confirm gate stay covered by tests. Remove a role here to let its agent propose.
-var readOnlyRoles = map[string]bool{"admin": true, "dev": true}
+var readOnlyRoles = map[string]bool{"admin": true, "operator": true}
 
 // ActionsFor returns the actions of a role's agent (nil for an unknown or read-only role).
 func ActionsFor(role string) []Action {

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -191,7 +192,7 @@ func TestAllowsActionIsPerRole(t *testing.T) {
 }
 
 func TestAdminAndDevAreReadOnly(t *testing.T) {
-	for _, role := range []string{"admin", "dev"} {
+	for _, role := range []string{"admin", "operator"} {
 		if len(ActionsFor(role)) != 0 || CanPropose(role, "POST", "/admin/orders/12/cancel") {
 			t.Errorf("%s must have no proposable actions", role)
 		}
@@ -201,9 +202,9 @@ func TestAdminAndDevAreReadOnly(t *testing.T) {
 			}
 		}
 	}
-	for _, tool := range DefaultScopes["dev"] {
+	for _, tool := range DefaultScopes["operator"] {
 		if strings.HasPrefix(tool.Path, "/admin/") && tool.Path != "/admin/analytics/data-health" {
-			t.Errorf("dev must not see business data: %s", tool.Path)
+			t.Errorf("operator must not see business data: %s", tool.Path)
 		}
 	}
 }
@@ -230,6 +231,34 @@ func TestSellerProductListOffersStockSortsAndASmallPage(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("%s has no list_my_products", role)
+		}
+	}
+}
+
+// A filter the model can set but the API ignores is worse than no filter: the answer looks filtered and is not. So every query param a tool
+// declares must be read by some gateway handler (a quoted name in internal/handler). /ops/* is proxied and validated by ops-service, so skipped.
+func TestEveryQueryParamOfAToolIsReadByAHandler(t *testing.T) {
+	entries, err := os.ReadDir("../handler")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var src strings.Builder
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".go") && !strings.HasSuffix(e.Name(), "_test.go") {
+			b, _ := os.ReadFile("../handler/" + e.Name())
+			src.Write(b)
+		}
+	}
+	for role, tools := range DefaultScopes {
+		for _, tool := range tools {
+			if strings.HasPrefix(tool.Path, "/ops/") {
+				continue
+			}
+			for _, p := range tool.Params {
+				if p.In == "query" && !strings.Contains(src.String(), `"`+p.Name+`"`) {
+					t.Errorf("%s/%s: query param %q is not read by any handler", role, tool.Name, p.Name)
+				}
+			}
 		}
 	}
 }

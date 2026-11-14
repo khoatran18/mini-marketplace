@@ -24,7 +24,7 @@ func TestOpsQueryTurnsTheQueryStringIntoTheUpstreamBody(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	e := gin.New()
-	e.GET("/ops/queries/:name", func(c *gin.Context) { c.Set("userRole", "dev"); c.Set("userID", uint64(7)) }, NewOpsHandler(up.URL, "tok", zap.NewNop()).Query())
+	e.GET("/ops/queries/:name", func(c *gin.Context) { c.Set("userRole", "operator"); c.Set("userID", uint64(7)) }, NewOpsHandler(up.URL, "tok", zap.NewNop()).Query())
 
 	w := httptest.NewRecorder()
 	e.ServeHTTP(w, httptest.NewRequest("GET", "/ops/queries/grpc_latency_p95?window=15m&service=order-service&evil=1", nil))
@@ -34,7 +34,7 @@ func TestOpsQueryTurnsTheQueryStringIntoTheUpstreamBody(t *testing.T) {
 	if !strings.Contains(gotBody, `"window":"15m"`) || !strings.Contains(gotBody, `"service":"order-service"`) || strings.Contains(gotBody, "evil") {
 		t.Errorf("body %s", gotBody)
 	}
-	if gotAuth != "Bearer tok" || gotActor != "dev:7" {
+	if gotAuth != "Bearer tok" || gotActor != "operator:7" {
 		t.Errorf("auth=%q actor=%q", gotAuth, gotActor)
 	}
 

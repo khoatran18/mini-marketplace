@@ -241,3 +241,25 @@ func TestCheckoutResponseCarriesThePayment(t *testing.T) {
 		t.Errorf("no payment: %d %v", w.Code, plain)
 	}
 }
+
+func TestAdminPaymentListFiltersReachThePaymentService(t *testing.T) {
+	r, fake := paymentRouter("admin")
+	do(r, "GET", "/admin/payments?status=SUCCEEDED&method=MOCK_WALLET&created_from=2026-11-01&created_to=2026-11-30&min_amount=100000&max_amount=900000.5&sort=amount_desc", "")
+	l := fake.list
+	if l.Status != "SUCCEEDED" || l.Method != "MOCK_WALLET" || l.Sort != "amount_desc" {
+		t.Errorf("filters not forwarded: %+v", l)
+	}
+	if l.CreatedFrom != "2026-10-31T17:00:00Z" || l.CreatedTo != "2026-11-30T17:00:00Z" {
+		t.Errorf("dates: %q .. %q", l.CreatedFrom, l.CreatedTo)
+	}
+	// VND on the REST API, 1/100 VND in payment-service
+	if l.MinAmountMinor != 10000000 || l.MaxAmountMinor != 90000050 {
+		t.Errorf("amounts in minor units: %d .. %d", l.MinAmountMinor, l.MaxAmountMinor)
+	}
+	for _, q := range []string{"created_from=yesterday", "min_amount=abc", "max_amount=-1"} {
+		r, fake = paymentRouter("admin")
+		if w := do(r, "GET", "/admin/payments?"+q, ""); w.Code != http.StatusBadRequest || fake.list != nil {
+			t.Errorf("%s: %d (must be 400 and never reach payment-service)", q, w.Code)
+		}
+	}
+}

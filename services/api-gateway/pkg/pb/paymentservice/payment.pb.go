@@ -657,13 +657,19 @@ func (x *CancelPaymentRequest) GetBuyerId() uint64 {
 }
 
 type ListPaymentsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
-	Method        string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
-	Page          uint64                 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      uint64                 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Status   string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Method   string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
+	Page     uint64                 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize uint64                 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// optional filters, all AND-ed; empty/zero = no filter
+	CreatedFrom    string `protobuf:"bytes,5,opt,name=created_from,json=createdFrom,proto3" json:"created_from,omitempty"`             // RFC3339, inclusive
+	CreatedTo      string `protobuf:"bytes,6,opt,name=created_to,json=createdTo,proto3" json:"created_to,omitempty"`                   // RFC3339, exclusive
+	MinAmountMinor int64  `protobuf:"varint,7,opt,name=min_amount_minor,json=minAmountMinor,proto3" json:"min_amount_minor,omitempty"` // amount_minor >= (1/100 VND)
+	MaxAmountMinor int64  `protobuf:"varint,8,opt,name=max_amount_minor,json=maxAmountMinor,proto3" json:"max_amount_minor,omitempty"` // amount_minor <= (1/100 VND)
+	Sort           string `protobuf:"bytes,9,opt,name=sort,proto3" json:"sort,omitempty"`                                              // newest (default) | oldest | amount_desc | amount_asc
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListPaymentsRequest) Reset() {
@@ -722,6 +728,41 @@ func (x *ListPaymentsRequest) GetPageSize() uint64 {
 		return x.PageSize
 	}
 	return 0
+}
+
+func (x *ListPaymentsRequest) GetCreatedFrom() string {
+	if x != nil {
+		return x.CreatedFrom
+	}
+	return ""
+}
+
+func (x *ListPaymentsRequest) GetCreatedTo() string {
+	if x != nil {
+		return x.CreatedTo
+	}
+	return ""
+}
+
+func (x *ListPaymentsRequest) GetMinAmountMinor() int64 {
+	if x != nil {
+		return x.MinAmountMinor
+	}
+	return 0
+}
+
+func (x *ListPaymentsRequest) GetMaxAmountMinor() int64 {
+	if x != nil {
+		return x.MaxAmountMinor
+	}
+	return 0
+}
+
+func (x *ListPaymentsRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
 }
 
 type ListPaymentsResponse struct {
@@ -959,12 +1000,18 @@ const file_payment_proto_rawDesc = "" +
 	"\x14CancelPaymentRequest\x12\x1d\n" +
 	"\n" +
 	"payment_id\x18\x01 \x01(\x04R\tpaymentId\x12\x19\n" +
-	"\bbuyer_id\x18\x02 \x01(\x04R\abuyerId\"v\n" +
+	"\bbuyer_id\x18\x02 \x01(\x04R\abuyerId\"\xa0\x02\n" +
 	"\x13ListPaymentsRequest\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x16\n" +
 	"\x06method\x18\x02 \x01(\tR\x06method\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x04R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x04 \x01(\x04R\bpageSize\"i\n" +
+	"\tpage_size\x18\x04 \x01(\x04R\bpageSize\x12!\n" +
+	"\fcreated_from\x18\x05 \x01(\tR\vcreatedFrom\x12\x1d\n" +
+	"\n" +
+	"created_to\x18\x06 \x01(\tR\tcreatedTo\x12(\n" +
+	"\x10min_amount_minor\x18\a \x01(\x03R\x0eminAmountMinor\x12(\n" +
+	"\x10max_amount_minor\x18\b \x01(\x03R\x0emaxAmountMinor\x12\x12\n" +
+	"\x04sort\x18\t \x01(\tR\x04sort\"i\n" +
 	"\x14ListPaymentsResponse\x12;\n" +
 	"\bpayments\x18\x01 \x03(\v2\x1f.payment_service.pkg.pb.PaymentR\bpayments\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x04R\x05total\"y\n" +

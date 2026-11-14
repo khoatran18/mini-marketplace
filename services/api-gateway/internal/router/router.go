@@ -150,7 +150,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	}
 	agentRoute.POST("/proposals", handler.ProposalHandler{Signer: signer}.Create)
 	agentRoute.GET("/tools", handler.ToolsHandler{Scopes: agent.DefaultScopes}.List)
-	aiRoute := router.Group("/ai", authenticated, middleware.AuthorizationMiddleware([]string{"buyer", "seller_admin", "seller_employee", "admin", "dev"}, serviceConfig.ZapLogger))
+	aiRoute := router.Group("/ai", authenticated, middleware.AuthorizationMiddleware([]string{"buyer", "seller_admin", "seller_employee", "admin", "operator"}, serviceConfig.ZapLogger))
 	if envConfig.AIRateLimit > 0 {
 		// per IP (coarse, shared offices stay possible) and refusing when Redis is down: every chat can cost money
 		aiRoute.Use(middleware.RateLimitByKey("ai", envConfig.AIRateLimit, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient, func(c *gin.Context) string { return c.ClientIP() }, true))
@@ -169,10 +169,10 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	adminRoute := router.Group("/admin", authenticated, middleware.AuthorizationMiddleware([]string{"admin"}, serviceConfig.ZapLogger))
 	{
 		opsHandler := handler.NewOpsHandler(envConfig.OpsServiceURL, envConfig.OpsAPIToken, serviceConfig.ZapLogger)
-		// The whole /ops workflow (read, propose, review, approve, execute) and system health: admin or dev (ADR-40).
+		// The whole /ops workflow (read, propose, review, approve, execute) and system health: admin or operator (ADR-40).
 		// Reports, revenue and every /admin route stay admin only (except pipeline data-health below). The creator of a proposal still cannot approve or run it.
-		adminOrDev := middleware.AuthorizationMiddleware([]string{"admin", "dev"}, serviceConfig.ZapLogger)
-		opsRead := router.Group("/ops", authenticated, adminOrDev)
+		adminOrOperator := middleware.AuthorizationMiddleware([]string{"admin", "operator"}, serviceConfig.ZapLogger)
+		opsRead := router.Group("/ops", authenticated, adminOrOperator)
 		opsRead.POST("/incidents/:id/investigate", opsHandler.Proxy("/incidents/:id/investigate"))
 		opsRead.GET("/actions", opsHandler.Proxy("/actions"))
 		opsRead.GET("/queries", opsHandler.Proxy("/queries"))
@@ -182,10 +182,10 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		opsRead.POST("/proposals/:id/decision", opsHandler.Proxy("/proposals/:id/decision"))
 		opsRead.POST("/proposals/:id/execute", opsHandler.Proxy("/proposals/:id/execute"))
 		opsRead.POST("/proposals/:id/executed", opsHandler.Proxy("/proposals/:id/executed"))
-		// pipeline health (lag, reconcile), not business figures: stays under /admin/analytics, open to dev as well
-		// Reads the admin/dev agent may call (agent.DefaultScopes) sit in groups with agentOr: a group-level `authenticated`
+		// pipeline health (lag, reconcile), not business figures: stays under /admin/analytics, open to the operator as well
+		// Reads the admin/operator agent may call (agent.DefaultScopes) sit in groups with agentOr: a group-level `authenticated`
 		// would reject the agent token before it is checked. Writes stay on adminRoute/opsRead with the user's own JWT.
-		opsAgentRead := router.Group("/ops", agentOr(authenticated), adminOrDev)
+		opsAgentRead := router.Group("/ops", agentOr(authenticated), adminOrOperator)
 		opsAgentRead.GET("/incidents", opsHandler.Proxy("/incidents"))
 		opsAgentRead.GET("/incidents/:id", opsHandler.Proxy("/incidents/:id"))
 		opsAgentRead.GET("/audit", opsHandler.Proxy("/audit"))
@@ -194,7 +194,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		opsAgentRead.GET("/proposals", opsHandler.Proxy("/proposals"))
 		opsAgentRead.GET("/proposals/:id", opsHandler.Proxy("/proposals/:id"))
 		opsAgentRead.GET("/queries/:name", opsHandler.Query())
-		router.Group("/admin", agentOr(authenticated), adminOrDev).GET("/analytics/data-health", h.AnalyticsHandler.Admin("data-health"))
+		router.Group("/admin", agentOr(authenticated), adminOrOperator).GET("/analytics/data-health", h.AnalyticsHandler.Admin("data-health"))
 		adminAgentRead := router.Group("/admin", agentOr(authenticated), middleware.AuthorizationMiddleware([]string{"admin"}, serviceConfig.ZapLogger))
 		for _, r := range []string{"summary", "timeseries", "top-products", "funnel", "low-stock", "traffic", "payments", "search-terms"} {
 			adminAgentRead.GET("/analytics/"+r, h.AnalyticsHandler.Admin(r))

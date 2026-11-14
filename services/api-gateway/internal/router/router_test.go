@@ -206,7 +206,7 @@ func TestCatalogRouteAccessRules(t *testing.T) {
 		{"GET", "/admin/accounts", "seller_admin"},
 		{"POST", "/admin/accounts", "buyer"},
 		{"DELETE", "/admin/accounts/1", "seller_admin"},
-		{"POST", "/admin/accounts/1/reset-password", "dev"},
+		{"POST", "/admin/accounts/1/reset-password", "operator"},
 		{"GET", "/admin/categories", "seller_admin"},
 		{"POST", "/admin/categories", "buyer"},
 		{"PUT", "/admin/categories/1", "seller_admin"},
@@ -338,7 +338,7 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 			}
 		}
 	}
-	// a "dev" runs the whole ops workflow (read, propose, review, decide, execute) but never reports/revenue/other admin routes (ADR-40)
+	// an "operator" runs the whole ops workflow (read, propose, review, decide, execute) but never reports/revenue/other admin routes (ADR-40)
 	for _, route := range []struct {
 		method, path string
 		want         int
@@ -350,18 +350,18 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 		{"GET", "/admin/analytics/summary", 403}, {"GET", "/admin/analytics/traffic", 403}, {"GET", "/admin/payments", 403}, {"GET", "/admin/orders", 403},
 		{"GET", "/admin/categories", 403}, {"GET", "/admin/accounts", 403}, {"POST", "/admin/accounts", 403}, {"DELETE", "/admin/accounts/1", 403}, {"POST", "/admin/orders/1/cancel", 403}, {"POST", "/admin/payments/1/refund", 403},
 	} {
-		w := request(e, route.method, route.path, token(t, "dev"))
+		w := request(e, route.method, route.path, token(t, "operator"))
 		if route.want == -1 {
 			if w.Code == http.StatusUnauthorized || w.Code == http.StatusForbidden {
-				t.Errorf("dev %s %s: %d, must be allowed", route.method, route.path, w.Code)
+				t.Errorf("operator %s %s: %d, must be allowed", route.method, route.path, w.Code)
 			}
 		} else if w.Code != route.want {
-			t.Errorf("dev %s %s: %d, want %d", route.method, route.path, w.Code, route.want)
+			t.Errorf("operator %s %s: %d, want %d", route.method, route.path, w.Code, route.want)
 		}
 	}
-	request(e, "GET", "/ops/incidents", token(t, "dev"))
-	if !strings.HasPrefix(gotActor, "dev:") {
-		t.Errorf("actor for dev: %q", gotActor)
+	request(e, "GET", "/ops/incidents", token(t, "operator"))
+	if !strings.HasPrefix(gotActor, "operator:") {
+		t.Errorf("actor for operator: %q", gotActor)
 	}
 	if w := request(e, "GET", "/ops/incidents?state=open", token(t, "admin")); w.Code != 200 || gotPath != "/incidents?state=open" || gotAuth != "Bearer ops-secret" || !strings.HasPrefix(gotActor, "admin:") {
 		t.Fatalf("proxy: %d path=%q auth=%q actor=%q", w.Code, gotPath, gotAuth, gotActor)
@@ -429,14 +429,14 @@ func TestFeaturesPublicAndAIChatAuthenticatedAndGated(t *testing.T) {
 	if w := request(off, "POST", "/ai/chat", token(t, "buyer")); w.Code != http.StatusNotFound {
 		t.Errorf("chat with flag off: %d, want 404", w.Code)
 	}
-	// flag on + upstream: allowed for buyer/seller/admin/dev, stream reaches the client
+	// flag on + upstream: allowed for buyer/seller/admin/operator, stream reaches the client
 	on := newEngineEnv(t, func(c *config.EnvConfig) {
 		c.FeatureAIChat, c.AIServiceURL, c.AIStreamTimeout = true, up.URL, 5*time.Second
 	})
 	if w := request(on, "GET", "/config/features", ""); !strings.Contains(w.Body.String(), `"ai_chat":true`) {
 		t.Errorf("features (on): %s", w.Body.String())
 	}
-	for _, role := range []string{"buyer", "seller_admin", "seller_employee", "admin", "dev"} {
+	for _, role := range []string{"buyer", "seller_admin", "seller_employee", "admin", "operator"} {
 		w := request(on, "POST", "/ai/chat", token(t, role))
 		if w.Code != 200 || !strings.Contains(w.Body.String(), "data: ok") || gotPath != "/chat" || gotRole != role {
 			t.Errorf("chat as %s: %d %q path=%q role=%q", role, w.Code, w.Body.String(), gotPath, gotRole)

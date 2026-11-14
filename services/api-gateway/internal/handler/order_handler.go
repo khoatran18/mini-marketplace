@@ -367,6 +367,36 @@ func (h *OrderHandler) scope(c *gin.Context, kind string) (buyer, store uint64, 
 	}
 }
 
+// orderListRequest reads the optional list filters (status, payment_method, payment_status, created_from/created_to, min_total/max_total, sort).
+// A date is YYYY-MM-DD in the platform timezone or RFC 3339; created_to is inclusive of that day. store_id narrows the ADMIN list only.
+func orderListRequest(c *gin.Context, kind string) (*orderpb.ListOrdersRequest, bool) {
+	req := &orderpb.ListOrdersRequest{
+		Status: c.Query("status"), PaymentMethod: c.Query("payment_method"), PaymentStatus: c.Query("payment_status"), Sort: c.Query("sort"),
+	}
+	var ok bool
+	if req.CreatedFrom, ok = parseWhen(c.Query("created_from"), false); !ok {
+		badRequest(c, "created_from must be YYYY-MM-DD or RFC 3339")
+		return nil, false
+	}
+	if req.CreatedTo, ok = parseWhen(c.Query("created_to"), true); !ok {
+		badRequest(c, "created_to must be YYYY-MM-DD or RFC 3339")
+		return nil, false
+	}
+	if req.MinTotal, ok = queryFloat(c, "min_total"); !ok {
+		return nil, false
+	}
+	if req.MaxTotal, ok = queryFloat(c, "max_total"); !ok {
+		return nil, false
+	}
+	// store_id narrows the admin list only. For buyer/seller the scope comes from the token and this query is ignored, like buyer_id/store_id always were.
+	if kind == "admin" {
+		if req.FilterStoreId, ok = queryUint(c, "store_id", 0); !ok {
+			return nil, false
+		}
+	}
+	return req, true
+}
+
 func (h *OrderHandler) listOrders(kind string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		buyer, store, admin, ok := h.scope(c, kind)
@@ -377,12 +407,17 @@ func (h *OrderHandler) listOrders(kind string) gin.HandlerFunc {
 		if !ok {
 			return
 		}
+		req, ok := orderListRequest(c, kind)
+		if !ok {
+			return
+		}
+		req.BuyerId, req.StoreId, req.IsAdmin, req.Page, req.PageSize = buyer, store, admin, page, size
 		oc, ctx, cancel, ok := h.order(c)
 		if !ok {
 			return
 		}
 		defer cancel()
-		res, err := oc.ListOrders(ctx, &orderpb.ListOrdersRequest{BuyerId: buyer, StoreId: store, IsAdmin: admin, Status: c.Query("status"), Page: page, PageSize: size})
+		res, err := oc.ListOrders(ctx, req)
 		if err != nil {
 			respondError(c, h.Logger, "OrderHandler: ListOrders", err)
 			return
