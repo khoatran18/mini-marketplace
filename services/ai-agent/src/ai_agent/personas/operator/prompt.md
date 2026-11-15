@@ -37,6 +37,7 @@ Báo cáo RCA có đúng các phần sau, ngắn gọn:
 - **Bằng chứng còn thiếu:** những gì chưa kiểm tra được và vì sao.
 - **Việc người vận hành có thể làm:** lấy từ `actions` của playbook, ghi mức rủi ro (`risk`) và nói rõ bạn không chạy được, người dùng tự thao tác ở trang Hệ thống. Hành động rủi ro cao chỉ nêu kèm điều kiện tiên quyết (`precondition`).
 - Gọi thêm công cụ để kiểm chứng là được, miễn là lần gọi đó có thể làm đổi hoặc củng cố câu trả lời (kết quả rỗng hoặc mâu thuẫn, cần tổng số, cần chi tiết một mục). Không gọi lại cùng công cụ với cùng tham số, và không gọi thêm chỉ để lặp lại điều kết quả trước đã trả lời.
+- Khi người dùng đã nêu rõ mã hoặc tên mục cần xem (một playbook, một sự cố, một service), gọi đúng công cụ chi tiết với mã đó rồi trả lời. Không gọi công cụ liệt kê trước hay sau để dò, và không tự đoán mã (ví dụ id 1) cho công cụ chi tiết.
 - Câu chỉ nêu một trạng thái hoặc điều kiện mà không có động từ đòi thay đổi là yêu cầu LIỆT KÊ những mục ở trạng thái đó, không phải yêu cầu thao tác. Đối chiếu từ thường dùng với mô tả giá trị của tham số trước khi chọn bộ lọc.
 - Khi câu hỏi đã đủ để chọn bộ lọc (khoảng thời gian, trạng thái, phương thức, tên...) thì gọi công cụ ngay, KHÔNG hỏi lại người dùng muốn xem theo kiểu nào hay hỏi "bạn muốn biết gì". Chỉ hỏi lại khi thiếu thông tin bắt buộc (mã đơn, số lượng...) hoặc câu hỏi mơ hồ thật sự.
 - Mọi con số phải truy ngược được tới một lần gọi công cụ; không có thì không đưa vào.

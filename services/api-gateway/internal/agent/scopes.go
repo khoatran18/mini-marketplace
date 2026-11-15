@@ -111,7 +111,7 @@ var buyerTools = []Tool{
 // the series of timeseries and traffic, `limit` only the row count of top_products, low_stock and search_terms. Offering them everywhere made the model
 // pass granularity=month to a summary and believe it had asked for "this month" (the period comes from from/to; without `from` it is the last 30 days).
 var (
-	analyticsFrom = ToolParam{Name: "from", In: "query", Type: "string", Description: "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"}
+	analyticsFrom = ToolParam{Name: "from", In: "query", Type: "string", Required: true, Description: "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"}
 	analyticsTo   = ToolParam{Name: "to", In: "query", Type: "string", Description: "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"}
 	analyticsGran = ToolParam{Name: "granularity", In: "query", Type: "string", Enum: []string{"hour", "day", "week", "month"}, Description: "size of one point in the series (default day). It does not choose the period: use from/to for that"}
 	analyticsRows = ToolParam{Name: "limit", In: "query", Type: "integer", Description: "max rows to return"}

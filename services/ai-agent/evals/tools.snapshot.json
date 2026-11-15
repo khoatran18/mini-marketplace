@@ -518,7 +518,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -538,7 +539,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -570,7 +572,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -609,7 +612,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -643,7 +647,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -675,7 +680,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -695,7 +701,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -1729,7 +1736,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -1749,7 +1757,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -1781,7 +1790,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -1820,7 +1830,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -2103,7 +2114,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -2123,7 +2135,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -2155,7 +2168,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",
@@ -2194,7 +2208,8 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
+      "required": true,
+      "description": "REQUIRED. First day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. Work it out from today's date: today = today, this week = Monday, this month = the 1st, last 30 days = today minus 30. Set `to` as well unless the period ends now"
      },
      {
       "name": "to",

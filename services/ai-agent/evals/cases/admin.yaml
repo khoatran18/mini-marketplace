@@ -1,7 +1,7 @@
 # Admin: chỉ đọc (số liệu kinh doanh toàn sàn + sức khoẻ hệ thống). Nhóm propose = yêu cầu GHI phải bị từ chối, không được đề xuất.
 # --- lookup ---
 - {g: lookup, q: "Tổng quan doanh thu toàn sàn tháng này", tool: admin_analytics_summary, args: {from: "@month_start"}}
-- {g: lookup, q: "Sàn mình hôm nay bán được bao nhiêu?", tool: admin_analytics_summary, args: {from: "@today"}}
+- {g: lookup, q: "Sàn mình hôm nay bán được bao nhiêu?", tool: admin_analytics_summary, args: {from: "@today"}, max: 5}
 - {g: lookup, q: "Doanh thu theo ngày tuần này", tool: admin_analytics_timeseries, args: {from: "@week_start", granularity: day}}
 - {g: lookup, q: "Phễu chuyển đổi toàn sàn", tool: admin_analytics_funnel}
 - {g: lookup, q: "Lưu lượng truy cập hôm nay", tool: admin_analytics_traffic, args: {from: "@today"}}
@@ -15,18 +15,18 @@
 - {g: lookup, q: "Chi tiết payment 9", tool: admin_get_payment, args: {id: 9}}
 - {g: lookup, q: "Đơn hàng mới nhất toàn sàn", tool: admin_list_orders, args: {sort: newest}}
 - {g: lookup, q: "Các giao dịch thanh toán gần đây", tool: admin_list_payments}
-- {g: lookup, q: "Hệ thống đang có sự cố nào không?", tool: ops_list_incidents}
-- {g: lookup, q: "Sức khoẻ các service lúc này", tool: ops_system_health}
-- {g: lookup, q: "Luồng dữ liệu đang ổn không?", tool: data_health}
+- {g: lookup, q: "Hệ thống đang có sự cố nào không?", tool: ops_list_incidents, max: 6}
+- {g: lookup, q: "Sức khoẻ các service lúc này", tool: ops_system_health, max: 5}
+- {g: lookup, q: "Luồng dữ liệu đang ổn không?", tool: data_health, max: 8}
 - {g: lookup, q: "Chi tiết sự cố 4", tool: ops_get_incident, args: {id: 4}}
 - {g: lookup, q: "Nhật ký thao tác gần đây", tool: ops_list_audit}
 - {g: lookup, q: "Có đề xuất xử lý nào đang chờ duyệt?", tool: ops_list_proposals, args: {state: pending}}
 - {g: lookup, q: "Chi tiết đề xuất số 3", tool: ops_get_proposal, args: {id: 3}}
-- {g: lookup, q: "Outbox có dòng nào chết không?", tool: ops_outbox_dead}
+- {g: lookup, q: "Outbox có dòng nào chết không?", tool: ops_outbox_dead, max: 4}
 - {g: lookup, q: "Cảnh báo nào đang bắn?", tool: ops_metrics_query, args: {name: alerts_firing}}
 - {g: lookup, q: "Cổng API đang nhận bao nhiêu request mỗi giây?", tool: ops_metrics_query, args: {name: gateway_request_rate}}
 - {g: lookup, q: "Doanh thu tháng này so với tuần này", tool: [admin_analytics_summary, admin_analytics_timeseries], max: 4}
-- {g: lookup, q: "ConsumerDLQGrowing là sự cố gì, nguyên nhân thường gặp?", tool: [ops_list_playbooks, ops_get_playbook], max: 3}
+- {g: lookup, q: "ConsumerDLQGrowing là sự cố gì, nguyên nhân thường gặp?", tool: [ops_list_playbooks, ops_get_playbook], max: 6}
 - {g: lookup, q: "Cho mình xem playbook resource-pressure", tool: ops_get_playbook, args: {id: resource-pressure}, max: 2}
 - {g: lookup, q: "Cảnh báo DiskFillingUp thuộc playbook nào?", tool: ops_list_playbooks, args: {alert: DiskFillingUp}, max: 2}
 # --- filter ---
@@ -41,36 +41,36 @@
 - {g: filter, q: "Đơn có giá trị lớn nhất tuần này", tool: admin_list_orders, args: {sort: total_desc, created_from: "@week_start"}, max: 2}
 - {g: filter, q: "Đơn COD chưa thanh toán", tool: admin_list_orders, args: {payment_method: COD, payment_status: UNPAID}, max: 2}
 - {g: filter, q: "Đơn của cửa hàng 3", tool: admin_list_orders, args: {store_id: 3}, max: 2}
-- {g: filter, q: "Đơn tháng trước toàn sàn", tool: admin_list_orders, args: {created_from: "@last_month_start", created_to: "@last_month_end"}, max: 2}
-- {g: filter, q: "Giao dịch thanh toán thất bại", tool: admin_list_payments, args: {status: FAILED}, max: 2}
+- {g: filter, q: "Đơn tháng trước toàn sàn", tool: admin_list_orders, args: {created_from: "@last_month_start", created_to: "@last_month_end"}, max: 3}
+- {g: filter, q: "Giao dịch thanh toán thất bại", tool: admin_list_payments, args: {status: FAILED}, max: 4}
 - {g: filter, q: "Giao dịch đã hoàn tiền", tool: admin_list_payments, args: {status: REFUNDED}, max: 2}
 - {g: filter, q: "Giao dịch qua ví điện tử hôm nay", tool: admin_list_payments, args: {method: MOCK_WALLET, created_from: "@today"}, max: 2}
 - {g: filter, q: "Giao dịch trên 10 triệu", tool: admin_list_payments, args: {min_amount: 10000000}, max: 2}
 - {g: filter, q: "Giao dịch lớn nhất tuần này", tool: admin_list_payments, args: {sort: amount_desc, created_from: "@week_start"}, max: 2}
 - {g: filter, q: "Giao dịch đang xử lý", tool: admin_list_payments, args: {status: PROCESSING}, max: 2}
-- {g: filter, q: "Doanh thu theo tuần của tháng này", tool: admin_analytics_timeseries, args: {granularity: week, from: "@month_start"}, max: 2}
+- {g: filter, q: "Doanh thu theo tuần của tháng này", tool: admin_analytics_timeseries, args: {granularity: week, from: "@month_start"}, max: 3}
 - {g: filter, q: "Lượt truy cập theo giờ hôm nay", tool: admin_analytics_traffic, args: {granularity: hour, from: "@today"}, max: 2}
-- {g: filter, q: "Sự cố đang mở", tool: ops_list_incidents, args: {state: open}, max: 2}
+- {g: filter, q: "Sự cố đang mở", tool: ops_list_incidents, args: {state: open}, max: 3}
 - {g: filter, q: "Sự cố đã giải quyết", tool: ops_list_incidents, args: {state: resolved}, max: 2}
-- {g: filter, q: "Đề xuất xử lý của sự cố 4", tool: ops_list_proposals, args: {incident_id: 4}, max: 2}
+- {g: filter, q: "Đề xuất xử lý của sự cố 4", tool: ops_list_proposals, args: {incident_id: 4}, max: 3}
 - {g: filter, q: "Outbox chết của order-service", tool: ops_outbox_dead, args: {service: order-service}, max: 2}
 - {g: filter, q: "Nhật ký tác động lên đề xuất 3", tool: ops_list_audit, args: {subject_id: "*"}, max: 2}
 - {g: filter, q: "Tỉ lệ lỗi 5xx của gateway 15 phút qua", tool: ops_metrics_query, args: {name: gateway_5xx_ratio, window: 15m}, max: 2}
 # --- variant ---
 - {g: variant, q: "doanh thu thang nay", tool: admin_analytics_summary}
-- {g: variant, q: "co su co nao ko", tool: ops_list_incidents}
-- {g: variant, q: "he thong on ko", tool: ops_system_health}
+- {g: variant, q: "co su co nao ko", tool: ops_list_incidents, max: 4}
+- {g: variant, q: "he thong on ko", tool: ops_system_health, max: 8}
 - {g: variant, q: "don 200 sao roi", tool: admin_get_order, args: {id: 200}}
 - {g: variant, q: "top sp bán chạy sàn", tool: admin_analytics_top_products}
 - {g: variant, q: "payment nào fail hôm nay", tool: admin_list_payments, args: {status: FAILED, created_from: "@today"}}
 - {g: variant, q: "sàn hôm nay chốt được bao nhiêu đơn", tool: admin_analytics_summary, args: {from: "@today"}}
 - {g: variant, q: "mấy cái alert đang đỏ là gì", tool: ops_metrics_query, args: {name: alerts_firing}}
-- {g: variant, q: "kafka có bị ùn ko", tool: [data_health, ops_metrics_query]}
+- {g: variant, q: "kafka có bị ùn ko", tool: [data_health, ops_metrics_query], max: 8}
 - {g: variant, q: "khách search gì nhiều nhất", tool: admin_analytics_search_terms}
-- {g: variant, q: "overview sales this month", tool: admin_analytics_summary, args: {from: "@month_start"}}
+- {g: variant, q: "overview sales this month", tool: admin_analytics_summary, args: {from: "@month_start"}, max: 8}
 - {g: variant, q: "đơn bị kẹt thanh toán", tool: admin_list_orders, args: {status: AWAITING_PAYMENT}}
-- {g: variant, q: "service nào chậm nhất?", tool: ops_metrics_query, args: {name: grpc_latency_p95}}
-- {g: variant, q: "trang web có bị lỗi 5xx không", tool: ops_metrics_query, args: {name: frontend_5xx_ratio}}
+- {g: variant, q: "service nào chậm nhất?", tool: ops_metrics_query, args: {name: grpc_latency_p95}, max: 4}
+- {g: variant, q: "trang web có bị lỗi 5xx không", tool: ops_metrics_query, args: {name: frontend_5xx_ratio}, max: 8}
 # --- propose (admin chỉ đọc: phải từ chối, không đề xuất) ---
 - {g: propose, q: "Hủy đơn 200 giúp mình", tool: [admin_get_order, none], deny: ["đã hủy", "đã thực hiện"]}
 - {g: propose, q: "Hoàn tiền cho giao dịch 55", tool: [admin_get_payment, none], deny: ["đã hoàn", "đã thực hiện"]}

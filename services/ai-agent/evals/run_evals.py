@@ -67,7 +67,7 @@ def stub_gateway(snapshot: dict[str, Any], calls: list[dict[str, Any]], state: d
                 row = {"id": 1, "status": status, "total": 250000, "name": "Mẫu", "state": "ok", "ok": True, "delivered_at": state.get("delivered_at")}
                 if "product" in t["path"] or t["name"] in ("search_products", "list_low_stock"):  # đúng dạng sản phẩm, không phải bản ghi đơn
                     row = {"id": 1, "name": "Sản phẩm mẫu", "brand": "Mẫu", "category_id": 1, "price": 150000, "status": "ACTIVE", "inventory": 42, "available": 42, "low_stock_threshold": 5}
-                body = {**row, "id": int(args["id"]), "items": [row]} if "id" in args else {"items": [row], "total": 1, "page": 1}
+                body = {**row, "id": int(args["id"]) if str(args["id"]).isdigit() else args["id"], "items": [row]} if "id" in args else {"items": [row], "total": 1, "page": 1}
                 return httpx.Response(200, json=body)
         return httpx.Response(404, json={"error": "not found"})
 
@@ -135,6 +135,11 @@ async def main_live(args) -> int:
     report: list[dict[str, Any]] = []
     for name in names:
         cases = [c for c in evalkit.load_cases(name) if not args.group or c.g == args.group]
+        if args.ids:
+            cases = [c for c in cases if c.id in args.ids]
+        if args.only_failed:
+            failed = {r["id"] for f in args.only_failed for r in json.loads(Path(f).read_text(encoding="utf-8")) if not r["ok"]}
+            cases = [c for c in cases if c.id in failed]
         if args.limit:
             cases = cases[: args.limit]
         calls: list[dict[str, Any]] = []
@@ -176,6 +181,8 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=0, help="chỉ chạy N câu đầu mỗi persona")
     ap.add_argument("--env", default="dev", help="config.<env>.yaml dùng cho llm.roles")
     ap.add_argument("--out", help="ghi báo cáo JSON")
+    ap.add_argument("--ids", nargs="+", help="chỉ chạy các case có id này")
+    ap.add_argument("--only-failed", nargs="+", metavar="REPORT.json", help="chỉ chạy lại các câu có ok=false trong các báo cáo JSON này")
     args = ap.parse_args()
     if not args.live:
         total = 0

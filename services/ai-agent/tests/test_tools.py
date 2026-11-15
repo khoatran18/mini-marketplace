@@ -114,3 +114,32 @@ async def test_gateway_client_maps_failures():
         await gw.get("t", "/orders")
     assert e.value.status == 500 and "tạm thời" in e.value.message
     assert (await mock_gateway().list_tools("t"))["role"] == "buyer"
+
+
+def test_python_keyword_param_reaches_the_model_and_the_gateway():
+    """`from` là từ khoá Python: LangChain bỏ nó khỏi schema gửi mô hình (mô hình không thể điền, báo cáo luôn rơi về 30 ngày)."""
+    import asyncio
+    import json
+    from pathlib import Path
+
+    from langchain_core.tools import StructuredTool
+    from langchain_core.utils.function_calling import convert_to_openai_tool
+
+    from ai_agent.tools.spec import ToolSpec, args_model, build_request, restore_names
+
+    snap = json.loads((Path(__file__).parent.parent / "evals" / "tools.snapshot.json").read_text(encoding="utf-8"))
+    spec = ToolSpec.from_json(next(t for t in snap["scopes"]["seller_admin"] if t["name"] == "analytics_summary"))
+    got: dict = {}
+
+    async def run(**kw):
+        got.update(restore_names(spec, kw))
+        return "ok"
+
+    tool = StructuredTool.from_function(coroutine=run, name=spec.name, description="d", args_schema=args_model(spec))
+    props = convert_to_openai_tool(tool)["function"]["parameters"]
+    assert "from_" in props["properties"]
+    assert "from_" in props.get("required", [])
+    asyncio.run(tool.ainvoke({"from_": "2026-11-01", "to": "2026-11-15"}))
+    assert got == {"from": "2026-11-01", "to": "2026-11-15"}
+    _, query = build_request(spec, got)
+    assert query["from"] == "2026-11-01"

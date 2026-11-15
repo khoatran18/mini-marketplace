@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import keyword
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
 from urllib.parse import quote
@@ -56,6 +57,17 @@ class ActionSpec(ToolSpec):
 MAX_BODY_TEXT = 300
 
 
+def py_name(name: str) -> str:
+    """Từ khoá Python (from) làm tên trường: LangChain bỏ trường đó khỏi schema gửi mô hình, nên mô hình không bao giờ điền được. Đổi thành from_."""
+    return name + "_" if keyword.iskeyword(name) else name
+
+
+def restore_names(spec: ToolSpec, args: dict[str, Any]) -> dict[str, Any]:
+    """Ngược lại của py_name: trả tham số về tên thật của gateway (from_ -> from)."""
+    back = {py_name(p.name): p.name for p in spec.params}
+    return {back.get(k, k): v for k, v in args.items()}
+
+
 def args_model(spec: ToolSpec) -> type[BaseModel]:
     """Mô hình pydantic cho tham số của tool. Tham số lạ bị từ chối (extra=forbid): mô hình không nhét thêm được store_id, v.v."""
     fields: dict[str, Any] = {}
@@ -63,9 +75,9 @@ def args_model(spec: ToolSpec) -> type[BaseModel]:
         t: Any = Literal[p.enum] if p.enum else _TYPES.get(p.type, str)  # type: ignore[valid-type]
         extra: dict[str, Any] = {"max_length": MAX_BODY_TEXT} if (p.where == "body" and t is str) else {}
         if p.required:
-            fields[p.name] = (t, Field(..., description=p.description, **extra))
+            fields[py_name(p.name)] = (t, Field(..., description=p.description, **extra))
         else:
-            fields[p.name] = (Optional[t], Field(None, description=p.description, **extra))
+            fields[py_name(p.name)] = (Optional[t], Field(None, description=p.description, **extra))
     return create_model(f"{spec.name}_args", __config__=ConfigDict(extra="forbid"), **fields)
 
 

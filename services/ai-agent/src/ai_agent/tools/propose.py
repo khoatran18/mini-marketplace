@@ -13,7 +13,7 @@ from ai_agent.runtime import events
 from ai_agent.runtime.context import current_run
 from ai_agent.tools.gateway import GatewayClient, GatewayError
 from ai_agent.tools.registry import TurnAborted
-from ai_agent.tools.spec import ActionSpec, args_model, build_action
+from ai_agent.tools.spec import ActionSpec, args_model, build_action, restore_names
 
 logger = get_logger(__name__)
 
@@ -27,6 +27,7 @@ def make_action_tool(spec: ActionSpec, gateway: GatewayClient, *, tool_timeout: 
     name = f"propose_{spec.name}"
 
     async def run(**kwargs: Any) -> str:
+        kwargs = restore_names(spec, kwargs)
         ctx = current_run()
         ctx.tool_calls += 1
         await ctx.events.put(events.make(events.TOOL_CALL, ctx.run_id, tool=name, label=events.label_for(name)))

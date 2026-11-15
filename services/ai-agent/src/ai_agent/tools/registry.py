@@ -15,7 +15,7 @@ from ai_agent.runtime import events
 from ai_agent.runtime.context import current_run
 from ai_agent.tools import views
 from ai_agent.tools.gateway import GatewayClient, GatewayError
-from ai_agent.tools.spec import ActionSpec, ToolSpec, args_model, build_request
+from ai_agent.tools.spec import ActionSpec, ToolSpec, args_model, build_request, restore_names
 
 logger = get_logger(__name__)
 
@@ -27,6 +27,7 @@ class TurnAborted(Exception):
 def make_tool(spec: ToolSpec, gateway: GatewayClient, *, tool_timeout: float, max_chars: int, max_items: int,
               reveal_route: bool = True) -> StructuredTool:
     async def run(**kwargs: Any) -> str:
+        kwargs = restore_names(spec, kwargs)
         ctx = current_run()
         ctx.tool_calls += 1
         label = events.label_for(spec.name)

@@ -87,7 +87,7 @@ limits:
   # Một lượt tối đa token_budget_per_turn nên hạn mức có thể vượt tối đa một lượt. Hết hạn mức: 429 code=daily_token_limit, không gọi mô hình.
   # Trần riêng cho persona có prompt/kết quả tool lớn (admin, operator gọi nhiều tool đọc trong một lượt); thiếu = dùng token_budget_per_turn.
   token_budget_by_persona:
-    buyer: 25000
+    buyer: 32000
     seller: 35000
     admin: 45000
     operator: 45000
