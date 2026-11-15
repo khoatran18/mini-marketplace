@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from ai_agent import metrics
 from ai_agent.config.logging import get_logger
+from ai_agent.guard import untrusted
 from ai_agent.personas.base import Persona
 from ai_agent.rca.budget import Budget
 from ai_agent.runtime.context import RunContext, reset_run, set_run
@@ -67,8 +68,9 @@ def _evidence_lines(evidence: list[dict[str, Any]], limit: int = 40) -> str:
 
 
 def _incident_line(inc: dict[str, Any]) -> str:
+    # tóm tắt và nhãn do hệ thống khác sinh ra: bọc như mọi dữ liệu không tin cậy (prompt rca, quy tắc 10)
     return (f"Sự cố #{inc.get('id')}: cảnh báo {inc.get('alert_name')} (mức {inc.get('severity')}), thành phần {inc.get('component')}. "
-            f"Tóm tắt: {inc.get('summary')}. Nhãn: {json.dumps(inc.get('labels') or {}, ensure_ascii=False)}")
+            + untrusted.wrap(f"Tóm tắt: {inc.get('summary')}. Nhãn: {json.dumps(inc.get('labels') or {}, ensure_ascii=False)}"))
 
 
 def _metered(fn):

@@ -216,3 +216,71 @@ async def test_postgres_run_store_round_trip_and_migration_is_idempotent():
         await pool.close()
         await admin.execute(f'DROP DATABASE "{name}" WITH (FORCE)')
         await admin.close()
+
+
+# ---- số liệu Prometheus của RCA ----
+def _val(metric, *labels):
+    return (metric.labels(*labels) if labels else metric)._value.get()
+
+
+async def test_metrics_count_starts_finishes_waiting_and_the_watcher_heartbeat():
+    from ai_agent import metrics
+
+    started = {t: _val(metrics.RCA_STARTED, t) for t in ("auto", "manual")}
+    fin = _val(metrics.RCA_FINISHED, "recovered")
+    ticks = _val(metrics.RCA_WATCHER_TICKS, "ok")
+    w, runs, ops, clock = make()
+    ops.incidents = [inc()]
+    await w.tick()
+    assert _val(metrics.RCA_STARTED, "auto") == started["auto"] + 1 and _val(metrics.RCA_STARTED, "manual") == started["manual"]
+    assert _val(metrics.RCA_WAITING, "waiting_confirm") == 1 and _val(metrics.RCA_WAITING, "waiting_approval") == 0
+    assert _val(metrics.RCA_WATCHER_LAST_TICK, "rca") == clock.t and _val(metrics.RCA_WATCHER_TICKS, "ok") == ticks + 1
+    ops.props = {4: prop(4)}
+    await w.tick()
+    assert _val(metrics.RCA_WAITING, "waiting_approval") == 1
+    ops.props[4] = prop(4, state="ACCEPTED", exec_state="EXECUTED", finished=clock.t - 1000)
+    await w.tick()
+    assert _val(metrics.RCA_FINISHED, "recovered") == fin + 1 and _val(metrics.RCA_WAITING, "waiting_approval") == 0
+
+
+async def test_manual_trigger_is_counted_apart_and_a_crashing_graph_counts_as_an_error_outcome():
+    from ai_agent import metrics
+
+    manual, err = _val(metrics.RCA_STARTED, "manual"), _val(metrics.RCA_FINISHED, "error")
+
+    async def graph_for(run):
+        raise RuntimeError("boom")
+
+    await Runner(graph_for, MemoryRunStore()).start(inc(), "manual:42")
+    assert _val(metrics.RCA_STARTED, "manual") == manual + 1 and _val(metrics.RCA_FINISHED, "error") == err + 1
+
+
+async def test_a_failing_tick_in_run_forever_is_counted_as_an_error():
+    import asyncio
+
+    from ai_agent import metrics
+
+    w, runs, ops, clock = make(budget=Budget(poll_interval_sec=0))
+    errs = _val(metrics.RCA_WATCHER_TICKS, "error")
+
+    async def boom():
+        raise RuntimeError("ops-service không trả lời")
+
+    ops.open_incidents = boom
+    task = asyncio.create_task(w.run_forever())
+    await asyncio.sleep(0.05)
+    task.cancel()
+    assert _val(metrics.RCA_WATCHER_TICKS, "error") > errs
+
+
+async def test_run_token_histogram_observes_the_session_total_when_a_run_ends():
+    from ai_agent import metrics
+
+    before = metrics.RCA_RUN_TOKENS._sum.get()
+    t = {"input_tokens": 1000, "output_tokens": 100}
+    brain = ScriptedBrain(report=[{"summary": "xong", "ready_to_close": True, "reason": "r", "model_calls": 1, **t}])
+    w, runs, ops, clock = make(brain=brain)
+    await _to_approval(w, runs, ops)
+    ops.props[4] = prop(4, state="REJECTED")
+    await w.tick()
+    assert metrics.RCA_RUN_TOKENS._sum.get() == before + 1100

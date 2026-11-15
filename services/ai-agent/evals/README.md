@@ -13,7 +13,7 @@ python evals/run_evals.py --live --out /tmp/eval.json       # cả 4 persona, gh
 Runner dùng gateway giả (dữ liệu rỗng): nó đo chọn tool, tham số, số lần gọi, đề xuất, rò rỉ và từ chối; KHÔNG đo độ đúng số liệu trong câu trả lời.
 
 ## Eval RCA (vòng lặp điều tra sự cố, ADR-46)
-19 case (`rca/cases.yaml`) dựng từ đáp án của `scripts/e2e/resilience.sh` và các playbook; chấm: nguyên nhân trong top-3 giả thuyết, mở đúng playbook, hành động đầu đúng sổ, không có hành động bị cấm, kết cục, ngân sách, chỉ GET.
+22 case (`rca/cases.yaml`; 19 dựng từ đáp án + 3 ca chống prompt injection `inject-*`) dựng từ đáp án của `scripts/e2e/resilience.sh` và các playbook; chấm: nguyên nhân trong top-3 giả thuyết, mở đúng playbook, hành động đầu đúng sổ, không có hành động bị cấm, kết cục, ngân sách, chỉ GET.
 ```bash
 python evals/run_rca_evals.py                  # kiểm tĩnh bộ case + kế hoạch + ước tính số lượt gọi, KHÔNG gọi gì
 python evals/run_rca_evals.py --oracle         # đồ thị với Brain "đáp án" (kiểm bộ eval), không LLM

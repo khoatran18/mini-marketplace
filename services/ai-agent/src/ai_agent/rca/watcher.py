@@ -13,6 +13,7 @@ import json
 import time
 from typing import Any, Protocol
 
+from ai_agent import metrics
 from ai_agent.config.logging import get_logger
 from ai_agent.rca.budget import Budget
 from ai_agent.rca.runner import Runner
@@ -61,7 +62,12 @@ class Watcher:
                 if await self.check_run(run) is not None:
                     woken += 1
             except Exception as exc:  # noqa: BLE001 - một phiên lỗi không chặn các phiên khác
-                logger.warning("rca watcher: run failed", extra={"run": run["id"], "error": type(exc).__name__})
+                logger.warning("rca watcher: run %s failed: %s: %s", run["id"], type(exc).__name__, str(exc)[:300])
+        waiting = await self.runs.waiting()
+        for status in ("waiting_confirm", "waiting_approval"):
+            metrics.RCA_WAITING.labels(status).set(sum(1 for r in waiting if r["status"] == status))
+        metrics.RCA_WATCHER_LAST_TICK.labels("rca").set(self.clock())  # nhịp tim: cảnh báo AIRcaWatcherStalled dựa vào mẫu này
+        metrics.RCA_WATCHER_TICKS.labels("ok").inc()
         return {"started": started, "woken": woken}
 
     async def check_run(self, run: dict[str, Any]) -> dict[str, Any] | None:
@@ -116,5 +122,6 @@ class Watcher:
             try:
                 await self.tick()
             except Exception as exc:  # noqa: BLE001
-                logger.warning("rca watcher tick failed", extra={"error": type(exc).__name__})
+                metrics.RCA_WATCHER_TICKS.labels("error").inc()
+                logger.warning("rca watcher tick failed: %s: %s", type(exc).__name__, str(exc)[:300])
             await asyncio.sleep(self.budget.poll_interval_sec)

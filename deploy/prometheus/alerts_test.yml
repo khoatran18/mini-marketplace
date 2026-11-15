@@ -251,3 +251,27 @@ tests:
               summary: "ai-agent không scrape được hoặc không còn target (chat AI ngừng hoạt động)"
               runbook: "§19"
               action: low
+  # Bộ theo dõi RCA: nhịp tim còn mới thì im lặng; ngừng tick quá 5 phút (+ for 2m) thì AIRcaWatcherStalled bắn.
+  # (Mẫu tăng đều 15 s một bước tới t=300 s rồi đứng yên ở 315: mô phỏng watcher chết sau tick cuối.)
+  - interval: 15s
+    input_series:
+      - series: 'mm_ai_rca_watcher_last_tick_timestamp_seconds{job="ai-agent",swarm_service="ai-agent",instance="10.0.0.20:8090",watcher="rca"}'
+        values: '15+15x20 315x40'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AIRcaWatcherStalled
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: AIRcaWatcherStalled
+        exp_alerts: []
+      - eval_time: 11m
+        alertname: AIRcaWatcherStalled
+        exp_alerts: []
+      - eval_time: 14m
+        alertname: AIRcaWatcherStalled
+        exp_alerts:
+          - exp_labels: {severity: warning, job: ai-agent, swarm_service: ai-agent, instance: "10.0.0.20:8090", watcher: rca}
+            exp_annotations:
+              summary: "bộ theo dõi RCA của ai-agent không tick quá 5 phút (RCA tự chạy ngừng, phiên chờ người không được đánh thức)"
+              runbook: "§19"
+              action: low

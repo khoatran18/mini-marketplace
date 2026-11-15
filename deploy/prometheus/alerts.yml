@@ -23,6 +23,17 @@ groups:
           runbook: "§19"
           action: low
 
+      # Bộ theo dõi RCA (poll_interval_sec mặc định 30 s) ngừng tick: phiên RCA tự chạy im lặng ngừng và phiên đang chờ người không được đánh thức.
+      # Mẫu chỉ có khi AI_RCA_ENABLED=true và đã tick ít nhất một lần, nên RCA tắt thì không bắn.
+      - alert: AIRcaWatcherStalled
+        expr: time() - mm_ai_rca_watcher_last_tick_timestamp_seconds{job="ai-agent"} > 300
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "bộ theo dõi RCA của ai-agent không tick quá 5 phút (RCA tự chạy ngừng, phiên chờ người không được đánh thức)"
+          runbook: "§19"
+          action: low
+
       # V7: service về 0 replica mà DNS trả NXDOMAIN thì target biến mất khỏi service discovery, `up == 0` không bao giờ đúng.
       # (Trên máy có DNS nhà mạng trả IP giả thì ServiceDown bắn thay; cả hai cùng bắn là bình thường.)
       - alert: ServiceMissing
