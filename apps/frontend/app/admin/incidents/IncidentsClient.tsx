@@ -327,6 +327,7 @@ function RunDetail({ incidentId, runId, role, onChanged }: { incidentId: number;
 function Proposals({ proposals, busy, act }: { proposals: OpsProposal[]; busy: string; act: (name: string, fn: (t: string) => Promise<unknown>) => Promise<void> }) {
   const [command, setCommand] = useState<Record<number, string>>({});
   const getValidAccessToken = useToken();
+  const { role, userId } = useAuth();
   if (proposals.length === 0) return null;
   const showCommand = async (id: number) => {
     const { getProposal } = await import('../../../lib/rca');
@@ -339,6 +340,8 @@ function Proposals({ proposals, busy, act }: { proposals: OpsProposal[]; busy: s
       <ul className="grid gap-2 text-sm">
         {proposals.map((p) => {
           const approved = p.state === 'ACCEPTED' || p.state === 'ALTERNATIVE';
+          // ops-service ghi người tạo là "<role>:<userID>" (X-Actor do gateway đặt); chính người đó không tự duyệt được
+          const mine = userId != null && role != null && p.created_by === `${role}:${userId}`;
           return (
             <li key={p.id} className="rounded-lg border border-line p-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -352,13 +355,15 @@ function Proposals({ proposals, busy, act }: { proposals: OpsProposal[]; busy: s
               {p.params && Object.keys(p.params).length ? <code className="text-xs">{JSON.stringify(p.params)}</code> : null}
               {p.state === 'PENDING' ? (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button type="button" className="btn-primary h-8 px-3 text-xs" disabled={busy !== ''} onClick={() => void act(`accept${p.id}`, (t) => decideProposal(t, p.id, 'accept', 'duyệt từ màn hình sự cố'))}>
-                    Duyệt
-                  </button>
+                  {mine ? null : (
+                    <button type="button" className="btn-primary h-8 px-3 text-xs" disabled={busy !== ''} onClick={() => void act(`accept${p.id}`, (t) => decideProposal(t, p.id, 'accept', 'duyệt từ màn hình sự cố'))}>
+                      Duyệt
+                    </button>
+                  )}
                   <button type="button" className="btn-danger h-8 px-3 text-xs" disabled={busy !== ''} onClick={() => void act(`reject${p.id}`, (t) => decideProposal(t, p.id, 'reject', 'từ chối từ màn hình sự cố'))}>
                     Từ chối
                   </button>
-                  <span className="text-xs text-muted">Người tạo đề xuất không tự duyệt được (server từ chối).</span>
+                  <span className="text-xs text-muted">{mine ? 'Bạn là người tạo đề xuất này: cần người khác duyệt.' : 'Người tạo đề xuất không tự duyệt được (server từ chối).'}</span>
                 </div>
               ) : null}
               {approved && !p.exec_state ? (

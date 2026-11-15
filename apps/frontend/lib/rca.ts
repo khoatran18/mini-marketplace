@@ -48,6 +48,8 @@ export interface RcaView {
   run: RcaRun;
   round: number;
   model_calls: number;
+  input_tokens?: number;
+  output_tokens?: number;
   queries: number;
   hypotheses: RcaHypothesis[];
   evidence: RcaEvidence[];
