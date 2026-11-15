@@ -37,6 +37,12 @@ class LLMMetrics(BaseCallbackHandler):
             usage = dict(getattr(msg, "usage_metadata", None) or {})
         except (IndexError, AttributeError):
             pass
+        from ai_agent.runtime.context import peek_run  # nhập muộn: tránh vòng nhập giữa llm và runtime
+
+        run = peek_run()
+        if run is not None:
+            run.input_tokens += int(usage.get("input_tokens") or 0)
+            run.output_tokens += int(usage.get("output_tokens") or 0)
         if t0:
             _prom.LLM_SECONDS.labels(self.profile).observe(time.monotonic() - t0)
         logger.info("llm call", extra={
@@ -49,7 +55,7 @@ class LLMMetrics(BaseCallbackHandler):
         self._start.pop(run_id, None)
         self._first.pop(run_id, None)
         _prom.LLM_ERRORS.labels(self.profile).inc()
-        logger.warning("llm error", extra={"profile": self.profile, "error": type(error).__name__})
+        logger.warning("llm error", extra={"profile": self.profile, "error": type(error).__name__, "detail": str(error)[:200]})
 
 
 def attach(model: BaseChatModel, profile: str) -> None:

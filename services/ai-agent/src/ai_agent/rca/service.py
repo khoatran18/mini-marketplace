@@ -32,7 +32,7 @@ class RcaError(Exception):
 
 def _view_state(values: dict[str, Any]) -> dict[str, Any]:
     ev = [{**e, "summary": str(e.get("summary", ""))[:_EVIDENCE_CHARS]} for e in values.get("evidence") or []]
-    return {"round": values.get("round", 0), "model_calls": values.get("model_calls", 0), "queries": values.get("queries", 0),
+    return {"round": values.get("round", 0), "model_calls": values.get("model_calls", 0), "input_tokens": values.get("input_tokens", 0), "output_tokens": values.get("output_tokens", 0), "queries": values.get("queries", 0),
             "hypotheses": values.get("hypotheses") or [], "evidence": ev, "timeline": values.get("timeline") or [],
             "playbook": values.get("playbook"), "report": values.get("report"), "outcome": values.get("outcome") or ""}
 

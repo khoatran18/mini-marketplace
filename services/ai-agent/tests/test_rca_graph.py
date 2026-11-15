@@ -181,3 +181,25 @@ def test_budget_from_config_has_defaults_and_overrides():
     assert Budget.from_config(None) == Budget()
     b = Budget.from_config({"max_rounds": 2, "confident_at": 0.8, "auto_critical": False})
     assert (b.max_rounds, b.confident_at, b.auto_critical, b.max_queries) == (2, 0.8, False, 25)
+
+
+async def test_tokens_add_up_across_steps_and_survive_the_waits():
+    t = lambda i, o: {"input_tokens": i, "output_tokens": o}  # noqa: E731
+    brain = ScriptedBrain(
+        collect=[{"evidence": [{"source": "a", "args": {}, "summary": "x"}], "queries": 1, "model_calls": 1, **t(1000, 100)}],
+        hypothesize=[{"hypotheses": [{"cause": "c", "confidence": 0.9, "evidence_ids": ["e1"], "refuted_by": "r"}], "model_calls": 1, **t(200, 50)}],
+        choose=[{"action_id": "restart_service", "params": {"service": "payment-service"}, "rationale": "r", "evidence_ids": ["e1"], "model_calls": 1, **t(300, 30)}],
+        verify=[{"recovered": True, "note": "ok", "queries": 1, "model_calls": 1, **t(400, 40)}],
+        report=[{"summary": "xong", "ready_to_close": True, "reason": "r", "model_calls": 1, **t(500, 60)}])
+    g, _ = make(brain)
+    r = await start(g)
+    assert (r["input_tokens"], r["output_tokens"]) == (1500, 180)  # collect + hypothesize + choose, tới chỗ dừng đầu tiên
+    await g.ainvoke(Command(resume={"event": "confirmed", "proposal_id": 31}), cfg())
+    r = await g.ainvoke(Command(resume={"event": "executed"}), cfg())
+    assert (r["input_tokens"], r["output_tokens"]) == (2400, 280)  # cộng thêm verify + report sau hai lần chờ
+
+
+async def test_a_brain_that_reports_no_tokens_leaves_the_totals_at_zero():
+    g, _ = make()
+    r = await start(g)
+    assert r.get("input_tokens", 0) == 0 and r.get("output_tokens", 0) == 0

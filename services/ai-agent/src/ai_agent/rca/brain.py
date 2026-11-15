@@ -6,6 +6,7 @@
 Mọi lời gọi tool đi qua `tools/registry.make_tool` (cùng đường với chat) nên giới hạn, che dữ liệu và nhật ký như nhau."""
 from __future__ import annotations
 
+import functools
 import json
 import re
 from typing import Any
@@ -13,6 +14,7 @@ from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from pydantic import BaseModel, Field, ValidationError
 
+from ai_agent import metrics
 from ai_agent.config.logging import get_logger
 from ai_agent.personas.base import Persona
 from ai_agent.rca.budget import Budget
@@ -69,6 +71,22 @@ def _incident_line(inc: dict[str, Any]) -> str:
             f"Tóm tắt: {inc.get('summary')}. Nhãn: {json.dumps(inc.get('labels') or {}, ensure_ascii=False)}")
 
 
+def _metered(fn):
+    """Đo token mô hình dùng trong MỘT bước của Brain: thêm `input_tokens`/`output_tokens` vào kết quả (đồ thị cộng dồn vào state)
+    và tăng `mm_ai_tokens_total{persona="rca"}`. Bước lỗi giữa chừng vẫn được đếm vào Prometheus (tiền đã tiêu) nhưng không vào state."""
+    @functools.wraps(fn)
+    async def wrapper(self, *a, **kw):
+        i0, o0 = self.ctx.input_tokens, self.ctx.output_tokens
+        try:
+            r = await fn(self, *a, **kw)
+        finally:
+            di, do = self.ctx.input_tokens - i0, self.ctx.output_tokens - o0
+            metrics.TOKENS.labels("rca", "input").inc(di)
+            metrics.TOKENS.labels("rca", "output").inc(do)
+        return {**r, "input_tokens": di, "output_tokens": do}
+    return wrapper
+
+
 class LlmBrain:
     def __init__(self, rt: Any, persona: Persona, ctx: RunContext, budget: Budget) -> None:
         self.rt, self.persona, self.ctx, self.budget = rt, persona, ctx, budget
@@ -79,13 +97,17 @@ class LlmBrain:
         model = self.rt._model(self.persona.llm_role)
         msgs = [SystemMessage(self.persona.prompt), HumanMessage(f"{stage}\n\n{body}\n\nChỉ trả JSON.")]
         calls = 0
-        for attempt in range(2):
-            calls += 1
-            ai = await model.ainvoke(msgs)
-            try:
-                return parse_json(text_of(ai.content), model_cls), calls
-            except (ValueError, ValidationError, json.JSONDecodeError):
-                msgs += [ai, HumanMessage("Phản hồi chưa đúng định dạng. Trả lại đúng MỘT đối tượng JSON theo mẫu, không thêm chữ.")]
+        tok = set_run(self.ctx)  # nhà cung cấp đòi mã phiên (x-opencode-session) lấy từ contextvar lúc gửi request
+        try:
+            for attempt in range(2):
+                calls += 1
+                ai = await model.ainvoke(msgs)
+                try:
+                    return parse_json(text_of(ai.content), model_cls), calls
+                except (ValueError, ValidationError, json.JSONDecodeError):
+                    msgs += [ai, HumanMessage("Phản hồi chưa đúng định dạng. Trả lại đúng MỘT đối tượng JSON theo mẫu, không thêm chữ.")]
+        finally:
+            reset_run(tok)
         raise ValueError(f"mô hình không trả JSON hợp lệ ở bước {stage[:20]!r}")
 
     async def _tools(self) -> dict[str, Any]:
@@ -93,6 +115,7 @@ class LlmBrain:
         return {t.name: t for t in self.rt.read_tools(self.persona, specs)}
 
     # ---- các bước ----
+    @_metered
     async def collect(self, state: dict[str, Any]) -> dict[str, Any]:
         remaining = max(1, self.budget.max_queries - state.get("queries", 0))
         known = state.get("evidence", [])
@@ -130,6 +153,7 @@ class LlmBrain:
         finally:
             reset_run(tok)
 
+    @_metered
     async def hypothesize(self, state: dict[str, Any]) -> dict[str, Any]:
         body = (f"{_incident_line(state['incident'])}\n\nBằng chứng:\n{_evidence_lines(state['evidence'])}\n\n"
                 f"Nêu tối đa {self.budget.max_hypotheses} giả thuyết về nguyên nhân gốc, xếp theo độ tin cậy giảm dần. Mẫu: "
@@ -137,6 +161,7 @@ class LlmBrain:
         res, calls = await self._ask("BƯỚC LẬP GIẢ THUYẾT.", body, _Hyps)
         return {"hypotheses": [h.model_dump() for h in res.hypotheses], "model_calls": calls}
 
+    @_metered
     async def choose_action(self, state: dict[str, Any], catalog: list[dict[str, Any]]) -> dict[str, Any]:
         catalog_view = [{"id": a["id"], "risk": a.get("risk"), "mode": a.get("mode"), "title": a.get("title"), "playbook": a.get("playbook"),
                "params": [{k: p[k] for k in ("name", "type", "required", "enum", "min", "max") if k in p} for p in a.get("params") or []]} for a in catalog]
@@ -148,6 +173,7 @@ class LlmBrain:
         res, calls = await self._ask("BƯỚC CHỌN HÀNH ĐỘNG.", body, _Choice)
         return {**res.model_dump(), "model_calls": calls}
 
+    @_metered
     async def verify(self, state: dict[str, Any]) -> dict[str, Any]:
         """Chạy lại các truy vấn đã dẫn cho giả thuyết hàng đầu (xác định), rồi so trước/sau."""
         evid = {e["id"]: e for e in state["evidence"]}
@@ -174,6 +200,7 @@ class LlmBrain:
         res, calls = await self._ask("BƯỚC KIỂM TRA LẠI SAU HÀNH ĐỘNG.", body, _Verdict)
         return {"recovered": res.recovered, "note": res.note, "queries": queries, "model_calls": calls}
 
+    @_metered
     async def report(self, state: dict[str, Any]) -> dict[str, Any]:
         body = (f"{_incident_line(state['incident'])}\n\nKết cục: {state.get('outcome')}. Giả thuyết: {json.dumps(state.get('hypotheses', []), ensure_ascii=False)}\n"
                 f"Hành động: {json.dumps(state.get('draft'), ensure_ascii=False)}\nBằng chứng:\n{_evidence_lines(state.get('evidence', []), 20)}\n\n"

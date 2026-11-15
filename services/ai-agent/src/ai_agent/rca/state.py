@@ -13,6 +13,8 @@ class RcaState(TypedDict, total=False):
     round: int
     round_limit: int              # trần vòng hiện tại; verify thất bại thì nới thêm đúng một vòng
     model_calls: int
+    input_tokens: int             # token vào/ra đã dùng của cả phiên (cộng dồn qua mọi bước, sống qua checkpoint và resume)
+    output_tokens: int
     queries: int
     evidence: list[dict[str, Any]]      # {id, source, args, summary}
     hypotheses: list[dict[str, Any]]    # {id, cause, confidence, evidence_ids, refuted_by}

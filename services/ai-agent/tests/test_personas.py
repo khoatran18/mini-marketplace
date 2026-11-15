@@ -77,3 +77,12 @@ def test_rca_persona_is_read_only_and_never_chosen_by_a_chat_token():
     assert persona_for_role(personas, "operator").name == "operator"  # chat của operator vẫn là persona operator
     assert "CHỈ ĐỌC" in r.prompt and "propose_" not in r.prompt and "{policy}" not in r.prompt
     assert all(p.allow_actions for n, p in personas.items() if n != "rca")
+
+
+def test_every_persona_tells_the_model_that_the_untrusted_block_is_data():
+    """Tool nào cũng bọc kết quả vào <du_lieu_khong_tin_cay> (tools/views.py); khối đó chỉ có tác dụng khi prompt dặn mô hình coi nó là dữ liệu."""
+    from ai_agent.guard.untrusted import OPEN, CLOSE
+    from ai_agent.personas import load_personas
+
+    for name, p in load_personas().items():
+        assert OPEN in p.prompt and CLOSE in p.prompt and "DỮ LIỆU" in p.prompt, f"persona {name} thiếu quy tắc về dữ liệu không tin cậy"

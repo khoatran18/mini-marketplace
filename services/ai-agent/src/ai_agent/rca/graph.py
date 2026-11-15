@@ -18,10 +18,19 @@ from typing import Any, Callable
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
+from ai_agent.config.logging import get_logger
 from ai_agent.rca.budget import Budget
 from ai_agent.rca.ports import Brain, OpsPort
 from ai_agent.rca.state import RcaState
 from ai_agent.rca.validate import ESCALATE, check_params
+
+logger = get_logger(__name__)
+
+
+def _tok(state: Any, r: dict[str, Any]) -> dict[str, int]:
+    """Cộng token của một bước (`r`) vào tổng của phiên trong state."""
+    return {"input_tokens": int(state.get("input_tokens", 0)) + int(r.get("input_tokens", 0)),
+            "output_tokens": int(state.get("output_tokens", 0)) + int(r.get("output_tokens", 0))}
 
 LOW_CONFIDENCE = 0.4  # dưới mức này không dám đề xuất hành động thật: chuyển cho người
 
@@ -48,6 +57,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
         try:
             r = await brain.collect(full)
         except Exception as exc:  # noqa: BLE001 - lỗi mô hình/tool không được làm sập phiên
+            logger.warning("rca collect failed: %s: %s", type(exc).__name__, str(exc)[:300])
             return {**out, "abort": "error", "timeline": _note("collect", f"lỗi khi thu bằng chứng: {type(exc).__name__}")}
         have = {(e["source"], json.dumps(e.get("args"), sort_keys=True)) for e in state.get("evidence", [])}
         merged = list(state.get("evidence", []))
@@ -58,7 +68,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
             have.add(k)
             merged.append({"id": f"e{len(merged) + 1}", "source": e["source"], "args": e.get("args") or {}, "summary": str(e.get("summary", ""))[:1200]})
         out.update(evidence=merged, queries=state.get("queries", 0) + int(r.get("queries", 0)),
-                   model_calls=state.get("model_calls", 0) + int(r.get("model_calls", 0)))
+                   model_calls=state.get("model_calls", 0) + int(r.get("model_calls", 0)), **_tok(state, r))
         if r.get("playbook"):
             out["incident"] = {**state["incident"], "playbook": r["playbook"]}
         out["timeline"] = _note("collect", f"vòng {rnd}: {len(merged)} bằng chứng ({int(r.get('queries', 0))} truy vấn mới)")
@@ -72,6 +82,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
         try:
             r = await brain.hypothesize(dict(state))
         except Exception as exc:  # noqa: BLE001
+            logger.warning("rca hypothesize failed: %s: %s", type(exc).__name__, str(exc)[:300])
             return {"abort": "error", "timeline": _note("hypothesize", f"lỗi khi lập giả thuyết: {type(exc).__name__}")}
         ids = {e["id"] for e in state["evidence"]}
         hyps: list[dict[str, Any]] = []
@@ -85,7 +96,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
         for n, h in enumerate(hyps, start=1):
             h["id"] = f"h{n}"
         top = f"{hyps[0]['cause']} ({hyps[0]['confidence']:.0%})" if hyps else "không có"
-        return {"hypotheses": hyps, "model_calls": state.get("model_calls", 0) + int(r.get("model_calls", 0)),
+        return {"hypotheses": hyps, "model_calls": state.get("model_calls", 0) + int(r.get("model_calls", 0)), **_tok(state, r),
                 "timeline": _note("hypothesize", f"{len(hyps)} giả thuyết; hàng đầu: {top}")}
 
     async def decide(state: RcaState) -> dict[str, Any]:
@@ -133,14 +144,14 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
                 draft = {"action_id": aid, "params": params, "rationale": str(r.get("rationale", ""))[:1000],
                          "evidence_ids": [i for i in r.get("evidence_ids", []) if i in {e["id"] for e in state.get("evidence", [])}][:20],
                          "risk": by_id[aid].get("risk"), "mode": by_id[aid].get("mode"), "escalated": aid == ESCALATE}
-            state = {**state, "model_calls": state.get("model_calls", 0) + out_calls}
+            state = {**state, "model_calls": state.get("model_calls", 0) + out_calls, **_tok(state, r)}
         if draft is None:
             if ESCALATE not in by_id:
-                return {"draft": None, "outcome": "blocked", "model_calls": state.get("model_calls", 0), "timeline": _note("propose", f"{reason}; sổ không có escalate_to_human")}
+                return {"draft": None, "outcome": "blocked", "model_calls": state.get("model_calls", 0), **_tok(state, {}), "timeline": _note("propose", f"{reason}; sổ không có escalate_to_human")}
             ev = [e["id"] for e in state.get("evidence", [])][:20]
             draft = {"action_id": ESCALATE, "params": {}, "rationale": f"Chuyển cho người: {reason}.", "evidence_ids": ev,
                      "risk": by_id[ESCALATE].get("risk"), "mode": by_id[ESCALATE].get("mode"), "escalated": True}
-        return {"draft": draft, "model_calls": state.get("model_calls", 0),
+        return {"draft": draft, "model_calls": state.get("model_calls", 0), **_tok(state, {}),
                 "timeline": _note("propose", f"nháp: {draft['action_id']}" + (f" ({reason})" if draft["escalated"] and reason else ""))}
 
     async def wait_confirm(state: RcaState) -> dict[str, Any]:
@@ -165,8 +176,9 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
         try:
             r = await brain.verify(dict(state))
         except Exception as exc:  # noqa: BLE001
+            logger.warning("rca verify failed: %s: %s", type(exc).__name__, str(exc)[:300])
             return {"verify_attempts": attempts, "outcome": "error", "timeline": _note("verify", f"lỗi khi kiểm tra lại: {type(exc).__name__}")}
-        out: dict[str, Any] = {"verify_attempts": attempts, "model_calls": state.get("model_calls", 0) + int(r.get("model_calls", 0)),
+        out: dict[str, Any] = {"verify_attempts": attempts, "model_calls": state.get("model_calls", 0) + int(r.get("model_calls", 0)), **_tok(state, r),
                                "queries": state.get("queries", 0) + int(r.get("queries", 0))}
         if r.get("recovered"):
             return {**out, "outcome": "recovered", "timeline": _note("verify", f"đã hồi phục: {r.get('note', '')}")}
@@ -191,7 +203,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
         ready = bool(r.get("ready_to_close")) and outcome == "recovered"  # chỉ khi verify xác nhận hồi phục
         rep = {"summary": str(r.get("summary", "")), "ready_to_close": ready,
                "reason": str(r.get("reason", "")) if ready or not r.get("ready_to_close") else "chưa có xác nhận hồi phục từ bước kiểm tra lại: người quyết định"}
-        return {"outcome": outcome, "report": rep, "model_calls": state.get("model_calls", 0) + int(r.get("model_calls", 0)),
+        return {"outcome": outcome, "report": rep, "model_calls": state.get("model_calls", 0) + int(r.get("model_calls", 0)), **_tok(state, r),
                 "timeline": _note("report", f"kết thúc: {outcome}; đủ điều kiện đóng: {'có' if ready else 'chưa'}")}
 
     g = StateGraph(RcaState)

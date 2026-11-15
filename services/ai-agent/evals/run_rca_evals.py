@@ -33,6 +33,7 @@ async def run_all(args) -> list[dict]:
             run = await rcakit.run_case(c, world, brain)
             res = rcakit.score(c, run)
             row = {"id": c["id"], "ok": res.ok, "reasons": res.reasons, "checks": res.checks, "model_calls": run.values.get("model_calls"),
+                   "input_tokens": run.values.get("input_tokens", 0), "output_tokens": run.values.get("output_tokens", 0),
                    "queries": run.values.get("queries"), "outcome": run.values.get("outcome"), "drafts": [(d["action_id"], d["params"]) for d in run.drafts],
                    "hypotheses": [h["cause"] for h in run.values.get("hypotheses", [])], "seconds": round(time.monotonic() - started, 1)}
         except Exception as exc:  # noqa: BLE001

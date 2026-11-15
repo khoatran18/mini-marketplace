@@ -6,6 +6,10 @@ from typing import Any, Awaitable, Callable
 
 from langgraph.types import Command
 
+from ai_agent.config.logging import get_logger
+
+logger = get_logger(__name__)
+
 GraphFor = Callable[[dict[str, Any]], Awaitable[Any]]  # run -> đồ thị đã biên dịch (Brain gắn token của phiên này)
 
 
@@ -30,7 +34,8 @@ class Runner:
         try:
             graph = await self.graph_for(run)
             result = await graph.ainvoke(payload, {"configurable": {"thread_id": run["thread_id"]}})
-        except Exception:  # noqa: BLE001 - phiên hỏng không được làm sập bộ theo dõi
+        except Exception as exc:  # noqa: BLE001 - phiên hỏng không được làm sập bộ theo dõi
+            logger.warning("rca run %s crashed: %s: %s", run["id"], type(exc).__name__, str(exc)[:300])
             return await self.runs.update(run["id"], status="error", outcome="error", waiting_since=None)
         intr = result.get("__interrupt__")
         if intr:

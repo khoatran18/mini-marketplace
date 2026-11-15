@@ -90,3 +90,34 @@ async def test_full_run_graph_plus_llm_brain_with_fake_model():
     await g.ainvoke(Command(resume={"event": "confirmed", "proposal_id": 12}), c)
     r = await g.ainvoke(Command(resume={"event": "executed"}), c)
     assert r["outcome"] == "recovered" and r["report"]["ready_to_close"] is True and r["model_calls"] == 6
+
+
+async def test_json_requests_carry_the_run_in_the_contextvar_so_the_provider_gets_its_session_header():
+    """OpenCode trả 400 nếu thiếu x-opencode-session; header lấy từ contextvar lúc gửi request (llm/providers/openai.py)."""
+    from ai_agent.runtime.context import peek_run
+
+    rt, persona, ctx, model = brain_env([{"content": json.dumps(HYP)}])
+    seen = []
+    orig = model._generate
+
+    def spy(*a, **kw):
+        run = peek_run()
+        seen.append(run.run_id if run else None)
+        return orig(*a, **kw)
+
+    object.__setattr__(model, "_generate", spy)
+    await LlmBrain(rt, persona, ctx, Budget()).hypothesize(state(evidence=[{"id": "e1", "source": "a", "args": {}, "summary": "x"}]))
+    assert seen == [ctx.run_id] and peek_run() is None  # có trong lúc gọi, gỡ ngay sau đó
+
+
+async def test_each_step_reports_its_own_token_use_and_feeds_the_rca_counter():
+    from ai_agent import metrics
+    from ai_agent.llm.metrics import attach
+
+    rt, persona, ctx, model = brain_env([{"content": json.dumps(HYP)}])
+    attach(model, "rca")  # bản chạy thật gắn đo lường lúc dựng mô hình; fake_builder thì không
+    before = metrics.TOKENS.labels("rca", "input")._value.get()
+    r = await LlmBrain(rt, persona, ctx, Budget()).hypothesize(state(evidence=[{"id": "e1", "source": "a", "args": {}, "summary": "x"}]))
+    assert r["input_tokens"] > 0 and r["output_tokens"] > 0
+    assert (ctx.input_tokens, ctx.output_tokens) == (r["input_tokens"], r["output_tokens"])
+    assert metrics.TOKENS.labels("rca", "input")._value.get() == before + r["input_tokens"]

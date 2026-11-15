@@ -5,7 +5,7 @@
    - chờ xác nhận: tìm đề xuất cùng sự cố, cùng hành động và tham số, tạo SAU khi nháp xuất hiện -> `confirmed`; quá hạn -> `expired`;
    - chờ duyệt: ACCEPTED/ALTERNATIVE và exec_state=EXECUTED (đã qua `verify_wait_sec`) -> `executed`; FAILED -> `failed`;
      REJECTED -> `rejected`; EXPIRED hoặc quá hạn -> `expired`.
-Danh tính hệ thống để tự chạy (token agent không gắn người đăng nhập) CHƯA có: xem ADR-46; `Runner.graph_for` là nơi cấp token cho phiên."""
+Danh tính hệ thống để tự chạy là token chỉ đọc `sys` (ADR-47); `Runner.graph_for` là nơi cấp token cho phiên."""
 from __future__ import annotations
 
 import asyncio

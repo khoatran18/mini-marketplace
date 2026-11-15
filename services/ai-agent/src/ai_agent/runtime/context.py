@@ -18,6 +18,8 @@ class RunContext:
     events: "asyncio.Queue[Any]" = field(default_factory=asyncio.Queue)  # sự kiện SSE: token, tool_call, card...
     conversation_id: str = ""  # điền ở đầu lượt; dùng làm mã phiên gửi nhà cung cấp mô hình (cache/định tuyến)
     tool_calls: int = 0
+    input_tokens: int = 0      # token mô hình đã dùng trong lượt/phiên này (llm/metrics.py cộng dồn lúc mỗi lần gọi xong)
+    output_tokens: int = 0
     proposals: int = 0         # số đề xuất đã tạo trong lượt này (có trần)
     cards: list[dict[str, Any]] = field(default_factory=list)            # tham chiếu card để lưu (loại + id), không lưu nội dung
 
