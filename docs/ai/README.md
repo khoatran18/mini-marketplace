@@ -11,7 +11,8 @@
 | [06_AGENT_FEATURES.md](06_AGENT_FEATURES.md) | Danh mục tính năng agent cho admin / seller / buyer: tool nào đã có, người xác nhận ở đâu, thứ tự làm |
 | [07_COROOT_AND_INCIDENT_AGENT.md](07_COROOT_AND_INCIDENT_AGENT.md) | Coroot (eBPF observability + RCA) là gì, giúp khoanh vùng sự cố ra sao, và kịch bản / dataset / test case cho agent điều tra sự cố: đã có, còn thiếu |
 | [08_AGENT_BUILD_ROADMAP.md](08_AGENT_BUILD_ROADMAP.md) | Lộ trình xây agent buyer/seller/admin/dev và vòng lặp RCA: nền đã có/thiếu, các điểm cần chốt trước, kiến trúc, cấu trúc thư mục `services/ai-agent`, thứ tự 8 bước có tiêu chí xong, đánh giá, an toàn |
-| [09_AGENT_BUILD_LOG.md](09_AGENT_BUILD_LOG.md) | Nhật ký xây `services/ai-agent` (§16.1-§16.26): cái đã làm, đo được, lỗi gặp và cách sửa, kết quả eval, việc RCA còn lại |
+| [09_AGENT_BUILD_LOG.md](09_AGENT_BUILD_LOG.md) | Nhật ký xây `services/ai-agent` (§16.1-§16.29): cái đã làm, đo được, lỗi gặp và cách sửa, kết quả eval, việc RCA còn lại |
+| [10_AGENT_QUALITY_CRITERIA.md](10_AGENT_QUALITY_CRITERIA.md) | Tiêu chí chất lượng của hệ thống agent (an toàn, bảo mật, injection, riêng tư, chi phí, đúng đắn, tin cậy...): đánh giá hiện trạng kèm mức bằng chứng, ưu nhược, đề xuất và cách kiểm |
 | [05_AI_DRAFT_ORIGINAL.md](05_AI_DRAFT_ORIGINAL.md) | Bản nháp ý tưởng ban đầu (hợp đồng tool, SSE, hệ gợi ý, RAG). Chỉ là điểm xuất phát; khi mâu thuẫn thì các file 01–04 mới hơn |
 
 Bộ dữ liệu để kiểm chứng từng scope: [../dataset/README.md](../dataset/README.md).

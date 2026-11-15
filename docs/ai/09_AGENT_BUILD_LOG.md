@@ -403,7 +403,73 @@ Test: ai-agent 187 passed + 13 skipped; 200 passed với Postgres thật (contai
 
 **Chưa kiểm (cần Swarm bật và, với LLM, cần bạn đồng ý):**
 - Chưa build image, chưa chạy `AI_SYSTEM_KEY` thật qua gateway thật; màn hình `/admin/incidents` chưa mở được trên trình duyệt (frontend chỉ qua type-check/lint/build, không có test giao diện).
-- Chưa chạy LLM nào cho RCA (eval `--live`, và phiên tự động thật).
+- LLM cho RCA: đã chạy eval live nhỏ (xem §16.29); chưa chạy phiên tự động thật.
 - Chưa gây lỗi thật bằng `resilience.sh`.
-- Điều chưa làm: dọn checkpoint của sự cố đã đóng sau 30 ngày (ADR-46); hai người duyệt khác nhau chỉ do ops-service ép (UI không ẩn nút Duyệt với người tạo); trong MỘT bước `collect` trần tool/mô hình vẫn là `limits` (§16.27).
+- Điều chưa làm: dọn checkpoint của sự cố đã đóng sau 30 ngày (ADR-46); hai người duyệt khác nhau chỉ do ops-service ép (UI đã ẩn nút Duyệt với người tạo, xem §16.29); trong MỘT bước `collect` trần tool/mô hình vẫn là `limits` (§16.27).
 
+
+### 16.29 Lần chạy LLM thật đầu tiên của RCA, lỗi tìm được và cách RCA vận hành (2026-11-15)
+
+**Eval live (người dùng đồng ý từng lần):**
+
+| Lần | Ca | Kết quả | Gọi mô hình |
+|---|---|---|---|
+| 1 | `C-payment-down`, `F-postgres-down`, `outbox-dead-corrupt-payload` | 0/3, cả ba kết cục `error` | 6 + 5 + 5 |
+| 2 | `C-payment-down` (sau khi thêm log lỗi, chưa sửa) | 0/1, lỗi lặp lại; log cho thấy `OpenAIInvalidRequestError: 400 ... missing x-opencode-session` | khoảng 6 |
+| 3 | `C-payment-down` sau khi sửa | **PASS** 7/7 tiêu chí; đề xuất `scale_service {payment-service, replicas: 1}`; kết cục `recovered` | 10 lần gọi, 12 truy vấn, 47 s |
+
+Chỉ mới chạy 1 trong 19 ca đạt; `F-postgres-down` và `outbox-dead-corrupt-payload` (mong đợi `escalate_to_human`) chưa chạy lại sau khi sửa. Điều đã chứng minh: luồng chạy thông với mô hình thật. Chưa đo được chất lượng chung.
+
+**Lỗi tìm được (do code của mình, không phải do agent suy luận kém):** OpenCode trả `400 Request is missing x-opencode-session`. Header này lấy mã phiên từ contextvar lúc gửi request (`llm/providers/openai.py`, `_session_clients`). Bước `collect` có đặt contextvar (`set_run`), còn `LlmBrain._ask` (hypothesize, choose_action, report) thì không, nên mọi ca chết ở lần gọi JSON đầu tiên. Sửa: `_ask` đặt và gỡ contextvar. Test mới `test_json_requests_carry_the_run_in_the_contextvar_...` (fail khi bỏ bản sửa).
+
+**Lỗi bị nuốt, đã sửa:** ban đầu không đọc được nguyên nhân vì lỗi bị nuốt (graph chỉ ghi tên lớp lỗi vào timeline; runner không log; kho eval nằm trong bộ nhớ). Nay `graph.py` (collect/hypothesize/verify), `runner.py` và `llm/metrics.py` log `Loại lỗi: nội dung` (cắt 200-300 ký tự). Bài học: lỗi bị nuốt phải để lại dấu vết trong log.
+
+**Việc nhỏ làm cùng lượt:** docstring `watcher.py` trỏ ADR-47; `/admin/incidents` ẩn nút Duyệt khi `created_by == "<role>:<userId>"` của chính người đang đăng nhập (ops-service vẫn là nơi ép quy tắc, UI chỉ tránh gây nhầm). 33 lỗi `ruff` trong code RCA (hầu hết kiểu dáng trong test) chưa dọn. Test: ai-agent 188 passed + 13 skipped.
+
+#### Ai làm gì trong một phiên RCA (ca `C-payment-down`)
+
+Eval chỉ đo phần ĐIỀU TRA (collect, hypothesize, choose, verify, report). Gateway và hệ thống đều giả (`World` trong `evals/rcakit.py`); hai cổng người được giả lập: nháp nào cũng được xác nhận, hành động chạy xong ngay, `World` đổi sang trạng thái "sau". `recovered` trong eval vì thế KHÔNG chứng minh gì về hệ thống thật.
+
+| Bước | Bên làm | LLM |
+|---|---|---|
+| nhận sự cố | harness (thật: watcher) | không |
+| collect: đọc playbook, chạy truy vấn chẩn đoán | agent LLM chọn tool; tool chỉ đọc | có |
+| ghi bằng chứng `e1..eN` từ kết quả tool thật | code (`brain.py`) | không |
+| hypothesize (tối đa 3, có độ tin cậy, có điều kiện bác bỏ) | LLM, JSON | có |
+| decide (thu thêm hay đề xuất) | đồ thị | không |
+| choose_action trong danh mục; code kiểm hành động và tham số (`validate.py`) | LLM + code | có |
+| propose: tạo NHÁP | đồ thị | không |
+| `wait_confirm` (đồ thị dừng) | operator xác nhận nháp trên UI | không |
+| `wait_approval` (đồ thị dừng) | người KHÁC duyệt ở ops-service, rồi thực thi theo `mode` | không |
+| verify: chạy lại truy vấn của giả thuyết hàng đầu, so trước/sau | code chạy lại; LLM kết luận `recovered` | có |
+| report | LLM | có |
+| chấm 7 tiêu chí | harness, regex, không LLM | không |
+
+**Tool của agent chỉ đọc:** persona `rca` có `allow_actions=False`; `agent_factory.agent_for` xoá danh sách tool đề xuất dù token có quyền. Còn lại chỉ các tool GET (`ops_get_playbook`, `ops_metrics_query`, `ops_system_health`, `ops_list_actions`...). Gateway chặn thêm: token `sys` chỉ gọi GET `/ops/*`, `ProposalHandler.Create` trả 403.
+
+**Sao agent chỉ soạn NHÁP, không tự đề xuất:** khi tự chạy agent dùng token hệ thống không thuộc tài khoản nào; đề xuất cần có người tạo để quy tắc "người tạo không tự duyệt" có nghĩa, và để cảnh báo giả hay một câu LLM sai không đẩy thẳng việc vào hàng chờ duyệt. Operator bấm Xác nhận (`POST /ops/rca/runs/:id/proposal`) thì gateway dùng JWT của chính họ tạo đề xuất thật. Đánh đổi: chậm hơn. Agent không soạn lại nháp; không xác nhận thì sau `wait_timeout_sec` (mặc định 1800 s) watcher gửi `expired`, phiên kết thúc `outcome=expired`, `ready_to_close=false`; muốn điều tra lại thì mở phiên mới.
+
+**`wait_confirm` khác `wait_approval`:**
+- `wait_confirm`: chờ operator biến NHÁP thành đề xuất (chưa có đề xuất nào ở ops-service). Thoát bằng `confirmed` (watcher thấy đề xuất cùng sự cố, hành động, tham số, tạo sau nháp) hoặc `expired`.
+- `wait_approval`: chờ người khác duyệt và chạy đề xuất đã có. Thoát bằng `executed`, `failed`, `rejected` hoặc `expired`.
+
+**Watcher** (`rca/watcher.py`, không gọi LLM): mỗi `poll_interval_sec` (1) phát hiện sự cố `critical` đang mở chưa có phiên thì bắt đầu phiên tự động (mỗi sự cố một lần, có trần theo ngày); (2) với phiên đang chờ người, hỏi ops-service rồi `resume` với đúng sự kiện. Cần nó vì đồ thị dừng hẳn ở interrupt (trạng thái nằm trong checkpoint, không tiến trình nào chạy). Đánh đổi: độ trễ tối đa bằng chu kỳ poll; chưa có đường ops-service gọi ngược. Nút "Kiểm tra lại" là hỏi ngay bằng tay.
+
+**Playbook được chọn thế nào (không hard-code):** `rca/prompt.md` bảo agent bắt đầu từ playbook theo tên cảnh báo (`ops_list_playbooks` rồi `ops_get_playbook`); mỗi playbook YAML khai `triggers.alerts` (`service-unavailable.yml` có `ServiceDown, ServiceMissing, ServiceNotReady, CircuitBreakerOpen, GatewayServerErrors`). Mô hình tự so khớp, nên đây là điểm có thể sai; tiêu chí `playbook` của eval đo đúng điều đó.
+
+#### Cách thực thi hành động (`mode` trong `ops-service/internal/actions/catalog.go`)
+
+| mode | Ai chạy sau khi duyệt | Hành động hiện có |
+|---|---|---|
+| `http` | ops-service tự gọi endpoint nội bộ `:8081` của service đích, có kiểm tiền điều kiện trước và sau khi ghi (`executor/executor.go`) | `requeue_outbox` (rủi ro `high`; tham số `service`, `ids` hoặc `limit` ≤ 100; đọc số DEAD, requeue, đọc lại để kiểm) |
+| `command` | NGƯỜI chạy câu lệnh ops-service sinh sẵn (ops-service cố ý không có quyền docker/shell), rồi báo qua `POST /ops/proposals/:id/executed` | `restart_service`, `scale_service`, `run_backfill` (ghi đè ClickHouse) |
+| `manual` | người làm hoàn toàn, không có thao tác tự động | `escalate_to_human` (rủi ro `observe`) |
+
+Hệ quả: với sự cố dịch vụ sập (`scale_service`, `restart_service`) hiện có ba lần người: xác nhận nháp, duyệt, chạy lệnh; agent lo điều tra, chọn hành động và kiểm chứng. ops-service giới hạn 5 lần mỗi giờ và nghỉ 5 phút giữa các lần thực thi. Muốn restart/scale tự chạy cần một đường thực thi có quyền docker (ví dụ một tác tử nhỏ trên máy Swarm chỉ nhận các lệnh này): đó là quyết định về an toàn, CHƯA làm. Chưa đọc kỹ `executor.go` ngoài phần `requeue_outbox`.
+
+**Còn lại:** chạy lại 2 ca `escalate_to_human` rồi (nếu muốn) cả 19 ca (tối đa khoảng 228 lần gọi); mục 5 (build, deploy, smoke, `resilience.sh`) cần Swarm bật, `AI_SYSTEM_KEY`, `AI_RCA_ENABLED=true`, `FEATURE_AI_OPS=true` và đồng ý từng lần; dọn checkpoint sau 30 ngày.
+
+**Bổ sung cùng ngày (2026-11-15):**
+- **Đo token riêng cho RCA:** `RunContext` có `input_tokens`/`output_tokens`; `llm/metrics.py` cộng dồn lúc mỗi lần gọi mô hình xong; `LlmBrain` (decorator `_metered`) báo token từng bước; `graph.py` cộng vào state phiên (`_tok`), sống qua checkpoint và resume; `GET /rca/runs/:id` trả hai số; Prometheus `mm_ai_tokens_total{persona="rca"}`; eval ghi token từng ca. Test: `test_tokens_add_up_across_steps_and_survive_the_waits`, `test_each_step_reports_its_own_token_use_and_feeds_the_rca_counter`. Chưa quy ra tiền, chưa có trần token theo ngày cho RCA.
+- **Lỗ hổng prompt injection đã vá:** kết quả tool của RCA được bọc `<du_lieu_khong_tin_cay>` nhưng `personas/rca/prompt.md` không dặn mô hình coi khối đó là DỮ LIỆU (bốn persona kia có). Đã thêm quy tắc 10 và test `test_every_persona_tells_the_model_that_the_untrusted_block_is_data`. Còn lại: `_incident_line` chưa bọc.
+- Đánh giá theo tiêu chí, ưu nhược, đề xuất và cách kiểm: xem `10_AGENT_QUALITY_CRITERIA.md`.
