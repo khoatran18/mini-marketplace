@@ -143,3 +143,41 @@ def test_python_keyword_param_reaches_the_model_and_the_gateway():
     assert got == {"from": "2026-11-01", "to": "2026-11-15"}
     _, query = build_request(spec, got)
     assert query["from"] == "2026-11-01"
+
+
+def _ops_action_spec():
+    import json
+    from pathlib import Path
+
+    from ai_agent.tools.spec import ActionSpec
+
+    snap = json.loads((Path(__file__).parent.parent / "evals" / "tools.snapshot.json").read_text(encoding="utf-8"))
+    return ActionSpec.from_json(snap["actions"]["operator"][0])
+
+
+def test_ops_action_body_nests_params_and_the_summary_shows_what_will_run():
+    from ai_agent.tools.spec import build_action, restore_names, args_model
+
+    spec = _ops_action_spec()
+    args = restore_names(spec, args_model(spec)(action_id="scale_service", rationale="p95 cao", evidence=["gateway_latency_p95=2.1s (15m)"], service="payment-service", replicas=3).model_dump())
+    path, body, summary = build_action(spec, args)
+    assert path == "/ops/proposals"
+    assert body == {"action_id": "scale_service", "rationale": "p95 cao", "evidence": ["gateway_latency_p95=2.1s (15m)"], "params": {"service": "payment-service", "replicas": 3}}
+    assert "scale_service" in summary and "service=payment-service" in summary and "replicas=3" in summary and "p95 cao" in summary
+
+
+def test_ops_action_backfill_uses_from_and_lists_are_checked():
+    from ai_agent.tools.spec import build_action, restore_names, args_model
+
+    spec = _ops_action_spec()
+    model = args_model(spec)
+    assert "from_" in model.model_fields and "from" not in model.model_fields  # từ khoá Python: mô hình thấy from_, gateway nhận from
+    args = restore_names(spec, model(action_id="run_backfill", rationale="lệch số liệu", from_="2026-11-01", to="2026-11-05").model_dump())
+    _, body, _ = build_action(spec, args)
+    assert body["params"] == {"from": "2026-11-01", "to": "2026-11-05"}
+    with pytest.raises(ValueError):
+        build_action(spec, {"action_id": "requeue_outbox", "rationale": "x", "service": "order-service", "ids": []})
+    with pytest.raises(ValueError):
+        build_action(spec, {"action_id": "restart_service"})  # thiếu rationale
+    with pytest.raises(ValidationError):
+        model(action_id="format_disk", rationale="x")  # ngoài sổ

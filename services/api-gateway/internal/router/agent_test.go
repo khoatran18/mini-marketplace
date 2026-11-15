@@ -199,13 +199,16 @@ func TestToolsEndpoint(t *testing.T) {
 	if w.Code != 200 || !strings.Contains(w.Body.String(), `"tools":[]`) {
 		t.Errorf("unknown role: %d %s", w.Code, w.Body.String())
 	}
-	// admin and operator get read tools and no propose_ actions
-	for _, role := range []string{"admin", "operator"} {
-		at3, _, _ := s.IssueAgentToken(1, "u", role, 0, time.Minute)
-		w = do(e, "GET", "/ai/tools", at3, "", "")
-		if w.Code != 200 || !strings.Contains(w.Body.String(), `"actions":[]`) || strings.Contains(w.Body.String(), `"tools":[]`) {
-			t.Errorf("%s: want tools and no actions, got %d", role, w.Code)
-		}
+	// admin gets read tools and no propose_ actions; operator gets read tools and the single ops_action (ADR-45)
+	at3, _, _ := s.IssueAgentToken(1, "u", "admin", 0, time.Minute)
+	w = do(e, "GET", "/ai/tools", at3, "", "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"actions":[]`) || strings.Contains(w.Body.String(), `"tools":[]`) {
+		t.Errorf("admin: want tools and no actions, got %d", w.Code)
+	}
+	at4, _, _ := s.IssueAgentToken(1, "u", "operator", 0, time.Minute)
+	w = do(e, "GET", "/ai/tools", at4, "", "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"name":"ops_action"`) || strings.Contains(w.Body.String(), `"tools":[]`) {
+		t.Errorf("operator: want tools and ops_action, got %d", w.Code)
 	}
 }
 
@@ -236,12 +239,18 @@ func TestAdminAndDevAgentScopes(t *testing.T) {
 			t.Errorf("%s %s %s: %d, want refused", c.role, c.method, c.path, w.Code)
 		}
 	}
-	// the read-only roles cannot even get a proposal signed
-	for _, role := range []string{"admin", "operator"} {
-		w := do(e, "POST", "/ai/proposals", tok(role), "", `{"method":"POST","path":"/admin/orders/5/cancel","summary":"x","body":null}`)
+	// admin cannot get anything signed; the operator can get an ops proposal signed but nothing else
+	for _, c := range []struct{ role, path string }{
+		{"admin", "/admin/orders/5/cancel"}, {"admin", "/ops/proposals"}, {"operator", "/admin/orders/5/cancel"},
+		{"operator", "/ops/proposals/5/decision"}, {"operator", "/ops/proposals/5/execute"},
+	} {
+		w := do(e, "POST", "/ai/proposals", tok(c.role), "", `{"method":"POST","path":"`+c.path+`","summary":"x","body":null}`)
 		if w.Code != http.StatusForbidden {
-			t.Errorf("%s proposal: %d, want 403", role, w.Code)
+			t.Errorf("%s proposal for %s: %d, want 403", c.role, c.path, w.Code)
 		}
+	}
+	if w := do(e, "POST", "/ai/proposals", tok("operator"), "", `{"method":"POST","path":"/ops/proposals","summary":"Đề xuất vận hành: restart_service","body":{"action_id":"restart_service","rationale":"x","params":{"service":"order-service"}}}`); w.Code != http.StatusCreated {
+		t.Errorf("operator ops proposal: %d, want 201 (%s)", w.Code, w.Body.String())
 	}
 }
 

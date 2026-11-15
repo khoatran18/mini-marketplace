@@ -29,6 +29,7 @@ var proposable = []struct {
 	{"POST", regexp.MustCompile(`^/seller/products/\d+/inventory/adjust$`)}, // body {delta, reason} is bound by hash
 	{"POST", regexp.MustCompile(`^/admin/orders/\d+/cancel$`)},
 	{"POST", regexp.MustCompile(`^/admin/payments/\d+/refund$`)},
+	{"POST", regexp.MustCompile(`^/ops/proposals$`)}, // operator only: records an ops proposal; review, approval and execution stay with other humans
 }
 
 // Proposable reports whether method+path may be proposed.

@@ -24,7 +24,7 @@ import yaml
 HERE = Path(__file__).resolve().parent
 GROUPS = ("lookup", "filter", "variant", "propose", "adversarial", "scope")
 PERSONA_TOOL_ROLE = {"buyer": "buyer", "seller": "seller_admin", "admin": "admin", "operator": "operator"}
-READ_ONLY = ("admin", "operator")  # đọc thôi: yêu cầu ghi phải được từ chối, không có đề xuất
+READ_ONLY = ("admin",)  # đọc thôi: yêu cầu ghi phải được từ chối, không có đề xuất
 KNOWN_KEYS = {"g", "q", "tool", "args", "max", "propose", "deny", "need", "note"}
 # Số câu tối thiểu mỗi persona (xem docs/ai/08_AGENT_BUILD_ROADMAP.md, mục eval): dưới mức này dao động ngẫu nhiên che mất tín hiệu.
 MIN_PER_PERSONA = 90

@@ -1,6 +1,6 @@
 # Bộ eval của ai-agent
 
-402 câu hỏi tự viết tay cho 4 persona (`cases/<persona>.yaml`), 6 nhóm: `lookup`, `filter`, `variant`, `propose`, `adversarial`, `scope`.
+406 câu hỏi tự viết tay cho 4 persona (`cases/<persona>.yaml`), 6 nhóm: `lookup`, `filter`, `variant`, `propose`, `adversarial`, `scope`.
 Định dạng case và cách chấm: docstring đầu `evalkit.py`. Chạy test tĩnh (không gọi mô hình): `python -m pytest tests/test_evals_dataset.py`.
 
 ```bash

@@ -12,12 +12,16 @@ def test_every_gateway_role_has_exactly_one_persona():
     assert persona_for_role(personas, "nobody") is None
 
 
-def test_admin_and_operator_prompts_are_read_only_and_operator_has_no_business_data():
+def test_admin_prompt_is_read_only_and_operator_may_only_propose_an_ops_action():
     personas = load_personas()
-    for name in ("admin", "operator"):
-        p = personas[name].prompt
-        assert "CHỈ ĐỌC" in p and "propose_" not in p and "{policy}" not in p
-    assert "không có dữ liệu kinh doanh" in personas["operator"].prompt
+    p = personas["admin"].prompt
+    assert "CHỈ ĐỌC" in p and "propose_" not in p and "{policy}" not in p
+    # operator (ADR-45): one proposal tool, ops_action; it never approves, runs or records a result
+    o = personas["operator"].prompt
+    assert "propose_ops_action" in o and "{policy}" not in o
+    assert o.count("propose_") == o.count("propose_ops_action")
+    assert "NGƯỜI KHÁC" in o and "không có công cụ để duyệt" in o
+    assert "không có dữ liệu kinh doanh" in o
 
 
 async def test_admin_turn_runs_with_the_admin_persona():

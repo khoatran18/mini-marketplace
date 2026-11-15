@@ -192,10 +192,20 @@ func TestAllowsActionIsPerRole(t *testing.T) {
 }
 
 func TestAdminAndDevAreReadOnly(t *testing.T) {
-	for _, role := range []string{"admin", "operator"} {
-		if len(ActionsFor(role)) != 0 || CanPropose(role, "POST", "/admin/orders/12/cancel") {
-			t.Errorf("%s must have no proposable actions", role)
+	if len(ActionsFor("admin")) != 0 || CanPropose("admin", "POST", "/admin/orders/12/cancel") || CanPropose("admin", "POST", "/ops/proposals") {
+		t.Error("admin must have no proposable actions")
+	}
+	// the operator's agent may propose exactly one thing: record an ops proposal (ADR-45). Never a business write, never an approval.
+	ops := ActionsFor("operator")
+	if len(ops) != 1 || ops[0].Name != "ops_action" || !CanPropose("operator", "POST", "/ops/proposals") {
+		t.Errorf("operator actions = %+v, want only ops_action", ops)
+	}
+	for _, no := range []string{"/admin/orders/12/cancel", "/admin/payments/12/refund", "/ops/proposals/1/review", "/ops/proposals/1/decision", "/ops/proposals/1/execute", "/ops/proposals/1/executed"} {
+		if CanPropose("operator", "POST", no) {
+			t.Errorf("operator must not be able to propose %s", no)
 		}
+	}
+	for _, role := range []string{"admin", "operator"} {
 		for _, tool := range DefaultScopes[role] {
 			if tool.Method != "GET" || strings.Contains(tool.Path, "/accounts") || strings.HasPrefix(tool.Path, "/auth") {
 				t.Errorf("%s: %s %s must be a read outside accounts/auth", role, tool.Method, tool.Path)
@@ -260,5 +270,28 @@ func TestEveryQueryParamOfAToolIsReadByAHandler(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// The ops_action body carries `params` as a nested object; every nested param must be a body param, and the action ids must be the catalog's.
+func TestOpsActionShape(t *testing.T) {
+	a := ActionsFor("operator")[0]
+	have := map[string]ToolParam{}
+	for _, p := range a.Params {
+		have[p.Name] = p
+		if p.Nest != "" && (p.In != "body" || p.Nest != "params") {
+			t.Errorf("%s: Nest %q only makes sense for a body param under params", p.Name, p.Nest)
+		}
+	}
+	for _, name := range []string{"action_id", "rationale"} {
+		if !have[name].Required || have[name].Nest != "" {
+			t.Errorf("%s must be a required top-level body param", name)
+		}
+	}
+	if got := strings.Join(have["action_id"].Enum, ","); got != "requeue_outbox,restart_service,scale_service,run_backfill,escalate_to_human" {
+		t.Errorf("action ids drifted from the ops-service catalog: %s", got)
+	}
+	if !strings.Contains(a.Summary, "{action_id}") {
+		t.Error("summary must show which action is proposed")
 	}
 }

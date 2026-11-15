@@ -967,3 +967,21 @@ Chạy thật cả bộ (4 luồng song song, không có lỗi ngoại lệ/429)
 - buyer-076/077 (đề xuất trả hàng): lần đầu `token_budget_exceeded` ở cuối lượt (đề xuất đã soạn đúng nhưng chạm trần buyer 25000 vì prompt dài hơn và `get_shop_rules` gọi hai lần). Nâng `token_budget_by_persona.buyer` lên 32000 (dev + prod): đạt cả hai.
 - buyer-064 ("mình đặt mấy đơn r"): vẫn hỏi lại thay vì `count_my_orders` (lần đầu còn timeout 60 giây của nhà cung cấp). Rule prompt "câu hỏi số lượng thì gọi công cụ ngay" chưa đủ. Lỗi hành vi nhỏ, chưa xử lý.
 - ai-agent đã build và deploy với trần 32000 và các rule buyer mới.
+
+### 16.25 Đường đề xuất vận hành cho operator (ADR-45) và việc RCA còn lại (2026-11-15)
+
+**Đã làm (offline, chưa chạy LLM):**
+- Gateway: `DefaultActions["operator"] = [ops_action]` (`POST /ops/proposals`), `readOnlyRoles = {admin}`, `/ops/proposals` vào danh sách `proposable`, `confirm` gắn ở route tạo đề xuất, tool đọc mới `ops_list_actions` (`GET /ops/actions` chuyển sang nhóm agent đọc được). `ToolParam.Nest` + kiểu `string_list`/`integer_list` cho body lồng `params`. Test: operator chỉ ký được `/ops/proposals` (duyệt, quyết định, thực thi, ghi nhận kết quả đều 403; admin không ký được gì), `TestOpsActionShape` (enum `action_id` khớp sổ ops-service).
+- ai-agent: `ParamSpec.nest`, `build_action` gom `params`, kiểm danh sách, câu tóm tắt liệt kê tham số lồng (người dùng thấy đúng thứ sẽ chạy), `from_` cho `run_backfill`. Prompt operator đổi rule 2 và thêm mục "Soạn đề xuất vận hành". Eval: `READ_ONLY = (admin,)`; operator có 6 câu propose (restart, scale, requeue, backfill, escalate, restart product) và các yêu cầu duyệt/đóng/silence/rollback/xoá outbox chuyển sang nhóm adversarial (vẫn phải bị từ chối); bộ eval nay 406 câu.
+- Chưa đo: chưa chạy LLM cho các câu propose mới của operator; chưa thử xác nhận thật trên UI (cần đăng nhập operator).
+
+**Việc RCA còn lại (bước 6, chưa làm), theo thứ tự đề xuất:**
+1. Vẽ đồ thị RCA rồi chốt LangGraph hay vòng lặp tay (§17 mục "Đầu bước 6").
+2. Điều phối `rca/`: nhận incident, `collect` (≤12 truy vấn, 5 s/truy vấn), `hypothesize` (≤3 giả thuyết, mỗi cái trích bằng chứng và "điều gì sẽ bác bỏ"), `decide` (≤3 vòng), `propose` (qua ops_action), `wait_human`, `verify`, `report` (xem §7.2).
+3. Ngân sách theo sự cố (lượt mô hình, truy vấn, thời gian); không đề xuất lại hành động đã thất bại khi không có bằng chứng mới; tối đa 2 đề xuất chờ cho một sự cố.
+4. `verify` sau khi hành động chạy: chờ 2-5 phút, kiểm lại đúng truy vấn đã chứng minh sự cố; không hồi phục thì không đóng sự cố.
+5. Màn hình RCA trên UI (dòng thời gian, bằng chứng, giả thuyết, đề xuất).
+6. Eval RCA: top-3 giả thuyết có chứa `ground_truth` của playbook không, hành động có đúng sổ không, số lượt gọi.
+7. Kịch bản gây lỗi (roadmap §8.2) trên MÔI TRƯỜNG THỬ, có lệnh dọn dẹp, bắt đầu từ 3 kịch bản rẻ (outbox kẹt, một service dừng, DB chậm): cần quyết định dùng stack thử riêng hay gây lỗi ngắn trên Swarm hiện tại, và cần người dùng đồng ý từng kịch bản.
+8. Cần từ người dùng: mật khẩu operator (và seller) để smoke thật (`OPERATOR_BOOTSTRAP_*` trong `deploy/.env` đang trống); chọn mô hình cho role `dev_rca` (mạnh hơn, tốn hơn); đồng ý trước mỗi lần chạy LLM (CLAUDE.md).
+

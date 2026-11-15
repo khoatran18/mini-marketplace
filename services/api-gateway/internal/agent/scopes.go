@@ -30,10 +30,12 @@ type Action struct {
 }
 
 // ToolParam describes one input of a tool or action; In is "path", "query" or (actions only) "body".
+// Nest (actions only, body params) puts the value under that key of the body, e.g. Nest "params" gives {"params":{"service":"x"}}.
 type ToolParam struct {
 	Name        string   `json:"name"`
 	In          string   `json:"in"`
-	Type        string   `json:"type"` // string | integer | number
+	Type        string   `json:"type"` // string | integer | number | string_list | integer_list (lists: actions only)
+	Nest        string   `json:"nest,omitempty"`
 	Required    bool     `json:"required,omitempty"`
 	Description string   `json:"description,omitempty"`
 	Enum        []string `json:"enum,omitempty"`
@@ -194,6 +196,7 @@ var opsTools = []Tool{
 	{Name: "ops_outbox_dead", Method: "GET", Path: "/ops/outbox/:service/dead", Description: "Outbox events that failed for good in one service (order, product or payment).", Params: []ToolParam{
 		{Name: "service", In: "path", Type: "string", Required: true, Description: "service name, e.g. order-service"}, limitParam,
 	}},
+	{Name: "ops_list_actions", Method: "GET", Path: "/ops/actions", Description: "The closed catalog of operational actions (id, title, risk level observe/low/high, mode, parameters). Read it before proposing one: an action that is not in it cannot be proposed.", Params: nil},
 	{Name: "ops_list_proposals", Method: "GET", Path: "/ops/proposals", Description: "Ops proposals (actions waiting for a human review/approval, or already decided). Read only: nobody can approve or run one through the agent.", Params: []ToolParam{
 		{Name: "state", In: "query", Type: "string", Enum: []string{"pending", "accepted", "rejected", "needs_review", "alternative", "expired"}, Description: "pending = waiting for a human; accepted / rejected = decided; needs_review = the human asked for another look; alternative = the human chose a different action; expired = nobody decided in time"},
 		{Name: "incident_id", In: "query", Type: "integer", Description: "only proposals made for this incident"}, limitParam,
@@ -293,6 +296,9 @@ var DefaultActions = map[string][]Action{
 	},
 	"seller_admin":    sellerActions,
 	"seller_employee": sellerActions,
+	// operator: one action, "create an ops proposal". Confirming it only records a proposal at ops-service; a different human must still
+	// review and approve it, and only ops-service executes it (ADR-45).
+	"operator": {opsProposalAction},
 	// admin has no persona yet; the rows exist so the proposable list and its confirm gate stay covered by tests.
 	"admin": {
 		{Name: "cancel_order", Method: "POST", Path: "/admin/orders/:id/cancel", Summary: "Huỷ đơn #{id} (quản trị)", Description: "Cancel any order.", Params: []ToolParam{orderID, reasonParam}},
@@ -301,6 +307,30 @@ var DefaultActions = map[string][]Action{
 			{Name: "amount_minor", In: "body", Type: "integer", Required: true, Description: "positive amount in 1/100 VND"},
 			reasonParam,
 		}},
+	},
+}
+
+// opsActionIDs / opsActionServices mirror ops-service's closed catalog (services/ops-service/internal/actions/catalog.go); ops-service validates
+// every proposal against its own catalog, so a drift here makes the proposal fail with 400, never run something else.
+var (
+	opsActionIDs      = []string{"requeue_outbox", "restart_service", "scale_service", "run_backfill", "escalate_to_human"}
+	opsActionServices = []string{"api-gateway", "auth-service", "user-service", "product-service", "order-service", "payment-service", "analytics-service"}
+)
+
+var opsProposalAction = Action{
+	Name: "ops_action", Method: "POST", Path: "/ops/proposals", Summary: "Đề xuất vận hành: {action_id}",
+	Description: "Propose ONE operational action from the catalog (ops_list_actions). This only records a proposal for a human to review and approve; it runs nothing. Use only after you found the cause with evidence, and give that evidence.",
+	Params: []ToolParam{
+		{Name: "action_id", In: "body", Type: "string", Required: true, Enum: opsActionIDs, Description: "requeue_outbox: put DEAD outbox rows back (service + exactly one of ids / limit); restart_service: docker service update --force (service); scale_service: set replicas 1-5 (service + replicas); run_backfill: rebuild ClickHouse for up to 31 days (from + to); escalate_to_human: no automatic step, use when no playbook fits"},
+		{Name: "incident_id", In: "body", Type: "integer", Description: "the incident this proposal is for, when there is one"},
+		{Name: "rationale", In: "body", Type: "string", Required: true, Description: "why this action, in 1-3 sentences, based on the evidence"},
+		{Name: "evidence", In: "body", Type: "string_list", Description: "up to 5 short facts you saw (query name, value, time) that justify the action"},
+		{Name: "service", In: "body", Nest: "params", Type: "string", Enum: opsActionServices, Description: "for requeue_outbox (order-service, product-service or payment-service only), restart_service, scale_service"},
+		{Name: "replicas", In: "body", Nest: "params", Type: "integer", Description: "for scale_service: 1 to 5"},
+		{Name: "limit", In: "body", Nest: "params", Type: "integer", Description: "for requeue_outbox: how many dead rows (1-100); use this or ids, not both"},
+		{Name: "ids", In: "body", Nest: "params", Type: "integer_list", Description: "for requeue_outbox: exact outbox row ids (1-100 of them) from ops_outbox_dead; use this or limit, not both"},
+		{Name: "from", In: "body", Nest: "params", Type: "string", Description: "for run_backfill: first day YYYY-MM-DD"},
+		{Name: "to", In: "body", Nest: "params", Type: "string", Description: "for run_backfill: last day YYYY-MM-DD (at most 31 days after from)"},
 	},
 }
 
@@ -315,9 +345,9 @@ var sellerActions = []Action{
 	}},
 }
 
-// readOnlyRoles get read tools only: no propose_ tools are served and /ai/proposals refuses them, although DefaultActions keeps
+// readOnlyRoles get read tools only (the operator is not one: it may propose ops actions, ADR-45): no propose_ tools are served and /ai/proposals refuses them, although DefaultActions keeps
 // the admin rows so the proposable list and its confirm gate stay covered by tests. Remove a role here to let its agent propose.
-var readOnlyRoles = map[string]bool{"admin": true, "operator": true}
+var readOnlyRoles = map[string]bool{"admin": true}
 
 // ActionsFor returns the actions of a role's agent (nil for an unknown or read-only role).
 func ActionsFor(role string) []Action {

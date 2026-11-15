@@ -10,7 +10,7 @@ from urllib.parse import quote
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
 _PATH_VALUE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
-_TYPES: dict[str, Any] = {"string": str, "integer": int, "number": float}
+_TYPES: dict[str, Any] = {"string": str, "integer": int, "number": float, "string_list": list[str], "integer_list": list[int]}
 
 
 @dataclass(frozen=True)
@@ -21,6 +21,7 @@ class ParamSpec:
     required: bool = False
     description: str = ""
     enum: tuple[str, ...] = ()
+    nest: str = ""  # chỉ tham số body của hành động: đặt giá trị dưới khoá này của body (vd "params")
 
 
 @dataclass(frozen=True)
@@ -36,7 +37,7 @@ class ToolSpec:
         return ToolSpec(
             name=d["name"], method=d["method"], path=d["path"], description=d.get("description", ""),
             params=tuple(
-                ParamSpec(p["name"], p["in"], p.get("type", "string"), bool(p.get("required")), p.get("description", ""), tuple(p.get("enum") or ()))
+                ParamSpec(p["name"], p["in"], p.get("type", "string"), bool(p.get("required")), p.get("description", ""), tuple(p.get("enum") or ()), p.get("nest", ""))
                 for p in d.get("params") or []
             ),
         )
@@ -115,6 +116,7 @@ def build_action(spec: ActionSpec, args: dict[str, Any]) -> tuple[str, dict[str,
     từ chính các giá trị này nên luôn khớp với việc sẽ chạy (mô hình không tự viết câu người dùng đọc)."""
     path, _ = build_request(spec, {p.name: args.get(p.name) for p in spec.params if p.where == "path"})
     body: dict[str, Any] = {}
+    nested: dict[str, dict[str, Any]] = {}
     for p in spec.params:
         if p.where != "body":
             continue
@@ -125,10 +127,18 @@ def build_action(spec: ActionSpec, args: dict[str, Any]) -> tuple[str, dict[str,
             continue
         if p.type == "integer" and (not isinstance(v, int) or isinstance(v, bool) or v == 0):
             raise ValueError(f"{p.name} phải là số nguyên khác 0")
-        body[p.name] = v
-    shown = {k: (f"{v:+d}" if isinstance(v, int) and k == "delta" else v) for k, v in {**args, **body}.items() if v is not None}
+        if p.type.endswith("_list") and (not isinstance(v, list) or not v or len(v) > 100):
+            raise ValueError(f"{p.name} phải là danh sách có 1 đến 100 phần tử")
+        if p.nest:
+            nested.setdefault(p.nest, {})[p.name] = v
+        else:
+            body[p.name] = v
+    body.update(nested)
+    shown = {k: (f"{v:+d}" if isinstance(v, int) and k == "delta" else v) for k, v in {**args, **{k: v for k, v in body.items() if k not in nested}}.items() if v is not None}
     summary = spec.summary.format_map(_SafeDict(shown)) if spec.summary else spec.name
-    reason = body.get("reason")
+    for group in nested.values():  # giá trị lồng (vd params) luôn hiện ra ở câu người dùng đọc: họ thấy đúng thứ sẽ chạy
+        summary = f"{summary} ({', '.join(f'{k}={v}' for k, v in group.items())})"
+    reason = body.get("reason") or body.get("rationale")
     if reason:
         summary = f"{summary}. Lý do: {reason}"
     return path, (body or None), summary[:200]

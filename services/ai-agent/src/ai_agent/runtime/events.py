@@ -20,7 +20,7 @@ TOOL_LABELS = {
     "admin_list_orders": "Đang tra cứu đơn hàng…", "admin_get_order": "Đang xem đơn hàng…", "admin_list_payments": "Đang tra cứu thanh toán…",
     "admin_get_payment": "Đang xem thanh toán…", "admin_list_categories": "Đang xem danh mục…",
     "ops_list_incidents": "Đang xem sự cố…", "ops_get_incident": "Đang xem sự cố…", "ops_list_audit": "Đang xem nhật ký kiểm toán…",
-    "ops_outbox_dead": "Đang xem sự kiện lỗi…", "ops_list_proposals": "Đang xem đề xuất vận hành…", "ops_get_proposal": "Đang xem đề xuất vận hành…",
+    "ops_outbox_dead": "Đang xem sự kiện lỗi…", "ops_list_proposals": "Đang xem đề xuất vận hành…", "ops_list_actions": "Đang xem sổ hành động vận hành…", "ops_get_proposal": "Đang xem đề xuất vận hành…",
     "ops_list_playbooks": "Đang tìm playbook sự cố…", "ops_get_playbook": "Đang đọc playbook sự cố…",
     "ops_metrics_query": "Đang đọc số liệu hệ thống…", "ops_system_health": "Đang kiểm tra sức khoẻ hệ thống…", "data_health": "Đang kiểm tra luồng dữ liệu…",
 }
@@ -36,7 +36,7 @@ SOURCE_LABELS = {
     "analytics_funnel": "Báo cáo của shop", "analytics_low_stock": "Báo cáo của shop",
     "admin_list_orders": "Đơn hàng toàn sàn", "admin_get_order": "Đơn hàng toàn sàn", "admin_list_payments": "Thanh toán", "admin_get_payment": "Thanh toán",
     "admin_list_categories": "Danh mục", "ops_list_incidents": "Sự cố", "ops_get_incident": "Sự cố", "ops_list_audit": "Nhật ký kiểm toán",
-    "ops_outbox_dead": "Outbox lỗi", "ops_list_proposals": "Đề xuất vận hành", "ops_get_proposal": "Đề xuất vận hành", "ops_list_playbooks": "Playbook sự cố", "ops_get_playbook": "Playbook sự cố", "ops_metrics_query": "Số liệu hệ thống", "ops_system_health": "Sức khoẻ hệ thống", "data_health": "Luồng dữ liệu",
+    "ops_outbox_dead": "Outbox lỗi", "ops_list_proposals": "Đề xuất vận hành", "ops_list_actions": "Sổ hành động vận hành", "ops_get_proposal": "Đề xuất vận hành", "ops_list_playbooks": "Playbook sự cố", "ops_get_playbook": "Playbook sự cố", "ops_metrics_query": "Số liệu hệ thống", "ops_system_health": "Sức khoẻ hệ thống", "data_health": "Luồng dữ liệu",
 }
 
 
