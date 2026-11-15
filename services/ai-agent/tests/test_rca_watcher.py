@@ -52,7 +52,7 @@ def make(budget=None, brain=None, clock=None):
     async def graph_for(run):
         return build_graph(brain or ScriptedBrain(), FakeOps(), budget, checkpointer=saver, clock=clock)
 
-    runner = Runner(graph_for, runs, clock)
+    runner = Runner(graph_for, runs, clock, budget)
     return Watcher(runner, runs, ops, budget, clock), runs, ops, clock
 
 
@@ -284,3 +284,35 @@ async def test_run_token_histogram_observes_the_session_total_when_a_run_ends():
     ops.props[4] = prop(4, state="REJECTED")
     await w.tick()
     assert metrics.RCA_RUN_TOKENS._sum.get() == before + 1100
+
+
+async def test_daily_token_cap_stops_auto_runs_but_not_manual_ones():
+    from ai_agent import metrics
+
+    t = {"input_tokens": 900, "output_tokens": 100}
+    brain = ScriptedBrain(collect=[{"evidence": [], "queries": 0, "model_calls": 1, **t}] * 3)
+    w, runs, ops, clock = make(budget=Budget(daily_auto_runs=5, daily_tokens=1000), brain=brain)
+    ops.incidents = [inc(1)]
+    assert (await w.tick())["started"] == 1
+    assert (await runs.latest(1))["tokens"] >= 1000  # tổng token của phiên được ghi vào sổ
+    hits = metrics.RCA_TOKEN_CAP_HITS._value.get()
+    ops.incidents = [inc(2)]
+    assert (await w.tick())["started"] == 0 and await runs.latest(2) is None
+    assert metrics.RCA_TOKEN_CAP_HITS._value.get() == hits + 1
+    await w.runner.start(inc(2), "manual:operator:1")  # bấm tay không bị trần chặn
+    assert await runs.latest(2) is not None
+
+
+async def test_cost_is_computed_from_the_configured_prices_and_zero_price_means_off():
+    from ai_agent import metrics
+
+    assert Budget(usd_per_mtok_in=2.0, usd_per_mtok_out=10.0).cost_usd(500_000, 100_000) == pytest.approx(2.0)
+    assert Budget().cost_usd(500_000, 100_000) == 0.0
+    before = metrics.RCA_COST_USD._value.get()
+    t = {"input_tokens": 1_000_000, "output_tokens": 0}
+    brain = ScriptedBrain(report=[{"summary": "xong", "ready_to_close": True, "reason": "r", "model_calls": 1, **t}])
+    w, runs, ops, clock = make(brain=brain, budget=Budget(usd_per_mtok_in=0.5, daily_auto_runs=3))
+    await _to_approval(w, runs, ops)
+    ops.props[4] = prop(4, state="REJECTED")
+    await w.tick()
+    assert metrics.RCA_COST_USD._value.get() == pytest.approx(before + 0.5)

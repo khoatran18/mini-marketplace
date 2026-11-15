@@ -44,7 +44,7 @@ class RcaService:
         self.tokens = SystemTokens(gateway, system_key)
         self.ops = GatewayOps(gateway, self.tokens)
         self._brain_factory = brain_factory
-        self.runner = Runner(self._graph_for, runs, clock)
+        self.runner = Runner(self._graph_for, runs, clock, budget)
         self.watcher = Watcher(self.runner, runs, self.ops, budget, clock)
         self._sem = asyncio.Semaphore(max_concurrent)
         self._tasks: set[asyncio.Task] = set()

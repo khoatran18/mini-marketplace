@@ -81,6 +81,11 @@ class Watcher:
         now = self.clock()
         used = await self.runs.count_auto_since(now - DAY)
         n = 0
+        cap = self.budget.daily_tokens
+        if cap and await self.runs.tokens_since(now - DAY) >= cap:
+            metrics.RCA_TOKEN_CAP_HITS.inc()
+            logger.warning("rca watcher: daily token cap reached", extra={"cap": cap})
+            return 0
         for inc in await self.ops.open_incidents():
             if inc.get("severity") != "critical" or inc.get("state") != "open":
                 continue

@@ -8,6 +8,7 @@ from langgraph.types import Command
 
 from ai_agent import metrics
 from ai_agent.config.logging import get_logger
+from ai_agent.rca.budget import Budget
 
 logger = get_logger(__name__)
 
@@ -15,8 +16,8 @@ GraphFor = Callable[[dict[str, Any]], Awaitable[Any]]  # run -> đồ thị đã
 
 
 class Runner:
-    def __init__(self, graph_for: GraphFor, runs: Any, clock: Callable[[], float] = time.time) -> None:
-        self.graph_for, self.runs, self.clock = graph_for, runs, clock
+    def __init__(self, graph_for: GraphFor, runs: Any, clock: Callable[[], float] = time.time, budget: Budget | None = None) -> None:
+        self.graph_for, self.runs, self.clock, self.budget = graph_for, runs, clock, budget or Budget()
 
     async def begin(self, incident: dict[str, Any], trigger: str) -> dict[str, Any]:
         """Chỉ ghi phiên vào sổ (status running), chưa chạy: để API trả ngay rồi `go` chạy nền."""
@@ -36,9 +37,16 @@ class Runner:
         """Số liệu khi một phiên KẾT THÚC (không phải mỗi lần dừng chờ người)."""
         metrics.RCA_FINISHED.labels(outcome).inc()
         metrics.RCA_RUN_SECONDS.observe(max(0.0, self.clock() - float(run.get("created_at") or self.clock())))
-        used = int(values.get("input_tokens") or 0) + int(values.get("output_tokens") or 0)
-        if used:
-            metrics.RCA_RUN_TOKENS.observe(used)
+        tin, tout = int(values.get("input_tokens") or 0), int(values.get("output_tokens") or 0)
+        if tin + tout:
+            metrics.RCA_RUN_TOKENS.observe(tin + tout)
+            cost = self.budget.cost_usd(tin, tout)
+            if cost:
+                metrics.RCA_COST_USD.inc(cost)
+
+    @staticmethod
+    def _tokens(values: dict[str, Any]) -> int:
+        return int(values.get("input_tokens") or 0) + int(values.get("output_tokens") or 0)
 
     async def _drive(self, run: dict[str, Any], payload: Any) -> dict[str, Any]:
         try:
@@ -52,7 +60,7 @@ class Runner:
         if intr:
             v = intr[0].value
             if v.get("waiting") == "confirm":
-                return await self.runs.update(run["id"], status="waiting_confirm", draft=v.get("draft"), waiting_since=self.clock())
-            return await self.runs.update(run["id"], status="waiting_approval", proposal_id=v.get("proposal_id"), waiting_since=self.clock())
+                return await self.runs.update(run["id"], status="waiting_confirm", draft=v.get("draft"), tokens=self._tokens(result), waiting_since=self.clock())
+            return await self.runs.update(run["id"], status="waiting_approval", proposal_id=v.get("proposal_id"), tokens=self._tokens(result), waiting_since=self.clock())
         self._finished(run, result.get("outcome") or "unknown", result)
-        return await self.runs.update(run["id"], status="done", outcome=result.get("outcome"), report=result.get("report"), draft=result.get("draft"), waiting_since=None)
+        return await self.runs.update(run["id"], status="done", outcome=result.get("outcome"), report=result.get("report"), draft=result.get("draft"), tokens=self._tokens(result), waiting_since=None)

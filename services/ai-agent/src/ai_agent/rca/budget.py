@@ -22,6 +22,9 @@ class Budget:
     poll_interval_sec: int = 30
     auto_critical: bool = True    # alert critical: agent tự vào điều tra
     daily_auto_runs: int = 10     # trần số phiên tự chạy mỗi ngày
+    daily_tokens: int = 0         # trần tổng token (vào + ra) của MỌI phiên RCA trong 24 giờ; chạm trần thì không tự chạy phiên mới (0 = không giới hạn)
+    usd_per_mtok_in: float = 0.0  # đơn giá cho 1 triệu token vào; 0 = không quy ra tiền
+    usd_per_mtok_out: float = 0.0
 
     @classmethod
     def from_config(cls, cfg: Config | dict[str, Any] | None) -> "Budget":
@@ -29,6 +32,9 @@ class Budget:
         base = cls()
         fields = {k: type(getattr(base, k))(raw[k]) for k in cls.__dataclass_fields__ if k in raw}
         return cls(**fields)
+
+    def cost_usd(self, input_tokens: int, output_tokens: int) -> float:
+        return (input_tokens * self.usd_per_mtok_in + output_tokens * self.usd_per_mtok_out) / 1_000_000
 
     def exceeded(self, state: dict[str, Any], now: float) -> str | None:
         """Tên giới hạn đã chạm (để ghi vào dòng thời gian), None nếu còn."""

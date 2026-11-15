@@ -18,6 +18,7 @@ class RunStore(Protocol):
     async def waiting(self) -> list[dict[str, Any]]: ...
     async def update(self, run_id: int, **fields: Any) -> dict[str, Any]: ...
     async def count_auto_since(self, since: float) -> int: ...
+    async def tokens_since(self, since: float) -> int: ...
     async def recent(self, incident_id: int | None = None, limit: int = 30) -> list[dict[str, Any]]: ...
     async def fail_running(self) -> int: ...
 
@@ -30,7 +31,7 @@ class MemoryRunStore:
     async def create(self, incident_id: int, trigger: str) -> dict[str, Any]:
         rid = len(self.rows) + 1
         row = {"id": rid, "incident_id": incident_id, "thread_id": f"inc-{incident_id}-{rid}", "trigger": trigger, "status": "running", "draft": None,
-               "proposal_id": None, "waiting_since": None, "outcome": None, "report": None, "created_at": self._clock()}
+               "proposal_id": None, "waiting_since": None, "outcome": None, "report": None, "tokens": 0, "created_at": self._clock()}
         self.rows[rid] = row
         return dict(row)
 
@@ -63,6 +64,9 @@ class MemoryRunStore:
     async def count_auto_since(self, since: float) -> int:
         return sum(1 for r in self.rows.values() if r["trigger"] == "auto" and r["created_at"] >= since)
 
+    async def tokens_since(self, since: float) -> int:
+        return sum(int(r.get("tokens") or 0) for r in self.rows.values() if r["created_at"] >= since)
+
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS ai_rca_runs (
@@ -76,15 +80,17 @@ CREATE TABLE IF NOT EXISTS ai_rca_runs (
     waiting_since double precision,
     outcome text,
     report jsonb,
+    tokens bigint NOT NULL DEFAULT 0,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE ai_rca_runs ADD COLUMN IF NOT EXISTS tokens bigint NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS ai_rca_runs_incident_idx ON ai_rca_runs (incident_id, id DESC);
 CREATE INDEX IF NOT EXISTS ai_rca_runs_status_idx ON ai_rca_runs (status) WHERE status IN ('waiting_confirm', 'waiting_approval');
 """
-_COLS = "id, incident_id, thread_id, trigger, status, draft, proposal_id, waiting_since, outcome, report, extract(epoch from created_at) AS created_at"
+_COLS = "id, incident_id, thread_id, trigger, status, draft, proposal_id, waiting_since, outcome, report, tokens, extract(epoch from created_at) AS created_at"
 _JSON = ("draft", "report")
-_FIELDS = {"thread_id", "status", "draft", "proposal_id", "waiting_since", "outcome", "report"}
+_FIELDS = {"thread_id", "status", "draft", "proposal_id", "waiting_since", "outcome", "report", "tokens"}
 SCHEMA_VERSION = 2  # ai_agent_schema: 1 = bảng chat (store/postgres.py), 2 = ai_rca_runs
 
 
@@ -158,3 +164,7 @@ class PostgresRunStore:
     async def count_auto_since(self, since: float) -> int:
         async with self._pool.acquire() as con:
             return int(await con.fetchval("SELECT count(*) FROM ai_rca_runs WHERE trigger = 'auto' AND created_at >= to_timestamp($1)", since))
+
+    async def tokens_since(self, since: float) -> int:
+        async with self._pool.acquire() as con:
+            return int(await con.fetchval("SELECT coalesce(sum(tokens), 0) FROM ai_rca_runs WHERE created_at >= to_timestamp($1)", since))

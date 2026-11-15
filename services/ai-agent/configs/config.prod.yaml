@@ -133,6 +133,9 @@ rca:
   verify_wait_sec: 180        # chờ sau khi hành động chạy xong rồi mới verify
   wait_timeout_sec: 1800      # chờ người (xác nhận, duyệt) tối đa 30 phút
   poll_interval_sec: 30       # bộ theo dõi hỏi ops-service (không gọi LLM)
+  daily_tokens: 0             # trần tổng token (vào + ra) của mọi phiên RCA trong 24 giờ; chạm trần thì không tự chạy phiên mới (bấm tay vẫn chạy). 0 = không giới hạn
+  usd_per_mtok_in: 0          # đơn giá USD cho 1 triệu token vào, để quy ra tiền (mm_ai_rca_cost_usd_total); 0 = không tính
+  usd_per_mtok_out: 0
   auto_critical: true         # alert critical: agent tự vào điều tra (bằng danh tính hệ thống, ADR-47)
   daily_auto_runs: 10         # trần số phiên tự chạy mỗi ngày
 

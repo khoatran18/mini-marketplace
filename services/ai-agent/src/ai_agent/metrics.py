@@ -25,6 +25,8 @@ RCA_RUN_SECONDS = Histogram("mm_ai_rca_run_duration_seconds", "Từ lúc bắt �
                             buckets=(30, 60, 120, 300, 600, 1800, 3600, 7200, 21600))
 RCA_RUN_TOKENS = Histogram("mm_ai_rca_run_tokens", "Tổng token (vào + ra) của một phiên RCA đã kết thúc", registry=REGISTRY,
                            buckets=(5_000, 10_000, 20_000, 40_000, 80_000, 160_000, 320_000))
+RCA_COST_USD = Counter("mm_ai_rca_cost_usd_total", "Chi phí ước tính (USD) của các phiên RCA đã kết thúc, theo đơn giá trong config (rca.usd_per_mtok_*; 0 = không tính)", registry=REGISTRY)
+RCA_TOKEN_CAP_HITS = Counter("mm_ai_rca_token_cap_hits_total", "Số lần bộ theo dõi bỏ qua việc tự chạy phiên mới vì chạm trần token 24 giờ (rca.daily_tokens)", registry=REGISTRY)
 RCA_WAITING = Gauge("mm_ai_rca_runs_waiting", "Số phiên RCA đang chờ người, theo trạng thái (waiting_confirm, waiting_approval)", ["status"], registry=REGISTRY)
 # Nhịp tim của bộ theo dõi: có nhãn nên chỉ xuất hiện sau tick đầu tiên (RCA tắt thì không có mẫu nào, cảnh báo không bắn nhầm).
 RCA_WATCHER_LAST_TICK = Gauge("mm_ai_rca_watcher_last_tick_timestamp_seconds", "Thời điểm (epoch giây) tick thành công gần nhất của bộ theo dõi RCA", ["watcher"], registry=REGISTRY)
