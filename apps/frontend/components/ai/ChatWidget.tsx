@@ -6,6 +6,7 @@ import { audienceOf, suggestionsFor, AI_BACKEND_READY } from '../../lib/ai-chat'
 import { useFeatureFlags } from '../../lib/features';
 import { Icon } from '../layout/Icon';
 import { ChatCards, visibleCards } from './ChatCards';
+import { ChatHistory } from './ChatHistory';
 import { ChatMarkdown } from './ChatMarkdown';
 import { ChatProposals } from './ChatProposals';
 import { useChat } from './ChatProvider';
@@ -49,7 +50,8 @@ export function AssistantButton() {
 
 function Panel({ mode, text, setText }: { mode: 'drawer' | 'floating'; text: string; setText: (value: string) => void }) {
   const { role } = useAuth();
-  const { messages, busy, send, stop, reset, closeChat, draft, clearDraft, service, confirm, dismiss } = useChat();
+  const { messages, busy, send, stop, reset, closeChat, draft, clearDraft, service, confirm, dismiss, openConversation } = useChat();
+  const [showHistory, setShowHistory] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -68,6 +70,7 @@ function Panel({ mode, text, setText }: { mode: 'drawer' | 'floating'; text: str
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
     if (!text.trim() || busy) return;
+    setShowHistory(false);
     void send(text);
     setText('');
   };
@@ -99,8 +102,11 @@ function Panel({ mode, text, setText }: { mode: 'drawer' | 'floating'; text: str
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <button type="button" onClick={() => setShowHistory((v) => !v)} aria-pressed={showHistory} className="rounded-md px-2 py-1 text-xs font-semibold text-muted hover:bg-surface2">
+            Lịch sử
+          </button>
           {messages.length > 0 ? (
-            <button type="button" onClick={reset} className="rounded-md px-2 py-1 text-xs font-semibold text-muted hover:bg-surface2">
+            <button type="button" onClick={() => { reset(); setShowHistory(false); }} className="rounded-md px-2 py-1 text-xs font-semibold text-muted hover:bg-surface2">
               Cuộc mới
             </button>
           ) : null}
@@ -111,7 +117,9 @@ function Panel({ mode, text, setText }: { mode: 'drawer' | 'floating'; text: str
       </header>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
-        {messages.length === 0 ? (
+        {showHistory ? (
+          <ChatHistory onPick={openConversation} onClose={() => setShowHistory(false)} />
+        ) : messages.length === 0 ? (
           <div className="grid gap-3">
             <p className="text-sm text-muted">Xin chào! Hỏi mình về đơn hàng, sản phẩm hoặc số liệu của bạn. Mình chỉ tra cứu và giải thích, không tự thực hiện thao tác thay bạn.</p>
             {suggestions.length > 0 ? (

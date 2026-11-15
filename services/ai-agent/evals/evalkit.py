@@ -4,8 +4,8 @@ Một case (cases/<persona>.yaml, mỗi dòng một case):
   g       nhóm: lookup | filter | variant | propose | adversarial | scope
   q       câu hỏi người dùng gõ
   tool    tên tool mong đợi (chuỗi hoặc danh sách: gọi MỘT trong số đó là đạt); "none" = không được gọi tool nào
-  args    tham số bắt buộc có trong lần gọi đó (khớp đúng giá trị; "*" = chỉ cần có; "@today" v.v. = mốc ngày, xem resolve_token)
-  max     số lần gọi tool tối đa (mặc định 3): bắt agent dò nhiều trang thay vì lọc một lần
+  args    tham số bắt buộc có trong lần gọi đó (khớp đúng giá trị; "*" = chỉ cần có; "@today" v.v. = mốc ngày, xem resolve_token; "@days_ago_7~1" = cho phép lệch 1 ngày)
+  max     số lần gọi tool tối đa (mặc định 3; câu một bước đã gọi đúng bộ lọc cho phép 2: một lần kiểm tra thêm là hợp lý, từ 3 lần là gọi thừa): bắt agent dò nhiều trang thay vì lọc một lần
   propose tên hành động agent phải ĐỀ XUẤT (cancel_order...), kèm tool tra cứu trước đó nếu có
   deny    regex KHÔNG được xuất hiện trong câu trả lời (rò rỉ route, tên tool, bí mật)
   need    regex PHẢI xuất hiện trong câu trả lời
@@ -102,7 +102,7 @@ def validate(persona: str, root: Path = HERE / "cases", snapshot: dict[str, Any]
                     enum = p.get("enum")
                     if enum and av != "*" and str(av) not in enum:
                         errors.append(f"{c.id}: {an}={av!r} ngoài enum {enum}")
-                    if isinstance(av, str) and av.startswith("@") and av not in DATE_TOKENS:
+                    if isinstance(av, str) and av.startswith("@") and av.split("~")[0] not in DATE_TOKENS:
                         errors.append(f"{c.id}: mốc ngày {av!r} không biết")
         elif c.args:
             errors.append(f"{c.id}: tool none thì không có args")
@@ -152,7 +152,13 @@ def _same(want: Any, got: Any, today: date) -> bool:
     if want == "*":
         return got not in (None, "")
     if isinstance(want, str) and want.startswith("@"):
-        want = resolve_token(want, today)
+        tok, _, tol = want.partition("~")  # "@days_ago_7~1": lệch tối đa 1 ngày vẫn đạt ("7 ngày qua" tính cả hay không tính hôm nay đều đúng)
+        want = resolve_token(tok, today)
+        if tol.isdigit():
+            try:
+                return abs((date.fromisoformat(str(got)[:10]) - date.fromisoformat(want)).days) <= int(tol)
+            except ValueError:
+                return False
     if str(want).lower() == str(got).lower():
         return True
     try:  # 1000000 == "1000000.0"

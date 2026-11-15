@@ -129,6 +129,30 @@ class PostgresStore:
             await con.execute("UPDATE ai_conversations SET active_run_id = NULL, active_since = NULL, updated_at = now() "
                               "WHERE id = $1 AND active_run_id = $2", conv_id, turn.run_id)
 
+    async def list_conversations(self, *, user_id: int | None, role: str | None = None, limit: int = 30) -> list[dict]:
+        rows = await self._pool.fetch(
+            "SELECT c.id, c.user_id, c.role, c.created_at, c.updated_at, "
+            "(SELECT content FROM ai_messages m WHERE m.conversation_id = c.id AND m.role = 'user' ORDER BY m.id LIMIT 1) AS title, "
+            "(SELECT count(*) FROM ai_messages m WHERE m.conversation_id = c.id) AS messages "
+            "FROM ai_conversations c WHERE ($1::bigint IS NULL OR c.user_id = $1) AND ($2::text IS NULL OR c.role = $2) "
+            "ORDER BY c.updated_at DESC LIMIT $3", user_id, role, int(limit))
+        return [{"id": str(r["id"]), "user_id": r["user_id"], "role": r["role"], "title": r["title"] or "", "messages": int(r["messages"]),
+                 "created_at": r["created_at"].timestamp(), "updated_at": r["updated_at"].timestamp()} for r in rows]
+
+    async def get_conversation(self, conversation_id: str, *, user_id: int | None) -> dict:
+        try:
+            cid = uuid.UUID(conversation_id)
+        except ValueError:
+            raise NotFound(conversation_id) from None
+        conv = await self._pool.fetchrow("SELECT id, user_id, role, created_at, updated_at FROM ai_conversations WHERE id = $1", cid)
+        if conv is None or (user_id is not None and conv["user_id"] != user_id):
+            raise NotFound(conversation_id)
+        rows = await self._pool.fetch("SELECT role, content, created_at FROM (SELECT id, role, content, created_at FROM ai_messages WHERE conversation_id = $1 "
+                                      "ORDER BY id DESC LIMIT 200) t ORDER BY id", conv["id"])
+        return {"id": str(conv["id"]), "user_id": conv["user_id"], "role": conv["role"], "created_at": conv["created_at"].timestamp(),
+                "updated_at": conv["updated_at"].timestamp(),
+                "messages": [{"role": r["role"], "content": r["content"], "created_at": r["created_at"].timestamp()} for r in rows]}
+
     async def tokens_used_today(self, user_id: int) -> int:
         """Token (vào + ra) của người dùng từ 00:00 hôm nay theo giờ nền tảng (Asia/Ho_Chi_Minh). Lượt đang chạy chưa tính."""
         return int(await self._pool.fetchval(

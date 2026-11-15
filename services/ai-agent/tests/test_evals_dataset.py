@@ -90,3 +90,15 @@ def test_every_tool_in_the_table_has_a_friendly_label_and_source():
     assert not missing, f"thiếu TOOL_LABELS: {missing}"
     missing = sorted(n for n in names if n not in events.SOURCE_LABELS and not n.startswith("admin_analytics_"))
     assert not missing, f"thiếu SOURCE_LABELS: {missing}"
+
+
+def test_date_token_tolerance():
+    from datetime import date
+
+    import evalkit
+
+    today = date(2026, 11, 15)
+    assert evalkit._same("@days_ago_7~1", "2026-11-09", today)      # 6 ngày trước: vẫn đạt
+    assert evalkit._same("@days_ago_7~1", "2026-11-08", today)
+    assert not evalkit._same("@days_ago_7~1", "2026-11-05", today)
+    assert not evalkit._same("@days_ago_7", "2026-11-09", today)    # không có ~N thì khớp đúng

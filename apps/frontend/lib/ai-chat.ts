@@ -236,3 +236,52 @@ export function suggestionsFor(role: Role | null): string[] {
       return [];
   }
 }
+
+/** One row of the chat history list (text only: ai-agent keeps the user's text and the final answer, masked, for 30 days). */
+export interface ConversationSummary {
+  id: string;
+  user_id: number;
+  role: string;
+  /** first user message of the conversation */
+  title: string;
+  messages: number;
+  /** epoch seconds */
+  created_at: number;
+  updated_at: number;
+}
+
+export interface ConversationDetail {
+  id: string;
+  user_id: number;
+  role: string;
+  created_at: number;
+  updated_at: number;
+  messages: { role: 'user' | 'assistant'; content: string; created_at: number }[];
+}
+
+async function getJson<T>(path: string, token: string | null): Promise<T> {
+  const response = await fetch(`${getBaseUrl()}${path}`, { cache: 'no-store', headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!response.ok) {
+    const known: Record<number, string> = { 401: 'Phiên đăng nhập hết hạn.', 403: 'Bạn không có quyền xem mục này.', 404: 'Không tìm thấy cuộc trò chuyện.', 429: 'Bạn thao tác hơi nhanh, đợi một chút.', 503: 'Trợ lý tạm thời không khả dụng.' };
+    throw new ChatHttpError(known[response.status] ?? 'Không tải được lịch sử.', response.status);
+  }
+  return (await response.json()) as T;
+}
+
+/** Your own conversations (`mine`) or, for admin only, everyone's (`admin`, optional role / user filter). */
+export async function fetchConversations(token: string | null, scope: 'mine' | 'admin' = 'mine', params: { role?: string; userId?: string; limit?: number } = {}): Promise<ConversationSummary[]> {
+  const q = new URLSearchParams();
+  if (params.limit) q.set('limit', String(params.limit));
+  if (scope === 'admin') {
+    if (params.role) q.set('role', params.role);
+    if (params.userId) q.set('user_id', params.userId);
+  }
+  const base = scope === 'admin' ? '/admin/ai/conversations' : '/ai/conversations';
+  const body = await getJson<{ items: ConversationSummary[] }>(`${base}${q.size ? `?${q}` : ''}`, token);
+  return body.items ?? [];
+}
+
+export async function fetchConversation(token: string | null, id: string, scope: 'mine' | 'admin' = 'mine'): Promise<ConversationDetail> {
+  const base = scope === 'admin' ? '/admin/ai/conversations' : '/ai/conversations';
+  return getJson<ConversationDetail>(`${base}/${encodeURIComponent(id)}`, token);
+}

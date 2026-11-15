@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import AsyncIterator
+from datetime import datetime, timezone
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -17,7 +18,7 @@ from ai_agent.runtime import events
 from ai_agent.runtime.agent_factory import AgentRuntime
 from ai_agent.runtime.context import RunContext, reset_run, set_run
 from ai_agent.runtime.sse_adapter import BudgetExceeded, PumpResult, pump
-from ai_agent.store.base import Store, Turn
+from ai_agent.store.base import PLATFORM_TZ, Store, Turn
 from ai_agent.tools.registry import TurnAborted
 
 logger = get_logger(__name__)
@@ -35,6 +36,23 @@ class _Failed:
 
 def _error(ctx: RunContext, code: str, message: str) -> dict[str, Any]:
     return events.make(events.ERROR, ctx.run_id, code=code, message=message)
+
+
+_WEEKDAYS = ("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật")
+
+
+def today_line(now: datetime | None = None) -> str:
+    """Ngày hiện tại theo giờ nền tảng, đặt ở đầu tin của người dùng: mô hình không có đồng hồ nên "hôm nay / tháng này / tuần này"
+    sẽ bị đoán sai nếu không nói. Agent được dựng sẵn và dùng chung nhiều ngày nên ngày KHÔNG nằm trong system prompt."""
+    t = (now or datetime.now(timezone.utc)).astimezone(PLATFORM_TZ)
+    return f"[Hôm nay là {_WEEKDAYS[t.weekday()]}, {t.strftime('%Y-%m-%d')} (giờ Việt Nam).]"
+
+
+def _turn_budget(limits, persona_name: str) -> int:
+    """Trần token một lượt: limits.token_budget_by_persona.<persona> nếu có, không thì token_budget_per_turn (admin/operator có prompt và kết quả tool lớn hơn)."""
+    table = limits.get("token_budget_by_persona")
+    over = int(table.get(persona_name, 0) or 0) if table is not None else 0
+    return over or int(limits.token_budget_per_turn)
 
 
 async def run_turn(rt: AgentRuntime, store: Store, persona: Persona, ctx: RunContext, turn: Turn, text: str) -> AsyncIterator[dict[str, Any]]:
@@ -56,12 +74,12 @@ async def run_turn(rt: AgentRuntime, store: Store, persona: Persona, ctx: RunCon
             return
 
         leak = LeakFilter(rt.tool_names(ctx.role)) if persona.hide_internals else None
-        msgs = [HumanMessage(t) if r == "user" else AIMessage(t) for r, t in turn.history] + [HumanMessage(text)]
+        msgs = [HumanMessage(t) if r == "user" else AIMessage(t) for r, t in turn.history] + [HumanMessage(f"{today_line()}\n{text}")]
 
         async def drive() -> None:
             try:
                 stream = agent.astream({"messages": msgs}, stream_mode=["messages", "updates"], config={"recursion_limit": 40})
-                res = await pump(stream, ctx, int(limits.token_budget_per_turn), leak)
+                res = await pump(stream, ctx, _turn_budget(limits, persona.name), leak)
                 await ctx.events.put(_Final(res))
             except asyncio.CancelledError:
                 raise

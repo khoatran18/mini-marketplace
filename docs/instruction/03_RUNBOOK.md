@@ -441,3 +441,10 @@ Gateway ký token agent (sống ~150 s) và gói đề xuất (sống 5 phút) b
 3. Gỡ khoá cũ: `AGENT_TOKEN_KEYS=k2:<mới>`, deploy lại. Token còn sót của `k1` bị 401.
 `kid` không dùng lại cho khoá khác. Xoay ngay khi nghi lộ (nếu nghi lộ: bỏ khoá cũ luôn, chấp nhận gói đang chờ bị 401, người dùng bấm đề xuất lại) và khoảng 90 ngày một lần. Test `TestRotationKeepsOldTokensUntilTheKeyIsDropped` giữ hành vi này.
 **Tra một hành động do agent:** `SELECT * FROM order_domain_events WHERE agent_run_id = '<run id>'` (tương tự `payment_domain_events`, `product_domain_events`); log gateway có `agent run started` (giờ bắt đầu, người dùng) và `agent action confirmed by user` (route, đề xuất) cùng `agent_run_id`.
+
+## 19. ai-agent ngừng hoạt động (`AIAgentDown`)
+ai-agent (job Prometheus `ai-agent`, cổng 8090) chỉ phục vụ chat AI; chết thì `/ai/chat` trả "Trợ lý tạm thời không khả dụng", phần bán hàng không bị ảnh hưởng nên cảnh báo chỉ ở mức `warning`.
+1. `docker service ps marketplace_ai-agent` và `docker service logs marketplace_ai-agent --tail 100`.
+2. Có exception lúc khởi động hoặc 0 replica: `docker service update --force marketplace_ai-agent` (an toàn, hội thoại nằm trong Postgres).
+3. Service chạy mà chat vẫn lỗi: xem `mm_ai_llm_errors_total` (khoá/hạn mức nhà cung cấp mô hình), rồi `GET /ops/system/health` (gateway có tới được `/ready` không).
+Playbook cho agent: `docs/playbooks/ai-agent.yml`.

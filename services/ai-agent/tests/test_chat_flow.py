@@ -59,6 +59,7 @@ async def test_token_budget_stops_the_turn():
     c = cfg()
     d = c.to_dict(masked=False)
     d["limits"]["token_budget_per_turn"] = 1
+    d["limits"]["token_budget_by_persona"] = {}  # trần riêng theo persona (config thật) sẽ che trần chung
     rt, store, personas = make(config=Config(d))
     evs, _ = await collect(rt, store, personas["buyer"])
     assert evs[-1]["event"] == events.ERROR and evs[-1]["data"]["code"] == "token_budget_exceeded"
@@ -126,3 +127,32 @@ class _SilentAgent:
     async def astream(self, *_a, **_k):
         if False:
             yield None
+
+
+def test_turn_budget_per_persona_override():
+    from ai_agent.runtime.chat import _turn_budget
+
+    class L(dict):
+        token_budget_per_turn = 20000
+
+    limits = L({"token_budget_by_persona": {"admin": 45000}})
+    assert _turn_budget(limits, "admin") == 45000
+    assert _turn_budget(limits, "buyer") == 20000
+    assert _turn_budget(L(), "admin") == 20000
+
+
+def test_today_line_uses_platform_timezone_and_weekday():
+    from datetime import datetime, timezone
+
+    from ai_agent.runtime.chat import today_line
+
+    # 2026-11-13 18:00 UTC = 2026-11-14 01:00 giờ Việt Nam (Thứ Bảy)
+    assert today_line(datetime(2026, 11, 13, 18, 0, tzinfo=timezone.utc)) == "[Hôm nay là Thứ Bảy, 2026-11-14 (giờ Việt Nam).]"
+
+
+def test_every_persona_with_a_budget_override_is_a_real_persona():
+    """token_budget_by_persona chỉ được nêu persona có thật, ở cả hai config (gõ sai tên thì trần riêng âm thầm không có tác dụng)."""
+    for env in ("dev", "prod"):
+        d = cfg(env).to_dict(masked=False)
+        assert set(d["limits"].get("token_budget_by_persona", {})) <= set(d["personas"]), env
+        assert d["limits"]["token_budget_by_persona"] == cfg("dev").to_dict(masked=False)["limits"]["token_budget_by_persona"]  # dev và prod cùng giá trị

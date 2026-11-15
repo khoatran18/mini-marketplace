@@ -299,6 +299,7 @@
       "name": "status",
       "in": "query",
       "type": "string",
+      "description": "PENDING just created; AWAITING_PAYMENT online order not paid yet; CONFIRMED COD order accepted; PAID online order paid; CONFIRMED and PAID both mean accepted and not shipped yet; SHIPPED handed to the carrier; DELIVERED received; REFUND_REQUESTED the buyer asked to return, waiting for the shop; REFUNDED return approved and refunded; CANCELED cancelled; EXPIRED unpaid until the payment deadline; FAILED could not be created",
       "enum": [
        "PENDING",
        "AWAITING_PAYMENT",
@@ -317,6 +318,7 @@
       "name": "payment_method",
       "in": "query",
       "type": "string",
+      "description": "COD = cash on delivery; MOCK_CARD = card; MOCK_WALLET = e-wallet; MOCK_BANK_TRANSFER = bank transfer (all payments are simulated)",
       "enum": [
        "COD",
        "MOCK_CARD",
@@ -328,6 +330,7 @@
       "name": "payment_status",
       "in": "query",
       "type": "string",
+      "description": "UNPAID = money not collected yet; PAID = collected; REFUNDED = money returned",
       "enum": [
        "UNPAID",
        "PAID",
@@ -413,6 +416,7 @@
       "name": "status",
       "in": "query",
       "type": "string",
+      "description": "REQUIRES_ACTION waiting for the payer; PROCESSING sent, waiting for the result; SUCCEEDED money collected; FAILED gave up after repeated errors; CANCELED by the buyer; EXPIRED past the deadline; PARTIALLY_REFUNDED / REFUNDED part or all of the money returned",
       "enum": [
        "REQUIRES_ACTION",
        "PROCESSING",
@@ -428,6 +432,7 @@
       "name": "method",
       "in": "query",
       "type": "string",
+      "description": "MOCK_CARD = card; MOCK_WALLET = e-wallet; MOCK_BANK_TRANSFER = bank transfer (simulated).",
       "enum": [
        "MOCK_CARD",
        "MOCK_WALLET",
@@ -462,6 +467,7 @@
       "name": "sort",
       "in": "query",
       "type": "string",
+      "description": "default newest; amount_desc = largest payments first",
       "enum": [
        "newest",
        "oldest",
@@ -506,35 +512,19 @@
     "name": "admin_analytics_summary",
     "method": "GET",
     "path": "/admin/analytics/summary",
-    "description": "Platform KPIs for a period. Includes as_of and source.",
+    "description": "Platform KPIs for ONE period: revenue, refunds, net_revenue, gmv, orders_placed, orders_recognized, aov, canceled, expired, refunded, cancel_rate, plus the previous period of equal length. Default period is the last 30 days. Includes as_of and source.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      }
     ]
    },
@@ -542,35 +532,31 @@
     "name": "admin_analytics_timeseries",
     "method": "GET",
     "path": "/admin/analytics/timeseries",
-    "description": "Platform revenue/orders over time.",
+    "description": "Platform revenue, orders and refunds per time bucket (granularity) over the period. Use it for by-day / by-week / by-month questions; use admin_analytics_summary for one total.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      },
      {
       "name": "granularity",
       "in": "query",
       "type": "string",
+      "description": "size of one point in the series (default day). It does not choose the period: use from/to for that",
       "enum": [
        "hour",
        "day",
        "week",
        "month"
       ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
      }
     ]
    },
@@ -584,29 +570,19 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      },
      {
       "name": "limit",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "max rows to return"
      },
      {
       "name": "sort",
@@ -627,35 +603,19 @@
     "name": "admin_analytics_funnel",
     "method": "GET",
     "path": "/admin/analytics/funnel",
-    "description": "View -\u003e cart -\u003e order funnel.",
+    "description": "Distinct sessions per stage view -\u003e cart -\u003e checkout and the recognised orders, for the period, across the platform.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      }
     ]
    },
@@ -663,35 +623,13 @@
     "name": "admin_analytics_low_stock",
     "method": "GET",
     "path": "/admin/analytics/low-stock",
-    "description": "Low-stock report across stores.",
+    "description": "Low-stock report across stores (analytics, may lag): products out, low, or selling out within 7 days. Not tied to a period.",
     "params": [
-     {
-      "name": "from",
-      "in": "query",
-      "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "to",
-      "in": "query",
-      "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
      {
       "name": "limit",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "max rows to return"
      }
     ]
    },
@@ -699,35 +637,31 @@
     "name": "admin_analytics_traffic",
     "method": "GET",
     "path": "/admin/analytics/traffic",
-    "description": "Visits and sources.",
+    "description": "Page views, sessions, unique visitors, new vs returning visitors, a series per granularity and top pages/sources, for the period.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      },
      {
       "name": "granularity",
       "in": "query",
       "type": "string",
+      "description": "size of one point in the series (default day). It does not choose the period: use from/to for that",
       "enum": [
        "hour",
        "day",
        "week",
        "month"
       ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
      }
     ]
    },
@@ -735,35 +669,19 @@
     "name": "admin_analytics_payments",
     "method": "GET",
     "path": "/admin/analytics/payments",
-    "description": "Payment success/failure by method.",
+    "description": "Payment attempt outcomes by method, failure codes, refunds and orders awaiting payment, for the period. For individual payments use admin_list_payments.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      }
     ]
    },
@@ -771,35 +689,25 @@
     "name": "admin_analytics_search_terms",
     "method": "GET",
     "path": "/admin/analytics/search-terms",
-    "description": "Most searched terms and those with no result.",
+    "description": "Most searched terms and the terms that returned nothing, for the period.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      },
      {
       "name": "limit",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "max rows to return"
      }
     ]
    },
@@ -807,12 +715,13 @@
     "name": "ops_list_incidents",
     "method": "GET",
     "path": "/ops/incidents",
-    "description": "Incidents raised from alerts, newest first.",
+    "description": "Incidents opened automatically from firing alerts, newest first. Filter by state; the list already says which alert and how severe.",
     "params": [
      {
       "name": "state",
       "in": "query",
       "type": "string",
+      "description": "open = nobody has taken it yet; investigating = someone is working on it; resolved = finished (alert gone or closed)",
       "enum": [
        "open",
        "investigating",
@@ -850,12 +759,14 @@
      {
       "name": "subject_type",
       "in": "query",
-      "type": "string"
+      "type": "string",
+      "description": "what the decision was about, e.g. incident or proposal"
      },
      {
       "name": "subject_id",
       "in": "query",
-      "type": "string"
+      "type": "string",
+      "description": "id of that incident or proposal"
      },
      {
       "name": "limit",
@@ -896,6 +807,7 @@
       "name": "state",
       "in": "query",
       "type": "string",
+      "description": "pending = waiting for a human; accepted / rejected = decided; needs_review = the human asked for another look; alternative = the human chose a different action; expired = nobody decided in time",
       "enum": [
        "pending",
        "accepted",
@@ -908,7 +820,8 @@
      {
       "name": "incident_id",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "only proposals made for this incident"
      },
      {
       "name": "limit",
@@ -1047,7 +960,7 @@
     "name": "ops_system_health",
     "method": "GET",
     "path": "/ops/system/health",
-    "description": "Live health of every service."
+    "description": "Live readiness of every service right now (each one answers ok or not), one call for the whole system."
    },
    {
     "name": "data_health",
@@ -1061,7 +974,7 @@
     "name": "search_products",
     "method": "GET",
     "path": "/search",
-    "description": "Search active products by keyword, optionally by category.",
+    "description": "Search active products by keyword. Every filter (category, price range, brand, in stock, sort) is optional and can be combined in ONE call, so a price or brand condition is a parameter, not a second search.",
     "params": [
      {
       "name": "q",
@@ -1072,27 +985,32 @@
      {
       "name": "category_id",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "only this category (ids from list_categories)"
      },
      {
       "name": "price_min",
       "in": "query",
-      "type": "number"
+      "type": "number",
+      "description": "price at least this, in VND"
      },
      {
       "name": "price_max",
       "in": "query",
-      "type": "number"
+      "type": "number",
+      "description": "price at most this, in VND"
      },
      {
       "name": "brand",
       "in": "query",
-      "type": "string"
+      "type": "string",
+      "description": "exact brand name"
      },
      {
       "name": "in_stock",
       "in": "query",
       "type": "string",
+      "description": "true = only products that can be bought now",
       "enum": [
        "true",
        "false"
@@ -1102,6 +1020,7 @@
       "name": "sort",
       "in": "query",
       "type": "string",
+      "description": "default relevance; price_asc = cheapest first, price_desc = most expensive first",
       "enum": [
        "relevance",
        "price_asc",
@@ -1141,7 +1060,7 @@
     "name": "get_product_stock",
     "method": "GET",
     "path": "/products/:id/stock",
-    "description": "Available quantity of one product.",
+    "description": "Units available to buy right now for one product (large quantities are shown as a capped figure such as 20+).",
     "params": [
      {
       "name": "id",
@@ -1173,6 +1092,7 @@
       "name": "status",
       "in": "query",
       "type": "string",
+      "description": "PENDING just created; AWAITING_PAYMENT online order not paid yet; CONFIRMED COD order accepted; PAID online order paid; CONFIRMED and PAID both mean accepted and not shipped yet; SHIPPED handed to the carrier; DELIVERED received; REFUND_REQUESTED the buyer asked to return, waiting for the shop; REFUNDED return approved and refunded; CANCELED cancelled; EXPIRED unpaid until the payment deadline; FAILED could not be created",
       "enum": [
        "PENDING",
        "AWAITING_PAYMENT",
@@ -1191,6 +1111,7 @@
       "name": "payment_method",
       "in": "query",
       "type": "string",
+      "description": "COD = cash on delivery; MOCK_CARD = card; MOCK_WALLET = e-wallet; MOCK_BANK_TRANSFER = bank transfer (all payments are simulated)",
       "enum": [
        "COD",
        "MOCK_CARD",
@@ -1202,6 +1123,7 @@
       "name": "payment_status",
       "in": "query",
       "type": "string",
+      "description": "UNPAID = money not collected yet; PAID = collected; REFUNDED = money returned",
       "enum": [
        "UNPAID",
        "PAID",
@@ -1261,7 +1183,7 @@
     "name": "count_my_orders",
     "method": "GET",
     "path": "/orders/summary",
-    "description": "Number of the user's own orders per status."
+    "description": "Number of the user's own orders: how many orders are in each status (by_status); add them up for the overall count. One call answers 'how many orders' questions."
    },
    {
     "name": "get_my_order",
@@ -1295,12 +1217,13 @@
     "name": "ops_list_incidents",
     "method": "GET",
     "path": "/ops/incidents",
-    "description": "Incidents raised from alerts, newest first.",
+    "description": "Incidents opened automatically from firing alerts, newest first. Filter by state; the list already says which alert and how severe.",
     "params": [
      {
       "name": "state",
       "in": "query",
       "type": "string",
+      "description": "open = nobody has taken it yet; investigating = someone is working on it; resolved = finished (alert gone or closed)",
       "enum": [
        "open",
        "investigating",
@@ -1338,12 +1261,14 @@
      {
       "name": "subject_type",
       "in": "query",
-      "type": "string"
+      "type": "string",
+      "description": "what the decision was about, e.g. incident or proposal"
      },
      {
       "name": "subject_id",
       "in": "query",
-      "type": "string"
+      "type": "string",
+      "description": "id of that incident or proposal"
      },
      {
       "name": "limit",
@@ -1384,6 +1309,7 @@
       "name": "state",
       "in": "query",
       "type": "string",
+      "description": "pending = waiting for a human; accepted / rejected = decided; needs_review = the human asked for another look; alternative = the human chose a different action; expired = nobody decided in time",
       "enum": [
        "pending",
        "accepted",
@@ -1396,7 +1322,8 @@
      {
       "name": "incident_id",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "only proposals made for this incident"
      },
      {
       "name": "limit",
@@ -1535,7 +1462,7 @@
     "name": "ops_system_health",
     "method": "GET",
     "path": "/ops/system/health",
-    "description": "Live health of every service."
+    "description": "Live readiness of every service right now (each one answers ok or not), one call for the whole system."
    },
    {
     "name": "data_health",
@@ -1560,27 +1487,32 @@
      {
       "name": "q",
       "in": "query",
-      "type": "string"
+      "type": "string",
+      "description": "keywords in the product name"
      },
      {
       "name": "category_id",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "only this category"
      },
      {
       "name": "brand",
       "in": "query",
-      "type": "string"
+      "type": "string",
+      "description": "exact brand name"
      },
      {
       "name": "price_min",
       "in": "query",
-      "type": "number"
+      "type": "number",
+      "description": "price at least this, in VND"
      },
      {
       "name": "price_max",
       "in": "query",
-      "type": "number"
+      "type": "number",
+      "description": "price at most this, in VND"
      },
      {
       "name": "sort",
@@ -1665,7 +1597,8 @@
      {
       "name": "threshold",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "list products with at most this many units available; leave out to use each product's own low-stock threshold"
      }
     ]
    },
@@ -1679,6 +1612,7 @@
       "name": "status",
       "in": "query",
       "type": "string",
+      "description": "PENDING just created; AWAITING_PAYMENT online order not paid yet; CONFIRMED COD order accepted; PAID online order paid; CONFIRMED and PAID both mean accepted and not shipped yet; SHIPPED handed to the carrier; DELIVERED received; REFUND_REQUESTED the buyer asked to return, waiting for the shop; REFUNDED return approved and refunded; CANCELED cancelled; EXPIRED unpaid until the payment deadline; FAILED could not be created",
       "enum": [
        "PENDING",
        "AWAITING_PAYMENT",
@@ -1697,6 +1631,7 @@
       "name": "payment_method",
       "in": "query",
       "type": "string",
+      "description": "COD = cash on delivery; MOCK_CARD = card; MOCK_WALLET = e-wallet; MOCK_BANK_TRANSFER = bank transfer (all payments are simulated)",
       "enum": [
        "COD",
        "MOCK_CARD",
@@ -1708,6 +1643,7 @@
       "name": "payment_status",
       "in": "query",
       "type": "string",
+      "description": "UNPAID = money not collected yet; PAID = collected; REFUNDED = money returned",
       "enum": [
        "UNPAID",
        "PAID",
@@ -1767,7 +1703,7 @@
     "name": "count_store_orders",
     "method": "GET",
     "path": "/seller/orders/summary",
-    "description": "Number of the store's orders per status."
+    "description": "Number of the store's orders: how many orders are in each status (by_status); add them up for the overall count. One call answers 'how many orders' questions."
    },
    {
     "name": "get_store_order",
@@ -1787,35 +1723,19 @@
     "name": "analytics_summary",
     "method": "GET",
     "path": "/seller/analytics/summary",
-    "description": "Store KPIs for a period (revenue, orders...). Includes as_of and source.",
+    "description": "KPIs of the store for ONE period: revenue (goods, before refunds), refunds, net_revenue, gmv, orders_placed, orders_recognized, aov, canceled, expired, refunded, cancel_rate, plus the same figures for the previous period of equal length. Revenue counts orders PAID (online) or DELIVERED (COD). Default period is the last 30 days. Includes as_of and source.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      }
     ]
    },
@@ -1823,35 +1743,31 @@
     "name": "analytics_timeseries",
     "method": "GET",
     "path": "/seller/analytics/timeseries",
-    "description": "Store revenue/orders over time.",
+    "description": "Revenue, orders and refunds of the store per time bucket (granularity) over the period, empty buckets as 0. Use it for by-day / by-week / by-month questions; use analytics_summary for a single total.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      },
      {
       "name": "granularity",
       "in": "query",
       "type": "string",
+      "description": "size of one point in the series (default day). It does not choose the period: use from/to for that",
       "enum": [
        "hour",
        "day",
        "week",
        "month"
       ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
      }
     ]
    },
@@ -1865,29 +1781,19 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      },
      {
       "name": "limit",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "max rows to return"
      },
      {
       "name": "sort",
@@ -1908,35 +1814,19 @@
     "name": "analytics_funnel",
     "method": "GET",
     "path": "/seller/analytics/funnel",
-    "description": "View -\u003e cart -\u003e order funnel of the store.",
+    "description": "Distinct sessions per stage view -\u003e cart -\u003e checkout, and the recognised orders, for the period. The checkout stage is null for one store (not attributable).",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      }
     ]
    },
@@ -1944,35 +1834,13 @@
     "name": "analytics_low_stock",
     "method": "GET",
     "path": "/seller/analytics/low-stock",
-    "description": "Low-stock report from analytics (may lag Postgres; prefer list_low_stock for exact stock).",
+    "description": "Products that are out of stock, low, or would sell out within 7 days at the last 14 days' sales rate (analytics, may lag Postgres; prefer list_low_stock for exact stock). Not tied to a period.",
     "params": [
-     {
-      "name": "from",
-      "in": "query",
-      "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "to",
-      "in": "query",
-      "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
      {
       "name": "limit",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "max rows to return"
      }
     ]
    }
@@ -1993,27 +1861,32 @@
      {
       "name": "q",
       "in": "query",
-      "type": "string"
+      "type": "string",
+      "description": "keywords in the product name"
      },
      {
       "name": "category_id",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "only this category"
      },
      {
       "name": "brand",
       "in": "query",
-      "type": "string"
+      "type": "string",
+      "description": "exact brand name"
      },
      {
       "name": "price_min",
       "in": "query",
-      "type": "number"
+      "type": "number",
+      "description": "price at least this, in VND"
      },
      {
       "name": "price_max",
       "in": "query",
-      "type": "number"
+      "type": "number",
+      "description": "price at most this, in VND"
      },
      {
       "name": "sort",
@@ -2098,7 +1971,8 @@
      {
       "name": "threshold",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "list products with at most this many units available; leave out to use each product's own low-stock threshold"
      }
     ]
    },
@@ -2112,6 +1986,7 @@
       "name": "status",
       "in": "query",
       "type": "string",
+      "description": "PENDING just created; AWAITING_PAYMENT online order not paid yet; CONFIRMED COD order accepted; PAID online order paid; CONFIRMED and PAID both mean accepted and not shipped yet; SHIPPED handed to the carrier; DELIVERED received; REFUND_REQUESTED the buyer asked to return, waiting for the shop; REFUNDED return approved and refunded; CANCELED cancelled; EXPIRED unpaid until the payment deadline; FAILED could not be created",
       "enum": [
        "PENDING",
        "AWAITING_PAYMENT",
@@ -2130,6 +2005,7 @@
       "name": "payment_method",
       "in": "query",
       "type": "string",
+      "description": "COD = cash on delivery; MOCK_CARD = card; MOCK_WALLET = e-wallet; MOCK_BANK_TRANSFER = bank transfer (all payments are simulated)",
       "enum": [
        "COD",
        "MOCK_CARD",
@@ -2141,6 +2017,7 @@
       "name": "payment_status",
       "in": "query",
       "type": "string",
+      "description": "UNPAID = money not collected yet; PAID = collected; REFUNDED = money returned",
       "enum": [
        "UNPAID",
        "PAID",
@@ -2200,7 +2077,7 @@
     "name": "count_store_orders",
     "method": "GET",
     "path": "/seller/orders/summary",
-    "description": "Number of the store's orders per status."
+    "description": "Number of the store's orders: how many orders are in each status (by_status); add them up for the overall count. One call answers 'how many orders' questions."
    },
    {
     "name": "get_store_order",
@@ -2220,35 +2097,19 @@
     "name": "analytics_summary",
     "method": "GET",
     "path": "/seller/analytics/summary",
-    "description": "Store KPIs for a period (revenue, orders...). Includes as_of and source.",
+    "description": "KPIs of the store for ONE period: revenue (goods, before refunds), refunds, net_revenue, gmv, orders_placed, orders_recognized, aov, canceled, expired, refunded, cancel_rate, plus the same figures for the previous period of equal length. Revenue counts orders PAID (online) or DELIVERED (COD). Default period is the last 30 days. Includes as_of and source.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      }
     ]
    },
@@ -2256,35 +2117,31 @@
     "name": "analytics_timeseries",
     "method": "GET",
     "path": "/seller/analytics/timeseries",
-    "description": "Store revenue/orders over time.",
+    "description": "Revenue, orders and refunds of the store per time bucket (granularity) over the period, empty buckets as 0. Use it for by-day / by-week / by-month questions; use analytics_summary for a single total.",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      },
      {
       "name": "granularity",
       "in": "query",
       "type": "string",
+      "description": "size of one point in the series (default day). It does not choose the period: use from/to for that",
       "enum": [
        "hour",
        "day",
        "week",
        "month"
       ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
      }
     ]
    },
@@ -2298,29 +2155,19 @@
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      },
      {
       "name": "limit",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "max rows to return"
      },
      {
       "name": "sort",
@@ -2341,35 +2188,19 @@
     "name": "analytics_funnel",
     "method": "GET",
     "path": "/seller/analytics/funnel",
-    "description": "View -\u003e cart -\u003e order funnel of the store.",
+    "description": "Distinct sessions per stage view -\u003e cart -\u003e checkout, and the recognised orders, for the period. The checkout stage is null for one store (not attributable).",
     "params": [
      {
       "name": "from",
       "in": "query",
       "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
+      "description": "first day of the period, YYYY-MM-DD (Asia/Ho_Chi_Minh) or RFC3339. If left out the period starts 30 days before `to`, so ALWAYS set it for today, this week, this month, last N days or a named month (work it out from today's date)"
      },
      {
       "name": "to",
       "in": "query",
       "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
-     {
-      "name": "limit",
-      "in": "query",
-      "type": "integer"
+      "description": "last day of the period, inclusive, YYYY-MM-DD or RFC3339; default now"
      }
     ]
    },
@@ -2377,35 +2208,13 @@
     "name": "analytics_low_stock",
     "method": "GET",
     "path": "/seller/analytics/low-stock",
-    "description": "Low-stock report from analytics (may lag Postgres; prefer list_low_stock for exact stock).",
+    "description": "Products that are out of stock, low, or would sell out within 7 days at the last 14 days' sales rate (analytics, may lag Postgres; prefer list_low_stock for exact stock). Not tied to a period.",
     "params": [
-     {
-      "name": "from",
-      "in": "query",
-      "type": "string",
-      "description": "start, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "to",
-      "in": "query",
-      "type": "string",
-      "description": "end, RFC3339 or YYYY-MM-DD"
-     },
-     {
-      "name": "granularity",
-      "in": "query",
-      "type": "string",
-      "enum": [
-       "hour",
-       "day",
-       "week",
-       "month"
-      ]
-     },
      {
       "name": "limit",
       "in": "query",
-      "type": "integer"
+      "type": "integer",
+      "description": "max rows to return"
      }
     ]
    }

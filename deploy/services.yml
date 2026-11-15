@@ -321,6 +321,8 @@ services:
       OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
       OPENCODE_BASE_URL: ${OPENCODE_BASE_URL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Bearer tuỳ chọn cho /metrics (cùng giá trị với Prometheus và các service Go); rỗng = mở
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       # Kho lịch sử chat (bảng ai_*, giữ 30 ngày, tự tạo bảng lúc khởi động)
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

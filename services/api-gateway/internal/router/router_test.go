@@ -443,3 +443,41 @@ func TestFeaturesPublicAndAIChatAuthenticatedAndGated(t *testing.T) {
 		}
 	}
 }
+
+func TestAIHistoryRoutes(t *testing.T) {
+	var gotPath, gotQuery string
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotQuery = r.URL.Path, r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"items":[]}`))
+	}))
+	defer up.Close()
+	off := newEngine(t)
+	if w := request(off, "GET", "/ai/conversations", token(t, "buyer")); w.Code != http.StatusNotFound {
+		t.Errorf("history with flag off: %d, want 404", w.Code)
+	}
+	on := newEngineEnv(t, func(c *config.EnvConfig) { c.FeatureAIChat, c.AIServiceURL = true, up.URL })
+	if w := request(on, "GET", "/ai/conversations", ""); w.Code != http.StatusUnauthorized {
+		t.Errorf("anonymous history: %d, want 401", w.Code)
+	}
+	for _, role := range []string{"buyer", "seller_admin", "admin", "operator"} {
+		if w := request(on, "GET", "/ai/conversations?limit=5&user_id=1", token(t, role)); w.Code != 200 || gotPath != "/conversations" || gotQuery != "limit=5" {
+			t.Errorf("own history as %s: %d path=%q query=%q (only limit may pass through)", role, w.Code, gotPath, gotQuery)
+		}
+	}
+	if w := request(on, "GET", "/ai/conversations/abc-123", token(t, "buyer")); w.Code != 200 || gotPath != "/conversations/abc-123" {
+		t.Errorf("one conversation: %d path=%q", w.Code, gotPath)
+	}
+	// everyone's history is a platform-admin route
+	for _, role := range []string{"buyer", "seller_admin", "operator"} {
+		if w := request(on, "GET", "/admin/ai/conversations", token(t, role)); w.Code != http.StatusForbidden {
+			t.Errorf("admin history as %s: %d, want 403", role, w.Code)
+		}
+	}
+	if w := request(on, "GET", "/admin/ai/conversations?role=buyer&user_id=9&x=1", token(t, "admin")); w.Code != 200 || gotPath != "/admin/conversations" || gotQuery != "role=buyer&user_id=9" {
+		t.Errorf("admin history: %d path=%q query=%q", w.Code, gotPath, gotQuery)
+	}
+	if w := request(on, "GET", "/admin/ai/conversations/abc-123", token(t, "admin")); w.Code != 200 || gotPath != "/admin/conversations/abc-123" {
+		t.Errorf("admin one: %d path=%q", w.Code, gotPath)
+	}
+}

@@ -221,3 +221,33 @@ tests:
       - eval_time: 15m
         alertname: GatewayLatencyHigh
         exp_alerts: []
+  # ai-agent: target up == 0 quá 2 phút thì AIAgentDown bắn; target biến mất hẳn (absent) cũng bắn
+  - interval: 15s
+    input_series:
+      - series: 'up{job="ai-agent",swarm_service="ai-agent",instance="10.0.0.20:8090"}'
+        values: '1x20 0x40'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AIAgentDown
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: AIAgentDown
+        exp_alerts:
+          - exp_labels: {severity: warning, job: ai-agent, swarm_service: ai-agent, instance: "10.0.0.20:8090"}
+            exp_annotations:
+              summary: "ai-agent không scrape được hoặc không còn target (chat AI ngừng hoạt động)"
+              runbook: "§19"
+              action: low
+  - interval: 15s
+    input_series:
+      - series: 'up{job="mm-services",swarm_service="api-gateway",instance="10.0.0.10:8081"}'
+        values: '1x60'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AIAgentDown
+        exp_alerts:
+          - exp_labels: {severity: warning, job: ai-agent}
+            exp_annotations:
+              summary: "ai-agent không scrape được hoặc không còn target (chat AI ngừng hoạt động)"
+              runbook: "§19"
+              action: low

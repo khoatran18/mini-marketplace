@@ -108,3 +108,48 @@ async def test_metrics_endpoint_counts_runs_and_tools():
     assert "mm_ai_runs_total" in m.text and "mm_ai_tokens_total" in m.text
     assert metrics.RUNS.labels("buyer", "ok")._value.get() == before + 1
     assert "run-0000" not in m.text and "đơn của tôi" not in m.text
+
+
+async def _chat(c, user_id, text="đơn của tôi", role="buyer", jti=None):
+    h = hdr(user_id=user_id, role=role, jti=jti or f"run-{user_id}-{role}-0001")
+    r = await c.post("/chat", json={"message": text}, headers=h)
+    return parse(r.text)[0][1]["conversation_id"]
+
+
+async def test_conversation_history_is_per_user_and_404_for_others():
+    async with client() as c:
+        cid = await _chat(c, 11, "đơn của tôi")
+        await _chat(c, 12, "việc riêng của người khác")
+        mine = (await c.get("/conversations", headers=hdr(user_id=11, jti="r-list-1"))).json()["items"]
+        assert [m["id"] for m in mine] == [cid] and mine[0]["title"] == "đơn của tôi" and mine[0]["messages"] >= 1
+        ok = await c.get(f"/conversations/{cid}", headers=hdr(user_id=11, jti="r-one-1"))
+        assert ok.status_code == 200 and ok.json()["messages"][0] == {"role": "user", "content": "đơn của tôi", "created_at": ok.json()["messages"][0]["created_at"]}
+        assert (await c.get(f"/conversations/{cid}", headers=hdr(user_id=12, jti="r-one-2"))).status_code == 404
+        assert (await c.get("/conversations/not-a-uuid", headers=hdr(user_id=11, jti="r-one-3"))).status_code == 404
+        assert (await c.get("/conversations")).status_code == 401
+
+
+async def test_admin_can_read_every_conversation_others_cannot():
+    async with client() as c:
+        cid = await _chat(c, 21, "câu của người mua")
+        for role in ("buyer", "operator", "seller_admin"):
+            assert (await c.get("/admin/conversations", headers=hdr(user_id=5, role=role, jti=f"r-a-{role}"))).status_code == 403
+            assert (await c.get(f"/admin/conversations/{cid}", headers=hdr(user_id=5, role=role, jti=f"r-b-{role}"))).status_code == 403
+        admin = dict(user_id=1, role="admin")
+        rows = (await c.get("/admin/conversations?role=buyer", headers=hdr(**admin, jti="r-adm-1"))).json()["items"]
+        assert [r["id"] for r in rows] == [cid] and rows[0]["user_id"] == 21
+        assert (await c.get("/admin/conversations?user_id=99", headers=hdr(**admin, jti="r-adm-2"))).json()["items"] == []
+        assert (await c.get("/admin/conversations?role=root", headers=hdr(**admin, jti="r-adm-3"))).status_code == 422
+        assert (await c.get(f"/admin/conversations/{cid}", headers=hdr(**admin, jti="r-adm-4"))).json()["messages"][0]["content"] == "câu của người mua"
+
+
+async def test_metrics_requires_bearer_only_when_token_is_configured(monkeypatch):
+    async with client() as c:
+        monkeypatch.delenv("METRICS_TOKEN", raising=False)
+        assert (await c.get("/metrics")).status_code == 200                      # không đặt token: mở như các service Go
+        monkeypatch.setenv("METRICS_TOKEN", "s3cret")
+        assert (await c.get("/metrics")).status_code == 401
+        assert (await c.get("/metrics", headers={"Authorization": "Bearer wrong"})).status_code == 401
+        ok = await c.get("/metrics", headers={"Authorization": "Bearer s3cret"})
+        assert ok.status_code == 200 and "mm_ai" in ok.text
+        assert (await c.get("/health")).status_code == 200                       # probe luôn mở

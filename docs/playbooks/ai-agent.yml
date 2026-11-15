@@ -1,0 +1,56 @@
+id: ai-agent
+title: ai-agent ngừng hoạt động (chat AI báo không khả dụng)
+triggers:
+  alerts: [AIAgentDown]
+runbook: "§19"
+diagnose:
+  - id: agent-up
+    tool: prometheus
+    query: 'up{job="ai-agent"}, mm_ready{service="ai-agent"}'
+    read_only: true
+    interpret: "up=0 hoặc mất hẳn = service chết / 0 replica; up=1 nhưng chat vẫn lỗi = lỗi mô hình hoặc gateway, xem diagnose tiếp"
+  - id: agent-replicas
+    tool: prometheus
+    query: 'count(up{job="ai-agent"} == 1)'
+    read_only: true
+    interpret: "0 = không có task nào chạy; so với replicas khai báo trong services.yml"
+  - id: agent-runs
+    tool: prometheus
+    query: 'sum by (status) (rate(mm_ai_runs_total[5m])), sum by (profile) (rate(mm_ai_llm_errors_total[5m]))'
+    read_only: true
+    interpret: "status=error tăng hoặc mm_ai_llm_errors_total tăng = nhà cung cấp mô hình lỗi/hết hạn mức (khoá API, mạng); không có run nào dù có người hỏi = gateway không tới được ai-agent"
+  - id: agent-logs
+    tool: loki
+    query: '{service="ai-agent",level=~"error|warn"}'
+    read_only: true
+    interpret: "tìm 'cannot build agent' (thiếu khoá mô hình / gateway không trả tool), lỗi kết nối Postgres (bảng ai_*), OOM"
+  - id: gateway-reach
+    tool: http
+    query: "GET /ops/system/health"
+    read_only: true
+    interpret: "dòng ai-agent ok=false = gateway không probe được /ready của ai-agent"
+causes:
+  - id: crashed
+    when: "up=0 hoặc 0 replica, log có exception/OOM lúc khởi động"
+    fix: [restart-agent]
+  - id: llm-key-or-quota
+    when: "ai-agent up nhưng mm_ai_llm_errors_total tăng, log báo 401/429 từ nhà cung cấp mô hình"
+    fix: [notify-human]
+  - id: db-unreachable
+    when: "log báo lỗi Postgres khi ghi ai_* (ready=0 hoặc lỗi lưu hội thoại)"
+    fix: [notify-human]
+actions:
+  - id: restart-agent
+    risk: low
+    approval: confirm
+    command: "docker service update --force --detach=true marketplace_ai-agent"
+    verify: "up{job=\"ai-agent\"} == 1 trong vòng 1 phút và /ready trả 200"
+    rollback: "không cần (hội thoại lưu trong Postgres, không giữ trạng thái trong tiến trình)"
+  - id: notify-human
+    risk: observe
+    approval: none
+    command: "escalate_to_human"
+    verify: "khoá/hạn mức mô hình hoặc Postgres được xử lý"
+    rollback: "không cần"
+escalate: "Khoá API mô hình hết hạn hoặc hết hạn mức (cần chủ khoá xử lý), hoặc Postgres hỏng (xem playbook service-unavailable). Cửa hàng vẫn bán bình thường khi ai-agent chết."
+ground_truth: []

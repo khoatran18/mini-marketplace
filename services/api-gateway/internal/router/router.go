@@ -159,6 +159,8 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		aiRoute.Use(middleware.RateLimitByKey("ai_user", envConfig.AIUserRateLimit, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient, middleware.UserKey, true))
 	}
 	aiRoute.POST("/chat", aiHandler.Chat)
+	aiRoute.GET("/conversations", aiHandler.History("/conversations", false, "limit"))
+	aiRoute.GET("/conversations/:id", aiHandler.History("/conversations", true))
 
 	// Platform administrators only
 	var systemTargets []handler.SystemTarget
@@ -211,6 +213,8 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		adminAgentRead.GET("/payments/:id", h.PaymentHandler.AdminGet)
 		adminAgentRead.GET("/orders", h.OrderHandler.ListAllOrders())
 		adminAgentRead.GET("/orders/:id", h.OrderHandler.GetAnyOrder())
+		adminRoute.GET("/ai/conversations", aiHandler.History("/admin/conversations", false, "limit", "role", "user_id"))
+		adminRoute.GET("/ai/conversations/:id", aiHandler.History("/admin/conversations", true))
 		adminRoute.GET("/accounts", h.AuthHandler.ListAccounts)
 		adminRoute.POST("/accounts", h.AuthHandler.CreateStaffAccount)
 		adminRoute.DELETE("/accounts/:id", h.AuthHandler.DeleteStaffAccount)

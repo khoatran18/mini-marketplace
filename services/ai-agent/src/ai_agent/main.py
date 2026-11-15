@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from ai_agent.api import chat as chat_api
+from ai_agent.api import conversations as conversations_api
 from ai_agent.api import health as health_api
 from ai_agent.config import Config, load_config
 from ai_agent.config.logging import get_logger, setup_logging
@@ -81,5 +82,6 @@ def create_app(cfg: Config | None = None, runtime: AgentRuntime | None = None, s
     app = FastAPI(title="ai-agent", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(health_api.create_router(personas))
     app.include_router(chat_api.create_router(rt, _LazyStore(holder), personas))
+    app.include_router(conversations_api.create_router(_LazyStore(holder)))
     logger.info("ai-agent ready", extra={"env": str(cfg.app.env), "personas": sorted(personas)})
     return app

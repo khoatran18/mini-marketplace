@@ -160,3 +160,20 @@ async def test_tokens_used_today_counts_this_user_and_this_platform_day_only(sto
     # một lượt từ hôm qua (theo giờ nền tảng) không tính
     await store._pool.execute("UPDATE ai_runs SET started_at = started_at - interval '2 days' WHERE run_id = $1", t1.run_id)
     assert await store.tokens_used_today(7) == 300
+
+
+async def test_list_and_get_conversation_scoping(store):
+    a = await begin(store, user_id=7, text="đơn của tôi, số 0912 345 678")
+    await store.end_turn(a, status="ok", answer="Có 2 đơn.", cards=[], tool_calls=1)
+    b = await begin(store, user_id=8, role="seller_admin", text="tồn kho")
+    mine = await store.list_conversations(user_id=7)
+    assert [m["id"] for m in mine] == [a.conversation_id] and mine[0]["messages"] == 2 and "0912" not in mine[0]["title"]
+    assert {m["id"] for m in await store.list_conversations(user_id=None)} == {a.conversation_id, b.conversation_id}
+    assert [m["id"] for m in await store.list_conversations(user_id=None, role="seller_admin")] == [b.conversation_id]
+    conv = await store.get_conversation(a.conversation_id, user_id=7)
+    assert [m["role"] for m in conv["messages"]] == ["user", "assistant"]
+    with pytest.raises(NotFound):
+        await store.get_conversation(a.conversation_id, user_id=8)       # của người khác
+    assert (await store.get_conversation(a.conversation_id, user_id=None))["user_id"] == 7   # admin xem
+    with pytest.raises(NotFound):
+        await store.get_conversation("not-a-uuid", user_id=None)

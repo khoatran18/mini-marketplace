@@ -4,7 +4,7 @@ KHÔNG đo độ đúng số liệu trong câu trả lời (gateway giả không
 
 Mặc định chỉ liệt kê kế hoạch và KHÔNG gọi mô hình. Gọi mô hình tốn tiền nên phải thêm --live.
   python evals/run_evals.py                          # kế hoạch: số câu mỗi persona, không gọi gì
-  python evals/run_evals.py --live --persona buyer --limit 10 --out /tmp/buyer.json
+  python evals/run_evals.py --live --persona buyer --limit 10 --out evals/results/buyer.json   # results/ is git-ignored and survives a reboot (/tmp does not)
 Cần OPENCODE_API_KEY (hoặc khoá của profile trong config) trong môi trường; không in khoá."""
 from __future__ import annotations
 
@@ -36,9 +36,15 @@ def _template_regex(path: str) -> re.Pattern[str]:
     return re.compile("^" + re.sub(r":\w+", r"([^/]+)", path) + "$")
 
 
-def stub_gateway(snapshot: dict[str, Any], calls: list[dict[str, Any]]):
+# Trạng thái đơn mà gateway giả trả cho từng hành động đề xuất: đúng điều kiện tiên quyết thì agent mới có lý do đề xuất.
+PRECONDITION_STATUS = {"cancel_order": "PAID", "request_return": "DELIVERED", "approve_return": "REFUND_REQUESTED", "reject_return": "REFUND_REQUESTED"}
+
+
+def stub_gateway(snapshot: dict[str, Any], calls: list[dict[str, Any]], state: dict[str, Any] | None = None):
     """Gateway giả dựng từ chính bảng tool thật: /ai/tools trả đúng bộ tool của role, mọi tool đọc trả dữ liệu rỗng, /ai/proposals ký giả."""
     from ai_agent.tools.gateway import GatewayClient
+
+    state = state if state is not None else {}
 
     def handler(req: httpx.Request) -> httpx.Response:
         token = req.headers.get("authorization", "")
@@ -56,7 +62,12 @@ def stub_gateway(snapshot: dict[str, Any], calls: list[dict[str, Any]]):
                 for p, v in zip(re.findall(r":(\w+)", t["path"]), m.groups()):
                     args[p] = v
                 calls.append({"tool": t["name"], "args": args})
-                body = {"id": int(args["id"]), "status": "PAID", "items": []} if "id" in args else {"items": [], "total": 0, "page": 1}
+                status = state.get("status", "PAID")
+                # Có MỘT dòng dữ liệu hợp lệ: gateway trả rỗng thì agent (đúng) dò thêm nhiều lần, làm sai phép đo "gọi bao nhiêu lần".
+                row = {"id": 1, "status": status, "total": 250000, "name": "Mẫu", "state": "ok", "ok": True, "delivered_at": state.get("delivered_at")}
+                if "product" in t["path"] or t["name"] in ("search_products", "list_low_stock"):  # đúng dạng sản phẩm, không phải bản ghi đơn
+                    row = {"id": 1, "name": "Sản phẩm mẫu", "brand": "Mẫu", "category_id": 1, "price": 150000, "status": "ACTIVE", "inventory": 42, "available": 42, "low_stock_threshold": 5}
+                body = {**row, "id": int(args["id"]), "items": [row]} if "id" in args else {"items": [row], "total": 1, "page": 1}
                 return httpx.Response(200, json=body)
         return httpx.Response(404, json={"error": "not found"})
 
@@ -80,7 +91,7 @@ def _action_name(snapshot: dict[str, Any], role: str, request: dict[str, Any]) -
     return f"{request.get('method')} {request.get('path')}"
 
 
-async def run_case(rt, calls: list[dict[str, Any]], persona, case: evalkit.Case, today, snapshot: dict[str, Any], user_id: int = 9001) -> dict[str, Any]:
+async def run_case(rt, calls: list[dict[str, Any]], persona, case: evalkit.Case, today, snapshot: dict[str, Any], user_id: int = 9001, state: dict[str, Any] | None = None) -> dict[str, Any]:
     from ai_agent.runtime import events
     from ai_agent.runtime.chat import run_turn
     from ai_agent.runtime.context import RunContext
@@ -91,6 +102,10 @@ async def run_case(rt, calls: list[dict[str, Any]], persona, case: evalkit.Case,
     role = TOKEN_ROLE[case.persona]
     run_id = f"eval-{case.id}-{int(time.time() * 1000) % 10**8:08d}"
     calls.clear()
+    if state is not None:
+        state.clear()
+        state["status"] = PRECONDITION_STATUS.get(case.propose or "", "PAID")
+        state["delivered_at"] = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     ctx = RunContext(token=agent_token(user_id, role, run_id, ttl=900), run_id=run_id, request_id="eval", user_id=user_id, role=role)
     turn = await store.begin_turn(user_id=user_id, conversation_id=None, client_message_id=None, run_id=run_id, role=role, text=case.q, max_history=10)
     started = time.monotonic()
@@ -123,10 +138,11 @@ async def main_live(args) -> int:
         if args.limit:
             cases = cases[: args.limit]
         calls: list[dict[str, Any]] = []
-        rt = AgentRuntime(cfg, stub_gateway(snapshot, calls))
+        state: dict[str, Any] = {}
+        rt = AgentRuntime(cfg, stub_gateway(snapshot, calls, state))
         for i, case in enumerate(cases, start=1):
             try:
-                row = await run_case(rt, calls, personas[name], case, today, snapshot)
+                row = await run_case(rt, calls, personas[name], case, today, snapshot, state=state)
             except Exception as exc:  # noqa: BLE001
                 row = {"id": case.id, "g": case.g, "q": case.q, "ok": False, "reasons": [f"ngoại lệ: {type(exc).__name__}"], "calls": [], "proposals": [], "answer": ""}
             report.append(row)

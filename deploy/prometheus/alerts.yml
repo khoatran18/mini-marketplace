@@ -13,6 +13,16 @@ groups:
           runbook: "§1 readiness, §10"
           action: low
 
+      # ai-agent nằm ở job riêng `ai-agent` (không thuộc mm-services). Chết thì chat AI trả "không khả dụng"; shop vẫn bán bình thường nên chỉ warning.
+      - alert: AIAgentDown
+        expr: up{job="ai-agent"} == 0 or absent(up{job="ai-agent"})
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "ai-agent không scrape được hoặc không còn target (chat AI ngừng hoạt động)"
+          runbook: "§19"
+          action: low
+
       # V7: service về 0 replica mà DNS trả NXDOMAIN thì target biến mất khỏi service discovery, `up == 0` không bao giờ đúng.
       # (Trên máy có DNS nhà mạng trả IP giả thì ServiceDown bắn thay; cả hai cùng bắn là bình thường.)
       - alert: ServiceMissing

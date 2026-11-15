@@ -39,8 +39,11 @@ scrape_configs:
         target_label: swarm_service
         replacement: $1
 
-  # ai-agent (Python): GET /metrics on its single HTTP port 8090, reachable only inside the overlay (gateway does not proxy it)
+  # ai-agent (Python): GET /metrics on its single HTTP port 8090, reachable only inside the overlay (gateway does not proxy it); same optional METRICS_TOKEN bearer as the Go services
   - job_name: ai-agent
+    authorization:
+      type: Bearer
+      credentials_file: /tmp/metrics_token
     dns_sd_configs:
       - {names: [tasks.ai-agent], type: A, port: 8090, refresh_interval: 15s}
     relabel_configs:

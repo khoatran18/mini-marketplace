@@ -50,3 +50,13 @@ class Store(Protocol):
     async def tokens_used_today(self, user_id: int) -> int:
         """Tổng token (vào + ra) các lượt của người dùng từ 00:00 hôm nay (giờ nền tảng). Lượt đang chạy chưa tính: hạn mức có thể vượt tối đa một lượt."""
         ...
+
+    async def list_conversations(self, *, user_id: int | None, role: str | None = None, limit: int = 30) -> list[dict]:
+        """Cuộc trò chuyện mới nhất trước: {id, user_id, role, title (tin đầu của người dùng, đã che), messages, created_at, updated_at}.
+        user_id=None = mọi người dùng (chỉ dành cho admin xem lại); role lọc theo role lúc chat."""
+        ...
+
+    async def get_conversation(self, conversation_id: str, *, user_id: int | None) -> dict:
+        """{id, user_id, role, created_at, updated_at, messages: [{role, content, created_at}]} (tối đa 200 tin, cũ -> mới).
+        user_id khác None mà cuộc chat của người khác -> NotFound (không lộ có tồn tại)."""
+        ...

@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../auth/AuthProvider';
-import { AI_UI_PREVIEW, confirmProposal, sseTransport, stubTransport, type ChatEvent, type ChatMessage, type ChatProposal, type ChatTransport } from '../../lib/ai-chat';
+import { AI_UI_PREVIEW, confirmProposal, fetchConversation, sseTransport, stubTransport, type ChatEvent, type ChatMessage, type ChatProposal, type ChatTransport } from '../../lib/ai-chat';
 
 interface ChatState {
   open: boolean;
@@ -24,6 +24,8 @@ interface ChatState {
   dismiss: (messageId: string, proposalId: string) => void;
   stop: () => void;
   reset: () => void;
+  /** reopen an earlier conversation of yours (text only; looked-up cards are not stored) and continue it */
+  openConversation: (id: string) => Promise<void>;
 }
 
 const ChatContextValue = createContext<ChatState | null>(null);
@@ -126,6 +128,16 @@ export function ChatProvider({ children, transport }: { children: ReactNode; tra
     [pathname, service, activeTransport]
   );
 
+  const openConversation = useCallback(
+    async (id: string) => {
+      abortRef.current?.abort();
+      const detail = await fetchConversation(await getValidAccessToken(), id);
+      conversationRef.current = detail.id;
+      setMessages(detail.messages.map((m, i) => ({ id: `${detail.id}-${i}`, role: m.role, content: m.content, createdAt: m.created_at * 1000 })));
+    },
+    [getValidAccessToken]
+  );
+
   const patchProposal = useCallback((messageId: string, proposalId: string, patch: Partial<ChatProposal>) => {
     setMessages((current) =>
       current.map((m) => (m.id === messageId ? { ...m, proposals: m.proposals?.map((p) => (p.id === proposalId ? { ...p, ...patch } : p)) } : m))
@@ -172,13 +184,14 @@ export function ChatProvider({ children, transport }: { children: ReactNode; tra
       confirm,
       dismiss,
       stop,
+      openConversation,
       reset: () => {
         abortRef.current?.abort();
         conversationRef.current = undefined;
         setMessages([]);
       }
     }),
-    [open, messages, busy, service, draft, send, confirm, dismiss, stop]
+    [open, messages, busy, service, draft, send, confirm, dismiss, stop, openConversation]
   );
 
   return <ChatContextValue.Provider value={value}>{children}</ChatContextValue.Provider>;

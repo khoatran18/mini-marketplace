@@ -85,6 +85,12 @@ limits:
   token_budget_per_turn: 20000  # tổng token (vào + ra) tối đa một lượt; cần usage_metadata từ mô hình
   # Hạn mức token MỖI NGÀY cho mỗi người dùng, theo persona (vào + ra, ngày tính theo giờ Việt Nam, làm mới 00:00). 0 hoặc thiếu = không giới hạn.
   # Một lượt tối đa token_budget_per_turn nên hạn mức có thể vượt tối đa một lượt. Hết hạn mức: 429 code=daily_token_limit, không gọi mô hình.
+  # Trần riêng cho persona có prompt/kết quả tool lớn (admin, operator gọi nhiều tool đọc trong một lượt); thiếu = dùng token_budget_per_turn.
+  token_budget_by_persona:
+    buyer: 25000
+    seller: 35000
+    admin: 45000
+    operator: 45000
   daily_tokens:
     buyer: 150000
     seller: 200000

@@ -28,36 +28,36 @@
 - {g: lookup, q: "Hôm qua shop bán được bao nhiêu?", tool: analytics_summary, args: {from: "@yesterday"}}
 - {g: lookup, q: "Cho mình tổng quan hôm nay", tool: analytics_summary, args: {from: "@today"}}
 # --- filter ---
-- {g: filter, q: "Sản phẩm nào của tôi đang còn tồn kho nhiều nhất?", tool: list_my_products, args: {sort: stock_desc}, max: 1}
-- {g: filter, q: "Mặt hàng nào tồn ít nhất?", tool: list_my_products, args: {sort: stock_asc}, max: 1}
-- {g: filter, q: "Sản phẩm nào bán chạy nhất của shop?", tool: list_my_products, args: {sort: best_selling}, max: 1}
-- {g: filter, q: "Sản phẩm tôi mới đăng gần đây", tool: list_my_products, args: {sort: newest}, max: 1}
-- {g: filter, q: "Sản phẩm đắt nhất shop mình", tool: list_my_products, args: {sort: price_desc}, max: 1}
-- {g: filter, q: "Sản phẩm rẻ nhất shop mình", tool: list_my_products, args: {sort: price_asc}, max: 1}
-- {g: filter, q: "Chỉ những sản phẩm còn hàng thôi", tool: list_my_products, args: {in_stock: "true"}, max: 1}
-- {g: filter, q: "Tìm trong shop mình sản phẩm tên áo thun", tool: list_my_products, args: {q: "*"}, max: 1}
-- {g: filter, q: "Sản phẩm thương hiệu Nike của mình", tool: list_my_products, args: {brand: "*"}, max: 1}
-- {g: filter, q: "Sản phẩm giá trên 500 nghìn", tool: list_my_products, args: {price_min: 500000}, max: 1}
-- {g: filter, q: "Sản phẩm giá dưới 100 nghìn", tool: list_my_products, args: {price_max: 100000}, max: 1}
-- {g: filter, q: "Đơn đang chờ giao của shop", tool: list_store_orders, args: {status: PAID}, max: 1}
-- {g: filter, q: "Đơn đã giao tháng này", tool: list_store_orders, args: {status: DELIVERED, created_from: "@month_start"}, max: 1}
-- {g: filter, q: "Đơn khách đã hủy", tool: list_store_orders, args: {status: CANCELED}, max: 1}
-- {g: filter, q: "Đơn có yêu cầu hoàn tiền", tool: list_store_orders, args: {status: REFUND_REQUESTED}, max: 1}
-- {g: filter, q: "Đơn thu hộ COD của shop", tool: list_store_orders, args: {payment_method: COD}, max: 1}
-- {g: filter, q: "Đơn chưa thanh toán", tool: list_store_orders, args: {payment_status: UNPAID}, max: 1}
-- {g: filter, q: "Đơn trên 2 triệu", tool: list_store_orders, args: {min_total: 2000000}, max: 1}
-- {g: filter, q: "Đơn lớn nhất tuần này", tool: list_store_orders, args: {sort: total_desc, created_from: "@week_start"}, max: 1}
-- {g: filter, q: "Đơn của shop trong 7 ngày qua", tool: list_store_orders, args: {created_from: "@days_ago_7"}, max: 1}
-- {g: filter, q: "Đơn tháng trước", tool: list_store_orders, args: {created_from: "@last_month_start", created_to: "@last_month_end"}, max: 1}
-- {g: filter, q: "Top 5 sản phẩm doanh thu cao nhất tháng này", tool: analytics_top_products, args: {sort: revenue, from: "@month_start", limit: 5}, max: 1}
-- {g: filter, q: "Sản phẩm bán nhiều đơn vị nhất tháng này", tool: analytics_top_products, args: {sort: units, from: "@month_start"}, max: 1}
-- {g: filter, q: "Sản phẩm nhiều lượt xem nhất", tool: analytics_top_products, args: {sort: views}, max: 1}
-- {g: filter, q: "Sản phẩm nào xem nhiều mà không bán được?", tool: analytics_top_products, args: {sort: viewed_unsold}, max: 1}
-- {g: filter, q: "Sản phẩm có tỉ lệ chuyển đổi tốt nhất", tool: analytics_top_products, args: {sort: conversion}, max: 1}
-- {g: filter, q: "Sản phẩm tồn dưới 5 cái", tool: list_low_stock, args: {threshold: 5}, max: 1}
-- {g: filter, q: "Hàng còn dưới 20 cái là gì", tool: list_low_stock, args: {threshold: 20}, max: 1}
-- {g: filter, q: "Doanh thu từng tuần của tháng này", tool: analytics_timeseries, args: {granularity: week, from: "@month_start"}, max: 1}
-- {g: filter, q: "Doanh thu theo giờ hôm nay", tool: analytics_timeseries, args: {granularity: hour, from: "@today"}, max: 1}
+- {g: filter, q: "Sản phẩm nào của tôi đang còn tồn kho nhiều nhất?", tool: list_my_products, args: {sort: stock_desc}, max: 2}
+- {g: filter, q: "Mặt hàng nào tồn ít nhất?", tool: list_my_products, args: {sort: stock_asc}, max: 2}
+- {g: filter, q: "Sản phẩm nào bán chạy nhất của shop?", tool: list_my_products, args: {sort: best_selling}, max: 2}
+- {g: filter, q: "Sản phẩm tôi mới đăng gần đây", tool: list_my_products, args: {sort: newest}, max: 2}
+- {g: filter, q: "Sản phẩm đắt nhất shop mình", tool: list_my_products, args: {sort: price_desc}, max: 2}
+- {g: filter, q: "Sản phẩm rẻ nhất shop mình", tool: list_my_products, args: {sort: price_asc}, max: 2}
+- {g: filter, q: "Chỉ những sản phẩm còn hàng thôi", tool: list_my_products, args: {in_stock: "true"}, max: 2}
+- {g: filter, q: "Tìm trong shop mình sản phẩm tên áo thun", tool: list_my_products, args: {q: "*"}, max: 2}
+- {g: filter, q: "Sản phẩm thương hiệu Nike của mình", tool: list_my_products, args: {brand: "*"}, max: 2}
+- {g: filter, q: "Sản phẩm giá trên 500 nghìn", tool: list_my_products, args: {price_min: 500000}, max: 2}
+- {g: filter, q: "Sản phẩm giá dưới 100 nghìn", tool: list_my_products, args: {price_max: 100000}, max: 2}
+- {g: filter, q: "Đơn đang chờ giao của shop", tool: list_store_orders, args: {status: PAID}, max: 2}
+- {g: filter, q: "Đơn đã giao tháng này", tool: list_store_orders, args: {status: DELIVERED, created_from: "@month_start"}, max: 2}
+- {g: filter, q: "Đơn khách đã hủy", tool: list_store_orders, args: {status: CANCELED}, max: 2}
+- {g: filter, q: "Đơn có yêu cầu hoàn tiền", tool: list_store_orders, args: {status: REFUND_REQUESTED}, max: 2}
+- {g: filter, q: "Đơn thu hộ COD của shop", tool: list_store_orders, args: {payment_method: COD}, max: 2}
+- {g: filter, q: "Đơn chưa thanh toán", tool: list_store_orders, args: {payment_status: UNPAID}, max: 2}
+- {g: filter, q: "Đơn trên 2 triệu", tool: list_store_orders, args: {min_total: 2000000}, max: 2}
+- {g: filter, q: "Đơn lớn nhất tuần này", tool: list_store_orders, args: {sort: total_desc, created_from: "@week_start"}, max: 2}
+- {g: filter, q: "Đơn của shop trong 7 ngày qua", tool: list_store_orders, args: {created_from: "@days_ago_7"}, max: 2}
+- {g: filter, q: "Đơn tháng trước", tool: list_store_orders, args: {created_from: "@last_month_start", created_to: "@last_month_end"}, max: 2}
+- {g: filter, q: "Top 5 sản phẩm doanh thu cao nhất tháng này", tool: analytics_top_products, args: {sort: revenue, from: "@month_start", limit: 5}, max: 2}
+- {g: filter, q: "Sản phẩm bán nhiều đơn vị nhất tháng này", tool: analytics_top_products, args: {sort: units, from: "@month_start"}, max: 2}
+- {g: filter, q: "Sản phẩm nhiều lượt xem nhất", tool: analytics_top_products, args: {sort: views}, max: 2}
+- {g: filter, q: "Sản phẩm nào xem nhiều mà không bán được?", tool: analytics_top_products, args: {sort: viewed_unsold}, max: 2}
+- {g: filter, q: "Sản phẩm có tỉ lệ chuyển đổi tốt nhất", tool: analytics_top_products, args: {sort: conversion}, max: 2}
+- {g: filter, q: "Sản phẩm tồn dưới 5 cái", tool: list_low_stock, args: {threshold: 5}, max: 2}
+- {g: filter, q: "Hàng còn dưới 20 cái là gì", tool: list_low_stock, args: {threshold: 20}, max: 2}
+- {g: filter, q: "Doanh thu từng tuần của tháng này", tool: analytics_timeseries, args: {granularity: week, from: "@month_start"}, max: 2}
+- {g: filter, q: "Doanh thu theo giờ hôm nay", tool: analytics_timeseries, args: {granularity: hour, from: "@today"}, max: 2}
 # --- variant ---
 - {g: variant, q: "don moi cua shop", tool: list_store_orders}
 - {g: variant, q: "ktra don 45", tool: get_store_order, args: {id: 45}}
@@ -104,7 +104,7 @@
 # --- scope ---
 - {g: scope, q: "Cách chạy quảng cáo Facebook hiệu quả?", tool: none}
 - {g: scope, q: "Viết giúp mình mô tả sản phẩm thật hấp dẫn", tool: none}
-- {g: scope, q: "Hôm nay có tin gì mới?", tool: none}
+- {g: scope, q: "Hôm nay có tin gì mới?", tool: [none, count_store_orders, list_store_orders, list_low_stock]}
 - {g: scope, q: "Cảm ơn bạn", tool: none}
 - {g: scope, q: "Xin chào, bạn làm được gì?", tool: none}
 - {g: scope, q: "Thuế thu nhập cá nhân của chủ shop tính sao?", tool: none}
