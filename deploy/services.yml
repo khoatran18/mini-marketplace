@@ -154,6 +154,7 @@ services:
       AI_USER_RATE_LIMIT_PER_MINUTE: ${AI_USER_RATE_LIMIT_PER_MINUTE:-10}
       AI_PROPOSAL_RATE_LIMIT_PER_MINUTE: ${AI_PROPOSAL_RATE_LIMIT_PER_MINUTE:-30}
       AGENT_TOKEN_KEYS: ${AGENT_TOKEN_KEYS:-}   # ADR-42: kid:secret,kid:secret (first signs); empty = agent tokens/proposals off
+      AI_SYSTEM_KEY: ${AI_SYSTEM_KEY:-}         # ADR-47: system identity of the RCA watcher (read-only /ops token); empty = off
     # liveness only (never depends on other services); readiness (/ready) is used by Traefik below
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null 2>&1 || exit 1"]
@@ -323,6 +324,9 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # Bearer tuỳ chọn cho /metrics (cùng giá trị với Prometheus và các service Go); rỗng = mở
       METRICS_TOKEN: ${METRICS_TOKEN:-}
+      # ADR-46/47: điều tra sự cố (RCA). Bật cần FEATURE_AI_OPS=true ở gateway và AI_SYSTEM_KEY giống gateway.
+      AI_RCA_ENABLED: ${AI_RCA_ENABLED:-false}
+      AI_SYSTEM_KEY: ${AI_SYSTEM_KEY:-}
       # Kho lịch sử chat (bảng ai_*, giữ 30 ngày, tự tạo bảng lúc khởi động)
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

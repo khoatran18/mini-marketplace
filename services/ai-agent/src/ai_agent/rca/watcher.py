@@ -58,13 +58,16 @@ class Watcher:
         woken = 0
         for run in await self.runs.waiting():
             try:
-                event = await self._event_for(run)
-                if event:
-                    await self.runner.resume(run, event)
+                if await self.check_run(run) is not None:
                     woken += 1
             except Exception as exc:  # noqa: BLE001 - một phiên lỗi không chặn các phiên khác
                 logger.warning("rca watcher: run failed", extra={"run": run["id"], "error": type(exc).__name__})
         return {"started": started, "woken": woken}
+
+    async def check_run(self, run: dict[str, Any]) -> dict[str, Any] | None:
+        """Xem ops-service cho MỘT phiên đang chờ; có sự kiện thì đánh thức và trả phiên đã cập nhật, chưa có thì None (nút "Kiểm tra lại")."""
+        event = await self._event_for(run)
+        return await self.runner.resume(run, event) if event else None
 
     async def _discover(self) -> int:
         if not self.budget.auto_critical:

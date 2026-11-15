@@ -82,3 +82,19 @@ class GatewayClient:
     async def list_tools(self, token: str, request_id: str = "") -> dict[str, Any]:
         """GET /ai/tools: danh sách tool của role trong token."""
         return await self.get(token, "/ai/tools", None, request_id)
+
+    async def system_token(self, key: str) -> tuple[str, float]:
+        """POST /ai/system-token (ADR-47): đổi AI_SYSTEM_KEY lấy token hệ thống chỉ đọc. Trả (token, số giây còn hiệu lực). Lỗi -> GatewayError."""
+        try:
+            resp = await self._client.post(self.base_url + "/ai/system-token", headers={"X-System-Key": key, "Accept": "application/json"})
+        except httpx.HTTPError as exc:
+            logger.warning("gateway unreachable (system token)", extra={"error": type(exc).__name__})
+            raise GatewayError(503, "dịch vụ tạm thời không phản hồi") from None
+        if resp.status_code >= 400:
+            logger.warning("system token refused", extra={"status": resp.status_code})
+            raise GatewayError(resp.status_code, "gateway từ chối cấp token hệ thống")
+        try:
+            data = resp.json()
+            return str(data["token"]), float(data.get("expires_in", 0))
+        except (ValueError, KeyError, TypeError):
+            raise GatewayError(502, "phản hồi không hợp lệ") from None

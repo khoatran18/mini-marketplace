@@ -13,9 +13,15 @@ class Runner:
     def __init__(self, graph_for: GraphFor, runs: Any, clock: Callable[[], float] = time.time) -> None:
         self.graph_for, self.runs, self.clock = graph_for, runs, clock
 
-    async def start(self, incident: dict[str, Any], trigger: str) -> dict[str, Any]:
-        run = await self.runs.create(int(incident["id"]), trigger)
+    async def begin(self, incident: dict[str, Any], trigger: str) -> dict[str, Any]:
+        """Chỉ ghi phiên vào sổ (status running), chưa chạy: để API trả ngay rồi `go` chạy nền."""
+        return await self.runs.create(int(incident["id"]), trigger)
+
+    async def go(self, run: dict[str, Any], incident: dict[str, Any]) -> dict[str, Any]:
         return await self._drive(run, {"incident": incident, "started_at": self.clock()})
+
+    async def start(self, incident: dict[str, Any], trigger: str) -> dict[str, Any]:
+        return await self.go(await self.begin(incident, trigger), incident)
 
     async def resume(self, run: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
         return await self._drive(run, Command(resume=event))

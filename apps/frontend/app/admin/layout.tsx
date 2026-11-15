@@ -15,6 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: '/admin/analytics', label: 'Phân tích', icon: 'chart', roles: ['admin'] },
         { href: '/admin/accounts', label: 'Tài khoản', icon: 'users', roles: ['admin'] },
         { href: '/admin/ai-chats', label: 'Lịch sử chat AI', icon: 'spark', roles: ['admin'] },
+        { href: '/admin/incidents', label: 'Sự cố', icon: 'server' },
         { href: '/admin/system', label: 'Hệ thống', icon: 'map' }
       ]}
     >

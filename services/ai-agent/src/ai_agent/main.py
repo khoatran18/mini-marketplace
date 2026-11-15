@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import FastAPI
 
 from ai_agent.api import chat as chat_api
 from ai_agent.api import conversations as conversations_api
 from ai_agent.api import health as health_api
+from ai_agent.api import rca as rca_api
 from ai_agent.config import Config, load_config
 from ai_agent.config.logging import get_logger, setup_logging
 from ai_agent.guard.startup import check_no_tracing
@@ -42,6 +43,33 @@ async def _purge_loop(store, every_sec: float = 3600.0) -> None:
         await asyncio.sleep(every_sec)
 
 
+def _truthy(v) -> bool:
+    """Cờ trong yaml có thể là bool hoặc chuỗi từ biến môi trường ("false" không được tính là bật)."""
+    return v is True or str(v).strip().lower() in ("1", "true", "yes", "on")
+
+
+async def _start_rca(stack: AsyncExitStack, cfg: Config, rt, gateway, store, personas):
+    """Dựng RCA (ADR-46/47). Postgres: sổ phiên + checkpoint bền. Memory: chỉ cho dev/test (mất khi restart)."""
+    from ai_agent.rca.budget import Budget
+    from ai_agent.rca.checkpoint import open_checkpointer
+    from ai_agent.rca.runs import MemoryRunStore, PostgresRunStore
+    from ai_agent.rca.service import RcaService
+
+    rca = cfg.rca
+    if hasattr(store, "_pool"):
+        runs = PostgresRunStore(store._pool)
+        await runs.migrate()
+        saver = await stack.enter_async_context(open_checkpointer(cfg.store.postgres.to_dict(masked=False)))
+    else:
+        runs = MemoryRunStore()
+        saver = await stack.enter_async_context(open_checkpointer())
+    svc = RcaService(rt=rt, gateway=gateway, runs=runs, saver=saver, persona=personas["rca"], budget=Budget.from_config(cfg),
+                     system_key=str(rca.get("system_key", "") or ""), max_concurrent=int(rca.get("max_concurrent", 2)))
+    await svc.start()
+    stack.push_async_callback(svc.stop)
+    return svc
+
+
 def create_app(cfg: Config | None = None, runtime: AgentRuntime | None = None, store=None) -> FastAPI:
     cfg = cfg or load_config()
     setup_logging(str(cfg.app.get("log_level", "INFO")))
@@ -54,7 +82,8 @@ def create_app(cfg: Config | None = None, runtime: AgentRuntime | None = None, s
     backend = str(cfg.store.backend)
     if store is None and backend not in ("memory", "postgres"):
         raise ValueError(f"store.backend={backend!r} chưa hỗ trợ (hiện có: memory, postgres)")
-    holder = {"store": store or (MemoryStore() if backend == "memory" else None)}
+    holder = {"store": store or (MemoryStore() if backend == "memory" else None), "rca": None}
+    rca_cfg = cfg.get("rca") if hasattr(cfg, "get") else None
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -69,9 +98,14 @@ def create_app(cfg: Config | None = None, runtime: AgentRuntime | None = None, s
             logger.info("chat store ready", extra={"backend": "postgres", "retention_days": int(cfg.store.retention_days)})
         if hasattr(holder["store"], "purge"):
             purge_task = asyncio.create_task(_purge_loop(holder["store"]))
+        stack = AsyncExitStack()  # RCA: checkpoint + bộ theo dõi, đóng trước kho chat
+        if rca_cfg is not None and _truthy(rca_cfg.get("enabled", False)):
+            holder["rca"] = await _start_rca(stack, cfg, rt, gateway, holder["store"], personas)
         try:
             yield
         finally:
+            await stack.aclose()
+            holder["rca"] = None
             if purge_task:
                 purge_task.cancel()
                 await asyncio.gather(purge_task, return_exceptions=True)
@@ -83,5 +117,6 @@ def create_app(cfg: Config | None = None, runtime: AgentRuntime | None = None, s
     app.include_router(health_api.create_router(personas))
     app.include_router(chat_api.create_router(rt, _LazyStore(holder), personas))
     app.include_router(conversations_api.create_router(_LazyStore(holder)))
+    app.include_router(rca_api.create_router(holder))
     logger.info("ai-agent ready", extra={"env": str(cfg.app.env), "personas": sorted(personas)})
     return app

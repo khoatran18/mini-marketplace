@@ -43,12 +43,13 @@ Biến bắt buộc trong `deploy/.env` (thiếu là stack không lên). `deploy
 
 ### Sinh token cho AI và ops (tuỳ chọn, khi bật `FEATURE_AI_CHAT` / `FEATURE_AI_OPS`)
 
-Ba biến này đều là chuỗi ngẫu nhiên nhưng **khác loại, không dùng chung giá trị**:
+Các biến này đều là chuỗi ngẫu nhiên nhưng **khác loại, không dùng chung giá trị**:
 
 | Biến | Dạng | Dùng để |
 |---|---|---|
 | `OPS_API_TOKEN` | `<hex>` | bí mật gateway ↔ ops-service (route `/ops/*`) |
 | `OPS_AGENT_TOKEN` | `<hex>`, khác `OPS_API_TOKEN` | quyền hẹp cho agent operator gọi ops-service (đọc + tạo đề xuất, không duyệt/chạy) |
+| `AI_SYSTEM_KEY` | `<hex>` ≥ 32 ký tự, cùng giá trị ở gateway và ai-agent, khác mọi khoá khác | danh tính hệ thống chỉ đọc của bộ theo dõi RCA (ADR-47): `POST /ai/system-token`. Trống = RCA không chạy được. Cần `AGENT_TOKEN_KEYS` |
 | `AGENT_TOKEN_KEYS` | `kid:<hex>` (vd `k1:...`), secret ≥ 32 ký tự, khác `JWT_SECRET` | khoá **ký** token agent và gói đề xuất (ADR-42); khoá đầu ký, các khoá sau chỉ kiểm. Chỉ gateway giữ, ai-agent không có |
 
 Lệnh dưới chỉ điền biến **đang trống hoặc chưa có**, không ghi đè, không in giá trị ra màn hình (chạy ở thư mục gốc repo):
@@ -61,6 +62,7 @@ set_if_empty() {  # $1 = tên biến, $2 = giá trị
 set_if_empty OPS_API_TOKEN      "$(openssl rand -hex 24)"
 set_if_empty OPS_AGENT_TOKEN    "$(openssl rand -hex 32)"
 set_if_empty AGENT_TOKEN_KEYS   "k1:$(openssl rand -hex 32)"
+set_if_empty AI_SYSTEM_KEY      "$(openssl rand -hex 32)"   # tuỳ chọn: danh tính hệ thống của RCA (ADR-47); đặt AI_RCA_ENABLED=true để bật
 set_if_empty METRICS_TOKEN      "$(openssl rand -hex 24)"   # tuỳ chọn: khoá :8081/metrics; rỗng = mở trong mạng nội bộ
 ./scripts/deploy.sh services    # gateway và ops-service đọc lại biến
 ```

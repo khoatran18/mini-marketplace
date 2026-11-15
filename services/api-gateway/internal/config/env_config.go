@@ -44,6 +44,9 @@ type EnvConfig struct {
 	// AgentKeys is "kid:secret,kid:secret" (first = signing key, the rest only verify; ADR-42, runbook §18). AGENT_TOKEN_SECRET
 	// (one secret, kid "k1") is accepted as the simple form. Empty = no agent tokens, no proposals.
 	AgentKeys string
+	// AISystemKey (AI_SYSTEM_KEY, min 32 characters) lets ai-agent's RCA watcher ask POST /ai/system-token for a read-only system
+	// token (ADR-47). Empty = no system identity: critical incidents are then investigated only when an operator clicks.
+	AISystemKey string
 }
 
 // InitJWTSecret load env about jwt
@@ -123,6 +126,9 @@ func NewEnvConfig() (*EnvConfig, error) {
 	if err := checkAIConfig(envBool("FEATURE_AI_CHAT") || envBool("FEATURE_AI_OPS"), strings.TrimRight(os.Getenv("AI_SERVICE_URL"), "/"), agentKeysFromEnv()); err != nil {
 		return nil, err
 	}
+	if err := checkSystemKey(strings.TrimSpace(os.Getenv("AI_SYSTEM_KEY")), agentKeysFromEnv()); err != nil {
+		return nil, err
+	}
 
 	return &EnvConfig{
 		JWTSecret:           jwtSecret,
@@ -144,6 +150,7 @@ func NewEnvConfig() (*EnvConfig, error) {
 		AIUserRateLimit:     envInt("AI_USER_RATE_LIMIT_PER_MINUTE", 10),
 		AIProposalRateLimit: envInt("AI_PROPOSAL_RATE_LIMIT_PER_MINUTE", 30),
 		AgentKeys:           agentKeysFromEnv(),
+		AISystemKey:         strings.TrimSpace(os.Getenv("AI_SYSTEM_KEY")),
 		SystemTargets: envPairs("SYSTEM_HEALTH_TARGETS", map[string]string{
 			"api-gateway":       "http://localhost:8081", // this replica only
 			"auth-service":      "http://auth-service:8081",
@@ -155,6 +162,20 @@ func NewEnvConfig() (*EnvConfig, error) {
 			"ops-service":       "http://ops-service:8081",
 		}),
 	}, nil
+}
+
+// checkSystemKey: AI_SYSTEM_KEY (ADR-47) must be long enough to be a credential and needs the agent keys that sign its token.
+func checkSystemKey(key, agentKeys string) error {
+	if key == "" {
+		return nil
+	}
+	if len(key) < 32 {
+		return errors.New("AI_SYSTEM_KEY is too short (min 32 characters)")
+	}
+	if agentKeys == "" {
+		return errors.New("AI_SYSTEM_KEY is set but AGENT_TOKEN_KEYS is empty: the system token is signed with the agent keys")
+	}
+	return nil
 }
 
 // checkAIConfig stops the start when an AI feature is switched on but cannot work: without AI_SERVICE_URL every chat would answer

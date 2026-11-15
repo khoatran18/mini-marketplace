@@ -295,3 +295,38 @@ func TestOpsActionShape(t *testing.T) {
 		t.Error("summary must show which action is proposed")
 	}
 }
+
+// ADR-47: a system token belongs to no account (subject 0) yet verifies as an agent token, only as an agent token.
+func TestSystemToken(t *testing.T) {
+	s := &Signer{Keys: ring(t, "k1:"+secA)}
+	tok, jti, err := s.IssueSystemToken("rca-watcher", 15*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := s.Verify(tok, TypeAgent)
+	if err != nil {
+		t.Fatalf("system token must verify as an agent token: %v", err)
+	}
+	if !c.IsSystem() || c.Sys != "rca-watcher" || c.UserID() != 0 || c.Role != SystemRole || c.ID != jti || c.PwdVersion != 0 {
+		t.Errorf("unexpected claims %+v", c)
+	}
+	if _, err := s.Verify(tok, TypeProposal); err == nil {
+		t.Error("a system token must not pass as a proposal")
+	}
+	// a normal token with subject 0 stays invalid: only the sys claim opens that door
+	plain, _, _ := s.IssueAgentToken(0, "x", "operator", 0, time.Minute)
+	if _, err := s.Verify(plain, TypeAgent); err == nil {
+		t.Error("a user token with subject 0 must stay invalid")
+	}
+}
+
+func TestSystemRoleIsReadOnlyOps(t *testing.T) {
+	if SystemRole != "operator" {
+		t.Fatal("the system identity must use the operator's READ tools only (ADR-47)")
+	}
+	for _, tl := range DefaultScopes.Tools(SystemRole) {
+		if tl.Method != "GET" || !strings.HasPrefix(tl.Path, "/ops/") && !strings.HasPrefix(tl.Path, "/admin/analytics/data-health") {
+			t.Errorf("tool %s %s is outside the read-only ops view", tl.Method, tl.Path)
+		}
+	}
+}

@@ -205,6 +205,13 @@ async def test_postgres_run_store_round_trip_and_migration_is_idempotent():
         with pytest.raises(ValueError):
             await st.update(run["id"], incident_id=9)  # không cho đổi trường ngoài danh sách
         assert await pool.fetchval("SELECT max(version) FROM ai_agent_schema") == 2
+        # danh sách cho API và dọn phiên bị ngắt giữa chừng lúc khởi động
+        a, b = await st.create(8, "manual:42"), await st.create(8, "manual:42")
+        assert [r["id"] for r in await st.recent(8)] == [b["id"], a["id"]] and len(await st.recent()) == 3 and len(await st.recent(limit=2)) == 2
+        await st.update(a["id"], status="waiting_approval", proposal_id=3)
+        assert await st.fail_running() == 1  # b (đang running) bị ngắt; a đang chờ người thì giữ nguyên
+        assert (await st.get(b["id"]))["status"] == "error" and (await st.get(b["id"]))["outcome"] == "interrupted"
+        assert (await st.get(a["id"]))["status"] == "waiting_approval"
     finally:
         await pool.close()
         await admin.execute(f'DROP DATABASE "{name}" WITH (FORCE)')

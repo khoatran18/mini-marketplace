@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestCheckAIConfigStopsAnAIFeatureThatCannotWork(t *testing.T) {
 	cases := []struct {
@@ -16,6 +19,18 @@ func TestCheckAIConfigStopsAnAIFeatureThatCannotWork(t *testing.T) {
 	for _, c := range cases {
 		if err := checkAIConfig(c.on, c.url, c.keys); (err != nil) != c.wantErr {
 			t.Errorf("checkAIConfig(%v,%q,%q) = %v, wantErr %v", c.on, c.url, c.keys, err, c.wantErr)
+		}
+	}
+}
+
+func TestCheckSystemKey(t *testing.T) {
+	long := strings.Repeat("k", 32)
+	for _, c := range []struct {
+		key, keys string
+		wantErr   bool
+	}{{"", "", false}, {"", "k1:x", false}, {long, "k1:s", false}, {long, "", true}, {"short", "k1:s", true}} {
+		if err := checkSystemKey(c.key, c.keys); (err != nil) != c.wantErr {
+			t.Errorf("checkSystemKey(%q,%q) = %v, wantErr %v", c.key, c.keys, err, c.wantErr)
 		}
 	}
 }

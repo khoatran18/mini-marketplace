@@ -128,7 +128,15 @@ func AgentOrUser(signer *agent.Signer, scopes agent.Scopes, pwd *PwdVerifier, us
 			c.Abort()
 			return
 		}
-		if pwd != nil {
+		if claims.IsSystem() {
+			// ADR-47: no account behind it, so no password version; only /ops reads (defence in depth on top of the scopes table).
+			if !strings.HasPrefix(c.FullPath(), "/ops/") {
+				logger.Warn("Middleware: system token outside /ops", zap.String("agent_run_id", claims.ID), zap.String("path", c.FullPath()))
+				c.JSON(http.StatusForbidden, gin.H{"error": "the agent cannot call this route"})
+				c.Abort()
+				return
+			}
+		} else if pwd != nil {
 			if err := pwd.Verify(c.Request.Context(), claims.UserID(), claims.PwdVersion); err != nil {
 				if IsPwdChanged(err) {
 					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired pwd version"})

@@ -384,3 +384,26 @@ Test: ai-agent 175 passed + 13 skipped (không có Postgres); 188 passed khi có
 - Giới hạn đã biết: trong MỘT bước `collect`, trần tool/mô hình là của `limits` (8 lượt tool, 6 lượt mô hình) chứ không phải ngân sách sự cố; ngân sách sự cố chỉ kiểm giữa các node. Token agent sống 15 phút (ttl phiên) trong khi phiên chờ tới 30 phút: khi tiếp tục sau khi chờ phải cấp token mới.
 - `resilience.sh` chưa chạy lại; nó phải chạy trên Swarm thật nên cần đồng ý từng lần.
 
+### 16.28 Danh tính hệ thống, API và màn hình sự cố (ADR-47, 2026-11-15)
+
+Đã làm (offline, không gọi LLM), theo thứ tự người dùng chọn "làm 2, 3, 4 trước; xong test 1, 5":
+
+| Phần | Đã làm | Nơi |
+|---|---|---|
+| Danh tính hệ thống (ADR-47) | claim `sys` + `IssueSystemToken`; `POST /ai/system-token` (khoá `AI_SYSTEM_KEY`); middleware chỉ cho `/ops/` GET, bỏ kiểm `pwd_version`; `POST /ai/proposals` từ chối token `sys`; kiểm cấu hình lúc khởi động | `api-gateway/internal/agent/token.go`, `middleware/agent.go`, `handler/ai_rca.go`, `handler/proposals.go`, `config/env_config.go` |
+| API ở gateway | `GET/POST /ops/rca/runs`, `GET /ops/rca/runs/:id`, `POST .../:id/recheck`, `POST .../:id/proposal` (CHỈ operator); admin và operator; cờ `FEATURE_AI_OPS` (tắt = 404); chuyển tiếp kèm token agent 60 giây | `handler/ai_rca.go` `Forward`, `router/router.go` |
+| API ở ai-agent | `/rca/runs...` kiểm lại role; chạy nền (tối đa `rca.max_concurrent`=2 phiên cùng lúc); đang có phiên chưa xong thì trả phiên đó, không mở phiên thứ hai; xác nhận nháp = dựng đúng body `ops_action` từ bảng tool của gateway rồi xin gateway ký bằng token của operator (cùng đường với nút xác nhận trong chat) | `api/rca.py`, `rca/service.py`, `rca/gateway_ops.py` |
+| Nối vào `main.py` | `rca.enabled` (env `AI_RCA_ENABLED`, mặc định tắt): sổ phiên + checkpoint Postgres + `Watcher` chạy nền; khởi động đánh dấu `error/interrupted` các phiên đang `running` (tiến trình chết giữa chừng), không tự chạy lại | `main.py`, `rca/runs.py` (`recent`, `fail_running`) |
+| Màn hình `/admin/incidents` | danh sách sự cố (lọc trạng thái) + nút Điều tra; chi tiết phiên: trạng thái, nháp và nút Xác nhận (operator), đề xuất của sự cố với Duyệt / Từ chối / Chạy / Xem lệnh / Đã chạy xong (review → decision với `approval_token`, execute, executed), giả thuyết, bằng chứng, dòng thời gian, báo cáo "đủ điều kiện đóng"; tự làm mới 5 giây khi còn phiên đang chạy | `apps/frontend/app/admin/incidents/`, `lib/rca.ts` |
+| Cấu hình | `AI_SYSTEM_KEY` (gateway và ai-agent, `deploy/.env.example`, `services.yml`), `AI_RCA_ENABLED` | `deploy/` |
+
+**Quyết định đổi so với ADR-46 lúc đầu:** RCA đọc bằng token hệ thống chứ không bằng token operator (token người bấm chỉ sống 60 giây còn phiên chờ 30 phút; giải luôn "giới hạn đã biết" ở §16.27 về token hết hạn lúc tiếp tục).
+
+Test: ai-agent 187 passed + 13 skipped; 200 passed với Postgres thật (container dùng một lần, đã xoá); Go gateway đạt (có `TestSystemToken`, `TestAgentOrUserSystemToken`, `TestSystemTokenRoute`, `TestRCARoutes`, `TestCheckSystemKey`); frontend `tsc`, `next lint`, `next build` đạt.
+
+**Chưa kiểm (cần Swarm bật và, với LLM, cần bạn đồng ý):**
+- Chưa build image, chưa chạy `AI_SYSTEM_KEY` thật qua gateway thật; màn hình `/admin/incidents` chưa mở được trên trình duyệt (frontend chỉ qua type-check/lint/build, không có test giao diện).
+- Chưa chạy LLM nào cho RCA (eval `--live`, và phiên tự động thật).
+- Chưa gây lỗi thật bằng `resilience.sh`.
+- Điều chưa làm: dọn checkpoint của sự cố đã đóng sau 30 ngày (ADR-46); hai người duyệt khác nhau chỉ do ops-service ép (UI không ẩn nút Duyệt với người tạo); trong MỘT bước `collect` trần tool/mô hình vẫn là `limits` (§16.27).
+

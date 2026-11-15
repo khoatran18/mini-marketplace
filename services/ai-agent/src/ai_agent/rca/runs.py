@@ -18,6 +18,8 @@ class RunStore(Protocol):
     async def waiting(self) -> list[dict[str, Any]]: ...
     async def update(self, run_id: int, **fields: Any) -> dict[str, Any]: ...
     async def count_auto_since(self, since: float) -> int: ...
+    async def recent(self, incident_id: int | None = None, limit: int = 30) -> list[dict[str, Any]]: ...
+    async def fail_running(self) -> int: ...
 
 
 class MemoryRunStore:
@@ -45,6 +47,18 @@ class MemoryRunStore:
     async def update(self, run_id: int, **fields: Any):
         self.rows[run_id].update(fields)
         return dict(self.rows[run_id])
+
+    async def recent(self, incident_id: int | None = None, limit: int = 30):
+        rows = [r for r in self.rows.values() if incident_id is None or r["incident_id"] == incident_id]
+        return [dict(r) for r in sorted(rows, key=lambda r: -r["id"])[:limit]]
+
+    async def fail_running(self) -> int:
+        n = 0
+        for r in self.rows.values():
+            if r["status"] == "running":
+                r.update(status="error", outcome="interrupted", waiting_since=None)
+                n += 1
+        return n
 
     async def count_auto_since(self, since: float) -> int:
         return sum(1 for r in self.rows.values() if r["trigger"] == "auto" and r["created_at"] >= since)
@@ -126,6 +140,20 @@ class PostgresRunStore:
         async with self._pool.acquire() as con:
             await con.execute(f"UPDATE ai_rca_runs SET {', '.join(sets)}, updated_at = now() WHERE id = $1", *args)
         return await self.get(run_id)  # type: ignore[return-value]
+
+    async def recent(self, incident_id: int | None = None, limit: int = 30):
+        async with self._pool.acquire() as con:
+            if incident_id is None:
+                rows = await con.fetch(f"SELECT {_COLS} FROM ai_rca_runs ORDER BY id DESC LIMIT $1", limit)
+            else:
+                rows = await con.fetch(f"SELECT {_COLS} FROM ai_rca_runs WHERE incident_id = $1 ORDER BY id DESC LIMIT $2", incident_id, limit)
+        return [_row(r) for r in rows]
+
+    async def fail_running(self) -> int:
+        """Phiên đang `running` lúc dịch vụ khởi động là phiên bị ngắt giữa chừng (tiến trình chết): đánh dấu lỗi, không tự chạy lại."""
+        async with self._pool.acquire() as con:
+            res = await con.execute("UPDATE ai_rca_runs SET status = 'error', outcome = 'interrupted', waiting_since = NULL, updated_at = now() WHERE status = 'running'")
+        return int(res.split()[-1])
 
     async def count_auto_since(self, since: float) -> int:
         async with self._pool.acquire() as con:

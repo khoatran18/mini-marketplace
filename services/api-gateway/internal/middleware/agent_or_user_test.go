@@ -98,3 +98,47 @@ func TestRateLimitByKeyFailClosed(t *testing.T) {
 		}
 	}
 }
+
+// ADR-47: a system token has no account behind it. It is let through ONLY on /ops reads, with no password check.
+func TestAgentOrUserSystemToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mr := miniredis.RunT(t)
+	_ = mr.Set(pwdSafeAfterKey, "1")
+	ring, _ := agent.ParseKeyRing("k1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-A")
+	signer := &agent.Signer{Keys: ring}
+	pwd := NewPwdVerifier(zap.NewNop(), redis.NewClient(&redis.Options{Addr: mr.Addr()}))
+	userAuth := func(c *gin.Context) { c.JSON(401, gin.H{"error": "user path"}); c.Abort() }
+	mw := AgentOrUser(signer, agent.DefaultScopes, pwd, userAuth, zap.NewNop())
+	e := gin.New()
+	ok := func(c *gin.Context) {
+		c.JSON(200, gin.H{"user": c.Value("userID"), "role": c.Value("userRole"), "name": c.Value("username")})
+	}
+	e.GET("/ops/incidents", mw, ok)
+	e.GET("/ops/incidents/:id", mw, ok)
+	e.POST("/ops/incidents", mw, ok)
+	tok, _, _ := signer.IssueSystemToken("rca-watcher", time.Minute)
+	do := func(method, path string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, nil)
+		req.Header.Set("Authorization", "Bearer "+tok)
+		w := httptest.NewRecorder()
+		e.ServeHTTP(w, req)
+		return w
+	}
+	w := do("GET", "/ops/incidents")
+	if w.Code != 200 || w.Body.String() != `{"name":"system:rca-watcher","role":"operator","user":0}` {
+		t.Fatalf("system token on an ops read: %d %s", w.Code, w.Body.String())
+	}
+	if w := do("POST", "/ops/incidents"); w.Code != http.StatusForbidden {
+		t.Errorf("a write is not in the table: %d, want 403", w.Code)
+	}
+	// a route outside /ops is refused even if some table row pointed there
+	e2 := gin.New()
+	e2.GET("/orders/:id", AgentOrUser(signer, agent.Scopes{"operator": {{Name: "x", Method: "GET", Path: "/orders/:id"}}}, pwd, userAuth, zap.NewNop()), ok)
+	req := httptest.NewRequest("GET", "/orders/7", nil)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	w2 := httptest.NewRecorder()
+	e2.ServeHTTP(w2, req)
+	if w2.Code != http.StatusForbidden {
+		t.Errorf("system token outside /ops: %d, want 403", w2.Code)
+	}
+}

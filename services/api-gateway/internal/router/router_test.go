@@ -481,3 +481,117 @@ func TestAIHistoryRoutes(t *testing.T) {
 		t.Errorf("admin one: %d path=%q", w.Code, gotPath)
 	}
 }
+
+const sysKey = "system-key-system-key-system-key-0"
+
+func requestWith(e *gin.Engine, method, path, tok string, hdr map[string]string, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	if tok != "" {
+		req.Header.Set("Authorization", "Bearer "+tok)
+	}
+	for k, v := range hdr {
+		req.Header.Set(k, v)
+	}
+	w := httptest.NewRecorder()
+	e.ServeHTTP(w, req)
+	return w
+}
+
+// ADR-47: POST /ai/system-token exists only with AI_SYSTEM_KEY, needs that exact key, and the token it returns is a read-only /ops pass.
+func TestSystemTokenRoute(t *testing.T) {
+	keys := "k1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-A"
+	off := newEngineEnv(t, func(c *config.EnvConfig) { c.AgentKeys = keys })
+	if w := requestWith(off, "POST", "/ai/system-token", "", map[string]string{"X-System-Key": sysKey}, ""); w.Code != http.StatusNotFound {
+		t.Errorf("no AI_SYSTEM_KEY: %d, want 404", w.Code)
+	}
+	var gotPath, gotAuth string
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotAuth = r.URL.RequestURI(), r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"incidents":[]}`))
+	}))
+	defer up.Close()
+	e := newEngineEnv(t, func(c *config.EnvConfig) {
+		c.AgentKeys, c.AISystemKey, c.OpsServiceURL, c.OpsAPIToken = keys, sysKey, up.URL, "ops-secret"
+	})
+	for _, hdr := range []map[string]string{nil, {"X-System-Key": "wrong"}, {"X-System-Key": sysKey + "x"}} {
+		if w := requestWith(e, "POST", "/ai/system-token", "", hdr, ""); w.Code != http.StatusUnauthorized {
+			t.Errorf("headers %v: %d, want 401", hdr, w.Code)
+		}
+	}
+	w := requestWith(e, "POST", "/ai/system-token", "", map[string]string{"X-System-Key": sysKey}, "")
+	if w.Code != 200 {
+		t.Fatalf("right key: %d %s", w.Code, w.Body.String())
+	}
+	var out struct {
+		Token     string `json:"token"`
+		ExpiresIn int    `json:"expires_in"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil || out.Token == "" || out.ExpiresIn != 900 {
+		t.Fatalf("body %s", w.Body.String())
+	}
+	// the token reads the ops view...
+	if w := requestWith(e, "GET", "/ops/incidents?state=open", out.Token, nil, ""); w.Code != 200 || gotPath != "/incidents?state=open" || gotAuth != "Bearer ops-secret" {
+		t.Errorf("ops read with the system token: %d path=%q auth=%q", w.Code, gotPath, gotAuth)
+	}
+	// ...and nothing else: no write, no other area, no proposal
+	for _, r := range []struct{ method, path string }{
+		{"POST", "/ops/proposals"}, {"POST", "/ops/proposals/1/decision"}, {"POST", "/ops/incidents/1/investigate"}, {"GET", "/admin/orders"},
+		{"GET", "/admin/accounts"}, {"GET", "/orders"}, {"POST", "/ai/proposals"}, {"POST", "/ai/chat"}, {"POST", "/ops/rca/runs"},
+	} {
+		if w := requestWith(e, r.method, r.path, out.Token, nil, `{}`); w.Code < 400 {
+			t.Errorf("%s %s with a system token: %d, must be refused", r.method, r.path, w.Code)
+		}
+	}
+}
+
+// The RCA routes forward to ai-agent for admin/operator only; confirming a draft is the operator's alone.
+func TestRCARoutes(t *testing.T) {
+	var gotMethod, gotPath, gotBody, gotTok string
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		gotMethod, gotPath, gotBody, gotTok = r.Method, r.URL.RequestURI(), string(b), r.Header.Get("X-Agent-Token")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"items":[]}`))
+	}))
+	defer up.Close()
+	keys := "k1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-A"
+	off := newEngineEnv(t, func(c *config.EnvConfig) { c.AgentKeys, c.AIServiceURL = keys, up.URL })
+	if w := request(off, "GET", "/ops/rca/runs", token(t, "operator")); w.Code != http.StatusNotFound {
+		t.Errorf("FEATURE_AI_OPS off: %d, want 404", w.Code)
+	}
+	on := newEngineEnv(t, func(c *config.EnvConfig) { c.AgentKeys, c.AIServiceURL, c.FeatureAIOps = keys, up.URL, true })
+	routes := []struct{ method, path string }{
+		{"GET", "/ops/rca/runs"}, {"GET", "/ops/rca/runs/7"}, {"POST", "/ops/rca/runs"}, {"POST", "/ops/rca/runs/7/recheck"}, {"POST", "/ops/rca/runs/7/proposal"},
+	}
+	for _, r := range routes {
+		if w := request(on, r.method, r.path, ""); w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s anonymous: %d, want 401", r.method, r.path, w.Code)
+		}
+		for _, role := range []string{"buyer", "seller_admin", "seller_employee"} {
+			if w := request(on, r.method, r.path, token(t, role)); w.Code != http.StatusForbidden {
+				t.Errorf("%s %s as %s: %d, want 403", r.method, r.path, role, w.Code)
+			}
+		}
+	}
+	for _, role := range []string{"admin", "operator"} {
+		if w := requestWith(on, "GET", "/ops/rca/runs?incident_id=5&limit=3&x=1", token(t, role), nil, ""); w.Code != 200 || gotPath != "/rca/runs?incident_id=5&limit=3" || gotTok == "" {
+			t.Errorf("list as %s: %d path=%q token=%q", role, w.Code, gotPath, gotTok)
+		}
+		if w := requestWith(on, "POST", "/ops/rca/runs", token(t, role), nil, `{"incident_id":5}`); w.Code != 200 || gotMethod != "POST" || gotPath != "/rca/runs" || gotBody != `{"incident_id":5}` {
+			t.Errorf("start as %s: %d %s %s %s", role, w.Code, gotMethod, gotPath, gotBody)
+		}
+		if w := request(on, "POST", "/ops/rca/runs/7/recheck", token(t, role)); w.Code != 200 || gotPath != "/rca/runs/7/recheck" {
+			t.Errorf("recheck as %s: %d path=%q", role, w.Code, gotPath)
+		}
+	}
+	if w := request(on, "POST", "/ops/rca/runs/7/proposal", token(t, "admin")); w.Code != http.StatusForbidden {
+		t.Errorf("an admin must not sign a draft: %d, want 403", w.Code)
+	}
+	if w := request(on, "POST", "/ops/rca/runs/7/proposal", token(t, "operator")); w.Code != 200 || gotPath != "/rca/runs/7/proposal" {
+		t.Errorf("operator draft: %d path=%q", w.Code, gotPath)
+	}
+	if w := request(on, "GET", "/ops/rca/runs/a%2F..%2Fb", token(t, "operator")); w.Code == 200 && strings.Contains(gotPath, "/../") {
+		t.Errorf("path traversal reached the upstream: %q", gotPath)
+	}
+}

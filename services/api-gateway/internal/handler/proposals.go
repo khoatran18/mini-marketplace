@@ -29,6 +29,10 @@ func (h ProposalHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "agent token required"})
 		return
 	}
+	if claims.IsSystem() { // ADR-47: a system identity never asks for a write, not even a proposal
+		c.JSON(http.StatusForbidden, gin.H{"error": "a system token cannot propose actions"})
+		return
+	}
 	raw, err := io.ReadAll(io.LimitReader(c.Request.Body, 16<<10+1))
 	var req proposalRequest
 	if err != nil || len(raw) > 16<<10 || json.Unmarshal(raw, &req) != nil {

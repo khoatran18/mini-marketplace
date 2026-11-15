@@ -119,6 +119,9 @@ store:
 
 # Vòng lặp RCA (rca/, ADR-46): ngân sách MỘT sự cố. Thiếu khoá = dùng mặc định trong rca/budget.py.
 rca:
+  enabled: "${AI_RCA_ENABLED:-false}"   # bật = dựng RCA khi khởi động (bảng ai_rca_runs, checkpoint, bộ theo dõi). Cần AI_SYSTEM_KEY để chạy được (ADR-47)
+  system_key: "${AI_SYSTEM_KEY:-}"   # khớp AI_SYSTEM_KEY của gateway; rỗng = không có danh tính hệ thống (không tự chạy, nút Điều tra báo 503)
+  max_concurrent: 2           # số phiên chạy cùng lúc
   max_rounds: 3               # vòng collect -> hypothesize -> decide
   max_model_calls: 12
   max_queries: 25             # số lần gọi tool đọc
@@ -130,6 +133,6 @@ rca:
   verify_wait_sec: 180        # chờ sau khi hành động chạy xong rồi mới verify
   wait_timeout_sec: 1800      # chờ người (xác nhận, duyệt) tối đa 30 phút
   poll_interval_sec: 30       # bộ theo dõi hỏi ops-service (không gọi LLM)
-  auto_critical: true         # alert critical: agent tự vào điều tra (cần danh tính hệ thống, chưa có: xem ADR-46)
+  auto_critical: true         # alert critical: agent tự vào điều tra (bằng danh tính hệ thống, ADR-47)
   daily_auto_runs: 10         # trần số phiên tự chạy mỗi ngày
 
