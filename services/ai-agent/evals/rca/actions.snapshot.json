@@ -1,0 +1,116 @@
+{
+ "actions": [
+  {
+   "id": "escalate_to_human",
+   "title": "Báo người xử lý (không có thao tác tự động); dùng khi chưa khớp playbook nào",
+   "risk": "observe",
+   "mode": "manual",
+   "params": null
+  },
+  {
+   "id": "requeue_outbox",
+   "title": "Requeue các hàng outbox DEAD (sau khi đã sửa nguyên nhân)",
+   "risk": "high",
+   "mode": "http",
+   "params": [
+    {
+     "name": "service",
+     "type": "enum",
+     "required": true,
+     "enum": [
+      "order-service",
+      "product-service",
+      "payment-service"
+     ]
+    },
+    {
+     "name": "ids",
+     "type": "int_list",
+     "required": false,
+     "min": 1,
+     "max": 100
+    },
+    {
+     "name": "limit",
+     "type": "int",
+     "required": false,
+     "min": 1,
+     "max": 100
+    }
+   ],
+   "playbook": "outbox-stuck/inspect-then-requeue"
+  },
+  {
+   "id": "restart_service",
+   "title": "Khởi động lại một service không trạng thái (docker service update --force)",
+   "risk": "low",
+   "mode": "command",
+   "params": [
+    {
+     "name": "service",
+     "type": "enum",
+     "required": true,
+     "enum": [
+      "api-gateway",
+      "auth-service",
+      "user-service",
+      "product-service",
+      "order-service",
+      "payment-service",
+      "analytics-service"
+     ]
+    }
+   ],
+   "playbook": "service-unavailable/force-restart"
+  },
+  {
+   "id": "run_backfill",
+   "title": "Dựng lại dữ liệu ClickHouse từ Postgres cho một khoảng ngày (ghi đè)",
+   "risk": "high",
+   "mode": "command",
+   "params": [
+    {
+     "name": "from",
+     "type": "date",
+     "required": true
+    },
+    {
+     "name": "to",
+     "type": "date",
+     "required": true
+    }
+   ],
+   "playbook": "analytics-data/backfill"
+  },
+  {
+   "id": "scale_service",
+   "title": "Đặt lại số replica của một service không trạng thái",
+   "risk": "low",
+   "mode": "command",
+   "params": [
+    {
+     "name": "service",
+     "type": "enum",
+     "required": true,
+     "enum": [
+      "api-gateway",
+      "auth-service",
+      "user-service",
+      "product-service",
+      "order-service",
+      "payment-service",
+      "analytics-service"
+     ]
+    },
+    {
+     "name": "replicas",
+     "type": "int",
+     "required": true,
+     "min": 1,
+     "max": 5
+    }
+   ],
+   "playbook": "service-unavailable/scale-up"
+  }
+ ]
+}

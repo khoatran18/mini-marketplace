@@ -68,3 +68,12 @@ def test_prompts_tell_agents_to_filter_instead_of_paging():
     p = load_personas()
     for name in ("buyer", "seller", "admin"):
         assert "MỘT lần gọi" in p[name].prompt, name
+
+
+def test_rca_persona_is_read_only_and_never_chosen_by_a_chat_token():
+    personas = load_personas()
+    r = personas["rca"]
+    assert r.allow_actions is False and r.token_roles == () and r.llm_role == "rca"
+    assert persona_for_role(personas, "operator").name == "operator"  # chat của operator vẫn là persona operator
+    assert "CHỈ ĐỌC" in r.prompt and "propose_" not in r.prompt and "{policy}" not in r.prompt
+    assert all(p.allow_actions for n, p in personas.items() if n != "rca")

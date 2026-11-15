@@ -1,0 +1,116 @@
+# Nhật ký xây `services/ai-agent` (tách từ roadmap 08, §16)
+
+> Kế hoạch, kiến trúc, quyết định và thứ tự xây nằm ở [08_AGENT_BUILD_ROADMAP.md](08_AGENT_BUILD_ROADMAP.md) (§0-§15). File này là nhật ký những gì ĐÃ làm và đo được, theo thời gian (§16.1 trở đi). Số mục giữ nguyên `§16.x` để các tài liệu và ADR đang trỏ tới không đổi.
+
+## 16. Trạng thái xây `services/ai-agent` (2026-11-14)
+
+Đã dựng (xem `services/ai-agent/README.md`): config yaml + loader; LLM profile/role/registry/factory + provider `openai` (DeepSeek, OpenCode qua `base_url`), `anthropic`, `fake` (có kịch bản); persona buyer, seller; tool sinh từ `GET /ai/tools`; hàm bọc tool tách card/model_view; `POST /chat` SSE; giới hạn vòng/tool/thời gian/token; kho trong bộ nhớ; Dockerfile + service trong `deploy/services.yml` + `scripts/build-images.sh ai-agent`. Phía gateway: bảng route đọc của seller (`seller_admin`, `seller_employee`) ở `agent/scopes.go`, route đọc seller nhận token agent.
+
+**Đã kiểm (Python 3.10, langchain-core 1.6.9):** 36 test chạy qua: config/env/che secret, factory + lỗi nêu tên profile, mô hình giả (invoke/stream/ghép tool call), tool (schema cấm tham số lạ, không thoát được route, che dữ liệu, card đầy đủ vs bản mô hình, lỗi → văn bản), token agent, kho (sở hữu/bận/trùng), bộ chuyển SSE, cả lượt chat bằng agent giả (thứ tự sự kiện, token/timeout/hết hạn, lưu kho).
+
+**CHƯA kiểm** (sandbox không có mạng, env chỉ có langchain-core): (1) `create_agent` + `ModelCallLimitMiddleware`/`ToolCallLimitMiddleware` (tên, tham số, dạng `astream(stream_mode=["messages","updates"])`, tên nút `model`); (2) lớp FastAPI (`tests/test_api.py` tự bỏ qua nếu thiếu fastapi); (3) provider `openai`/`anthropic` mới chỉ dựng đối tượng, chưa gọi mạng; (4) streaming của DeepSeek/OpenCode. Chạy `pytest` ở môi trường Python 3.12 đủ requirements và sửa theo kết quả trước khi nối mô hình thật. Nếu `create_agent` khác giả định, chỉ cần sửa `runtime/agent_factory.py`, `guard/limits.py`, `runtime/sse_adapter.py` (đã tách riêng).
+
+**OpenCode (cổng mô hình):** chưa xác minh streaming của endpoint chat/completions. Tìm được: server của opencode phát sự kiện qua SSE `GET /event` (SDK cộng đồng, dành cho phiên làm việc của opencode, không phải API mô hình); endpoint Zen `/v1/responses` stream thiếu nhiều sự kiện vòng đời (issue anomalyco/opencode #40171, đóng "not planned"). Dùng endpoint **chat/completions** (provider `openai` + `base_url`) thay vì `/v1/responses`, và tự thử một request `stream: true` bằng khoá của bạn trước khi dựa vào nó. Hồ sơ `opencode_zen` trong yaml để trống `model_id` cho tới khi bạn điền.
+
+**Việc tiếp theo:** chạy test thật ở 3.12; kho Postgres; `/metrics`; tool đề xuất hành động (bước 5); bộ vàng buyer/seller (`evals/`); chọn mô hình theo bộ vàng.
+
+### 16.1 Môi trường kiểm thử đã dùng (ghi để không nhầm là đã kiểm xong)
+- Mới chạy trên **Python 3.10.21** (conda env `base_python_3.10`: `langchain-core 1.6.9`, `langchain-openai 1.7.0`, `langchain-anthropic 1.7.5`, `httpx 0.28.1`, `pydantic 2.14.0`, `PyYAML 6.0.3`), bằng một runner tạm vì không có pytest. Không có env 3.12 trên máy, sandbox soạn code không có mạng (DNS tới pypi.org lỗi), và mạng của máy dev đang yếu nên chưa dựng được 3.12.
+- Code cố ý không dùng tính năng chỉ có từ 3.11 trở lên trong các đường đã test, nên chạy được ở 3.10; `pyproject.toml` và Dockerfile đặt 3.12 (đích triển khai). `langchain` 1.x yêu cầu Python ≥ 3.10.
+- Nếu tải cả env 3.12 quá nặng: dùng luôn env 3.10 và chỉ cài phần còn thiếu (nhỏ hơn nhiều): `pip install "langchain>=1.0,<2" langgraph fastapi "uvicorn[standard]" pytest pytest-asyncio`, rồi `cd services/ai-agent && pytest`. Hoặc tải wheel ở nơi có mạng tốt (`pip download -r requirements-dev.txt -d wheels/`) rồi cài offline (`pip install --no-index --find-links wheels/ -r requirements-dev.txt`).
+- Phiên bản `==` trong `requirements.txt` là bản đã import và chạy được; dòng `~=` (`langchain`, `fastapi`, `uvicorn`, `pytest`) chưa được kiểm. Cài xong chạy `pip freeze > requirements.lock.txt`, commit, và Dockerfile sẽ tự dùng file khoá.
+
+### 16.2 Checklist chạy lần đầu (khi đã có env đủ gói)
+1. `cd services/ai-agent && pytest`. Kỳ vọng 36 test cũ đạt + `tests/test_api.py` (đang tự bỏ qua) chạy. Ca lỗi nhiều khả năng nhất: tên nút/dạng stream của `create_agent`, đối số `ModelCallLimitMiddleware`/`ToolCallLimitMiddleware`.
+2. Chạy thử không cần model thật: `APP_ENV=dev PYTHONPATH=src uvicorn ai_agent.main:create_app --factory --port 8090`, rồi `POST /chat` với một token agent do gateway cấp (hoặc dùng `tests/helpers.agent_token` để tạo token thử và mock gateway). Ở dev, `llm.roles.buyer/seller` là `fake_*`.
+3. Viết thêm test cho `create_agent` thật với model giả (spike ở bước 0): `ScriptedChatModel.bind_tools` có chạy trong `create_agent` không; `astream(stream_mode=["messages","updates"])` có ra đúng `(mode, data)` và tên nút `model` không; `ModelCallLimit` khi chạm trần có kết thúc êm không. Kết quả ghi vào §14.4.
+4. Nối gateway thật trong dev: `FEATURE_AI_CHAT=true`, `AI_SERVICE_URL`, `AGENT_TOKEN_KEYS`; đăng nhập buyer, `POST /ai/chat`, xem đủ sự kiện `start`, `tool_call`, `card`, `token`, `done`; thử token hết hạn và tài khoản đổi mật khẩu giữa chừng.
+5. Chỉ sau đó mới gán `llm.roles.buyer` sang profile thật (`deepseek_flash`), thử 1 request `stream: true` và kiểm `usage` có về không (`stream_usage`). Chưa có API model nào được gọi tới giờ.
+6. Lỗi/khác biệt tìm được ghi vào đây và vào `docs/planning/01_OPEN_ISSUES.md` (V8).
+
+### 16.3 Quyết định đã làm khi dựng (không có trong các mục trên)
+- **ai-agent không kiểm chữ ký token agent** (không có khoá). Bảo vệ bằng mạng nội bộ (không publish cổng) và vì mọi lời gọi tool quay lại gateway kèm token đó (gateway kiểm chữ ký). Header `X-Agent-Run-ID` phải khớp `jti`.
+- **Tool lấy từ gateway** (`GET /ai/tools`, cache theo role 60 s), không khai báo bộ tool trong code agent. Persona chỉ là prompt + tên role LLM.
+- **Hàng đợi sự kiện chung** cho một lượt: token từ model và `card`/`tool_call` từ hàm bọc tool cùng vào một `asyncio.Queue`; không dùng `get_stream_writer` (tránh phụ thuộc API chưa kiểm). Hàm bọc đọc ngữ cảnh lượt qua contextvar nên token agent không vào prompt.
+- **Kho lịch sử** hiện chỉ lưu chữ người dùng + câu trả lời cuối (không lưu kết quả tool): lượt sau model phải gọi lại tool nếu cần. Đổi khi làm kho Postgres.
+- **Trần token** tính ở bộ chuyển SSE (cộng `usage_metadata` từng chunk), không bằng middleware (chưa có sẵn).
+- **Prod từ chối khởi động nếu có biến tracing LangSmith**; dev chỉ cảnh báo.
+- **Seller dùng chung bộ tool cho `seller_admin` và `seller_employee`**; hai role cùng một persona `seller`. Tách nếu cần quyền hẹp hơn cho nhân viên.
+
+
+### 16.4 OpenCode và đổi tên route vận hành (2026-11-14)
+- **Đổi route:** nhóm vận hành chuyển từ `/admin/ops/*` và `/admin/system/health` sang `/ops/*` và `/ops/system/health` (vẫn admin hoặc operator, ADR-40). `/admin/analytics/data-health` giữ nguyên chỗ cũ, vẫn mở cho dev. Gateway test pass; UI (`lib/api.ts`) và tài liệu đã đổi theo; log phiên cũ giữ nguyên.
+- **Profile `opencode_deepseek_flash`** (dev, prod): OpenCode Go, `base_url` mặc định `https://opencode.ai/inference/go/openai/v1`, `model_id: deepseek-v4.1-flash` (theo [docs OpenCode Go](https://opencode.ai/docs/go/)). Docs yêu cầu User-Agent riêng và header `x-opencode-session` ổn định cho mỗi cuộc hội thoại: provider `openai` nay hỗ trợ khoá `session_header`, giá trị lấy từ `conversation_id` của lượt đang chạy lúc gửi request (hook httpx, đọc contextvar), nên một model dùng chung vẫn đúng phiên.
+- **Streaming: ĐÃ KIỂM (2026-11-14, curl với key thật, 3 request nhỏ).** Kết quả ở đoạn "Kết quả kiểm" bên dưới. Đoạn cũ:  Docs OpenCode (Go và Zen) không nói gì về `stream`, `stream_options` hay `tools`. Chỉ có bằng chứng gián tiếp: các endpoint `chat/completions` này dùng gói `@ai-sdk/openai-compatible` mà chính OpenCode gọi để stream. Muốn chắc: một request `curl` với `"stream": true, "stream_options": {"include_usage": true}` và một request có `tools`. Chưa gọi API nào.
+- Test mới (header phiên theo conversation) đã viết trong `tests/test_config_llm.py` nhưng **chưa chạy**.
+
+**Kết quả kiểm (`POST .../go/openai/v1/chat/completions`, model `deepseek-v4.1-flash`):**
+| Phép thử | Kết quả |
+|---|---|
+| `stream: true` + `stream_options.include_usage` | HTTP 200, SSE `chat.completion.chunk`, kết thúc `finish_reason: stop` và `data: [DONE]`; chunk cuối có `usage` (prompt/completion/total, `reasoning_tokens`). TTFB ~1,8 s, tổng ~2,4 s cho 60 token |
+| `stream: true` + `tools` | HTTP 200, `tool_calls` stream từng mảnh (`name`, rồi `arguments` theo từng ký tự JSON); LangChain ghép được qua `tool_call_chunks` |
+| Mặc định (thinking bật) | stream thêm `delta.reasoning_content`, chiếm phần lớn token ra (37/46 trong phép thử); `max_tokens` nhỏ dễ bị suy luận ăn hết |
+| `"thinking": {"type": "disabled"}` (top-level, = `extra_body` của langchain-openai) | `reasoning_tokens: 0`, không có `reasoning_content` |
+| Thiếu `x-opencode-session` | HTTP 400 `MissingSessionID` (đúng như docs) |
+Hệ quả: profile bật `extra_body: thinking disabled` (dev, prod). Chưa kiểm qua `ChatOpenAI` của langchain-openai và chưa kiểm chất lượng gọi tool của model khi tắt thinking (nên đo bằng bộ câu hỏi mẫu). `usage.cost`/`opencode.list_cost` có trong chunk cuối: có thể dùng đo chi phí.
+
+### 16.5 Kiểm trên Python 3.12 và UI chat (2026-11-14)
+- **Môi trường:** venv 3.12 dựng bằng `python3.12 -m venv --without-pip` rồi `pip --python <venv> install -r requirements-dev.txt` (hệ thống không có ensurepip). Phiên bản thực tế: langchain 1.4.4, langgraph 1.2.22, fastapi 0.162.7, pydantic 2.14.0. `requirements.lock.txt` sinh từ venv này (Dockerfile dùng nếu có).
+- **Test:** 45 đạt trên 3.12 (gồm test chạy `create_agent` + middleware giới hạn thật với mô hình giả có kịch bản, `tests/test_api.py` qua FastAPI, test header phiên). `helpers.cfg()` ép role LLM về mô hình giả để test không phụ thuộc key/mạng.
+- **Lượt thật (OpenCode `deepseek-v4.1-flash`, thinking tắt, gateway giả):** buyer "đơn gần đây": `tool_call` → `card` → `token` từng mẩu → `done` (2586 vào / 139 ra token), token đầu ~2,8 s sau khi gửi; seller "đếm đơn theo trạng thái" tương tự (~3,2 s tới khi tool chạy, xong ~6,9 s).
+- **Phát hiện:** trên Python 3.10, `agent.astream(stream_mode="messages")` trả MỘT message hoàn chỉnh (không stream) và `usage_metadata` không vào được `pump` (token = 0, trần token không áp được). Trên 3.12 stream từng mẩu và đếm token đúng. Vì vậy 3.12 là bắt buộc, không chỉ là mong muốn (`pyproject.toml`, Dockerfile đã nhắm 3.12).
+- **UI:** `lib/ai-chat.ts` có `sseTransport` (fetch + ReadableStream, `parseSse` xử lý sự kiện bị cắt giữa chừng, `\r\n`, nhiều dòng `data:`), `ChatProvider` giữ `conversation_id`, áp từng sự kiện (token, tool_call → trạng thái "Đang tra cứu…", card, citation, error), `ChatCards` vẽ thẻ dữ liệu chung (bảng hoặc cặp khoá/giá trị, tiền theo VND). `AI_BACKEND_READY` nay luôn bật (chỉ hiện khi cờ gateway bật), `NEXT_PUBLIC_AI_UI_PREVIEW=true` vẫn cho bản giả. `tsc` và `next lint` sạch; `parseSse` kiểm bằng script rời. Chưa thử trên trình duyệt. Chưa có thẻ xác nhận đề xuất (chưa có tool đề xuất).
+
+### 16.6 Lỗi thấy khi dùng thử trên Swarm (2026-11-14) và cách sửa
+- **Lộ đường dẫn API:** UI hiện "Nguồn: GET /search". Sửa: sự kiện `citation` chỉ còn `{tool, label}` với `label` là tên thân thiện ("Tìm kiếm sản phẩm", `events.SOURCE_LABELS`); route không còn đi ra ngoài ai-agent. UI hiện nhãn, không hiện route.
+- **Hỏi "điện thoại dưới 20 triệu" ra khung trả lời trống:** không có điện thoại nào dưới 20 triệu, model tìm 3 lần không ra rồi hết `max_model_calls` (4) khi chưa kịp viết chữ. Sửa: `max_model_calls` 6; câu trả lời dự phòng khi model kết thúc mà không có chữ ("Mình chưa tổng hợp xong…"); `prompt.md` buyer có mục "Cách tìm sản phẩm" (giá bằng VND nguyên, chỉ đặt bộ lọc khi người dùng nói rõ, không có kết quả thì thử tối đa một lần nới điều kiện rồi trả lời, dùng `sort` thay vì tự so sánh "rẻ nhất"). UI ẩn thẻ rỗng (tìm không ra) vì câu trả lời đã nói.
+- **Chưa đặt/huỷ đơn qua agent:** đúng thiết kế phase đầu (chỉ đọc, D1). Huỷ đơn cần tool đề xuất (bước 5); đặt đơn chưa nằm trong kế hoạch v1.
+- Ghi chú: log ai-agent cố ý không chứa nội dung chat (chỉ tên tool, token, độ trễ), kho chat nằm trong bộ nhớ, nên không có "lịch sử chat" để xem lại sau; muốn xem phải thêm kho Postgres (§5 bước 0) hoặc bật log nội dung ở dev.
+
+### 16.7 Đề xuất hành động và kho chat Postgres (2026-11-14)
+- **Trước đó chưa có tool tạo đề xuất ở ai-agent và chưa có thẻ xác nhận ở UI** (chỉ có `POST /ai/proposals` và cổng xác nhận ở gateway), nên chat không có nút Xác nhận. Nay có:
+  - Gateway: `agent.DefaultActions` (role -> hành động: tên, route, tham số `path`/`body`, mẫu câu tóm tắt) là nguồn duy nhất; `GET /ai/tools` trả thêm `actions`; `POST /ai/proposals` kiểm cả vai trò (`AllowsAction`): buyer không đề xuất được route seller/admin. Có hàng cho admin (chưa có persona) để danh sách proposable và cổng xác nhận vẫn được test.
+  - ai-agent: tool `propose_<hành động>` (`tools/propose.py`). Tool CHỈ xin gateway ký rồi phát `action_proposal` `{proposal, id, expires_at, summary, request{method,path,body}}`; token đề xuất không qua mô hình; câu tóm tắt do mã điền từ tham số đã kiểm (không phải mô hình viết); tối đa 2 đề xuất/lượt; lỗi gateway trả "[lỗi công cụ]"; 401 dừng lượt.
+  - UI: `ChatProposals` (thẻ "Đề xuất cần bạn xác nhận": Xác nhận, Bỏ qua, đếm ngược). Xác nhận = `confirmProposal` gọi route thật bằng JWT người dùng + `X-Agent-Proposal` (CORS đã cho header này). Lỗi 401/403 hiện "hết hạn/đã dùng, hãy yêu cầu lại".
+  - Kiểm: gateway test, ai-agent test (tham số, tóm tắt, sự kiện, trần, lỗi, cả lượt với `create_agent` thật), một lượt thật với OpenCode: "Huỷ giúp tôi đơn 1, tôi đặt nhầm" ra đúng đề xuất `POST /orders/1/cancel`; "Trả hàng cho tôi" (thiếu mã đơn) thì hỏi lại. Chưa thử xác nhận thật trên Swarm/trình duyệt.
+- **Kho chat Postgres** (`store/postgres.py`, `store.backend: postgres`, dev và prod): bảng `ai_conversations`, `ai_messages`, `ai_runs` (cùng cụm Postgres, tự tạo lúc khởi động, khoá advisory nhiều bản sao). Lưu chữ người dùng và câu trả lời cuối đã che email/số điện thoại, trạng thái/số tool/token và tham chiếu card/đề xuất mỗi lượt; KHÔNG lưu kết quả tool, token agent, token đề xuất. Giữ 30 ngày (`retention_days`), dọn mỗi giờ. Lượt treo quá 180 s không khoá cuộc chat. Kết nối lỗi lúc khởi động thì dịch vụ không lên. 9 test cần `TEST_POSTGRES_DSN` (mỗi test tạo DB riêng), kiểm trên Postgres 16 thật: 64 đạt.
+- Chưa có: giao diện/API cho admin xem lại hội thoại (hiện xem bằng SQL), mở lại cuộc chat cũ trên UI, chặn đồng thời theo người dùng.
+
+### 16.8 Persona admin và operator, chỉ đọc (2026-11-14)
+- **Gateway** (`agent/scopes.go`): `DefaultScopes["admin"]` gồm đọc toàn sàn (`/admin/orders`, `/admin/orders/:id`, `/admin/payments`, `/admin/payments/:id`, `/admin/categories`, 8 báo cáo `/admin/analytics/*`) cộng bộ ops. `DefaultScopes["operator"]` chỉ có bộ ops: `/ops/incidents`, `/ops/incidents/:id`, `/ops/audit`, `/ops/outbox/:service/dead`, `/ops/system/health`, `/admin/analytics/data-health`. Operator không có dữ liệu kinh doanh (cùng luật với route). Không có `/admin/accounts`, `/auth/*`, `/users/*`.
+- **Route:** các GET trên chuyển sang nhóm `agentOr(authenticated)` (`opsAgentRead`, `adminAgentRead`) để token agent đi qua; POST/PUT/DELETE vẫn ở nhóm cũ chỉ nhận JWT người dùng. Các route `/ops` ghi (`investigate`, `proposals/*`, `queries/:name`) không nằm trong bảng.
+- **Chỉ đọc thật sự:** `readOnlyRoles = {admin, operator}`: `GET /ai/tools` trả `actions: []` (agent không có tool `propose_`) và `/ai/proposals` từ chối (`CanPropose`). Hàng `DefaultActions["admin"]` giữ lại để test cổng xác nhận. Muốn admin được đề xuất sau này: bỏ role khỏi `readOnlyRoles`.
+- **ai-agent:** persona `admin` và `operator` (`personas/admin|operator/prompt.md`, role LLM `admin`/`operator` trong `llm.roles`, dev và prod), nhãn tool thân thiện. Prompt nói rõ chỉ đọc, operator không có dữ liệu kinh doanh.
+- **UI/cấu hình:** `FEATURE_AI_OPS=true` bật nút trợ lý ở mọi trang `/admin` cho admin và operator (cùng cờ `ai_ops`). Gợi ý câu hỏi của admin/operator đổi cho khớp tool có thật.
+- **Seller:** nền tảng có hai role `seller_admin` (chủ shop) và `seller_employee` (nhân viên); agent cho cả hai cùng một persona `seller` và cùng bộ tool, không phân biệt.
+- Chưa có: chạy thử thật với admin/operator trên Swarm.
+
+### 16.9 Số liệu hệ thống, đề xuất vận hành, chính sách (2026-11-14)
+- **Số liệu Prometheus/Loki cho admin và operator:** tool `ops_metrics_query` = `GET /ops/queries/:name?service=&window=&request_id=`. Route mới `OpsHandler.Query` đổi query string thành body `{"params":{...}}` rồi gọi `POST /queries/:name` của ops-service (đây là kho truy vấn có tên, cố định, chỉ đọc, ops-service kiểm enum/regex từng tham số, cắt kết quả 50 chuỗi/100 dòng log và ghi audit mỗi lần chạy với `X-Actor` là `admin:<id>` hoặc `dev:<id>`). Agent KHÔNG viết PromQL/LogQL. Danh sách tên nằm ở `agent.opsQueryNames` và phải khớp `services/ops-service/internal/queries/queries.go` (24 truy vấn; đã đối chiếu tay, chưa có test tự động vì hai module tách nhau). Hỏi "service nào chậm nhất" -> `grpc_latency_p95` và `gateway_latency_p95` (prompt hướng dẫn).
+- **Đề xuất vận hành:** `ops_list_proposals`, `ops_get_proposal` (chỉ GET; duyệt/chạy vẫn là việc người dùng ở trang Hệ thống). Các GET này chuyển sang nhóm `opsAgentRead`.
+- **Chính sách:** `personas/buyer/policy.md` (trước chỉ có TODO) và `personas/seller/policy.md` (prompt seller có thêm mục `{policy}`). Nội dung lấy từ mặc định thật của order-service (`ORDER_PAYMENT_TTL_MIN` 15, `RETURN_WINDOW_DAYS` 7, `AUTO_DELIVER_DAYS` 7, `SHIPPING_FLAT_FEE` 30000, `FREE_SHIP_OVER` 500000) và máy trạng thái đơn. Đã thay bằng tool `get_shop_rules`, xem §16.11 (không còn phải sửa tay khi đổi biến). Chỗ code chưa chứng minh (ngày giao dự kiến, hoàn tiền khi huỷ đơn đã trả online) ghi là "chưa có thông tin" để agent không hứa.
+- Test: `TestOpsQueryTurnsTheQueryStringIntoTheUpstreamBody`, mở rộng `TestAdminAndDevAgentScopes`, `test_personas.py` (policy thật, nhãn tool).
+
+### 16.10 Kiểm tra khi khởi động và một luồng chat mỗi người dùng (2026-11-14)
+- **Khởi động:** `FEATURE_AI_CHAT` hoặc `FEATURE_AI_OPS` bật mà `AI_SERVICE_URL` rỗng hoặc `AGENT_TOKEN_KEYS` rỗng thì gateway KHÔNG chạy (`config.checkAIConfig`, lỗi nêu tên biến). Trước đây chỉ lộ ra khi có người chat (503, hoặc agent không có token). Đổi hành vi: bản triển khai bật cờ AI mà không có khoá sẽ không lên nữa; tắt cờ hoặc điền khoá.
+- **Một luồng mỗi người dùng:** `handler.RedisSlots` (SET NX theo `ai_slot:<user_id>`, giá trị ngẫu nhiên, TTL = thời lượng tối đa của luồng + 10 s, xoá bằng script chỉ khi còn đúng giá trị). Luồng thứ hai: 409 `busy`, UI hiện "Trợ lý đang xử lý câu hỏi trước của bạn". Redis lỗi: 503, không cho qua (mỗi luồng tốn tiền gọi mô hình). Giới hạn này chung cho mọi replica gateway; ai-agent vẫn tự chặn trùng theo cuộc hội thoại.
+- Chưa có: trần token mỗi ngày mỗi người dùng.
+- Test: `TestCheckAIConfigStopsAnAIFeatureThatCannotWork`, `TestRedisSlotsAllowOneHolderPerUserAndReleaseOnlyOwn` (miniredis, gồm TTL), `TestChatRefusesASecondStreamAndFreesTheSlotAfterwards`.
+
+### 16.11 Quy tắc đơn hàng lấy từ order-service (2026-11-14)
+- **Vì sao:** số liệu chính sách (hạn thanh toán, ngày trả hàng, ngày tự "đã giao", phí ship, mức miễn phí) từng được chép tay vào `policy.md`; đổi biến môi trường là agent nói sai. Giờ chỉ còn một nguồn: cấu hình đang chạy của order-service.
+- **API:** gRPC `OrderService.GetShopRules` (proto mới `ShopRules`, đã sinh lại `.pb.go` bằng `scripts/protogen/gen.sh order-service`, chỉ thêm) -> gateway `GET /shop/rules` (công khai, chỉ đọc, `Cache-Control: public, max-age=60`) trả `{payment_ttl_minutes, return_window_days, auto_deliver_days, shipping_flat_fee, free_ship_over}` (VND nguyên; 0 ở `auto_deliver_days`/`free_ship_over` là "không bao giờ").
+- **Tool:** `get_shop_rules` cho buyer và seller (`agent/scopes.go`). `policy.md` của hai persona không còn con số nào, chỉ nêu luật không đổi và dặn lấy số bằng tool; test `test_policy_numbers_come_from_the_tool_not_from_the_text` chặn việc chép số lại.
+- **Hai điều trước đây "chưa có thông tin" đã tra code:** (1) huỷ đơn đã trả online phát `order.refund_requested` hoàn TOÀN BỘ `total_price` (gồm phí ship) cho payment-service, hoàn xong bất đồng bộ (`order-service/internal/repository/orders.go:324`); duyệt trả hàng cũng hoàn toàn bộ, chỉ với đơn online; COD không có gì để hoàn. Đã ghi vào policy. (2) Ngày giao dự kiến: không có trường nào trong order-service, giữ "chưa có thông tin".
+- Test: `TestSettingsRulesAreWholeUnitsFromTheEnvironment`, `TestDefaultRulesMatchTheDocumentedDefaults` (order-service), `/shop/rules` nằm trong `TestPublicRoutesNeedNoToken`, tool nằm trong kiểm tra "mọi hàng bảng là route thật".
+
+
+### 16.12 Không lộ chi tiết nội bộ cho buyer/seller, bảng trong chat, smoke test (2026-11-14)
+- **Lỗi thấy khi chạy thật:** (1) hỏi "bạn đã gọi API nào" thì buyer/seller trả ra được tên công cụ và đường dẫn, vì kết quả tool đưa cho mô hình có `source: "GET /orders/:id"` và mô hình biết tên tool; (2) bảng markdown hiện thành dấu `|` thô và `**\`ready\`**` hiện dấu backtick; (3) persona admin/operator quên bật trong `config.*.yaml` nên chat trả 403 "vai trò này chưa được hỗ trợ".
+- **Nguyên tắc:** biết tên route KHÔNG phải ranh giới bảo mật. Ranh giới thật là bảng `agent/scopes.go` ở gateway (token buyer gọi route admin vẫn 403). Phần này chỉ để người dùng cuối không thấy chi tiết kỹ thuật và để giảm bề mặt bị dò. Admin/dev cố ý vẫn thấy route (họ cần nó để đối chiếu).
+- **Ba lớp (`Persona.hide_internals` = true cho buyer, seller):** (a) `tools/views.py`: mô hình chỉ thấy nhãn nguồn ("Đơn hàng của bạn"), không thấy `GET /…`; (b) prompt quy tắc 6 dặn không nói về công cụ/API/đường dẫn và nêu câu trả lời mẫu; (c) `guard/leak.py` `LeakFilter` lọc TRÊN LUỒNG token (giữ đuôi 48 ký tự để bắt tên bị cắt giữa hai mẩu) và cả bản lưu vào kho: che "METHOD /path", đường dẫn chỉ có ở API (`/ai/`, `/ops/`, `/admin/`, `/auth/`, `/users/`, `/shop/rules`, có `:id`) và tên mọi tool của role (+ `propose_*`). Trang web như `/cart` không bị đụng. Đánh đổi: văn bản trễ tới 48 ký tự so với mô hình; tên tool vẫn nằm trong ngữ cảnh mô hình (function calling cần), nên lớp (c) là chốt chặn cuối chứ không thay cho (a), (b).
+- **Dữ liệu nhạy cảm trong text tự do (dòng log Loki, audit):** `redact.mask_text` che thêm JWT, `Bearer …`, `password=…`/`token: …`, IPv4 (đã có email, số điện thoại). Không bắt được tên người hay địa chỉ viết thành chữ: dữ liệu như vậy phải bị bỏ theo tên khoá hoặc không cấp cho tool.
+- **Frontend:** `ChatMarkdown` thêm bảng (`| a | b |` + dòng `|---|`, cuộn ngang khi hẹp), tiêu đề `#`, in đậm chứa mã. Vẫn chỉ dựng React element, không HTML thô.
+- **Canh lệch cấu hình:** `test_every_persona_is_enabled_and_has_an_llm_role_in_every_config`; `scripts/smoke-ai.sh` đăng nhập từng role, hỏi một câu và kiểm tra có `event: done` (gọi LLM thật; tài khoản qua biến `SMOKE_*`).
+- Test: `tests/test_guard_leak.py` (lọc, luồng bị cắt từng 1–7 ký tự, buyer bị che còn admin thì không, mask chuỗi nhạy cảm), `tests/test_api.py` (admin/operator được nhận).
+

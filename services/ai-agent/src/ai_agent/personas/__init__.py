@@ -14,6 +14,8 @@ def load_personas() -> dict[str, Persona]:
         "seller": Persona.load("seller", "seller", ("seller_admin", "seller_employee"), _HERE / "seller", hide_internals=True),
         "admin": Persona.load("admin", "admin", ("admin",), _HERE / "admin"),
         "operator": Persona.load("operator", "operator", ("operator",), _HERE / "operator"),
+        # RCA (ADR-46): không có role token riêng (token_roles rỗng nên chat không bao giờ chọn nó); chạy bằng token operator, chỉ đọc
+        "rca": Persona.load("rca", "rca", (), _HERE / "rca", allow_actions=False),
     }
 
 

@@ -314,7 +314,7 @@ Chạy thật cả bộ (4 luồng song song, không có lỗi ngoại lệ/429)
 4. `verify` sau khi hành động chạy: chờ 2-5 phút, kiểm lại đúng truy vấn đã chứng minh sự cố; không hồi phục thì không đóng sự cố.
 5. Màn hình RCA trên UI (dòng thời gian, bằng chứng, giả thuyết, đề xuất).
 6. Eval RCA: top-3 giả thuyết có chứa `ground_truth` của playbook không, hành động có đúng sổ không, số lượt gọi.
-7. Kịch bản gây lỗi (roadmap §8.2) trên MÔI TRƯỜNG THỬ, có lệnh dọn dẹp, bắt đầu từ 3 kịch bản rẻ (outbox kẹt, một service dừng, DB chậm): cần quyết định dùng stack thử riêng hay gây lỗi ngắn trên Swarm hiện tại, và cần người dùng đồng ý từng kịch bản.
+7. Kịch bản gây lỗi: ĐÃ CÓ `scripts/e2e/resilience.sh` (A-M, ghi ground truth). Nó gây lỗi trên Swarm đang chạy (roadmap §8.2 muốn môi trường thử), nên mỗi lần chạy cần người dùng đồng ý; eval RCA offline đã dựng sẵn từ đáp án của nó (§16.27).
 8. Cần từ người dùng: mật khẩu operator (và seller) để smoke thật (`OPERATOR_BOOTSTRAP_*` trong `deploy/.env` đang trống); (role LLM `rca` đã thêm, hiện cùng mô hình với operator; muốn mạnh hơn thì sửa một dòng); đồng ý trước mỗi lần chạy LLM (CLAUDE.md).
 
 ### 16.26 Đồ thị RCA và thử LangGraph (ADR-46, 2026-11-15)
@@ -323,16 +323,20 @@ Chạy thật cả bộ (4 luồng song song, không có lỗi ngoại lệ/429)
 
 ```mermaid
 graph TD;
-  start([incident]) --> collect
+  start([Sự cố]) --> collect
   collect --> hypothesize
   hypothesize --> decide
-  decide -- cần thêm bằng chứng, vòng < 3 --> collect
+  decide -- cần thêm bằng chứng, vòng dưới 3 --> collect
   decide -- đủ bằng chứng hoặc hết vòng --> propose
-  propose --> wait_human
-  wait_human -- người khác duyệt và thực thi --> verify
-  wait_human -- từ chối / hết hạn --> report
-  verify --> report
-  report --> done([end])
+  propose --> wait_confirm
+  wait_confirm -- operator xác nhận, đề xuất PENDING --> wait_approval
+  wait_confirm -- bỏ qua hoặc hết hạn --> report
+  wait_approval -- người khác duyệt và đã chạy --> verify
+  wait_approval -- từ chối hoặc hết hạn --> report
+  verify -- hồi phục --> report
+  verify -- chưa hồi phục, lần đầu --> collect
+  verify -- chưa hồi phục, lần hai --> report
+  report --> done([Kết thúc])
 ```
 
 Quy ước: mỗi node là một hàm riêng (dễ test bằng LLM giả); `collect`/`hypothesize` là chỗ gọi LLM và tool, `decide` đếm vòng và ngân sách; `propose` gọi tool `propose_ops_action` (ADR-45), vẫn cần operator xác nhận rồi một người KHÁC duyệt.
@@ -340,3 +344,43 @@ Quy ước: mỗi node là một hàm riêng (dễ test bằng LLM giả); `coll
 Ngưỡng kích hoạt: 5 alert `critical` trong `deploy/prometheus/alerts.yml` đủ điều kiện cho agent vào xem ngay (khi có danh tính hệ thống, chưa làm); 15 alert `warning` chỉ chạy khi operator bấm "Điều tra".
 
 **Còn mở trước khi viết `rca/`: nơi lưu checkpoint.** `langgraph-checkpoint-postgres` cần thêm gói + `psycopg` (kho chat hiện dùng `asyncpg`, và môi trường này chưa cài được gói mới nếu không có mạng). Hai hướng: (a) thêm hai gói đó, checkpoint vào cùng Postgres với bảng `ai_*`; (b) viết một checkpointer nhỏ lưu JSON vào bảng `ai_rca_runs` bằng `asyncpg`. Đề xuất (a) nếu cài được gói, vì tự viết checkpointer dễ sai khi langgraph đổi.
+
+**Luồng đã chốt với người dùng (2026-11-15), chi tiết ở ADR-46:**
+
+| # | Bước | Ai | Việc | LLM |
+|---|---|---|---|---|
+| 0 | Phát hiện | Prometheus, ops-service | Alert tạo sự cố; `critical` thì agent tự vào, `warning` chờ bấm | không |
+| 1 | Bắt đầu | Hệ thống (critical) hoặc operator | Tạo phiên, `thread_id` = id sự cố | không |
+| 2 | `collect` | Agent | Metric, log, outbox, health theo playbook khớp; ≤12 truy vấn, 5 s/truy vấn | có |
+| 3 | `hypothesize` | Agent | ≤3 giả thuyết, độ tin cậy, bằng chứng, "điều gì sẽ bác bỏ" | có |
+| 4 | `decide` | Agent | Đủ thì sang `propose`; chưa đủ thì lặp ≤3 vòng; hết ngân sách thì dừng | có |
+| 5 | `propose` | Agent | Khớp playbook: đề xuất hành động gắn playbook; không khớp: `escalate_to_human`; ≤2 đề xuất chờ | có |
+| 6 | `wait_confirm` | Operator | Xem nháp trên màn hình RCA, xác nhận bằng JWT của mình, ghi `PENDING` | không |
+| 7 | `wait_approval` | Người khác (admin hoặc operator) + ops-service | Duyệt; `requeue_outbox` ops-service tự chạy, các hành động khác người chạy lệnh sinh từ sổ rồi báo `executed`; theo dõi 30 s, hạn 30 phút | không |
+| 8 | `verify` | Agent | Sau 2-5 phút đọc lại đúng truy vấn đã chứng minh; thất bại thì thêm một vòng, rồi báo người | có (ít) |
+| 9 | `report` | Agent | Báo cáo + "đủ điều kiện đóng: có/chưa, vì sao" | có |
+| 10 | Đóng sự cố | Người | Agent không đóng | không |
+
+Hiện trạng liên quan (kiểm bằng code 2026-11-15): trang `/admin/*` chưa có màn hình sự cố/đề xuất (chỉ `system` và `ai-chats`); chat widget có thẻ xác nhận. Ops-service đã có sẵn `review → decision(accept, approval_token) → execute | executed`, cho cả admin và operator (`adminOrOperator`). Có sẵn `scripts/e2e/resilience.sh` (kịch bản A-M, mỗi lần gây lỗi ghi đáp án vào `~/mm-ground-truth/resilience.jsonl`); script này gây lỗi trên Swarm ĐANG CHẠY nên chạy lần nào cũng phải hỏi người dùng (§16.27).
+
+### 16.27 Bước 1-5 của RCA đã làm, offline (2026-11-15)
+
+**Sửa một nhận định sai trước đó:** trước đây nói "chưa có script gây sự cố". Sai: `scripts/e2e/resilience.sh` gây 13 lỗi (A-M) trên Swarm đang chạy và ghi đáp án (`fault`, `playbooks`, `expected_alerts`) vào `~/mm-ground-truth/*.jsonl`; `ground_truth` trong `docs/playbooks/*.yml` là chữ của các kịch bản đó. Bộ eval RCA dùng chính các đáp án này. Chỉ 9 kịch bản có cảnh báo (A, B, C, D, F, G, K, L, M); E, H, I, J thoáng qua và không có cảnh báo nên không tạo sự cố để điều tra.
+
+| Bước | Đã làm | Nơi |
+|---|---|---|
+| 1 Nền checkpoint | `langgraph-checkpoint-postgres 3.2.1` + `psycopg 3.3.9` (requirements + lock); `open_checkpointer()` (Postgres hoặc RAM). Đã kiểm với Postgres thật (container dùng một lần, đã xoá): phiên chờ xác nhận sống sót qua "restart" (đóng kết nối, mở lại), `adelete_thread` dọn được. | `src/ai_agent/rca/checkpoint.py`, `tests/test_rca_checkpoint.py` |
+| 2 Lõi `rca/` | Đồ thị 8 node đúng §16.26; ngân sách (`rca:` trong config, đủ giá trị mặc định); nháp được kiểm theo sổ hành động (id có trong sổ, tham số đúng kiểu/enum/khoảng, `requeue_outbox` đúng một trong ids/limit, backfill ≤31 ngày); sai thì thành `escalate_to_human`, không bao giờ đưa người một hành động bịa; không lặp hành động đã thất bại khi chưa có bằng chứng mới; báo cáo không thể ghi "đủ điều kiện đóng" nếu `verify` chưa xác nhận hồi phục. | `rca/graph.py`, `budget.py`, `validate.py`, `state.py`, `ports.py` |
+| 3 Prompt và bộ tool | persona `rca` (prompt riêng, `llm.roles.rca`, `personas.rca` ở cả hai config, `token_roles=()` nên chat không bao giờ chọn nó); `Persona.allow_actions=False` làm agent RCA KHÔNG nhận tool `ops_action` dù token operator có; `LlmBrain` (bằng chứng lấy từ kết quả công cụ thật, JSON chặt + thử lại một lần, `verify` chạy lại ĐÚNG các truy vấn đã dẫn). | `personas/rca/prompt.md`, `rca/brain.py`, `runtime/agent_factory.py` |
+| 4 Bộ theo dõi | `Watcher.tick()` không gọi LLM: sự cố `critical` đang mở chưa có phiên thì tự bắt đầu (mỗi sự cố một lần, trần `daily_auto_runs`); phiên chờ xác nhận tìm đề xuất cùng sự cố/hành động/tham số tạo sau nháp; phiên chờ duyệt xử lý `REJECTED`/`EXPIRED`/`FAILED`/`EXECUTED` (đợi `verify_wait_sec`) và hết hạn 30 phút. Sổ phiên `ai_rca_runs` (RAM và Postgres, migration `ai_agent_schema` v2). | `rca/watcher.py`, `runner.py`, `runs.py` |
+| 5 Eval RCA offline | 19 case từ đáp án của `resilience.sh` + biến thể theo playbook, phủ đủ 10 playbook; gateway giả dùng playbook thật, sổ hành động thật (bản sao `evals/rca/actions.snapshot.json`, test Go giữ cho khớp) và bảng tool thật của operator; chấm 7 tiêu chí (nguyên nhân trong top-3, mở đúng playbook, hành động đầu đúng, không có hành động bị cấm, kết cục, ngân sách, chỉ GET). Brain "đáp án" đạt 19/19; Brain sai đạt ≤1/19 (chứng minh bộ chấm có răng). | `evals/rcakit.py`, `evals/run_rca_evals.py`, `evals/rca/cases.yaml` |
+
+Test: ai-agent 175 passed + 13 skipped (không có Postgres); 188 passed khi có `TEST_POSTGRES_DSN`. Go: ops-service và gateway đạt.
+
+**Chưa làm / chưa đo:**
+- CHƯA chạy LLM nào cho RCA: chất lượng điều tra thật chưa đo (cần `run_rca_evals.py --live`, tối đa 19 x 12 = 228 lượt gọi; hỏi người dùng trước).
+- Danh tính hệ thống để tự chạy alert `critical` CHƯA có: token agent gắn với một tài khoản thật (`PwdVersion`, đường xác thực của gateway), nên cần thiết kế riêng (ADR) chứ không thêm vội. `Runner.graph_for` là chỗ cấp token cho phiên; `Watcher` chưa được nối vào `main.py`.
+- Chưa có API ở gateway/ai-agent (bắt đầu phiên, xem phiên, "Kiểm tra lại", xác nhận nháp bằng JWT của operator: nháp phải được ký lúc người bấm vì chữ ký đề xuất chỉ sống 5 phút) và chưa có màn hình RCA.
+- Giới hạn đã biết: trong MỘT bước `collect`, trần tool/mô hình là của `limits` (8 lượt tool, 6 lượt mô hình) chứ không phải ngân sách sự cố; ngân sách sự cố chỉ kiểm giữa các node. Token agent sống 15 phút (ttl phiên) trong khi phiên chờ tới 30 phút: khi tiếp tục sau khi chờ phải cấp token mới.
+- `resilience.sh` chưa chạy lại; nó phải chạy trên Swarm thật nên cần đồng ý từng lần.
+

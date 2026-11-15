@@ -103,6 +103,7 @@ personas:
   seller: {enabled: true}
   admin: {enabled: true}
   operator: {enabled: true}
+  rca: {enabled: true}      # vòng lặp điều tra sự cố (rca/), chạy bằng token operator
 
 # Kho lịch sử chat (xem store/postgres.py). Bảng ai_* nằm cùng cụm Postgres với các service khác.
 store:
@@ -115,3 +116,20 @@ store:
     user: "${POSTGRES_USER:-postgres}"
     password: "${POSTGRES_PASSWORD:-}"
     database: "${POSTGRES_DB:-postgres}"
+
+# Vòng lặp RCA (rca/, ADR-46): ngân sách MỘT sự cố. Thiếu khoá = dùng mặc định trong rca/budget.py.
+rca:
+  max_rounds: 3               # vòng collect -> hypothesize -> decide
+  max_model_calls: 12
+  max_queries: 25             # số lần gọi tool đọc
+  max_seconds: 300
+  max_hypotheses: 3
+  confident_at: 0.6           # giả thuyết đầu từ mức này thì đủ tin cậy để đề xuất
+  max_pending_proposals: 2    # đề xuất PENDING tối đa cho một sự cố
+  verify_retries: 1           # verify thất bại: thêm đúng một vòng điều tra rồi báo người
+  verify_wait_sec: 180        # chờ sau khi hành động chạy xong rồi mới verify
+  wait_timeout_sec: 1800      # chờ người (xác nhận, duyệt) tối đa 30 phút
+  poll_interval_sec: 30       # bộ theo dõi hỏi ops-service (không gọi LLM)
+  auto_critical: true         # alert critical: agent tự vào điều tra (cần danh tính hệ thống, chưa có: xem ADR-46)
+  daily_auto_runs: 10         # trần số phiên tự chạy mỗi ngày
+

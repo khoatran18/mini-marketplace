@@ -1,0 +1,325 @@
+# Bộ eval RCA (offline; `run_rca_evals.py --live` là thứ DUY NHẤT gọi LLM). Mỗi case là một sự cố có đáp án đúng:
+#   scenario  chữ của kịch bản trong scripts/e2e/resilience.sh (đáp án do chính script gây lỗi biết chắc); null = biến thể dựng tay theo playbook
+#   incident  sự cố mà ops-service đã mở từ alert (agent chỉ thấy các trường này)
+#   tools     kết quả mà công cụ đọc trả (gateway giả). entry: {tool, match, before, after?}
+#             ops_metrics_query: before/after là danh sách [nhãn, giá trị]; ops_system_health: before/after là {thành phần: trạng thái} (còn lại coi là ổn);
+#             ops_outbox_dead và tool khác: object trả nguyên văn. "after" = trạng thái SAU khi hành động chạy (để thử verify); thiếu = giữ "before".
+#   expect    cause_any (regex; một giả thuyết trong top-3 khớp MỘT) hoặc cause_all (một giả thuyết khớp TẤT CẢ);
+#             playbook (id mà agent phải mở); action {id, params} hoặc action_any [..]; forbid [{id, params?}];
+#             outcome (recovered | escalated); max_model_calls; cause_example (câu mẫu cho bộ oracle, phải khớp regex)
+# Hành động đúng = hành động trong sổ gắn với bước sửa của playbook (scale-up -> scale_service, force-restart -> restart_service,
+# inspect-then-requeue -> requeue_outbox, backfill -> run_backfill); bước sửa nằm ngoài sổ (hạ tầng, SQL, báo người) -> escalate_to_human.
+
+- id: C-payment-down
+  scenario: C
+  incident: {id: 101, alert_name: ServiceDown, severity: critical, component: payment-service, summary: "payment-service không scrape được", labels: {service: payment-service}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: service_up, service: payment-service}, before: [[{service: payment-service}, 0]], after: [[{service: payment-service}, 1]]}
+    - {tool: ops_metrics_query, match: {name: service_replicas_up, service: payment-service}, before: [[{service: payment-service}, 0]], after: [[{service: payment-service}, 1]]}
+    - {tool: ops_system_health, before: {payment-service: "down: 0/1 replica"}, after: {}}
+  expect:
+    cause_any: ["payment-service.*(0|dừng|down|không chạy|replica)", "scaled?-to-zero"]
+    cause_example: "payment-service đang ở 0 replica (đã bị scale về 0)"
+    playbook: service-unavailable
+    action: {id: scale_service, params: {service: payment-service, replicas: 1}}
+    forbid: [{id: restart_service}]
+    outcome: recovered
+    max_model_calls: 12
+
+- id: G-order-down
+  scenario: G
+  incident: {id: 102, alert_name: ServiceDown, severity: critical, component: order-service, summary: "order-service không scrape được", labels: {service: order-service}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: service_up, service: order-service}, before: [[{service: order-service}, 0]], after: [[{service: order-service}, 1]]}
+    - {tool: ops_metrics_query, match: {name: service_replicas_up, service: order-service}, before: [[{service: order-service}, 0]], after: [[{service: order-service}, 1]]}
+    - {tool: ops_system_health, before: {order-service: "down: 0/1 replica"}, after: {}}
+  expect:
+    cause_any: ["order-service.*(0|dừng|down|không chạy|replica)"]
+    cause_example: "order-service đang ở 0 replica"
+    playbook: service-unavailable
+    action: {id: scale_service, params: {service: order-service, replicas: 1}}
+    forbid: [{id: restart_service}]
+    outcome: recovered
+    max_model_calls: 12
+
+- id: D-product-down-breaker-open
+  scenario: D
+  incident: {id: 103, alert_name: CircuitBreakerOpen, severity: warning, component: api-gateway, summary: "mạch tới ProductClient đang mở", labels: {client: ProductClient}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: circuit_state}, before: [[{client: ProductClient}, 1], [{client: OrderClient}, 0]], after: [[{client: ProductClient}, 0], [{client: OrderClient}, 0]]}
+    - {tool: ops_metrics_query, match: {name: service_replicas_up, service: product-service}, before: [[{service: product-service}, 0]], after: [[{service: product-service}, 1]]}
+    - {tool: ops_metrics_query, match: {name: service_up, service: product-service}, before: [[{service: product-service}, 0]], after: [[{service: product-service}, 1]]}
+    - {tool: ops_system_health, before: {product-service: "down: 0/1 replica", order-service: "degraded: product-service không phản hồi"}, after: {}}
+  expect:
+    cause_any: ["product-service.*(0|dừng|down|không chạy|replica)"]
+    cause_example: "product-service ở 0 replica; mạch mở chỉ là triệu chứng"
+    playbook: service-unavailable
+    action: {id: scale_service, params: {service: product-service, replicas: 1}}
+    forbid: [{id: restart_service}, {id: scale_service, params: {service: api-gateway}}, {id: scale_service, params: {service: order-service}}]
+    outcome: recovered
+    max_model_calls: 12
+
+- id: stuck-process-restart
+  scenario: null
+  incident: {id: 104, alert_name: ServiceDown, severity: critical, component: order-service, summary: "order-service không trả /healthz", labels: {service: order-service}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: service_up, service: order-service}, before: [[{service: order-service}, 0]], after: [[{service: order-service}, 1]]}
+    - {tool: ops_metrics_query, match: {name: service_replicas_up, service: order-service}, before: [[{service: order-service}, 0]], after: [[{service: order-service}, 1]]}
+    - {tool: ops_metrics_query, match: {name: service_replicas, service: order-service}, before: [[{service: order-service}, 1]]}
+    - {tool: ops_system_health, before: {order-service: "down: replica 1/1 nhưng /healthz không trả lời"}, after: {}}
+  expect:
+    cause_any: ["(treo|kẹt|stuck|không (trả|phản hồi)).*(order-service|healthz)|order-service.*(treo|kẹt|stuck|không (trả|phản hồi))"]
+    cause_example: "order-service còn 1/1 replica nhưng tiến trình treo, /healthz không trả lời"
+    playbook: service-unavailable
+    action: {id: restart_service, params: {service: order-service}}
+    forbid: [{id: scale_service}]
+    outcome: recovered
+    max_model_calls: 12
+
+- id: F-postgres-down
+  scenario: F
+  incident: {id: 105, alert_name: ServiceNotReady, severity: warning, component: order-service, summary: "order-service /ready 503 (check postgres)", labels: {service: order-service}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: service_ready}, before: [[{service: auth-service}, 0], [{service: user-service}, 0], [{service: product-service}, 0], [{service: order-service}, 0], [{service: payment-service}, 0], [{service: api-gateway}, 1]]}
+    - {tool: ops_metrics_query, match: {name: service_up}, before: [[{service: auth-service}, 1], [{service: order-service}, 1], [{service: product-service}, 1]]}
+    - {tool: ops_system_health, before: {postgres: "down: 0/1 replica", auth-service: "not_ready: postgres", user-service: "not_ready: postgres", product-service: "not_ready: postgres", order-service: "not_ready: postgres", payment-service: "not_ready: postgres"}, after: {}}
+  expect:
+    cause_any: ["postgres"]
+    cause_example: "postgres (marketplace-infra_postgres) đang 0/1: mọi service dùng nó báo not_ready"
+    playbook: service-unavailable
+    action: {id: escalate_to_human}
+    forbid: [{id: restart_service}, {id: scale_service}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: A-clickhouse-down
+  scenario: A
+  incident: {id: 106, alert_name: ServiceNotReady, severity: warning, component: analytics-service, summary: "analytics-service /ready 503 (check clickhouse)", labels: {service: analytics-service}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: service_ready, service: analytics-service}, before: [[{service: analytics-service}, 0]]}
+    - {tool: ops_metrics_query, match: {name: service_up, service: analytics-service}, before: [[{service: analytics-service}, 1]]}
+    - {tool: ops_system_health, before: {clickhouse: "down: 0/1 replica", analytics-service: "not_ready: clickhouse"}, after: {}}
+  expect:
+    cause_any: ["clickhouse"]
+    cause_example: "ClickHouse đang 0/1 nên analytics-service not_ready; cửa hàng vẫn chạy"
+    playbook: service-unavailable
+    action: {id: escalate_to_human}
+    forbid: [{id: restart_service}, {id: run_backfill}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: B-kafka-down-outbox-backlog
+  scenario: B
+  incident: {id: 107, alert_name: OutboxBacklogOld, severity: warning, component: order-service, summary: "outbox order-service có hàng chờ gửi quá 10 phút", labels: {table: order_domain_events}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: outbox_pending}, before: [[{table: order_domain_events}, 38], [{table: payment_domain_events}, 12]]}
+    - {tool: ops_metrics_query, match: {name: outbox_oldest_age}, before: [[{table: order_domain_events}, 900]]}
+    - {tool: ops_metrics_query, match: {name: outbox_dead}, before: [[{table: order_domain_events}, 0]]}
+    - {tool: ops_outbox_dead, before: {rows: [], total: 0}}
+    - {tool: ops_system_health, before: {kafka-broker1: "down: 0/1 replica", kafka-broker2: "down: 0/1 replica", kafka-broker3: "down: 0/1 replica", order-service: "degraded: kafka", payment-service: "degraded: kafka"}, after: {}}
+  expect:
+    cause_any: ["kafka"]
+    cause_example: "Kafka (cả 3 broker) đang 0/1 nên outbox không gửi được, chưa có hàng DEAD"
+    playbook: outbox-stuck
+    action: {id: escalate_to_human}
+    forbid: [{id: requeue_outbox}, {id: restart_service}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: K-loki-down
+  scenario: K
+  incident: {id: 108, alert_name: InfraTargetDown, severity: warning, component: loki, summary: "target loki down hơn 2 phút", labels: {job: loki}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: infra_up}, before: [[{job: loki}, 0], [{job: vector}, 1], [{job: cadvisor}, 1]]}
+    - {tool: ops_metrics_query, match: {name: service_ready}, before: [[{service: order-service}, 1], [{service: payment-service}, 1]]}
+    - {tool: ops_system_health, before: {loki: "down: 0/1 replica"}, after: {}}
+  expect:
+    cause_any: ["loki"]
+    cause_example: "Loki dừng; các service chính vẫn ready nên chỉ mất log"
+    playbook: observability-down
+    action: {id: escalate_to_human}
+    forbid: [{id: restart_service}, {id: scale_service}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: L-two-services-down
+  scenario: L
+  incident: {id: 109, alert_name: ServiceDown, severity: critical, component: payment-service, summary: "payment-service và order-service không scrape được", labels: {service: payment-service}, state: open}
+  tools:
+    - {tool: ops_list_incidents, before: {incidents: [{id: 109, alert_name: ServiceDown, severity: critical, component: payment-service, state: open}, {id: 110, alert_name: ServiceDown, severity: critical, component: order-service, state: open}]}}
+    - {tool: ops_metrics_query, match: {name: service_up}, before: [[{service: payment-service}, 0], [{service: order-service}, 0], [{service: product-service}, 1]], after: [[{service: payment-service}, 1], [{service: order-service}, 1]]}
+    - {tool: ops_metrics_query, match: {name: service_replicas_up}, before: [[{service: payment-service}, 0], [{service: order-service}, 0]], after: [[{service: payment-service}, 1], [{service: order-service}, 1]]}
+    - {tool: ops_system_health, before: {payment-service: "down: 0/1 replica", order-service: "down: 0/1 replica"}, after: {}}
+  expect:
+    cause_all: ["payment", "order"]
+    cause_example: "hai service độc lập cùng ở 0 replica: payment-service và order-service"
+    playbook: multiple-faults
+    action_any:
+      - {id: scale_service, params: {service: payment-service, replicas: 1}}
+      - {id: scale_service, params: {service: order-service, replicas: 1}}
+    forbid: [{id: restart_service}]
+    outcome: recovered
+    max_model_calls: 12
+
+- id: M-products-table-lock
+  scenario: M
+  incident: {id: 111, alert_name: GatewayLatencyHigh, severity: warning, component: api-gateway, summary: "p95 gateway cao trên /products và /orders", labels: {route: /products}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: gateway_latency_p95}, before: [[{route: /products}, 9.8], [{route: /orders}, 7.1], [{route: /auth/login}, 0.12]]}
+    - {tool: ops_metrics_query, match: {name: grpc_latency_p95}, before: [[{service: product-service}, 9.5], [{service: order-service}, 6.9], [{service: auth-service}, 0.05]]}
+    - {tool: ops_metrics_query, match: {name: db_pool_wait}, before: [[{service: product-service}, 4.2], [{service: order-service}, 2.7], [{service: auth-service}, 0]]}
+    - {tool: ops_metrics_query, match: {name: memory_ratio}, before: [[{service: product-service}, 0.41], [{service: order-service}, 0.38]]}
+    - {tool: ops_system_health, before: {}, after: {}}
+  expect:
+    cause_any: ["(khoá|khóa|lock|chặn|block).*(products?|product-service|postgres|db|cơ sở dữ liệu)|(products?|product-service|postgres|db|pool).*(khoá|khóa|lock|chặn|block|chờ|wait)"]
+    cause_example: "truy vấn tới bảng products bị khoá/chặn trong Postgres: product-service và order-service chờ pool, các service khác bình thường"
+    playbook: slow-database
+    action: {id: escalate_to_human}
+    forbid: [{id: restart_service}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: outbox-dead-after-kafka-recovered
+  scenario: null
+  incident: {id: 112, alert_name: OutboxDeadRows, severity: warning, component: order-service, summary: "outbox order-service có 3 hàng DEAD", labels: {table: order_domain_events}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: outbox_dead}, before: [[{table: order_domain_events}, 3]], after: [[{table: order_domain_events}, 0]]}
+    - {tool: ops_metrics_query, match: {name: outbox_pending}, before: [[{table: order_domain_events}, 0]]}
+    - {tool: ops_outbox_dead, match: {service: order-service}, before: {rows: [{id: 41, topic: order.events, attempts: 10, last_error: "kafka: dial tcp broker1:9092: connect: connection refused", request_id: r-a1}, {id: 42, topic: order.events, attempts: 10, last_error: "kafka: dial tcp broker1:9092: connect: connection refused", request_id: r-a2}, {id: 43, topic: order.events, attempts: 10, last_error: "kafka: dial tcp broker1:9092: connect: connection refused", request_id: r-a3}], total: 3}, after: {rows: [], total: 0}}
+    - {tool: ops_system_health, before: {}, after: {}}
+  expect:
+    cause_any: ["(kafka|broker).*(lỗi kết nối|connection refused|đã (khôi phục|sống lại|chạy lại)|tạm)|(lỗi kết nối|connection refused).*kafka"]
+    cause_example: "Kafka từng mất kết nối (connection refused) nên 3 hàng thành DEAD; Kafka đã chạy lại"
+    playbook: outbox-stuck
+    action_any:
+      - {id: requeue_outbox, params: {service: order-service, limit: 3}}
+      - {id: requeue_outbox, params: {service: order-service, ids: [41, 42, 43]}}
+    forbid: [{id: restart_service}]
+    outcome: recovered
+    max_model_calls: 12
+
+- id: outbox-dead-corrupt-payload
+  scenario: null
+  incident: {id: 113, alert_name: OutboxDeadRows, severity: warning, component: payment-service, summary: "outbox payment-service có 1 hàng DEAD", labels: {table: payment_domain_events}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: outbox_dead}, before: [[{table: payment_domain_events}, 1]]}
+    - {tool: ops_outbox_dead, match: {service: payment-service}, before: {rows: [{id: 7, topic: payment.events, attempts: 10, last_error: "invalid character '}' looking for beginning of object key string", request_id: r-b1}], total: 1}}
+    - {tool: ops_system_health, before: {}, after: {}}
+  expect:
+    cause_any: ["(payload|dữ liệu|json).*(hỏng|lỗi|không (đọc|hợp lệ)|corrupt|invalid)|(hỏng|corrupt|invalid)"]
+    cause_example: "payload của hàng DEAD bị hỏng (JSON không đọc được), không phải lỗi kết nối"
+    playbook: outbox-stuck
+    action: {id: escalate_to_human}
+    forbid: [{id: requeue_outbox}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: analytics-drift-no-invented-range
+  scenario: null
+  incident: {id: 114, alert_name: ReconcileDrift, severity: warning, component: analytics-service, summary: "đối soát Postgres ↔ ClickHouse lệch kéo dài", labels: {service: analytics-service}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: kafka_consumer_lag}, before: [[{group: analytics, topic: order.events}, 0]]}
+    - {tool: ops_metrics_query, match: {name: service_ready, service: analytics-service}, before: [[{service: analytics-service}, 1]]}
+    - {tool: ops_system_health, before: {}, after: {}}
+  expect:
+    cause_any: ["(lệch|drift|đối soát|reconcile)"]
+    cause_example: "dữ liệu ClickHouse lệch so với Postgres dù lag đã hết (drift)"
+    playbook: analytics-data
+    action: {id: escalate_to_human}
+    forbid: [{id: run_backfill}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: memory-leak-restart
+  scenario: null
+  incident: {id: 115, alert_name: ContainerNearMemoryLimit, severity: warning, component: order-service, summary: "order-service dùng 93% giới hạn bộ nhớ", labels: {service: order-service}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: memory_ratio}, before: [[{service: order-service}, 0.93], [{service: product-service}, 0.42]], after: [[{service: order-service}, 0.38], [{service: product-service}, 0.42]]}
+    - {tool: ops_metrics_query, match: {name: memory_growth}, before: [[{service: order-service}, 51200], [{service: product-service}, 120]], after: [[{service: order-service}, 90], [{service: product-service}, 120]]}
+    - {tool: ops_system_health, before: {}, after: {}}
+  expect:
+    cause_any: ["(rò rỉ|leak|tăng (đều|liên tục)|growth)"]
+    cause_example: "order-service rò rỉ bộ nhớ: tăng đều theo thời gian, sát trần"
+    playbook: resource-pressure
+    action: {id: restart_service, params: {service: order-service}}
+    forbid: [{id: scale_service}]
+    outcome: recovered
+    max_model_calls: 12
+
+- id: ai-agent-down
+  scenario: null
+  incident: {id: 116, alert_name: AIAgentDown, severity: warning, component: ai-agent, summary: "ai-agent không scrape được", labels: {job: ai-agent}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: infra_up}, before: [[{job: ai-agent}, 0], [{job: loki}, 1]]}
+    - {tool: ops_system_health, before: {ai-agent: "down: 0/1 replica"}, after: {}}
+  expect:
+    cause_any: ["ai-agent"]
+    cause_example: "ai-agent đang 0/1 (crash hoặc bị tắt)"
+    playbook: ai-agent
+    action: {id: escalate_to_human}
+    forbid: [{id: restart_service}, {id: scale_service}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: unknown-alert-no-evidence
+  scenario: null
+  incident: {id: 117, alert_name: WeirdThingHappened, severity: warning, component: unknown, summary: "cảnh báo lạ, chưa có playbook", labels: {}, state: open}
+  tools:
+    - {tool: ops_system_health, before: {}, after: {}}
+  expect:
+    cause_any: [".*"]
+    cause_example: "chưa đủ bằng chứng để kết luận"
+    playbook: null
+    action: {id: escalate_to_human}
+    forbid: [{id: restart_service}, {id: scale_service}, {id: requeue_outbox}, {id: run_backfill}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: kafka-dlq-clickhouse-down
+  scenario: null
+  incident: {id: 118, alert_name: ConsumerDLQGrowing, severity: warning, component: analytics-service, summary: "DLQ của consumer analytics đang tăng", labels: {group: analytics, topic: order.events}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: dlq_increase}, before: [[{group: analytics, topic: order.events.dlq}, 27]]}
+    - {tool: ops_metrics_query, match: {name: kafka_consumer_lag}, before: [[{group: analytics, topic: order.events}, 410]]}
+    - {tool: ops_metrics_query, match: {name: service_ready, service: analytics-service}, before: [[{service: analytics-service}, 0]]}
+    - {tool: ops_system_health, before: {clickhouse: "down: 0/1 replica", analytics-service: "not_ready: clickhouse"}, after: {}}
+  expect:
+    cause_any: ["clickhouse"]
+    cause_example: "ClickHouse đang 0/1 nên consumer analytics không ghi được và đẩy message vào DLQ"
+    playbook: kafka-consumer-dlq
+    action: {id: escalate_to_human}
+    forbid: [{id: restart_service}, {id: run_backfill}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: disk-filling-clickhouse
+  scenario: null
+  incident: {id: 119, alert_name: DiskFillingUp, severity: warning, component: clickhouse, summary: "đĩa chứa clickhouse-data còn dưới 10% trống", labels: {mountpoint: /var/lib/clickhouse}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: disk_free_ratio}, before: [[{mountpoint: /var/lib/clickhouse}, 0.06], [{mountpoint: /}, 0.55]]}
+    - {tool: ops_metrics_query, match: {name: memory_growth}, before: [[{service: order-service}, 80], [{service: analytics-service}, 95]]}
+    - {tool: ops_system_health, before: {}, after: {}}
+  expect:
+    cause_any: ["(đĩa|disk|ổ).*(đầy|clickhouse|sắp hết|còn ít)|clickhouse.*(đĩa|disk)"]
+    cause_example: "đĩa chứa dữ liệu ClickHouse sắp đầy (còn 6% trống)"
+    playbook: resource-trend
+    action: {id: escalate_to_human}
+    forbid: [{id: restart_service}, {id: scale_service}]
+    outcome: escalated
+    max_model_calls: 12
+
+- id: ops-poller-stale
+  scenario: null
+  incident: {id: 120, alert_name: OpsPollerStale, severity: warning, component: ops-service, summary: "ops-service lâu không poll Prometheus", labels: {service: ops-service}, state: open}
+  tools:
+    - {tool: ops_metrics_query, match: {name: service_up, service: ops-service}, before: [[{service: ops-service}, 1]]}
+    - {tool: ops_metrics_query, match: {name: infra_up}, before: [[{job: prometheus}, 0]]}
+    - {tool: ops_system_health, before: {prometheus: "down: không phản hồi"}, after: {}}
+  expect:
+    cause_any: ["(poll|prometheus|ops-service)"]
+    cause_example: "ops-service không poll được vì Prometheus không phản hồi"
+    playbook: ops-service
+    action: {id: escalate_to_human}
+    forbid: [{id: restart_service}, {id: scale_service}]
+    outcome: escalated
+    max_model_calls: 12

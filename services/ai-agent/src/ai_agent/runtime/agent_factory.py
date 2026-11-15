@@ -51,18 +51,24 @@ class AgentRuntime:
             self._models[llm_role] = self._llm_factory(self.cfg, llm_role)  # lỗi cấu hình báo ở đây, kèm tên profile
         return self._models[llm_role]
 
+    def read_tools(self, persona: Persona, specs: list[ToolSpec]) -> list:
+        limits = self.cfg.limits
+        return [
+            make_tool(s, self.gateway, tool_timeout=float(self.cfg.gateway.timeout_sec),
+                      max_chars=int(limits.tool_result_max_chars), max_items=int(limits.tool_result_max_items), reveal_route=not persona.hide_internals)
+            for s in specs
+        ]
+
     async def agent_for(self, persona: Persona, ctx: RunContext):
         specs, actions = await self.specs_for(ctx)
+        if not persona.allow_actions:
+            actions = []  # persona chỉ đọc (RCA): không nhận tool đề xuất dù token có quyền
         if not specs:
             raise LookupError(f"role {ctx.role!r} chưa có tool nào ở gateway")
         key = (persona.name, tuple((s.name, s.method, s.path) for s in specs), tuple((a.name, a.method, a.path) for a in actions))
         if key not in self._agents:
             limits = self.cfg.limits
-            tools = [
-                make_tool(s, self.gateway, tool_timeout=float(self.cfg.gateway.timeout_sec),
-                          max_chars=int(limits.tool_result_max_chars), max_items=int(limits.tool_result_max_items), reveal_route=not persona.hide_internals)
-                for s in specs
-            ]
+            tools = self.read_tools(persona, specs)
             tools += [make_action_tool(a, self.gateway, tool_timeout=float(self.cfg.gateway.timeout_sec)) for a in actions]
             model = self._model(persona.llm_role)
             if self._agent_builder is not None:
