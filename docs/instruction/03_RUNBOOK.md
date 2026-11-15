@@ -447,4 +447,9 @@ ai-agent (job Prometheus `ai-agent`, cổng 8090) chỉ phục vụ chat AI; ch�
 1. `docker service ps marketplace_ai-agent` và `docker service logs marketplace_ai-agent --tail 100`.
 2. Có exception lúc khởi động hoặc 0 replica: `docker service update --force marketplace_ai-agent` (an toàn, hội thoại nằm trong Postgres).
 3. Service chạy mà chat vẫn lỗi: xem `mm_ai_llm_errors_total` (khoá/hạn mức nhà cung cấp mô hình), rồi `GET /ops/system/health` (gateway có tới được `/ready` không).
+## 19b. Bộ theo dõi RCA ngừng tick (`AIRcaWatcherStalled`)
+Chỉ có khi `AI_RCA_ENABLED=true`. ai-agent vẫn chạy (chat bình thường) nhưng vòng lặp nền của RCA không còn tick: sự cố critical không được điều tra tự động và phiên đang chờ người không được đánh thức.
+1. `time() - mm_ai_rca_watcher_last_tick_timestamp_seconds` trong Prometheus (> 300 là ngừng); `mm_ai_rca_watcher_ticks_total{result="error"}` tăng nghĩa là ops-service hoặc gateway không trả lời.
+2. `docker service logs marketplace_ai-agent --tail 200 | grep "rca watcher"`: tìm `tick failed: <loại lỗi>: <nội dung>`.
+3. Không có dòng nào, hoặc đã lỗi quá lâu: `docker service update --force marketplace_ai-agent` (phiên chờ người nằm trong checkpoint Postgres nên không mất; phiên đang `running` lúc restart bị đánh dấu `error/interrupted`).
 Playbook cho agent: `docs/playbooks/ai-agent.yml`.

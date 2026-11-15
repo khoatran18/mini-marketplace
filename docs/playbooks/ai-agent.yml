@@ -1,7 +1,7 @@
 id: ai-agent
 title: ai-agent ngừng hoạt động (chat AI báo không khả dụng)
 triggers:
-  alerts: [AIAgentDown]
+  alerts: [AIAgentDown, AIRcaWatcherStalled]
 runbook: "§19"
 diagnose:
   - id: agent-up
@@ -24,6 +24,11 @@ diagnose:
     query: '{service="ai-agent",level=~"error|warn"}'
     read_only: true
     interpret: "tìm 'cannot build agent' (thiếu khoá mô hình / gateway không trả tool), lỗi kết nối Postgres (bảng ai_*), OOM"
+  - id: rca-watcher
+    tool: prometheus
+    query: 'time() - mm_ai_rca_watcher_last_tick_timestamp_seconds, sum by (result) (rate(mm_ai_rca_watcher_ticks_total[10m])), mm_ai_rca_runs_waiting'
+    read_only: true
+    interpret: "tuổi nhịp tim > 300 s = bộ theo dõi RCA ngừng; result=error tăng = ops-service hoặc gateway không trả lời bộ theo dõi (xem log 'rca watcher tick failed'); runs_waiting > 0 mà tuổi nhịp tim tăng = phiên đang chờ người không được đánh thức"
   - id: gateway-reach
     tool: http
     query: "GET /ops/system/health"
@@ -32,6 +37,9 @@ diagnose:
 causes:
   - id: crashed
     when: "up=0 hoặc 0 replica, log có exception/OOM lúc khởi động"
+    fix: [restart-agent]
+  - id: rca-watcher-stuck
+    when: "AIRcaWatcherStalled: ai-agent up nhưng nhịp tim RCA cũ; log có 'rca watcher tick failed' (ops-service/gateway lỗi) hoặc không có dòng nào (tác vụ nền đã chết)"
     fix: [restart-agent]
   - id: llm-key-or-quota
     when: "ai-agent up nhưng mm_ai_llm_errors_total tăng, log báo 401/429 từ nhà cung cấp mô hình"
