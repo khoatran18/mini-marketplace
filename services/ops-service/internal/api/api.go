@@ -65,6 +65,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /proposals/{id}", a.getProposal)
 	mux.HandleFunc("POST /proposals/{id}/review", human(a.reviewProposal))
 	mux.HandleFunc("POST /proposals/{id}/decision", human(a.decideProposal))
+	mux.HandleFunc("POST /proposals/{id}/withdraw", human(a.withdrawProposal))
 	mux.HandleFunc("POST /proposals/{id}/execute", human(a.executeProposal))
 	mux.HandleFunc("POST /proposals/{id}/executed", human(a.recordExecuted))
 	mux.HandleFunc("GET /incidents", a.listIncidents)

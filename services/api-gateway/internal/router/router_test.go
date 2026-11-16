@@ -326,7 +326,7 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 	for _, route := range []struct{ method, path string }{
 		{"GET", "/ops/incidents"}, {"GET", "/ops/incidents/1"}, {"POST", "/ops/incidents/1/investigate"}, {"GET", "/ops/audit"},
 		{"GET", "/ops/actions"}, {"GET", "/ops/proposals"}, {"POST", "/ops/proposals"}, {"GET", "/ops/proposals/1"},
-		{"POST", "/ops/proposals/1/review"}, {"POST", "/ops/proposals/1/decision"},
+		{"POST", "/ops/proposals/1/review"}, {"POST", "/ops/proposals/1/decision"}, {"POST", "/ops/proposals/1/withdraw"},
 		{"POST", "/ops/proposals/1/execute"}, {"POST", "/ops/proposals/1/executed"}, {"GET", "/ops/queries"}, {"GET", "/ops/queries/service_up"}, {"POST", "/ops/queries/service_up"}, {"GET", "/ops/outbox/order-service/dead"}, {"GET", "/ops/playbooks"}, {"GET", "/ops/playbooks/outbox-stuck"}, {"POST", "/ops/queries/gateway_latency_p95"},
 	} {
 		if w := request(e, route.method, route.path, ""); w.Code != http.StatusUnauthorized {
@@ -345,7 +345,7 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 	}{
 		{"GET", "/ops/incidents", 200}, {"GET", "/ops/proposals", 200}, {"POST", "/ops/proposals", 200},
 		{"POST", "/ops/queries/service_up", 200}, {"GET", "/ops/queries/service_up", 200}, {"POST", "/ops/incidents/1/investigate", 200}, {"GET", "/ops/system/health", -1},
-		{"POST", "/ops/proposals/1/review", 200}, {"POST", "/ops/proposals/1/decision", 200},
+		{"POST", "/ops/proposals/1/review", 200}, {"POST", "/ops/proposals/1/decision", 200}, {"POST", "/ops/proposals/1/withdraw", 200},
 		{"POST", "/ops/proposals/1/execute", 200}, {"POST", "/ops/proposals/1/executed", 200}, {"GET", "/admin/analytics/data-health", -1},
 		{"GET", "/admin/analytics/summary", 403}, {"GET", "/admin/analytics/traffic", 403}, {"GET", "/admin/payments", 403}, {"GET", "/admin/orders", 403},
 		{"GET", "/admin/categories", 403}, {"GET", "/admin/accounts", 403}, {"POST", "/admin/accounts", 403}, {"DELETE", "/admin/accounts/1", 403}, {"POST", "/admin/orders/1/cancel", 403}, {"POST", "/admin/payments/1/refund", 403},
@@ -562,7 +562,7 @@ func TestRCARoutes(t *testing.T) {
 	}
 	on := newEngineEnv(t, func(c *config.EnvConfig) { c.AgentKeys, c.AIServiceURL, c.FeatureAIOps = keys, up.URL, true })
 	routes := []struct{ method, path string }{
-		{"GET", "/ops/rca/runs"}, {"GET", "/ops/rca/runs/7"}, {"GET", "/ops/rca/runs/7/events"}, {"POST", "/ops/rca/runs"}, {"POST", "/ops/rca/runs/7/recheck"}, {"POST", "/ops/rca/runs/7/proposal"},
+		{"GET", "/ops/rca/runs"}, {"GET", "/ops/rca/runs/7"}, {"GET", "/ops/rca/runs/7/events"}, {"POST", "/ops/rca/runs"}, {"POST", "/ops/rca/runs/7/recheck"}, {"POST", "/ops/rca/runs/7/cancel"}, {"POST", "/ops/rca/runs/7/proposal"},
 	}
 	for _, r := range routes {
 		if w := request(on, r.method, r.path, ""); w.Code != http.StatusUnauthorized {
@@ -583,6 +583,9 @@ func TestRCARoutes(t *testing.T) {
 		}
 		if w := requestWith(on, "GET", "/ops/rca/runs/7/events?after=12&x=1", token(t, role), nil, ""); w.Code != 200 || gotPath != "/rca/runs/7/events?after=12" {
 			t.Errorf("%s events: %d path %q", role, w.Code, gotPath)
+		}
+		if w := request(on, "POST", "/ops/rca/runs/7/cancel", token(t, role)); w.Code != 200 || gotMethod != "POST" || gotPath != "/rca/runs/7/cancel" {
+			t.Errorf("%s cancel: %d %s %s", role, w.Code, gotMethod, gotPath)
 		}
 		if w := request(on, "POST", "/ops/rca/runs/7/recheck", token(t, role)); w.Code != 200 || gotPath != "/rca/runs/7/recheck" {
 			t.Errorf("recheck as %s: %d path=%q", role, w.Code, gotPath)

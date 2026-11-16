@@ -18,6 +18,7 @@ const (
 	PNeedsReview = "NEEDS_REVIEW"
 	PAlternative = "ALTERNATIVE"
 	PExpired     = "EXPIRED"
+	PWithdrawn   = "WITHDRAWN" // người tạo rút lại khi còn PENDING
 )
 
 // Quyết định của người duyệt.
@@ -32,6 +33,7 @@ const (
 var (
 	ErrExpired      = errors.New("proposal expired")
 	ErrSelfApproval = errors.New("creator cannot decide own proposal")
+	ErrNotCreator   = errors.New("only the creator can withdraw a proposal")
 	ErrTooMany      = errors.New("too many pending proposals for this incident")
 	ErrDuplicate    = errors.New("an identical proposal is already pending")
 )
@@ -322,6 +324,42 @@ func (s *Store) Decide(ctx context.Context, id int64, actor, decision, reason, r
 		details["alternative"] = map[string]any{"action_id": alt.ActionID, "params": alt.Params, "risk": alt.Risk, "hash": alt.Hash}
 	}
 	if err := audit(ctx, tx, actor, "proposal_"+decision, "proposal", fmt.Sprint(id), requestID, details); err != nil {
+		return p, err
+	}
+	p, err = scanP(tx.QueryRowContext(ctx, `SELECT `+pcols+` FROM ops_proposals WHERE id=$1`, id))
+	if err != nil {
+		return p, err
+	}
+	return p, tx.Commit()
+}
+
+// Withdraw cho NGƯỜI TẠO rút lại đề xuất còn PENDING (WITHDRAWN). Chỉ người tạo; không phải một quyết định duyệt nên không cần mã duyệt
+// và không mở đường cho người tạo tự duyệt hay tự chạy (Decide/Execute vẫn chặn họ). Dùng lại decided_by/decided_at/decision_reason.
+func (s *Store) Withdraw(ctx context.Context, id int64, actor, reason, requestID string, now time.Time) (Proposal, error) {
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return Proposal{}, err
+	}
+	defer tx.Rollback()
+	p, err := scanP(tx.QueryRowContext(ctx, `SELECT `+pcols+` FROM ops_proposals WHERE id=$1 FOR UPDATE`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return p, ErrNotFound
+	} else if err != nil {
+		return p, err
+	}
+	if p.CreatedBy != actor {
+		return p, ErrNotCreator
+	}
+	if p.State != PPending {
+		return p, ErrBadState
+	}
+	if !now.Before(p.ExpiresAt) {
+		return p, ErrExpired // ExpireDue sẽ chuyển EXPIRED; không đổi trạng thái ở đây
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE ops_proposals SET state='WITHDRAWN', decided_by=$2, decided_at=$3, decision_reason=$4 WHERE id=$1`, id, actor, now, reason); err != nil {
+		return p, err
+	}
+	if err := audit(ctx, tx, actor, "proposal_withdrawn", "proposal", fmt.Sprint(id), requestID, map[string]any{"reason": reason, "hash": p.ContentHash}); err != nil {
 		return p, err
 	}
 	p, err = scanP(tx.QueryRowContext(ctx, `SELECT `+pcols+` FROM ops_proposals WHERE id=$1`, id))

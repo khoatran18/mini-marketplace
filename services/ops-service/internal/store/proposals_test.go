@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -170,5 +171,47 @@ func TestStaleExecutionsFail(t *testing.T) {
 	// exec_state chỉ hợp lệ với đề xuất đã duyệt
 	if _, err := s.DB.ExecContext(ctx, `INSERT INTO ops_proposals (action_id, risk, state, content_hash, created_by, expires_at, exec_state) VALUES ('x','low','PENDING','h2','a', now(),'EXECUTED')`); err == nil {
 		t.Fatal("PENDING không được có exec_state")
+	}
+}
+
+func TestOnlyTheCreatorCanWithdrawAndOnlyWhilePending(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	p, _ := s.CreateProposal(ctx, newIn(nil, "w1"))
+	if _, err := s.Withdraw(ctx, p.ID, "admin:1", "không phải tôi", "", time.Now()); err != ErrNotCreator {
+		t.Fatalf("người khác rút lại phải ErrNotCreator, được %v", err)
+	}
+	out, err := s.Withdraw(ctx, p.ID, "admin:99", "đã tự xử lý", "r1", time.Now())
+	if err != nil || out.State != PWithdrawn || out.DecidedBy == nil || *out.DecidedBy != "admin:99" || out.DecisionReason != "đã tự xử lý" || out.DecidedAt == nil {
+		t.Fatalf("rút lại: %v %+v", err, out)
+	}
+	if _, err := s.Withdraw(ctx, p.ID, "admin:99", "", "", time.Now()); err != ErrBadState {
+		t.Fatalf("rút lại lần hai phải ErrBadState, được %v", err)
+	}
+	// đã rút lại thì không duyệt được nữa, và người tạo vẫn không tự duyệt được đề xuất khác của mình
+	if _, err := s.Decide(ctx, p.ID, "admin:1", DecAccept, "", "", nil, time.Now()); err != ErrBadState {
+		t.Fatalf("duyệt đề xuất đã rút: %v", err)
+	}
+	q, _ := s.CreateProposal(ctx, newIn(nil, "w2"))
+	if _, err := s.Decide(ctx, q.ID, "admin:99", DecAccept, "", "", nil, time.Now()); err != ErrSelfApproval {
+		t.Fatalf("người tạo vẫn không tự duyệt được: %v", err)
+	}
+	// cùng nội dung được đề xuất lại sau khi rút (chỉ PENDING mới chiếm chỗ ở chỉ mục duy nhất)
+	if _, err := s.CreateProposal(ctx, newIn(nil, "w1")); err != nil {
+		t.Fatalf("đề xuất lại sau khi rút: %v", err)
+	}
+	trail, _ := s.AuditList(ctx, "proposal", fmt.Sprint(p.ID), 10)
+	found := false
+	for _, e := range trail {
+		found = found || e.Event == "proposal_withdrawn"
+	}
+	if !found {
+		t.Fatalf("thiếu dòng nhật ký proposal_withdrawn: %v", trail)
+	}
+	exp := newIn(nil, "w3")
+	exp.TTL = time.Minute
+	e, _ := s.CreateProposal(ctx, exp)
+	if _, err := s.Withdraw(ctx, e.ID, "admin:99", "", "", time.Now().Add(time.Hour)); err != ErrExpired {
+		t.Fatalf("quá hạn phải ErrExpired, được %v", err)
 	}
 }

@@ -262,3 +262,34 @@ func TestBodyLimitAndCatalogEndpoint(t *testing.T) {
 		t.Errorf("catalog: %d %v", c, out)
 	}
 }
+
+func TestWithdrawIsCreatorOnlyAndDoesNotOpenSelfApproval(t *testing.T) {
+	e := newEnv(t)
+	p := e.propose(t, map[string]any{"action_id": "restart_service", "params": map[string]any{"service": "order-service"}, "rationale": "treo"})
+	id := int(p["id"].(float64))
+	path := fmt.Sprintf("/proposals/%d/withdraw", id)
+	if code, _ := e.call("POST", path, "admin:1", map[string]any{"reason": "x"}); code != 403 {
+		t.Fatalf("người khác rút lại phải 403, được %d", code)
+	}
+	if code, _ := e.call("POST", "/proposals/9999/withdraw", "admin:99", nil); code != 404 {
+		t.Fatalf("không có đề xuất phải 404, được %d", code)
+	}
+	if code, _ := e.call("POST", path, "admin:99", map[string]any{"reason": strings.Repeat("x", 1001)}); code != 400 {
+		t.Fatalf("lý do quá dài phải 400, được %d", code)
+	}
+	code, out := e.call("POST", path, "admin:99", map[string]any{"reason": "tự xử lý rồi"})
+	got, _ := out["proposal"].(map[string]any)
+	if code != 200 || got["state"] != "WITHDRAWN" || got["decided_by"] != "admin:99" || got["decision_reason"] != "tự xử lý rồi" {
+		t.Fatalf("rút lại: %d %v", code, out)
+	}
+	if code, _ := e.call("POST", path, "admin:99", nil); code != 409 {
+		t.Fatalf("rút lại lần hai phải 409, được %d", code)
+	}
+	if code, out := e.call("GET", "/proposals?state=withdrawn", "admin:1", nil); code != 200 || len(out["proposals"].([]any)) != 1 {
+		t.Fatalf("lọc state=WITHDRAWN: %d %v", code, out)
+	}
+	// đề xuất đã rút không còn duyệt hay chạy được
+	if code, _ := e.call("POST", fmt.Sprintf("/proposals/%d/review", id), "admin:1", nil); code != 409 {
+		t.Fatalf("review đề xuất đã rút phải 409, được %d", code)
+	}
+}

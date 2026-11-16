@@ -193,6 +193,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		opsRead.POST("/proposals", confirm, opsHandler.Proxy("/proposals"))
 		opsRead.POST("/proposals/:id/review", opsHandler.Proxy("/proposals/:id/review"))
 		opsRead.POST("/proposals/:id/decision", opsHandler.Proxy("/proposals/:id/decision"))
+		opsRead.POST("/proposals/:id/withdraw", opsHandler.Proxy("/proposals/:id/withdraw"))
 		opsRead.POST("/proposals/:id/execute", opsHandler.Proxy("/proposals/:id/execute"))
 		opsRead.POST("/proposals/:id/executed", opsHandler.Proxy("/proposals/:id/executed"))
 		// RCA (ADR-46/47): ai-agent runs the investigation; the gateway only forwards with a 60 s agent token. FEATURE_AI_OPS off = 404.
@@ -212,6 +213,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		rcaLog.GET("/runs/:id/events", rca.Forward(http.MethodGet, "/rca/runs/:id/events", "after"))
 		rcaRoute.POST("/runs", rca.Forward(http.MethodPost, "/rca/runs"))
 		rcaRoute.POST("/runs/:id/recheck", rca.Forward(http.MethodPost, "/rca/runs/:id/recheck"))
+		rcaRoute.POST("/runs/:id/cancel", rca.Forward(http.MethodPost, "/rca/runs/:id/cancel"))
 		// only an operator may confirm a draft (ADR-45: admin is read-only for the agent); ai-agent checks the role again
 		rcaRoute.POST("/runs/:id/proposal", middleware.AuthorizationMiddleware([]string{"operator"}, serviceConfig.ZapLogger), rca.Forward(http.MethodPost, "/rca/runs/:id/proposal"))
 		// pipeline health (lag, reconcile), not business figures: stays under /admin/analytics, open to the operator as well

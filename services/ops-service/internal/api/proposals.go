@@ -136,7 +136,7 @@ func (a *API) listProposals(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	state := strings.ToUpper(q.Get("state"))
 	switch state {
-	case "", store.PPending, store.PAccepted, store.PRejected, store.PNeedsReview, store.PAlternative, store.PExpired:
+	case "", store.PPending, store.PAccepted, store.PRejected, store.PNeedsReview, store.PAlternative, store.PExpired, store.PWithdrawn:
 	default:
 		writeErr(w, http.StatusBadRequest, "state không hợp lệ")
 		return
@@ -292,6 +292,43 @@ func (a *API) decideProposal(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusConflict, "đề xuất đã hết hạn")
 	case errors.Is(err, store.ErrSelfApproval):
 		writeErr(w, http.StatusForbidden, "người tạo đề xuất không được tự quyết định")
+	case err != nil:
+		writeErr(w, http.StatusInternalServerError, "internal error")
+	default:
+		writeJSON(w, http.StatusOK, map[string]any{"proposal": out})
+	}
+}
+
+type withdrawReq struct {
+	Reason string `json:"reason"`
+}
+
+// withdrawProposal: người TẠO rút lại đề xuất còn PENDING của chính mình (WITHDRAWN). Lý do tuỳ chọn, tối đa 1000 ký tự.
+func (a *API) withdrawProposal(w http.ResponseWriter, r *http.Request) {
+	n, ok := id(r)
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "id không hợp lệ")
+		return
+	}
+	var req withdrawReq
+	if r.ContentLength != 0 && !decode(w, r, &req) {
+		return
+	}
+	reason := strings.TrimSpace(req.Reason)
+	if len(reason) > 1000 {
+		writeErr(w, http.StatusBadRequest, "reason tối đa 1000 ký tự")
+		return
+	}
+	out, err := a.Store.Withdraw(r.Context(), n, actor(r), reason, r.Header.Get("X-Request-ID"), a.now())
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		writeErr(w, http.StatusNotFound, "not found")
+	case errors.Is(err, store.ErrNotCreator):
+		writeErr(w, http.StatusForbidden, "chỉ người tạo đề xuất mới rút lại được")
+	case errors.Is(err, store.ErrBadState):
+		writeErr(w, http.StatusConflict, "đề xuất không còn PENDING")
+	case errors.Is(err, store.ErrExpired):
+		writeErr(w, http.StatusConflict, "đề xuất đã hết hạn")
 	case err != nil:
 		writeErr(w, http.StatusInternalServerError, "internal error")
 	default:
