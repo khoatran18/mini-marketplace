@@ -3,6 +3,7 @@
   GET  /rca/runs/{id}                     một phiên: trạng thái, nháp, giả thuyết, bằng chứng (cắt ngắn), dòng thời gian, báo cáo
   POST /rca/runs {incident_id}            bấm "Điều tra": chạy nền, trả 202 + phiên (đang có phiên chưa xong thì trả phiên đó, 200)
   POST /rca/runs/{id}/recheck             "Kiểm tra lại": hỏi ops-service ngay thay vì chờ bộ theo dõi
+  POST /rca/runs/{id}/cancel              "Hủy điều tra": dừng phiên đang chạy hoặc đang chờ (nút dừng chi phí; ghi một dòng vào nhật ký)
   POST /rca/runs/{id}/proposal            CHỈ operator: xin gateway ký nháp để UI gọi POST /ops/proposals (người xác nhận bằng JWT của mình)
 `holder["rca"]` là RcaService (None = RCA tắt: 503)."""
 from __future__ import annotations
@@ -94,6 +95,17 @@ def create_router(holder: dict) -> APIRouter:
             return g
         try:
             return {"run": await g[1].recheck(run_id)}
+        except RcaError as exc:
+            return _err(exc.status, exc.message)
+
+    @router.post("/runs/{run_id}/cancel")
+    async def cancel(run_id: int, request: Request):
+        g = guard(request)
+        if isinstance(g, JSONResponse):
+            return g
+        ident, svc = g
+        try:
+            return {"run": await svc.cancel(run_id, ident.role, ident.user_id)}
         except RcaError as exc:
             return _err(exc.status, exc.message)
 

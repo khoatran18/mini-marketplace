@@ -126,7 +126,7 @@ async def test_executed_wakes_the_run_only_after_verify_wait_then_verifies():
     assert r["status"] == "done" and r["outcome"] == "recovered" and r["report"]["ready_to_close"] is True
 
 
-@pytest.mark.parametrize("p,outcome", [({"state": "REJECTED"}, "rejected"), ({"state": "EXPIRED"}, "expired"),
+@pytest.mark.parametrize("p,outcome", [({"state": "REJECTED"}, "rejected"), ({"state": "WITHDRAWN"}, "rejected"), ({"state": "EXPIRED"}, "expired"),
                                        ({"state": "ACCEPTED", "exec_state": "FAILED"}, "rejected")])
 async def test_rejected_expired_or_failed_execution_end_the_run_without_verify(p, outcome):
     brain = ScriptedBrain()

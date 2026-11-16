@@ -49,6 +49,7 @@ class RcaService:
         self.watcher = Watcher(self.runner, runs, self.ops, budget, clock)
         self._sem = asyncio.Semaphore(max_concurrent)
         self._tasks: set[asyncio.Task] = set()
+        self._by_run: dict[int, asyncio.Task] = {}  # phiên đang chạy nền -> tác vụ, để hủy được
         self._watch_task: asyncio.Task | None = None
 
     @property
@@ -81,7 +82,7 @@ class RcaService:
             t.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    def _spawn(self, coro) -> None:
+    def _spawn(self, coro, run_id: int | None = None) -> None:
         async def guarded():
             async with self._sem:
                 await coro
@@ -89,6 +90,9 @@ class RcaService:
         t = asyncio.create_task(guarded())
         self._tasks.add(t)
         t.add_done_callback(self._tasks.discard)
+        if run_id is not None:
+            self._by_run[run_id] = t
+            t.add_done_callback(lambda _t, rid=run_id: self._by_run.pop(rid, None))
 
     # ---- thao tác của API ----
     async def start_manual(self, incident_id: int, user_id: int) -> tuple[dict[str, Any], bool]:
@@ -105,7 +109,7 @@ class RcaService:
         if incident is None:
             raise RcaError(404, "không tìm thấy sự cố")
         run = await self.runner.begin(incident, f"manual:{user_id}")
-        self._spawn(self.runner.go(run, incident))
+        self._spawn(self.runner.go(run, incident), run["id"])
         return run, True
 
     async def state_of(self, run: dict[str, Any]) -> dict[str, Any]:
@@ -123,6 +127,23 @@ class RcaService:
         if run is None:
             raise RcaError(404, "không tìm thấy phiên")
         return {"run": run, **_view_state(await self.state_of(run))}
+
+    async def cancel(self, run_id: int, role: str, user_id: int) -> dict[str, Any]:
+        """"Hủy điều tra": dừng phiên đang chạy hoặc đang chờ. Chi phí dừng ngay (tác vụ nền bị hủy, bộ theo dõi không đánh thức nữa).
+        Đề xuất đã tạo ở ops-service (nếu có) KHÔNG bị đụng tới: nó có luồng duyệt/từ chối riêng."""
+        run = await self.runs.get(run_id)
+        if run is None:
+            raise RcaError(404, "không tìm thấy phiên")
+        if run["status"] not in ACTIVE:
+            raise RcaError(409, "phiên này đã kết thúc, không còn gì để hủy")
+        task = self._by_run.get(run_id)
+        if task is not None and not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        run = await self.runs.get(run_id) or run
+        if run["status"] not in ACTIVE:  # vừa kịp kết thúc trong lúc hủy
+            return run
+        return await self.runner.cancel(run, f"{role}:{user_id}")
 
     async def recheck(self, run_id: int) -> dict[str, Any]:
         """"Kiểm tra lại": hỏi ops-service ngay thay vì chờ chu kỳ của bộ theo dõi."""

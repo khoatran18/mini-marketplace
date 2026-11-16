@@ -4,7 +4,7 @@ from __future__ import annotations
 import operator
 from typing import Annotated, Any, TypedDict
 
-OUTCOMES = ("recovered", "not_recovered", "rejected", "expired", "dismissed", "escalated", "budget", "no_evidence", "blocked", "error")
+OUTCOMES = ("recovered", "not_recovered", "rejected", "expired", "dismissed", "escalated", "budget", "no_evidence", "blocked", "error", "cancelled")
 
 
 class RcaState(TypedDict, total=False):

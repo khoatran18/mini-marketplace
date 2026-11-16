@@ -4,7 +4,7 @@
 2. Đánh thức: phiên đang chờ người thì xem ops-service rồi gọi `resume` với đúng sự kiện:
    - chờ xác nhận: tìm đề xuất cùng sự cố, cùng hành động và tham số, tạo SAU khi nháp xuất hiện -> `confirmed`; quá hạn -> `expired`;
    - chờ duyệt: ACCEPTED/ALTERNATIVE và exec_state=EXECUTED (đã qua `verify_wait_sec`) -> `executed`; FAILED -> `failed`;
-     REJECTED -> `rejected`; EXPIRED hoặc quá hạn -> `expired`.
+     REJECTED hoặc WITHDRAWN (người tạo rút lại) -> `rejected`; EXPIRED hoặc quá hạn -> `expired`.
 Danh tính hệ thống để tự chạy là token chỉ đọc `sys` (ADR-47); `Runner.graph_for` là nơi cấp token cho phiên."""
 from __future__ import annotations
 
@@ -111,7 +111,7 @@ class Watcher:
         if p is None:
             return {"event": "expired"} if late else None
         state, ex = p.get("state"), p.get("exec_state")
-        if state == "REJECTED":
+        if state in ("REJECTED", "WITHDRAWN"):  # người tạo rút lại cũng là một lời từ chối đối với phiên điều tra
             return {"event": "rejected"}
         if state == "EXPIRED":
             return {"event": "expired"}

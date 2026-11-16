@@ -253,3 +253,57 @@ async def test_app_wiring_starts_and_stops_rca():
     async with app2.router.lifespan_context(app2):
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app2), base_url="http://ai") as cl:
             assert (await cl.get("/rca/runs", headers=hdr())).status_code == 503
+
+
+async def test_cancel_a_waiting_run_closes_it_logs_who_and_the_watcher_ignores_it():
+    svc, _, _ = make()
+    run, _ = await svc.start_manual(7, 42)
+    await settle(svc)
+    out = await svc.cancel(run["id"], "operator", 42)
+    assert out["status"] == "done" and out["outcome"] == "cancelled" and out["waiting_since"] is None
+    ev = await svc.events(run["id"])
+    last = ev["items"][-1]
+    assert last["title"] == "Đã hủy điều tra" and last["data"] == {"by": "operator:42", "was": "waiting_confirm"}
+    assert await svc.runs.waiting() == []  # bộ theo dõi không đánh thức phiên đã hủy
+    with pytest.raises(RcaError) as e:
+        await svc.cancel(run["id"], "operator", 42)
+    assert e.value.status == 409  # đã kết thúc: không hủy lần hai
+
+
+async def test_cancel_a_running_run_stops_the_background_task_before_it_spends_more():
+    class Slow(ScriptedBrain):
+        async def collect(self, state):
+            self.calls.append("collect")
+            await asyncio.sleep(60)
+
+    brain = Slow()
+    svc, _, _ = make(brain=brain)
+    run, _ = await svc.start_manual(7, 42)
+    for _ in range(50):
+        if brain.calls:
+            break
+        await asyncio.sleep(0.01)
+    out = await svc.cancel(run["id"], "admin", 5)
+    assert out["status"] == "done" and out["outcome"] == "cancelled" and not svc._by_run
+    assert brain.calls == ["collect"]  # không chạy tiếp sang bước sau
+    assert (await svc.events(run["id"]))["items"][-1]["data"]["was"] == "running"
+
+
+async def test_cancel_unknown_run_is_404():
+    svc, _, _ = make()
+    with pytest.raises(RcaError) as e:
+        await svc.cancel(999, "operator", 1)
+    assert e.value.status == 404
+
+
+async def test_api_cancel_roles_and_conflict():
+    svc, _, _ = make()
+    async with api(svc) as c:
+        rid = (await c.post("/rca/runs", json={"incident_id": 7}, headers=hdr("admin"))).json()["run"]["id"]
+        await settle(svc)
+        assert (await c.post(f"/rca/runs/{rid}/cancel")).status_code == 401
+        assert (await c.post(f"/rca/runs/{rid}/cancel", headers=hdr("buyer"))).status_code == 403
+        r = await c.post(f"/rca/runs/{rid}/cancel", headers=hdr("admin", 5))
+        assert r.status_code == 200 and r.json()["run"]["outcome"] == "cancelled"
+        assert (await c.post(f"/rca/runs/{rid}/cancel", headers=hdr("operator"))).status_code == 409
+        assert (await c.post("/rca/runs/999/cancel", headers=hdr())).status_code == 404

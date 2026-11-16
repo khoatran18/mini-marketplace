@@ -45,6 +45,12 @@ class Runner:
             if cost:
                 metrics.RCA_COST_USD.inc(cost)
 
+    async def cancel(self, run: dict[str, Any], who: str) -> dict[str, Any]:
+        """Người bấm "Hủy điều tra": đóng phiên (done/cancelled) và ghi MỘT dòng vào nhật ký (ai bấm, lúc nào). Không gọi mô hình."""
+        await self._event(run, "step", "Đã hủy điều tra", {"by": who, "was": run.get("status")})
+        self._finished(run, "cancelled", {})
+        return await self.runs.update(run["id"], status="done", outcome="cancelled", waiting_since=None)
+
     @staticmethod
     def _tokens(values: dict[str, Any]) -> int:
         return int(values.get("input_tokens") or 0) + int(values.get("output_tokens") or 0)
