@@ -110,3 +110,5 @@ mindmap
 ## 7. Tồn đọng riêng cho việc gắn AI
 
 Chi tiết và lý do: [../ai/04_AI_DATA_READINESS.md](../ai/04_AI_DATA_READINESS.md). Tóm tắt: chưa có review / wishlist, chưa có `request_id` + `model_version` trong envelope tracking (cần để đo CTR của gợi ý), chưa có feature flag, chưa có upload ảnh, chưa có bộ dữ liệu thật đủ lớn (dữ liệu demo là giả), chưa có `ai-service` và hạ tầng eval / quan sát LLM.
+
+- **[ĐÃ SỬA 2026-11-16: slug `[a-z0-9-]` riêng cho `/playbooks/:id`, test `TestOpsPlaybookSlugIsForwarded`, đã kiểm tay cả 11 id = 200] Gateway chặn mọi `GET /ops/playbooks/:id` (400 `invalid id`)** (2026-11-15): `OpsHandler.Proxy` chỉ nhận id là chữ số, mà id playbook là slug. Công cụ `ops_get_playbook` của RCA và chat operator không đọc được playbook thật. Chi tiết, cách kiểm và việc cần làm: `docs/ai/11_RCA_BUILD_LOG.md` §16.32 (cách sửa, kiểm chứng, việc còn lại: tích hợp công cụ RCA, giao diện hiện lỗi thật, dọn `ai_rca_events`).

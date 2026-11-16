@@ -267,7 +267,7 @@ Kiểm thật trên Swarm: "agent" `admin:99` tạo đề xuất `requeue_outbox
 6. `verify` thất bại: điều tra thêm MỘT vòng nữa trong ngân sách, vẫn thất bại thì báo người; không đóng sự cố.
 7. Agent chỉ báo cáo và ghi "đủ điều kiện đóng: có/chưa + lý do"; người đóng sự cố.
 **Hệ quả.** Chưa có code `rca/`. Màn hình RCA chưa có (frontend chưa có trang sự cố/đề xuất; chỉ có chat widget): cần trang mới. Checkpoint (chốt 2026-11-15): dùng `langgraph-checkpoint-postgres` + `psycopg` trong cùng Postgres với bảng `ai_*`; `setup()` chạy lúc khởi động ai-agent (bảng này nằm NGOÀI `ai_agent_schema`, ghi chú ở `store/postgres.py`); trạng thái chỉ giữ id và tóm tắt, bằng chứng lớn lưu ở `ai_rca_runs`; job dọn checkpoint của sự cố đã đóng sau 30 ngày. Đã kiểm: gói tải được (v3.2.1). Phương án khác đã cân: tự viết checkpointer, bỏ checkpointer (chạy lại từ `verify`), MemorySaver (chỉ để test).
-**Tiến độ (2026-11-15).** Bước 1-5 đã làm offline (checkpoint, lõi `rca/`, persona/prompt, bộ theo dõi, eval 19 case): nhật ký 09 §16.27. Chưa làm: danh tính hệ thống cho chạy tự động (cần ADR riêng), API/UI, và mọi lần chạy LLM thật.
+**Tiến độ (2026-11-15).** Bước 1-5 đã làm offline (checkpoint, lõi `rca/`, persona/prompt, bộ theo dõi, eval 19 case): nhật ký 11 §16.27. Chưa làm: danh tính hệ thống cho chạy tự động (cần ADR riêng), API/UI, và mọi lần chạy LLM thật.
 
 ## ADR-47 Danh tính hệ thống chỉ-đọc cho điều tra sự cố tự động (2026-11-15)
 **Bối cảnh.** ADR-46 cho agent tự điều tra alert `critical` lúc không có ai đăng nhập. Token agent hiện gắn với một tài khoản thật (`sub` = user id, `pwd_version` kiểm với auth-service), nên không dùng được. Ngoài ra phiên chờ người tới 30 phút còn token của người bấm chỉ sống 60 giây (gateway cấp mỗi lời gọi).

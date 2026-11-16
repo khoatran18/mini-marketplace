@@ -91,7 +91,7 @@ Hostname lấy từ `PUBLIC_HOST` (mặc định `marketplace.swarm.localhost`).
 | `buyer1` / `password` | `SEED_DEMO_DATA=true` | đặt hàng, thanh toán thử |
 | `seller1` / `password` | `SEED_DEMO_DATA=true` | seed **không tạo store**: đăng nhập seller rồi tạo store trước khi quản lý sản phẩm |
 | `admin` / `Admin12345` | `ADMIN_BOOTSTRAP_*` (đã điền sẵn trong `.env.example`) | không đăng ký công khai được; đổi mật khẩu rồi bỏ biến sau lần đăng nhập đầu |
-| `operator` (tên tuỳ bạn) | `OPERATOR_BOOTSTRAP_USERNAME` / `OPERATOR_BOOTSTRAP_PASSWORD` trong `deploy/.env` (trống mặc định = không tạo), hoặc admin tạo ở `/admin/accounts` (chọn role Operator) | vai trò **Operator (vận hành)**: tên 3–16 ký tự chữ/số/gạch dưới, mật khẩu ≥ 8; không đăng ký công khai được. Đăng nhập như thường (role lấy từ tài khoản). Vào `/admin/system` xem sức khoẻ, sự cố, đề xuất vận hành; **không** xem báo cáo, đơn, thanh toán. Chat AI của operator chỉ đọc số liệu hệ thống. Chi tiết: [03_RUNBOOK.md](03_RUNBOOK.md) §16 |
+| `operator` / `Operator12345` | `OPERATOR_BOOTSTRAP_USERNAME` / `OPERATOR_BOOTSTRAP_PASSWORD` (đã điền sẵn trong `.env.example` như admin; để trống = không tạo; chỉ cho local), hoặc admin tạo ở `/admin/accounts` (chọn role Operator) | vai trò **Operator (vận hành)**: tên 3–16 ký tự chữ/số/gạch dưới, mật khẩu ≥ 8; không đăng ký công khai được. Đăng nhập như thường (role lấy từ tài khoản). Vào `/admin/system` xem sức khoẻ, sự cố, đề xuất vận hành; **không** xem báo cáo, đơn, thanh toán. Chat AI của operator chỉ đọc số liệu hệ thống. Chi tiết: [03_RUNBOOK.md](03_RUNBOOK.md) §16 |
 | tài khoản mới | `/register` | chọn role buyer hoặc seller |
 
 ### Các trang chính của frontend

@@ -672,4 +672,4 @@ Mỗi hành động thêm mới cần: một dòng trong `proposable`, `confirm`
 
 ## 16. Trạng thái xây và nhật ký đo được
 
-Đã tách sang [09_AGENT_BUILD_LOG.md](09_AGENT_BUILD_LOG.md) (mục §16.1 trở đi, giữ nguyên số mục). Mục việc RCA còn lại: §16.25-§16.26 ở file đó.
+Đã tách sang [09_AGENT_BUILD_LOG.md](09_AGENT_BUILD_LOG.md) (mục §16.1 trở đi, giữ nguyên số mục). Mục việc RCA còn lại: §16.25 ở file đó, §16.26 trở đi ở [11_RCA_BUILD_LOG.md](11_RCA_BUILD_LOG.md).

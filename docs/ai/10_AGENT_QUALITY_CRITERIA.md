@@ -90,7 +90,7 @@ Mức "tốt / khá / yếu / chưa biết" là nhận định của người vi
 
 ### 2.6 Đúng đắn của chẩn đoán (điểm yếu nhất)
 
-- **Hiện trạng:** 19 ca RCA dựng từ đáp án của `scripts/e2e/resilience.sh`; chấm 7 tiêu chí bằng regex và so khớp (cause, playbook, action, forbid, outcome, budget, read_only), không có LLM chấm. Đã chạy live: lần đầu 0/3 (lỗi header của chính mình, §16.29), sau khi sửa `C-payment-down` đạt 7/7 (10 lần gọi, 12 truy vấn, 47 s).
+- **Hiện trạng:** 19 ca RCA dựng từ đáp án của `scripts/e2e/resilience.sh`; chấm 7 tiêu chí bằng regex và so khớp (cause, playbook, action, forbid, outcome, budget, read_only), không có LLM chấm. Đã chạy live: lần đầu 0/3 (lỗi header của chính mình, 11_RCA_BUILD_LOG §16.29), sau khi sửa `C-payment-down` đạt 7/7 (10 lần gọi, 12 truy vấn, 47 s).
 - **Ưu:** chấm xác định, không tốn thêm tiền cho giám khảo LLM, chạy được `--oracle` để kiểm chính bộ eval.
 - **Nhược:** 1/19 ca live thì chưa nói được gì về chất lượng chung; dữ liệu là giả (`World`), nên mô hình chưa gặp log thật ồn ào; hành vi "biết dừng và chuyển cho người" chưa đo lại.
 - **Đề xuất:** (a) chạy 2 ca `escalate_to_human` rồi cả 19 ca (tối đa khoảng 228 lần gọi), mỗi ca chạy lặp k lần (vd 3) để thấy độ dao động; (b) báo cáo theo tỷ lệ đạt và khoảng tin cậy, không chỉ đạt/hỏng; (c) thêm ca âm: sự cố không có playbook, dữ liệu mâu thuẫn, bằng chứng thiếu, kỳ vọng `escalate_to_human`; (d) thêm ca "nhiễu": các cảnh báo khác cùng bắn; (e) sau khi có Swarm, so với sự cố tiêm thật bằng `resilience.sh`.
