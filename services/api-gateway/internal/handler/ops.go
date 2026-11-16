@@ -37,10 +37,18 @@ func (h *OpsHandler) Proxy(upstreamPath string) gin.HandlerFunc {
 		path := upstreamPath
 		if strings.Contains(path, ":id") {
 			id := c.Param("id")
-			for _, r := range id {
-				if r < '0' || r > '9' {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			if strings.HasPrefix(path, "/playbooks/") {
+				// playbook ids are slugs ("analytics-data"), the others are numeric
+				if id == "" || len(id) > 64 || strings.Trim(id, "abcdefghijklmnopqrstuvwxyz0123456789-") != "" {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "invalid playbook id"})
 					return
+				}
+			} else {
+				for _, r := range id {
+					if r < '0' || r > '9' {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+						return
+					}
 				}
 			}
 			path = strings.Replace(path, ":id", id, 1)

@@ -11,6 +11,7 @@ from typing import Any, Callable
 
 from ai_agent.config.logging import get_logger
 from ai_agent.rca.budget import Budget
+from ai_agent.rca.events import EventLog
 from ai_agent.rca.gateway_ops import GatewayOps, SystemTokens, jti_of
 from ai_agent.rca.graph import build_graph
 from ai_agent.rca.runner import Runner
@@ -62,8 +63,8 @@ class RcaService:
         else:
             from ai_agent.rca.brain import LlmBrain
 
-            brain = LlmBrain(self.rt, self.persona, ctx, self.budget)
-        return build_graph(brain, self.ops, self.budget, checkpointer=self.saver, clock=self.clock)
+            brain = LlmBrain(self.rt, self.persona, ctx, self.budget, events=EventLog(self.runs, run["id"]))
+        return build_graph(brain, self.ops, self.budget, checkpointer=self.saver, clock=self.clock, events=EventLog(self.runs, run["id"]))
 
     # ---- vòng đời ----
     async def start(self) -> None:
@@ -110,6 +111,12 @@ class RcaService:
     async def state_of(self, run: dict[str, Any]) -> dict[str, Any]:
         tup = await self.saver.aget_tuple({"configurable": {"thread_id": run["thread_id"]}})
         return dict(tup.checkpoint.get("channel_values") or {}) if tup else {}
+
+    async def events(self, run_id: int, after: int = 0) -> dict[str, Any]:
+        run = await self.runs.get(run_id)
+        if run is None:
+            raise RcaError(404, "không tìm thấy phiên")
+        return {"status": run["status"], "items": await self.runs.events(run_id, after)}
 
     async def view(self, run_id: int) -> dict[str, Any]:
         run = await self.runs.get(run_id)

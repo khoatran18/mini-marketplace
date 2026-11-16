@@ -25,6 +25,7 @@ class Runner:
         return await self.runs.create(int(incident["id"]), trigger)
 
     async def go(self, run: dict[str, Any], incident: dict[str, Any]) -> dict[str, Any]:
+        await self._event(run, "step", "Bắt đầu điều tra", {"incident": {k: incident.get(k) for k in ("id", "alert_name", "severity", "component")}, "trigger": run.get("trigger")})
         return await self._drive(run, {"incident": incident, "started_at": self.clock()})
 
     async def start(self, incident: dict[str, Any], trigger: str) -> dict[str, Any]:
@@ -48,19 +49,28 @@ class Runner:
     def _tokens(values: dict[str, Any]) -> int:
         return int(values.get("input_tokens") or 0) + int(values.get("output_tokens") or 0)
 
+    async def _event(self, run: dict[str, Any], kind: str, title: str, data: dict[str, Any] | None = None) -> None:
+        try:
+            await self.runs.add_event(run["id"], kind, title, data)
+        except Exception as exc:  # noqa: BLE001 - nhật ký hỏng không được làm hỏng điều tra
+            logger.warning("rca event not saved: %s: %s", type(exc).__name__, str(exc)[:200])
+
     async def _drive(self, run: dict[str, Any], payload: Any) -> dict[str, Any]:
         try:
             graph = await self.graph_for(run)
             result = await graph.ainvoke(payload, {"configurable": {"thread_id": run["thread_id"]}})
         except Exception as exc:  # noqa: BLE001 - phiên hỏng không được làm sập bộ theo dõi
             logger.warning("rca run %s crashed: %s: %s", run["id"], type(exc).__name__, str(exc)[:300])
+            await self._event(run, "error", "Phiên bị lỗi", {"error": type(exc).__name__, "detail": str(exc)[:300]})
             self._finished(run, "error", {})
             return await self.runs.update(run["id"], status="error", outcome="error", waiting_since=None)
         intr = result.get("__interrupt__")
         if intr:
             v = intr[0].value
             if v.get("waiting") == "confirm":
+                await self._event(run, "wait", "Chờ operator xác nhận nháp", {"waiting": "confirm"})
                 return await self.runs.update(run["id"], status="waiting_confirm", draft=v.get("draft"), tokens=self._tokens(result), waiting_since=self.clock())
+            await self._event(run, "wait", "Chờ người khác duyệt đề xuất", {"waiting": "approval", "proposal_id": v.get("proposal_id")})
             return await self.runs.update(run["id"], status="waiting_approval", proposal_id=v.get("proposal_id"), tokens=self._tokens(result), waiting_since=self.clock())
         self._finished(run, result.get("outcome") or "unknown", result)
         return await self.runs.update(run["id"], status="done", outcome=result.get("outcome"), report=result.get("report"), draft=result.get("draft"), tokens=self._tokens(result), waiting_since=None)

@@ -562,7 +562,7 @@ func TestRCARoutes(t *testing.T) {
 	}
 	on := newEngineEnv(t, func(c *config.EnvConfig) { c.AgentKeys, c.AIServiceURL, c.FeatureAIOps = keys, up.URL, true })
 	routes := []struct{ method, path string }{
-		{"GET", "/ops/rca/runs"}, {"GET", "/ops/rca/runs/7"}, {"POST", "/ops/rca/runs"}, {"POST", "/ops/rca/runs/7/recheck"}, {"POST", "/ops/rca/runs/7/proposal"},
+		{"GET", "/ops/rca/runs"}, {"GET", "/ops/rca/runs/7"}, {"GET", "/ops/rca/runs/7/events"}, {"POST", "/ops/rca/runs"}, {"POST", "/ops/rca/runs/7/recheck"}, {"POST", "/ops/rca/runs/7/proposal"},
 	}
 	for _, r := range routes {
 		if w := request(on, r.method, r.path, ""); w.Code != http.StatusUnauthorized {
@@ -581,6 +581,9 @@ func TestRCARoutes(t *testing.T) {
 		if w := requestWith(on, "POST", "/ops/rca/runs", token(t, role), nil, `{"incident_id":5}`); w.Code != 200 || gotMethod != "POST" || gotPath != "/rca/runs" || gotBody != `{"incident_id":5}` {
 			t.Errorf("start as %s: %d %s %s %s", role, w.Code, gotMethod, gotPath, gotBody)
 		}
+		if w := requestWith(on, "GET", "/ops/rca/runs/7/events?after=12&x=1", token(t, role), nil, ""); w.Code != 200 || gotPath != "/rca/runs/7/events?after=12" {
+			t.Errorf("%s events: %d path %q", role, w.Code, gotPath)
+		}
 		if w := request(on, "POST", "/ops/rca/runs/7/recheck", token(t, role)); w.Code != 200 || gotPath != "/rca/runs/7/recheck" {
 			t.Errorf("recheck as %s: %d path=%q", role, w.Code, gotPath)
 		}
@@ -593,5 +596,28 @@ func TestRCARoutes(t *testing.T) {
 	}
 	if w := request(on, "GET", "/ops/rca/runs/a%2F..%2Fb", token(t, "operator")); w.Code == 200 && strings.Contains(gotPath, "/../") {
 		t.Errorf("path traversal reached the upstream: %q", gotPath)
+	}
+}
+
+// Playbook ids are slugs ("analytics-data"), not numbers: the gateway used to answer 400 "invalid id" for every one (RCA tool errors, 16.32).
+func TestOpsPlaybookSlugIsForwarded(t *testing.T) {
+	var gotPath string
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.RequestURI()
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer up.Close()
+	e := newEngineEnv(t, func(c *config.EnvConfig) { c.OpsServiceURL, c.OpsAPIToken = up.URL, "ops-secret" })
+	for _, id := range []string{"analytics-data", "outbox-stuck", "db-pool-2"} {
+		gotPath = ""
+		if w := request(e, "GET", "/ops/playbooks/"+id, token(t, "operator")); w.Code != 200 || gotPath != "/playbooks/"+id {
+			t.Errorf("playbook %s: %d path=%q", id, w.Code, gotPath)
+		}
+	}
+	for _, id := range []string{"Bad_ID", "a.b", "%2e%2e", strings.Repeat("a", 65)} {
+		gotPath = ""
+		if w := request(e, "GET", "/ops/playbooks/"+id, token(t, "operator")); w.Code != 400 || gotPath != "" {
+			t.Errorf("playbook %q: %d path=%q, want 400 and no upstream call", id, w.Code, gotPath)
+		}
 	}
 }

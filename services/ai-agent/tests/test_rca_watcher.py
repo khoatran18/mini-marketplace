@@ -316,3 +316,17 @@ async def test_cost_is_computed_from_the_configured_prices_and_zero_price_means_
     ops.props[4] = prop(4, state="REJECTED")
     await w.tick()
     assert metrics.RCA_COST_USD._value.get() == pytest.approx(before + 0.5)
+
+
+async def test_run_is_narrated_in_the_event_log_from_start_to_the_wait_for_confirm():
+    from ai_agent.rca.events import EventLog
+
+    runs, saver = MemoryRunStore(), MemorySaver()
+
+    async def graph_for(run):
+        return build_graph(ScriptedBrain(), FakeOps(), Budget(), checkpointer=saver, events=EventLog(runs, run["id"]))
+
+    run = await Runner(graph_for, runs).start({"id": 7, "alert_name": "ServiceDown", "severity": "critical", "component": "payment-service"}, "manual:1")
+    kinds = [e["kind"] for e in await runs.events(run["id"])]
+    assert kinds[0] == "step" and "hypotheses" in kinds and "draft" in kinds and kinds[-1] == "wait"
+    assert (await runs.events(run["id"]))[-1]["data"]["waiting"] == "confirm"

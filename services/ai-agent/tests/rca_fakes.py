@@ -108,6 +108,7 @@ class SeqModel(ScriptedChatModel):
 OPS_TOOLS = {"role": "operator", "tools": [
     {"name": "ops_get_playbook", "method": "GET", "path": "/ops/playbooks/:id", "description": "playbook", "params": [{"name": "id", "in": "path", "type": "string", "required": True}]},
     {"name": "ops_metrics_query", "method": "GET", "path": "/ops/metrics", "description": "metric", "params": [{"name": "q", "in": "query", "type": "string"}]},
+    {"name": "data_health", "method": "GET", "path": "/admin/analytics/data-health", "description": "ngoài /ops: token hệ thống luôn 403", "params": []},
 ], "actions": [
     {"name": "ops_action", "method": "POST", "path": "/ops/proposals", "description": "propose", "summary": "Đề xuất vận hành", "params": [
         {"name": "action_id", "in": "body", "type": "string", "required": True}]}]}

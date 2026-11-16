@@ -14,6 +14,7 @@ class Budget:
     max_queries: int = 25         # số lần gọi tool đọc (gateway)
     max_seconds: int = 300
     max_hypotheses: int = 3
+    max_tool_errors: int = 3      # công cụ lỗi LIÊN TIẾP từng này lần thì dừng vòng thu bằng chứng (0 = không dừng)
     confident_at: float = 0.6     # độ tin cậy của giả thuyết đầu từ mức này thì đủ để đề xuất
     max_pending_proposals: int = 2
     verify_retries: int = 1       # verify thất bại: thêm đúng một vòng điều tra rồi báo người

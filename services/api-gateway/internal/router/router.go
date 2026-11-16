@@ -204,6 +204,12 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		}
 		rcaRoute.GET("/runs", rca.Forward(http.MethodGet, "/rca/runs", "incident_id", "limit"))
 		rcaRoute.GET("/runs/:id", rca.Forward(http.MethodGet, "/rca/runs/:id"))
+		// the investigation log is polled every couple of seconds while a run is active, so it has its own, higher limit
+		rcaLog := router.Group("/ops/rca", authenticated, adminOrOperator)
+		if envConfig.AIUserRateLimit > 0 {
+			rcaLog.Use(middleware.RateLimitByKey("ai_rca_log", envConfig.AIUserRateLimit*12, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient, middleware.UserKey, true))
+		}
+		rcaLog.GET("/runs/:id/events", rca.Forward(http.MethodGet, "/rca/runs/:id/events", "after"))
 		rcaRoute.POST("/runs", rca.Forward(http.MethodPost, "/rca/runs"))
 		rcaRoute.POST("/runs/:id/recheck", rca.Forward(http.MethodPost, "/rca/runs/:id/recheck"))
 		// only an operator may confirm a draft (ADR-45: admin is read-only for the agent); ai-agent checks the role again

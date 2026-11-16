@@ -254,6 +254,22 @@ func TestAdminAndDevAgentScopes(t *testing.T) {
 	}
 }
 
+// The agent cuts the summary at 200 CHARACTERS (Python), so a Vietnamese summary (2-3 bytes per letter) must not be refused for its byte length.
+func TestProposalSummaryLimitCountsCharactersNotBytes(t *testing.T) {
+	e, s := agentEngine(t)
+	at, _, _ := s.IssueAgentToken(7, "op", "operator", 0, time.Minute)
+	long := strings.Repeat("ệ", 200) // 200 characters, 600 bytes
+	body := func(sum string) string {
+		return `{"method":"POST","path":"/ops/proposals","summary":"` + sum + `","body":{"action_id":"escalate_to_human","rationale":"x"}}`
+	}
+	if w := do(e, "POST", "/ai/proposals", at, "", body(long)); w.Code != http.StatusCreated {
+		t.Errorf("200-character summary: %d, want 201 (%s)", w.Code, w.Body.String())
+	}
+	if w := do(e, "POST", "/ai/proposals", at, "", body(long+"ệ")); w.Code != http.StatusBadRequest {
+		t.Errorf("201-character summary: %d, want 400", w.Code)
+	}
+}
+
 func TestAgentRoutesAreRateLimitedPerUser(t *testing.T) {
 	e := newEngineEnv(t, func(c *config.EnvConfig) { c.AgentKeys = agentKeys; c.AIProposalRateLimit = 2 })
 	ring, _ := agent.ParseKeyRing(agentKeys)

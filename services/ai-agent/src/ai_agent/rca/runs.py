@@ -21,11 +21,14 @@ class RunStore(Protocol):
     async def tokens_since(self, since: float) -> int: ...
     async def recent(self, incident_id: int | None = None, limit: int = 30) -> list[dict[str, Any]]: ...
     async def fail_running(self) -> int: ...
+    async def add_event(self, run_id: int, kind: str, title: str, data: dict[str, Any] | None = None) -> None: ...
+    async def events(self, run_id: int, after: int = 0, limit: int = 200) -> list[dict[str, Any]]: ...
 
 
 class MemoryRunStore:
     def __init__(self, clock=time.time) -> None:
         self.rows: dict[int, dict[str, Any]] = {}
+        self._events: list[dict[str, Any]] = []
         self._clock = clock
 
     async def create(self, incident_id: int, trigger: str) -> dict[str, Any]:
@@ -64,6 +67,12 @@ class MemoryRunStore:
     async def count_auto_since(self, since: float) -> int:
         return sum(1 for r in self.rows.values() if r["trigger"] == "auto" and r["created_at"] >= since)
 
+    async def add_event(self, run_id: int, kind: str, title: str, data: dict[str, Any] | None = None) -> None:
+        self._events.append({"id": len(self._events) + 1, "run_id": run_id, "at": self._clock(), "kind": kind, "title": title, "data": data or {}})
+
+    async def events(self, run_id: int, after: int = 0, limit: int = 200) -> list[dict[str, Any]]:
+        return [{k: v for k, v in e.items() if k != "run_id"} for e in self._events if e["run_id"] == run_id and e["id"] > after][:limit]
+
     async def tokens_since(self, since: float) -> int:
         return sum(int(r.get("tokens") or 0) for r in self.rows.values() if r["created_at"] >= since)
 
@@ -85,6 +94,15 @@ CREATE TABLE IF NOT EXISTS ai_rca_runs (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE ai_rca_runs ADD COLUMN IF NOT EXISTS tokens bigint NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS ai_rca_events (
+    id bigserial PRIMARY KEY,
+    run_id bigint NOT NULL,
+    at timestamptz NOT NULL DEFAULT now(),
+    kind text NOT NULL,
+    title text NOT NULL DEFAULT '',
+    data jsonb NOT NULL DEFAULT '{}'::jsonb
+);
+CREATE INDEX IF NOT EXISTS ai_rca_events_run_idx ON ai_rca_events (run_id, id);
 CREATE INDEX IF NOT EXISTS ai_rca_runs_incident_idx ON ai_rca_runs (incident_id, id DESC);
 CREATE INDEX IF NOT EXISTS ai_rca_runs_status_idx ON ai_rca_runs (status) WHERE status IN ('waiting_confirm', 'waiting_approval');
 """
@@ -164,6 +182,24 @@ class PostgresRunStore:
     async def count_auto_since(self, since: float) -> int:
         async with self._pool.acquire() as con:
             return int(await con.fetchval("SELECT count(*) FROM ai_rca_runs WHERE trigger = 'auto' AND created_at >= to_timestamp($1)", since))
+
+    async def add_event(self, run_id: int, kind: str, title: str, data: dict[str, Any] | None = None) -> None:
+        async with self._pool.acquire() as con:
+            await con.execute("INSERT INTO ai_rca_events (run_id, kind, title, data) VALUES ($1, $2, $3, $4::jsonb)", run_id, kind, title[:300],
+                              json.dumps(data or {}, ensure_ascii=False, default=str))
+
+    async def events(self, run_id: int, after: int = 0, limit: int = 200) -> list[dict[str, Any]]:
+        async with self._pool.acquire() as con:
+            rows = await con.fetch("SELECT id, extract(epoch from at) AS at, kind, title, data FROM ai_rca_events WHERE run_id = $1 AND id > $2 ORDER BY id LIMIT $3",
+                                   run_id, after, max(1, min(limit, 500)))
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["at"] = float(d["at"])
+            if isinstance(d.get("data"), str):
+                d["data"] = json.loads(d["data"])
+            out.append(d)
+        return out
 
     async def tokens_since(self, since: float) -> int:
         async with self._pool.acquire() as con:

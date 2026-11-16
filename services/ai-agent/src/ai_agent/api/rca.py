@@ -62,6 +62,19 @@ def create_router(holder: dict) -> APIRouter:
         except RcaError as exc:
             return _err(exc.status, exc.message)
 
+    @router.get("/runs/{run_id}/events")
+    async def run_events(run_id: int, request: Request):
+        g = guard(request)
+        if isinstance(g, JSONResponse):
+            return g
+        raw = request.query_params.get("after")
+        if raw and not raw.isdigit():
+            return _err(422, "tham số không hợp lệ")
+        try:
+            return await g[1].events(run_id, int(raw or 0))
+        except RcaError as exc:
+            return _err(exc.status, exc.message)
+
     @router.post("/runs")
     async def start(body: StartBody, request: Request):
         g = guard(request)

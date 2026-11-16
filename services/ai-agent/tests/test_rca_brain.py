@@ -140,3 +140,54 @@ async def test_evidence_summaries_keep_the_untrusted_wrapper_when_fed_back_into_
     for e in r["evidence"]:
         assert "<du_lieu_khong_tin_cay>" in e["summary"], f"bằng chứng {e['source']} mất khối bọc"
         assert e["summary"].count("</du_lieu_khong_tin_cay>") <= 1, "thẻ đóng giả trong dữ liệu phải bị vô hiệu hóa"
+
+
+async def test_collect_writes_each_tool_call_and_real_result_to_the_event_log():
+    from ai_agent.rca.events import EventLog
+    from ai_agent.rca.runs import MemoryRunStore
+
+    runs = MemoryRunStore()
+    run = await runs.create(7, "manual:1")
+    rt, persona, ctx, _ = brain_env(COLLECT)
+    await LlmBrain(rt, persona, ctx, Budget(), events=EventLog(runs, run["id"])).collect(state())
+    ev = await runs.events(run["id"])
+    assert [e["kind"] for e in ev] == ["tool_call", "tool_call", "tool_result", "tool_result"]
+    assert ev[0]["data"] == {"tool": "ops_get_playbook", "args": {"id": "service-unavailable"}}
+    assert "up=0" in ev[3]["data"]["text"] and ev[3]["data"]["error"] is False
+    assert [e["id"] for e in await runs.events(run["id"], after=ev[1]["id"])] == [ev[2]["id"], ev[3]["id"]]  # chỉ phần mới sau con trỏ
+
+
+async def test_a_broken_event_store_never_breaks_the_investigation():
+    from ai_agent.rca.events import EventLog
+
+    class Broken:
+        async def add_event(self, *a, **k):
+            raise RuntimeError("db down")
+
+    rt, persona, ctx, _ = brain_env(COLLECT)
+    r = await LlmBrain(rt, persona, ctx, Budget(), events=EventLog(Broken(), 1)).collect(state())
+    assert len(r["evidence"]) == 2
+
+
+async def test_collect_stops_after_consecutive_tool_errors_instead_of_burning_model_calls():
+    call = {"tool_calls": [{"name": "ops_metrics_query", "args": {"q": "up"}}]}
+    rt, persona, ctx, _ = brain_env([call] * 6 + [{"content": "XONG"}], gateway=ops_gateway(metric_status=500))
+    r = await LlmBrain(rt, persona, ctx, Budget(max_tool_errors=3)).collect(state())
+    assert r["evidence"] == [] and r["queries"] == 3 and r["model_calls"] <= 4  # dừng ở lỗi thứ 3, không chạy tiếp tới hết trần
+
+
+def test_rca_persona_has_its_own_model_and_tool_call_limits_unlike_chat():
+    from types import SimpleNamespace
+
+    from ai_agent.runtime.agent_factory import AgentRuntime
+    rt = AgentRuntime.__new__(AgentRuntime)
+    rt.cfg = SimpleNamespace(_data={"rca": {"collect_model_calls": 12, "collect_tool_calls": 10}})
+    assert rt._own_limits(SimpleNamespace(name="rca")) == (12, 10)
+    assert rt._own_limits(SimpleNamespace(name="buyer")) == (None, None)
+
+
+async def test_rca_agent_only_gets_ops_tools_because_the_system_token_is_limited_to_ops():
+    names: list = []
+    rt, persona, ctx, _ = brain_env([{"content": "XONG"}], tool_names=names)
+    tools = await LlmBrain(rt, persona, ctx, Budget())._tools()
+    assert "ops_get_playbook" in tools and "data_health" not in tools and all(t.name.startswith("ops_") for t in tools.values()), sorted(tools)

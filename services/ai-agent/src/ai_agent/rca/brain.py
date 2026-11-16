@@ -15,6 +15,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from pydantic import BaseModel, Field, ValidationError
 
 from ai_agent import metrics
+from ai_agent.rca.events import RESULT_CHARS, NullEvents
 from ai_agent.config.logging import get_logger
 from ai_agent.guard import untrusted
 from ai_agent.personas.base import Persona
@@ -90,8 +91,9 @@ def _metered(fn):
 
 
 class LlmBrain:
-    def __init__(self, rt: Any, persona: Persona, ctx: RunContext, budget: Budget) -> None:
+    def __init__(self, rt: Any, persona: Persona, ctx: RunContext, budget: Budget, events: Any = None) -> None:
         self.rt, self.persona, self.ctx, self.budget = rt, persona, ctx, budget
+        self.events = events or NullEvents()
 
     # ---- chung ----
     async def _ask(self, stage: str, body: str, model_cls: type[BaseModel]) -> tuple[BaseModel, int]:
@@ -134,7 +136,7 @@ class LlmBrain:
             before_calls = self.ctx.tool_calls
             pending: dict[str, dict[str, Any]] = {}
             evidence: list[dict[str, Any]] = []
-            model_calls, playbook = 0, None
+            model_calls, playbook, err_run, stopped = 0, None, 0, False
             async for mode, data in agent.astream({"messages": [HumanMessage(task)]}, stream_mode=["updates"], config={"recursion_limit": 40}):
                 if mode != "updates":
                     continue
@@ -142,15 +144,30 @@ class LlmBrain:
                     for m in (upd or {}).get("messages", []) if isinstance(upd, dict) else []:
                         if isinstance(m, AIMessage):
                             model_calls += 1
+                            said = text_of(m.content).strip()
+                            if said and said.upper().strip(". ") != "XONG":  # "XONG" chỉ là tín hiệu kết thúc, không phải nhận định
+                                await self.events.emit("note", "Mô hình", {"text": said[:RESULT_CHARS]})
                             for tc in m.tool_calls:
                                 pending[tc["id"]] = tc
+                                await self.events.emit("tool_call", tc["name"], {"tool": tc["name"], "args": tc["args"]})
                         elif isinstance(m, ToolMessage):
                             tc = pending.get(m.tool_call_id)
                             text = text_of(m.content)
+                            await self.events.emit("tool_result", (tc or {}).get("name", "công cụ"),
+                                                   {"tool": (tc or {}).get("name"), "text": text[:RESULT_CHARS], "error": text.startswith(TOOL_ERROR)})
+                            err_run = err_run + 1 if text.startswith(TOOL_ERROR) else 0
+                            if self.budget.max_tool_errors and err_run >= self.budget.max_tool_errors:
+                                stopped = True
+                                await self.events.emit("note", "Dừng thu bằng chứng", {"text": f"Công cụ lỗi liên tiếp {err_run} lần, dừng để không đốt thêm lượt gọi."})
+                                break
                             if tc and not text.startswith(TOOL_ERROR):
                                 evidence.append({"source": tc["name"], "args": tc["args"], "summary": text})
                                 if tc["name"] == "ops_get_playbook":
                                     playbook = str(tc["args"].get("id") or "") or playbook
+                    if stopped:
+                        break
+                if stopped:
+                    break
             return {"evidence": evidence, "queries": self.ctx.tool_calls - before_calls, "model_calls": model_calls, "playbook": playbook}
         finally:
             reset_run(tok)

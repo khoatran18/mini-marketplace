@@ -24,11 +24,11 @@ def _safe(status: int) -> GatewayError:
     if status == 403:
         return GatewayError(403, "không có quyền truy cập dữ liệu này")
     if status == 404:
-        return GatewayError(404, "không tìm thấy dữ liệu")
+        return GatewayError(404, "không tìm thấy dữ liệu (HTTP 404)")
     if status == 429:
         return GatewayError(429, "hệ thống đang bận, thử lại sau ít phút")
     if status in (400, 422):
-        return GatewayError(status, "tham số không hợp lệ")
+        return GatewayError(status, f"tham số không hợp lệ (HTTP {status})")  # mã trạng thái để người vận hành tra nguyên nhân; nội dung lỗi của gateway vẫn không lộ
     return GatewayError(status, "dịch vụ tạm thời không phản hồi")
 
 

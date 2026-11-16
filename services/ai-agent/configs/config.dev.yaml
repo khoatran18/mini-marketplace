@@ -124,6 +124,9 @@ rca:
   max_concurrent: 2           # số phiên chạy cùng lúc
   max_rounds: 3               # vòng collect -> hypothesize -> decide
   max_model_calls: 12
+  collect_model_calls: 12     # trần lượt gọi mô hình của MỘT vòng thu bằng chứng (chat chỉ 6 nên cạn khi RCA đọc playbook + chạy truy vấn)
+  collect_tool_calls: 12      # trần lượt gọi công cụ của một vòng thu bằng chứng
+  max_tool_errors: 3          # công cụ lỗi liên tiếp từng này lần thì dừng thu bằng chứng, khỏi đốt lượt gọi
   max_queries: 25             # số lần gọi tool đọc
   max_seconds: 300
   max_hypotheses: 3
@@ -137,5 +140,5 @@ rca:
   usd_per_mtok_in: 0          # đơn giá USD cho 1 triệu token vào, để quy ra tiền (mm_ai_rca_cost_usd_total); 0 = không tính
   usd_per_mtok_out: 0
   auto_critical: true         # alert critical: agent tự vào điều tra (bằng danh tính hệ thống, ADR-47)
-  daily_auto_runs: 10         # trần số phiên tự chạy mỗi ngày
+  daily_auto_runs: "${AI_RCA_DAILY_AUTO_RUNS:-10}"   # trần số phiên tự chạy mỗi ngày; 0 = không bao giờ tự chạy (bấm tay vẫn chạy)
 

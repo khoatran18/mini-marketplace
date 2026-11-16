@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 )
@@ -45,7 +46,7 @@ func (h ProposalHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "this action cannot be proposed by the agent"})
 		return
 	}
-	if req.Summary == "" || len(req.Summary) > 200 {
+	if req.Summary == "" || utf8.RuneCountInString(req.Summary) > 200 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "summary is required (max 200 characters)"})
 		return
 	}

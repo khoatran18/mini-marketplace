@@ -1,4 +1,4 @@
-"""Đồ thị RCA (docs/ai/09_AGENT_BUILD_LOG.md §16.26):
+"""Đồ thị RCA (docs/ai/11_RCA_BUILD_LOG.md §16.26):
 
 collect -> hypothesize -> decide --(more)--> collect
                                   \\-(propose)-> propose -> wait_confirm -> wait_approval -> verify -> report
@@ -20,6 +20,7 @@ from langgraph.types import interrupt
 
 from ai_agent.config.logging import get_logger
 from ai_agent.rca.budget import Budget
+from ai_agent.rca.events import NullEvents
 from ai_agent.rca.ports import Brain, OpsPort
 from ai_agent.rca.state import RcaState
 from ai_agent.rca.validate import ESCALATE, check_params
@@ -43,7 +44,30 @@ def _key(action_id: str, params: dict[str, Any]) -> str:
     return action_id + json.dumps(params, sort_keys=True, ensure_ascii=False)
 
 
-def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any = None, clock: Callable[[], float] = time.time):
+_NODE_TITLE = {"collect": "Thu bằng chứng", "hypothesize": "Lập giả thuyết", "decide": "Quyết định", "propose": "Soạn nháp đề xuất",
+               "wait_confirm": "Chờ xác nhận", "wait_approval": "Chờ duyệt", "verify": "Kiểm tra lại", "report": "Báo cáo"}
+
+
+def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any = None, clock: Callable[[], float] = time.time, events: Any = None):
+    events = events or NullEvents()
+
+    def traced(name: str, fn):
+        """Mỗi bước xong thì ghi vào nhật ký: dòng thời gian của bước + phần kết quả đáng xem. Bước dừng ở interrupt() không chạy xong nên không ghi ở đây
+        (runner ghi sự kiện chờ đúng một lần)."""
+        async def run(state):
+            out = await fn(state)
+            for t in out.get("timeline") or []:
+                await events.emit("step", _NODE_TITLE.get(name, name), {"node": name, "note": t.get("note", "")})
+            if name == "hypothesize" and out.get("hypotheses"):
+                await events.emit("hypotheses", "Giả thuyết", {"items": out["hypotheses"]})
+            elif name == "propose" and out.get("draft"):
+                await events.emit("draft", "Nháp đề xuất", {"draft": out["draft"]})
+            elif name == "report" and out.get("report"):
+                await events.emit("report", "Báo cáo", {"report": out["report"], "outcome": out.get("outcome")})
+            return out
+
+        return run
+
     def over(state: dict[str, Any]) -> str | None:
         return budget.exceeded(state, clock())
 
@@ -209,7 +233,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
     g = StateGraph(RcaState)
     for name, fn in (("collect", collect), ("hypothesize", hypothesize), ("decide", decide), ("propose", propose),
                      ("wait_confirm", wait_confirm), ("wait_approval", wait_approval), ("verify", verify), ("report", report)):
-        g.add_node(name, fn)
+        g.add_node(name, traced(name, fn))
     g.add_edge(START, "collect")
     g.add_conditional_edges("collect", lambda s: "report" if s.get("abort") else "hypothesize", {"report": "report", "hypothesize": "hypothesize"})
     g.add_conditional_edges("hypothesize", lambda s: "report" if s.get("abort") else "decide", {"report": "report", "decide": "decide"})

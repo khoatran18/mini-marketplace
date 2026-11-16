@@ -53,11 +53,21 @@ class AgentRuntime:
 
     def read_tools(self, persona: Persona, specs: list[ToolSpec]) -> list:
         limits = self.cfg.limits
+        if persona.name == "rca":  # token hệ thống chỉ đọc /ops/* (ADR-47): công cụ ngoài /ops (vd. data_health) sẽ luôn 403, đừng đưa cho mô hình
+            specs = [s for s in specs if s.path.startswith("/ops/")]
         return [
             make_tool(s, self.gateway, tool_timeout=float(self.cfg.gateway.timeout_sec),
                       max_chars=int(limits.tool_result_max_chars), max_items=int(limits.tool_result_max_items), reveal_route=not persona.hide_internals)
             for s in specs
         ]
+
+    def _own_limits(self, persona: Persona) -> tuple[int | None, int | None]:
+        """Persona RCA có trần riêng (`rca.collect_model_calls/collect_tool_calls`): một vòng thu bằng chứng cần nhiều lượt hơn một lượt chat."""
+        if persona.name != "rca":
+            return None, None
+        raw = self.cfg._data.get("rca", {}) or {}
+        return (int(raw["collect_model_calls"]) if raw.get("collect_model_calls") else None,
+                int(raw["collect_tool_calls"]) if raw.get("collect_tool_calls") else None)
 
     async def agent_for(self, persona: Persona, ctx: RunContext):
         specs, actions = await self.specs_for(ctx)
@@ -76,7 +86,7 @@ class AgentRuntime:
             else:
                 from langchain.agents import create_agent
 
-                agent = create_agent(model=model, tools=tools, system_prompt=persona.prompt, middleware=build_middleware(limits))
+                agent = create_agent(model=model, tools=tools, system_prompt=persona.prompt, middleware=build_middleware(limits, *self._own_limits(persona)))
             self._agents[key] = agent
             logger.info("agent built", extra={"persona": persona.name, "tools": [s.name for s in specs], "actions": [a.name for a in actions]})
         return self._agents[key]

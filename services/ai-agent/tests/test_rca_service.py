@@ -215,6 +215,12 @@ async def test_api_flow_and_roles():
         got = (await c.get(f"/rca/runs/{rid}", headers=hdr("admin"))).json()
         assert got["run"]["status"] == "waiting_confirm" and got["hypotheses"] and got["timeline"]
         assert (await c.get("/rca/runs/999", headers=hdr())).status_code == 404
+        ev = (await c.get(f"/rca/runs/{rid}/events", headers=hdr("admin"))).json()
+        assert ev["status"] == "waiting_confirm" and ev["items"][0]["title"] == "Bắt đầu điều tra" and ev["items"][-1]["kind"] == "wait"
+        last = ev["items"][-1]["id"]
+        assert (await c.get(f"/rca/runs/{rid}/events?after={last}", headers=hdr())).json()["items"] == []  # con trỏ: chỉ lấy phần mới
+        assert (await c.get(f"/rca/runs/{rid}/events?after=x", headers=hdr())).status_code == 422
+        assert (await c.get("/rca/runs/999/events", headers=hdr())).status_code == 404
         # admin xem được nhưng không xác nhận được nháp
         assert (await c.post(f"/rca/runs/{rid}/proposal", headers=hdr("admin"))).status_code == 403
         p = await c.post(f"/rca/runs/{rid}/proposal", headers=hdr("operator"))
