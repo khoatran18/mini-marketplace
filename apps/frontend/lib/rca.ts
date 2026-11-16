@@ -159,3 +159,18 @@ export function executeProposal(token: string, id: number): Promise<unknown> {
 export function recordExecuted(token: string, id: number, outcome: 'success' | 'failed', note: string): Promise<unknown> {
   return apiFetch(`/ops/proposals/${id}/executed`, { method: 'POST', token, body: JSON.stringify({ outcome, note }) });
 }
+
+// ---- nhật ký điều tra (hiện như một đoạn chat) ----
+export type RcaEventKind = 'step' | 'tool_call' | 'tool_result' | 'note' | 'hypotheses' | 'draft' | 'report' | 'wait' | 'error';
+
+export interface RcaEvent {
+  id: number;
+  at: number;
+  kind: RcaEventKind;
+  title: string;
+  data: Record<string, unknown>;
+}
+
+export function getRcaEvents(token: string, runId: number, after = 0): Promise<{ status: RunStatus; items: RcaEvent[] }> {
+  return apiFetch(`/ops/rca/runs/${runId}/events?after=${after}`, { method: 'GET', token });
+}

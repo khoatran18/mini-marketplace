@@ -326,6 +326,7 @@ services:
       METRICS_TOKEN: ${METRICS_TOKEN:-}
       # ADR-46/47: điều tra sự cố (RCA). Bật cần FEATURE_AI_OPS=true ở gateway và AI_SYSTEM_KEY giống gateway.
       AI_RCA_ENABLED: ${AI_RCA_ENABLED:-false}
+      AI_RCA_DAILY_AUTO_RUNS: ${AI_RCA_DAILY_AUTO_RUNS:-10}
       AI_SYSTEM_KEY: ${AI_SYSTEM_KEY:-}
       # Kho lịch sử chat (bảng ai_*, giữ 30 ngày, tự tạo bảng lúc khởi động)
       POSTGRES_HOST: postgres

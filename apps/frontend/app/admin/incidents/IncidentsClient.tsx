@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from '../../../components/ui/StateBlock';
-import { listOpsIncidentsRequest } from '../../../lib/api';
+import { RunLog } from './RunLog';
+import { ApiError, listOpsIncidentsRequest } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';
 import { useFeatureFlags } from '../../../lib/features';
 import {
@@ -45,8 +46,18 @@ function useToken(): () => Promise<string> {
   return useCallback(async () => (await getValidAccessToken()) ?? '', [getValidAccessToken]);
 }
 
+/** Câu hiển thị luôn bắt đầu bằng chữ hoa (lỗi từ server và lời của trợ lý thường viết thường). */
+function cap(text: string | null | undefined): string {
+  const t = (text ?? '').trim();
+  return t ? t.charAt(0).toLocaleUpperCase('vi') + t.slice(1) : '';
+}
+
+// Màn của admin/operator: giữ nguyên câu lỗi gateway trả về và thêm mã trạng thái để phân biệt 400/403/404/5xx.
 function errMsg(err: unknown, fallback: string): string {
-  return (err as Error)?.message || fallback;
+  const text = cap((err as Error)?.message);
+  const status = err instanceof ApiError ? err.status : 0;
+  if (!text) return status ? `${fallback} (HTTP ${status})` : fallback;
+  return status ? `${text} (HTTP ${status})` : text;
 }
 
 export function IncidentsClient() {
@@ -130,7 +141,20 @@ export function IncidentsClient() {
             const run = runs[inc.id];
             const active = run && ACTIVE.includes(run.status);
             return (
-              <li key={inc.id} className={`rounded-xl border p-3 ${selected === inc.id ? 'border-brand bg-brand-soft/40' : 'border-line'}`}>
+              <li
+                key={inc.id}
+                className={`rounded-xl border p-3 cursor-pointer ${selected === inc.id ? 'border-brand bg-brand-soft/40' : 'border-line'}`}
+                role="button"
+                tabIndex={0}
+                aria-pressed={selected === inc.id}
+                onClick={() => setSelected(inc.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelected(inc.id);
+                  }
+                }}
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <Pill tone={SEVERITY_TONE[inc.severity] ?? 'bg-surface2 text-muted'}>{inc.severity}</Pill>
                   <strong className="text-sm">{inc.alert_name}</strong>
@@ -143,14 +167,9 @@ export function IncidentsClient() {
                 {flags.ai_ops ? (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {run ? <Pill tone={RUN_TONE[run.status] ?? ''}>{STATUS_LABEL[run.status]}</Pill> : <span className="text-xs text-muted">Chưa điều tra</span>}
-                    {run?.trigger === 'auto' ? <span className="text-xs text-muted">tự động</span> : null}
-                    {run ? (
-                      <button type="button" className="btn h-8 px-3 text-xs" onClick={() => setSelected(inc.id)}>
-                        Xem
-                      </button>
-                    ) : null}
+                    {run?.trigger === 'auto' ? <span className="text-xs text-muted">Tự động</span> : null}
                     {!active ? (
-                      <button type="button" className="btn-primary h-8 px-3 text-xs" onClick={() => void investigate(inc.id)}>
+                      <button type="button" className="btn-primary h-8 px-3 text-xs" onClick={(e) => { e.stopPropagation(); void investigate(inc.id); }}>
                         {run ? 'Điều tra lại' : 'Điều tra'}
                       </button>
                     ) : null}
@@ -165,10 +184,35 @@ export function IncidentsClient() {
       <section className="grid content-start gap-3">
         {selected && runs[selected] ? (
           <RunDetail key={selected} incidentId={selected} runId={runs[selected].id} role={role} onChanged={() => void load()} />
+        ) : selected && (incidents ?? []).some((i) => i.id === selected) ? (
+          <NoRun inc={(incidents ?? []).find((i) => i.id === selected) as OpsIncident} canInvestigate={flags.ai_ops} onInvestigate={() => void investigate(selected)} />
         ) : (
-          <EmptyBlock>Chọn một sự cố đã điều tra để xem trợ lý đã làm gì.</EmptyBlock>
+          <EmptyBlock>Chọn một sự cố để xem chi tiết và việc trợ lý đã làm.</EmptyBlock>
         )}
       </section>
+    </div>
+  );
+}
+
+function NoRun({ inc, canInvestigate, onInvestigate }: { inc: OpsIncident; canInvestigate: boolean; onInvestigate: () => void }) {
+  return (
+    <div className="card grid gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <strong>Sự cố #{inc.id}</strong>
+        <Pill tone={SEVERITY_TONE[inc.severity] ?? 'bg-surface2 text-muted'}>{inc.severity}</Pill>
+        <span className="text-sm">{inc.alert_name}</span>
+        {inc.component ? <span className="text-xs text-muted">{inc.component}</span> : null}
+      </div>
+      {inc.summary ? <p className="text-sm text-muted">{inc.summary}</p> : null}
+      <p className="text-xs text-muted">
+        {inc.fire_count} lần · gần nhất {formatDateTime(inc.last_seen)}
+      </p>
+      <p className="text-sm text-muted">Chưa có phiên điều tra nào cho sự cố này.</p>
+      {canInvestigate ? (
+        <button type="button" className="btn-primary h-9 w-fit px-4 text-sm" onClick={onInvestigate}>
+          Điều tra
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -236,7 +280,7 @@ function RunDetail({ incidentId, runId, role, onChanged }: { incidentId: number;
           <Pill tone={RUN_TONE[run.status] ?? ''}>{STATUS_LABEL[run.status]}</Pill>
           {run.outcome ? <Pill tone="bg-surface2 text-text">{OUTCOME_LABEL[run.outcome] ?? run.outcome}</Pill> : null}
           <span className="text-xs text-muted">
-            vòng {view.round} · {view.queries} truy vấn · {view.model_calls} lượt gọi mô hình{view.playbook ? ` · playbook ${view.playbook}` : ''}
+            Vòng {view.round} · {view.queries} truy vấn · {view.model_calls} lượt gọi mô hình{view.playbook ? ` · playbook ${view.playbook}` : ''}
           </span>
         </div>
         {error ? (
@@ -256,12 +300,12 @@ function RunDetail({ incidentId, runId, role, onChanged }: { incidentId: number;
           <h2 className="text-sm font-bold">Nháp đề xuất của trợ lý (chưa ghi gì)</h2>
           <p className="text-sm">
             <strong>{draft.action_id}</strong> {Object.keys(draft.params).length ? <code className="text-xs">{JSON.stringify(draft.params)}</code> : null}
-            {draft.risk ? <span className="ml-2 text-xs text-muted">rủi ro: {draft.risk}</span> : null}
-            {draft.escalated ? <span className="ml-2 text-xs text-muted">(chuyển cho người, không có hành động tự động)</span> : null}
+            {draft.risk ? <span className="ml-2 text-xs text-muted">Rủi ro: {draft.risk}</span> : null}
+            {draft.escalated ? <span className="ml-2 text-xs text-muted">(Chuyển cho người, không có hành động tự động)</span> : null}
           </p>
-          <p className="text-sm text-muted">{draft.rationale}</p>
+          <p className="text-sm text-muted">{cap(draft.rationale)}</p>
           {role === 'operator' ? (
-            <button type="button" className="btn-primary h-9 w-fit px-4 text-sm" disabled={busy !== ''} onClick={() => void act('confirm', (t) => confirmRcaDraft(t, run.id))}>
+            <button type="button" className="btn-primary h-9 w-fit px-4 text-sm" disabled={busy !== ''} onClick={() => void act('confirm', async (t) => { await confirmRcaDraft(t, run.id); await recheckRca(t, run.id).catch(() => undefined); })}>
               {busy === 'confirm' ? 'Đang ghi đề xuất…' : 'Xác nhận đề xuất'}
             </button>
           ) : (
@@ -271,12 +315,13 @@ function RunDetail({ incidentId, runId, role, onChanged }: { incidentId: number;
         </div>
       ) : null}
 
-      <Proposals proposals={proposals} busy={busy} act={act} />
+      <RunLog runId={run.id} status={run.status} />
+      <Proposals proposals={proposals} currentId={run.proposal_id} busy={busy} act={act} />
 
       {view.report ? (
         <div className="card grid gap-1">
           <h2 className="text-sm font-bold">Báo cáo của trợ lý</h2>
-          <p className="text-sm">{view.report.summary}</p>
+          <p className="text-sm">{cap(view.report.summary)}</p>
           <p className="text-sm">
             Đủ điều kiện đóng sự cố: <strong>{view.report.ready_to_close ? 'có' : 'chưa'}</strong>
             {view.report.reason ? ` · ${view.report.reason}` : ''}
@@ -291,7 +336,7 @@ function RunDetail({ incidentId, runId, role, onChanged }: { incidentId: number;
         <ul className="grid gap-1 text-sm">
           {view.hypotheses.map((h, i) => (
             <li key={i}>
-              <strong>{Math.round(h.confidence * 100)}%</strong> {h.cause}
+              <strong>{Math.round(h.confidence * 100)}%</strong> {cap(h.cause)}
               {h.evidence_ids?.length ? <span className="text-xs text-muted"> · {h.evidence_ids.join(', ')}</span> : null}
             </li>
           ))}
@@ -315,7 +360,7 @@ function RunDetail({ incidentId, runId, role, onChanged }: { incidentId: number;
         <ol className="grid gap-1 text-xs">
           {view.timeline.map((t, i) => (
             <li key={i}>
-              <span className="font-semibold">{t.node}</span> · {t.note}
+              <span className="font-semibold">{t.node}</span> · {cap(t.note)}
             </li>
           ))}
         </ol>
@@ -324,7 +369,7 @@ function RunDetail({ incidentId, runId, role, onChanged }: { incidentId: number;
   );
 }
 
-function Proposals({ proposals, busy, act }: { proposals: OpsProposal[]; busy: string; act: (name: string, fn: (t: string) => Promise<unknown>) => Promise<void> }) {
+function Proposals({ proposals, currentId, busy, act }: { proposals: OpsProposal[]; currentId: number | null; busy: string; act: (name: string, fn: (t: string) => Promise<unknown>) => Promise<void> }) {
   const [command, setCommand] = useState<Record<number, string>>({});
   const getValidAccessToken = useToken();
   const { role, userId } = useAuth();
@@ -334,11 +379,7 @@ function Proposals({ proposals, busy, act }: { proposals: OpsProposal[]; busy: s
     const out = await getProposal(await getValidAccessToken(), id);
     setCommand((c) => ({ ...c, [id]: out.command ?? '(hành động này không có lệnh để chạy tay)' }));
   };
-  return (
-    <div className="card grid gap-2">
-      <h2 className="text-sm font-bold">Đề xuất vận hành của sự cố này</h2>
-      <ul className="grid gap-2 text-sm">
-        {proposals.map((p) => {
+  const item = (p: OpsProposal) => {
           const approved = p.state === 'ACCEPTED' || p.state === 'ALTERNATIVE';
           // ops-service ghi người tạo là "<role>:<userID>" (X-Actor do gateway đặt); chính người đó không tự duyệt được
           const mine = userId != null && role != null && p.created_by === `${role}:${userId}`;
@@ -350,20 +391,18 @@ function Proposals({ proposals, busy, act }: { proposals: OpsProposal[]; busy: s
                 </strong>
                 <Pill tone="bg-surface2 text-text">{p.state}</Pill>
                 {p.exec_state ? <Pill tone="bg-surface2 text-text">{p.exec_state}</Pill> : null}
-                {p.risk ? <span className="text-xs text-muted">rủi ro: {p.risk}</span> : null}
+                {p.risk ? <span className="text-xs text-muted">Rủi ro: {p.risk}</span> : null}
               </div>
               {p.params && Object.keys(p.params).length ? <code className="text-xs">{JSON.stringify(p.params)}</code> : null}
               {p.state === 'PENDING' ? (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {mine ? null : (
-                    <button type="button" className="btn-primary h-8 px-3 text-xs" disabled={busy !== ''} onClick={() => void act(`accept${p.id}`, (t) => decideProposal(t, p.id, 'accept', 'duyệt từ màn hình sự cố'))}>
-                      Duyệt
-                    </button>
-                  )}
-                  <button type="button" className="btn-danger h-8 px-3 text-xs" disabled={busy !== ''} onClick={() => void act(`reject${p.id}`, (t) => decideProposal(t, p.id, 'reject', 'từ chối từ màn hình sự cố'))}>
+                  <button type="button" className="btn-primary h-8 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-40" disabled={mine || busy !== ''} title={mine ? 'Bạn là người tạo đề xuất này' : undefined} onClick={() => void act(`accept${p.id}`, (t) => decideProposal(t, p.id, 'accept', 'Duyệt từ màn hình sự cố'))}>
+                    Duyệt
+                  </button>
+                  <button type="button" className="btn-danger h-8 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-40" disabled={mine || busy !== ''} title={mine ? 'Bạn là người tạo đề xuất này' : undefined} onClick={() => void act(`reject${p.id}`, (t) => decideProposal(t, p.id, 'reject', 'Từ chối từ màn hình sự cố'))}>
                     Từ chối
                   </button>
-                  <span className="text-xs text-muted">{mine ? 'Bạn là người tạo đề xuất này: cần người khác duyệt.' : 'Người tạo đề xuất không tự duyệt được (server từ chối).'}</span>
+                  <span className="text-xs text-muted">{mine ? 'Bạn là người tạo đề xuất này nên không duyệt hay từ chối được: cần người khác quyết định.' : 'Người tạo đề xuất không tự quyết định được (server từ chối).'}</span>
                 </div>
               ) : null}
               {approved && !p.exec_state ? (
@@ -387,8 +426,24 @@ function Proposals({ proposals, busy, act }: { proposals: OpsProposal[]; busy: s
               ) : null}
             </li>
           );
-        })}
-      </ul>
-    </div>
+  };
+  const current = proposals.filter((p) => p.id === currentId);
+  const older = proposals.filter((p) => p.id !== currentId);
+  return (
+    <>
+      {current.length > 0 ? (
+        <div className="card grid gap-2">
+          <h2 className="text-sm font-bold">Đề xuất của lần điều tra này</h2>
+          <ul className="grid gap-2 text-sm">{current.map(item)}</ul>
+        </div>
+      ) : null}
+      {older.length > 0 ? (
+        <details className="card grid gap-2">
+          <summary className="cursor-pointer text-sm font-bold">Đề xuất từ các lần điều tra trước ({older.length})</summary>
+          <p className="text-xs text-muted">Mỗi lần bạn bấm “Điều tra” hoặc “Điều tra lại” là một lần điều tra mới. Các đề xuất dưới đây do những lần trước tạo ra và vẫn đang chờ hoặc đã xử lý; nếu còn chờ thì vẫn duyệt hoặc từ chối được.</p>
+          <ul className="grid gap-2 text-sm">{older.map(item)}</ul>
+        </details>
+      ) : null}
+    </>
   );
 }
