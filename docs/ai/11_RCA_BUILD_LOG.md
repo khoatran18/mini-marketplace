@@ -257,3 +257,15 @@ Hệ quả: với sự cố dịch vụ sập (`scale_service`, `restart_service
 - Thông báo lỗi chung chung ("tham số không hợp lệ") làm mất 1 ngày mới ra gốc; mã trạng thái đi kèm (mục 4) giúp phân biệt 400/403/404 ngay trong nhật ký.
 
 **Còn lại.** (a) Kiểm tích hợp công cụ RCA như trên. (b) ĐÃ LÀM (phiên #12). (c) ĐÃ LÀM: `errMsg` ở `IncidentsClient.tsx` giữ nguyên câu lỗi của gateway và thêm "(HTTP <mã>)" cho mọi thông báo lỗi của màn; tsc và eslint sạch; đã build lại và cập nhật `frontend`. (d) Rà các route `Proxy` khác dùng `:id` xem có id không phải số (hiện chỉ thấy playbook). (e) Dọn dữ liệu `ai_rca_events` theo thời hạn lưu (chưa có). Các thay đổi trên chưa commit; vòng lặp nền giữ sự cố mô phỏng #58-#60 và #66 vẫn chạy trên máy.
+
+### 16.33 "Hủy điều tra" và "Rút lại đề xuất" (2026-11-16, ADR-48)
+
+Người dùng chốt hai thiết kế sau §16.32 (đề xuất của mình, user đồng ý nguyên văn: "chốt 2 cái này"); quy tắc ba người (người chạy khác người duyệt) KHÔNG làm, ghi lại ở ADR-48.
+
+| Việc | Cách làm | Kiểm |
+|---|---|---|
+| Hủy điều tra | ai-agent: `RcaService.cancel` (giữ map `run_id -> asyncio.Task` trong `_spawn`; hủy tác vụ rồi `Runner.cancel` ghi dòng nhật ký "Đã hủy điều tra" `{by, was}` và đóng phiên `done/cancelled`; phiên đã kết thúc: 409; không có phiên: 404); API `POST /rca/runs/{id}/cancel` (admin, operator); gateway `POST /ops/rca/runs/:id/cancel`; `OUTCOMES` thêm `cancelled` (nhãn metric `mm_ai_rca_finished_total`); UI nút "Hủy điều tra" (có hộp xác nhận) khi phiên đang chạy/chờ. | 4 test mới ở `test_rca_service.py` (đang chờ, đang chạy với Brain chậm: không chạy sang bước sau, 404, API vai trò/409); test route gateway; gọi tay phiên #12: `done/cancelled`, nhật ký `{by: operator:149, was: waiting_confirm}`, lần hai 409. |
+| Rút lại đề xuất | ops-service: migration `00004_withdrawn.sql` (CHECK thêm `WITHDRAWN`), `Store.Withdraw` (khoá dòng; chỉ `created_by == actor`, còn PENDING và chưa hết hạn), `POST /proposals/{id}/withdraw` sau `human()`, `state=WITHDRAWN` lọc được, audit `proposal_withdrawn`; gateway `POST /ops/proposals/:id/withdraw`; watcher coi WITHDRAWN như REJECTED; UI nút "Rút lại đề xuất" cho đúng người tạo. | Test store + API (có Postgres tạm `postgres:16-alpine` ở cổng 55432, đã xoá): người khác 403, rút lại 200, lần hai 409, quá hạn, người tạo vẫn bị `ErrSelfApproval` khi tự duyệt, đề xuất lại cùng nội dung được, audit có `proposal_withdrawn`; test watcher; gọi tay đề xuất #20: admin 403, operator 200 `WITHDRAWN`, lần hai 409. |
+
+Ghi chú cho lần tổng hợp: (1) bộ test của ops-service chỉ chạy store/API khi có `TEST_POSTGRES_DSN`; Postgres của Swarm không mở cổng ra máy, nên dùng một container tạm. (2) Chưa dọn trạng thái `WITHDRAWN` khỏi báo cáo/metric ngoài nhãn tự động `state` (`CountProposalsByState` đã đếm theo nhãn). (3) Triển khai lại ai-agent chỉ ngắt phiên đang `running`; phiên `waiting_*` sống sót (checkpoint trong Postgres).
+

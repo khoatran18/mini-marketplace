@@ -4,7 +4,7 @@ import { apiFetch } from './api';
 import { confirmProposal, type ChatProposal } from './ai-chat';
 
 export type RunStatus = 'running' | 'waiting_confirm' | 'waiting_approval' | 'done' | 'error';
-export type Outcome = '' | 'recovered' | 'not_recovered' | 'escalated' | 'blocked' | 'rejected' | 'expired' | 'dismissed' | 'failed' | 'budget' | 'error' | 'interrupted';
+export type Outcome = '' | 'recovered' | 'not_recovered' | 'escalated' | 'blocked' | 'rejected' | 'expired' | 'dismissed' | 'failed' | 'budget' | 'error' | 'interrupted' | 'cancelled';
 
 export interface RcaDraft {
   action_id: string;
@@ -66,7 +66,7 @@ export interface OpsProposal {
   params?: Record<string, unknown>;
   rationale?: string;
   risk?: string;
-  state: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'NEEDS_REVIEW' | 'ALTERNATIVE' | 'EXPIRED';
+  state: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'NEEDS_REVIEW' | 'ALTERNATIVE' | 'EXPIRED' | 'WITHDRAWN';
   created_by?: string;
   created_at?: string;
   expires_at?: string;
@@ -96,7 +96,8 @@ export const OUTCOME_LABEL: Record<string, string> = {
   failed: 'Hành động thất bại',
   budget: 'Hết ngân sách điều tra',
   error: 'Lỗi',
-  interrupted: 'Bị ngắt do khởi động lại'
+  interrupted: 'Bị ngắt do khởi động lại',
+  cancelled: 'Đã hủy điều tra'
 };
 
 export function listRcaRuns(token: string, incidentId?: number): Promise<{ items: RcaRun[] }> {
@@ -113,6 +114,11 @@ export function startRca(token: string, incidentId: number): Promise<{ run: RcaR
 
 export function recheckRca(token: string, id: number): Promise<{ run: RcaRun }> {
   return apiFetch(`/ops/rca/runs/${id}/recheck`, { method: 'POST', token });
+}
+
+/** Dừng một lần điều tra đang chạy hoặc đang chờ (nút dừng chi phí). Ai bấm được ghi vào nhật ký điều tra. */
+export function cancelRca(token: string, id: number): Promise<{ run: RcaRun }> {
+  return apiFetch(`/ops/rca/runs/${id}/cancel`, { method: 'POST', token });
 }
 
 interface DraftSigned {
@@ -150,6 +156,11 @@ export async function decideProposal(token: string, id: number, decision: 'accep
   // review gives the short-lived approval token bound to the proposal's content hash; the decision must carry it
   const review = await apiFetch<{ approval_token: string }>(`/ops/proposals/${id}/review`, { method: 'POST', token });
   await apiFetch(`/ops/proposals/${id}/decision`, { method: 'POST', token, body: JSON.stringify({ decision, reason, approval_token: review.approval_token }) });
+}
+
+/** Người TẠO rút lại đề xuất còn chờ duyệt của chính mình (trạng thái WITHDRAWN); người khác bị server từ chối. */
+export function withdrawProposal(token: string, id: number, reason = ''): Promise<unknown> {
+  return apiFetch(`/ops/proposals/${id}/withdraw`, { method: 'POST', token, body: JSON.stringify({ reason }) });
 }
 
 export function executeProposal(token: string, id: number): Promise<unknown> {

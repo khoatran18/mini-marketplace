@@ -10,6 +10,7 @@ import { useFeatureFlags } from '../../../lib/features';
 import {
   ACTIVE,
   OUTCOME_LABEL,
+  cancelRca,
   STATUS_LABEL,
   confirmRcaDraft,
   decideProposal,
@@ -20,6 +21,7 @@ import {
   recheckRca,
   recordExecuted,
   startRca,
+  withdrawProposal,
   type OpsProposal,
   type RcaRun,
   type RcaView
@@ -288,10 +290,25 @@ function RunDetail({ incidentId, runId, role, onChanged }: { incidentId: number;
             {error}
           </p>
         ) : null}
-        {run.status === 'waiting_approval' || run.status === 'waiting_confirm' ? (
-          <button type="button" className="btn h-8 w-fit px-3 text-xs" disabled={busy !== ''} onClick={() => void act('recheck', (t) => recheckRca(t, run.id))}>
-            {busy === 'recheck' ? 'Đang kiểm tra…' : 'Kiểm tra lại'}
-          </button>
+        {active ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {run.status === 'waiting_approval' || run.status === 'waiting_confirm' ? (
+              <button type="button" className="btn h-8 w-fit px-3 text-xs" disabled={busy !== ''} onClick={() => void act('recheck', (t) => recheckRca(t, run.id))}>
+                {busy === 'recheck' ? 'Đang kiểm tra…' : 'Kiểm tra lại'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="btn-danger h-8 w-fit px-3 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={busy !== ''}
+              onClick={() => {
+                if (window.confirm('Hủy lần điều tra này? Trợ lý sẽ dừng ngay. Đề xuất đã tạo (nếu có) vẫn giữ nguyên.')) void act('cancel', (t) => cancelRca(t, run.id));
+              }}
+            >
+              {busy === 'cancel' ? 'Đang hủy…' : 'Hủy điều tra'}
+            </button>
+            <span className="text-xs text-muted">Dừng ngay để khỏi tốn thêm chi phí. Ai bấm được ghi trong nhật ký điều tra.</span>
+          </div>
         ) : null}
       </div>
 
@@ -402,7 +419,12 @@ function Proposals({ proposals, currentId, busy, act }: { proposals: OpsProposal
                   <button type="button" className="btn-danger h-8 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-40" disabled={mine || busy !== ''} title={mine ? 'Bạn là người tạo đề xuất này' : undefined} onClick={() => void act(`reject${p.id}`, (t) => decideProposal(t, p.id, 'reject', 'Từ chối từ màn hình sự cố'))}>
                     Từ chối
                   </button>
-                  <span className="text-xs text-muted">{mine ? 'Bạn là người tạo đề xuất này nên không duyệt hay từ chối được: cần người khác quyết định.' : 'Người tạo đề xuất không tự quyết định được (server từ chối).'}</span>
+                  {mine ? (
+                    <button type="button" className="btn h-8 px-3 text-xs" disabled={busy !== ''} onClick={() => void act(`withdraw${p.id}`, (t) => withdrawProposal(t, p.id, 'Người tạo rút lại từ màn hình sự cố'))}>
+                      Rút lại đề xuất
+                    </button>
+                  ) : null}
+                  <span className="text-xs text-muted">{mine ? 'Bạn là người tạo đề xuất này nên không duyệt hay từ chối được (cần người khác), nhưng bạn có thể rút lại.' : 'Người tạo đề xuất không tự quyết định được (server từ chối).'}</span>
                 </div>
               ) : null}
               {approved && !p.exec_state ? (

@@ -12,7 +12,7 @@
 | [07_COROOT_AND_INCIDENT_AGENT.md](07_COROOT_AND_INCIDENT_AGENT.md) | Coroot (eBPF observability + RCA) là gì, giúp khoanh vùng sự cố ra sao, và kịch bản / dataset / test case cho agent điều tra sự cố: đã có, còn thiếu |
 | [08_AGENT_BUILD_ROADMAP.md](08_AGENT_BUILD_ROADMAP.md) | Lộ trình xây agent buyer/seller/admin/dev và vòng lặp RCA: nền đã có/thiếu, các điểm cần chốt trước, kiến trúc, cấu trúc thư mục `services/ai-agent`, thứ tự 8 bước có tiêu chí xong, đánh giá, an toàn |
 | [09_AGENT_BUILD_LOG.md](09_AGENT_BUILD_LOG.md) | Nhật ký xây `services/ai-agent` (§16.1-§16.25; RCA từ §16.26 ở file 11): cái đã làm, đo được, lỗi gặp và cách sửa, kết quả eval, việc RCA còn lại |
-| [11_RCA_BUILD_LOG.md](11_RCA_BUILD_LOG.md) | Nhật ký xây vòng lặp RCA (§16.26-§16.32): đồ thị LangGraph, danh tính hệ thống, lần chạy LLM thật đầu tiên, chạy thử trên Swarm, giao diện duyệt, nhật ký điều tra trực tiếp, lỗi công cụ hàng loạt và cách sửa |
+| [11_RCA_BUILD_LOG.md](11_RCA_BUILD_LOG.md) | Nhật ký xây vòng lặp RCA (§16.26-§16.33): đồ thị LangGraph, danh tính hệ thống, lần chạy LLM thật đầu tiên, chạy thử trên Swarm, giao diện duyệt, nhật ký điều tra trực tiếp, lỗi công cụ hàng loạt và cách sửa, hủy điều tra và rút lại đề xuất |
 | [10_AGENT_QUALITY_CRITERIA.md](10_AGENT_QUALITY_CRITERIA.md) | Tiêu chí chất lượng của hệ thống agent (an toàn, bảo mật, injection, riêng tư, chi phí, đúng đắn, tin cậy...): đánh giá hiện trạng kèm mức bằng chứng, ưu nhược, đề xuất và cách kiểm |
 | [05_AI_DRAFT_ORIGINAL.md](05_AI_DRAFT_ORIGINAL.md) | Bản nháp ý tưởng ban đầu (hợp đồng tool, SSE, hệ gợi ý, RAG). Chỉ là điểm xuất phát; khi mâu thuẫn thì các file 01–04 mới hơn |
 
