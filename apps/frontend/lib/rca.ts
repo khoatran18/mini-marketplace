@@ -26,7 +26,7 @@ export interface RcaRun {
   proposal_id: number | null;
   waiting_since: number | null;
   outcome: Outcome | null;
-  report: { summary?: string; ready_to_close?: boolean; reason?: string } | null;
+  report: { summary?: string; ready_to_close?: boolean; reason?: string; error_reason?: string } | null;
   created_at: number;
 }
 

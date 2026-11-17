@@ -34,6 +34,40 @@ groups:
           runbook: "§19"
           action: low
 
+      # SLO nhẹ của AI: phần lớn phiên RCA kết thúc ở `error` (thường do nhà cung cấp mô hình lỗi/hết hạn mức) thì RCA tự chạy không còn giúp được ai.
+      # Cần >= 3 phiên kết thúc trong 1 giờ để không báo vì một phiên lỗi lẻ. warning nên KHÔNG tự mở thêm phiên RCA cho chính nó.
+      - alert: AIRcaRunsErroring
+        expr: |
+          sum(increase(mm_ai_rca_runs_finished_total{job="ai-agent",outcome="error"}[1h]))
+            / clamp_min(sum(increase(mm_ai_rca_runs_finished_total{job="ai-agent"}[1h])), 1) > 0.5
+          and sum(increase(mm_ai_rca_runs_finished_total{job="ai-agent"}[1h])) >= 3
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "hơn một nửa phiên RCA kết thúc ở error trong 1 giờ qua (lý do nằm ở report.error_reason của từng phiên)"
+          runbook: "§19c"
+          action: observe
+
+      # Chat bị từ chối vì mô hình không dùng được (llm/resilience.py: hết hạn mức, quá tải, timeout, breaker đang mở).
+      - alert: AIModelUnavailable
+        expr: sum(increase(mm_ai_runs_total{job="ai-agent",status="model_unavailable"}[10m])) > 3
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "chat AI trả model_unavailable hơn 3 lượt trong 10 phút (nhà cung cấp mô hình lỗi, hết hạn mức hoặc breaker đang mở)"
+          runbook: "§19c"
+          action: observe
+
+      # Có profile dự phòng (llm.fallbacks) mà profile chính bị bỏ qua: hệ thống vẫn chạy nhưng bằng mô hình phụ. Với `fallbacks: {}` (mặc định) không bao giờ bắn.
+      - alert: AILlmFallbackUsed
+        expr: sum by (profile, reason) (increase(mm_ai_llm_fallback_total{job="ai-agent"}[10m])) > 0
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: "ai-agent đang dùng mô hình dự phòng vì profile {{ $labels.profile }} ({{ $labels.reason }})"
+          runbook: "§19c"
+          action: observe
+
       # V7: service về 0 replica mà DNS trả NXDOMAIN thì target biến mất khỏi service discovery, `up == 0` không bao giờ đúng.
       # (Trên máy có DNS nhà mạng trả IP giả thì ServiceDown bắn thay; cả hai cùng bắn là bình thường.)
       - alert: ServiceMissing

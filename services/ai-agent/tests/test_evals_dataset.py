@@ -117,6 +117,9 @@ def test_heldout_split_is_stable_and_about_a_fifth_for_every_persona():
         assert len(held) + len(dev) == len(cases) and not {c.id for c in held} & {c.id for c in dev}
         assert 0.08 <= len(held) / len(cases) <= 0.35, (persona, len(held), len(cases))
         assert len(evalkit.select_split(cases, "all")) == len(cases)
+        for g in {c.g for c in cases if sum(x.g == c.g for x in cases) >= 2}:  # nhóm từ 2 ca: cả hai tập đều có mặt, không nhóm nào vắng ở heldout
+            assert any(c.g == g for c in held), (persona, g, "không có ca giữ kín")
+            assert any(c.g == g for c in dev), (persona, g, "không còn ca dev")
 
 
 def test_clarify_cases_ask_back_instead_of_guessing():

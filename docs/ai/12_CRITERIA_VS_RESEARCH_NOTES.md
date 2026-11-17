@@ -41,9 +41,9 @@ Nhãn kết luận: **Có** (đã làm), **Một phần**, **Chưa** (cần, ch�
 | 31 | Fallback ladder (model dự phòng, kiểm tương thích tool calling) | **Một phần** (cập nhật 2026-11-17) | Cơ chế có và đã test (`llm.fallbacks.<role>`, lỗi nhà cung cấp mới sang dự phòng, 400 thì không). Cấu hình mặc định `fallbacks: {}` (chưa chọn model dự phòng thật, cần khoá và tiền); chưa có kiểm tương thích tool calling tự động (người cấu hình phải chọn profile hỗ trợ tool) | Nên cấu hình khi chạy liên tục |
 | 32 | Idempotency, checkpoint, resume sau crash | **Có** | [test] token đề xuất dùng một lần, hạn 5 phút; chỉ một đề xuất PENDING mỗi hành động (chỉ mục duy nhất); `Checkout` có khoá idempotent; checkpoint Postgres, phiên chờ sống sót qua deploy (§16.33) | Cần |
 | 33 | Semantic cache, stale-if-error | **Không cần** | Dữ liệu shop đổi liên tục, cache trả cũ là trả sai; chi phí đã bị chặn bằng trần token | Không |
-| 34 | Error budget, cảnh báo burn-rate đa cửa sổ, postmortem | **Một phần** | Cảnh báo ai-agent chết, watcher đứng (`AIRcaWatcherStalled`); chưa có SLO riêng cho AI, chưa burn-rate; postmortem dưới dạng nhật ký xây, chưa theo mẫu không đổ lỗi | Nên nhẹ: một SLO "phiên RCA không ra `error`" |
+| 34 | Error budget, cảnh báo burn-rate đa cửa sổ, postmortem | **Một phần** (cập nhật 2026-11-17) | Cảnh báo ai-agent chết, watcher đứng (`AIRcaWatcherStalled`); thêm SLO nhẹ `AIRcaRunsErroring` (hơn 50% phiên RCA lỗi trong 1 giờ, tối thiểu 3 phiên), `AIModelUnavailable`, `AILlmFallbackUsed` (§16.38, có test promtool); chưa burn-rate đa cửa sổ; postmortem dưới dạng nhật ký xây, chưa theo mẫu không đổ lỗi | Nên nhẹ: một SLO "phiên RCA không ra `error`" |
 | 35 | Đồ thị có trạng thái, cạnh có điều kiện, checkpointer | **Có** | `rca/graph.py` (LangGraph), chờ người bằng trạng thái + watcher đánh thức, checkpoint Postgres | Cần |
-| 36 | Dead letter khi không xử lý được | **Một phần** (cập nhật 2026-11-17) | Phiên hỏng ra `error`; nay kèm `report.error_reason` (vd "hạn mức mô hình đã hết") hiện cho người; chưa chuyển thành trạng thái "cần người xử lý" riêng | Nên |
+| 36 | Dead letter khi không xử lý được | **Một phần** (cập nhật 2026-11-17) | Phiên hỏng ra `error` kèm `report.error_reason`; trang `/admin/incidents` nay hiện khung đỏ "cần người xử lý sự cố này" kèm lý do (trước đó lý do chỉ nằm trong dữ liệu, giao diện chưa hiện); chưa có trạng thái DB riêng hay hàng đợi "cần người" | Nên |
 | 37 | Reflexion (tự viết nhận xét lỗi rồi thử lại) | **Một phần** | Không có Reflexion; có `verify_retries: 1`: kiểm lại sau khi người chạy lệnh, nếu chưa khỏi thì thêm một vòng điều tra | Không cần thêm; giá trị thấp so với chi phí |
 | 38 | Sandbox, khoá API nằm phía host | **Không cần** | Agent không chạy mã tuỳ ý; khoá model chỉ ở biến môi trường của ai-agent; token agent ngắn hạn, không vào log | Chỉ cần nếu thêm công cụ chạy mã |
 | 39 | Multi-agent (Supervisor/Researcher/…), A2A, MCP, Evidence Gateway | **Không cần** (quyết định) | ADR-49: một agent + công cụ chọn lọc; lớp bằng chứng làm trong ai-agent. Bài nghiên cứu cũng nêu câu hỏi mở "multi-agent có đáng chi phí không" | Không, trừ khi đề bài yêu cầu |
@@ -111,7 +111,7 @@ Bốn khoảng trống ở mục 3 đã được xử lý trong phạm vi không
 | 1. Kiểm chứng kết luận với bằng chứng | `rca/grounding.py` + nối vào đồ thị RCA; tiêu chí eval `grounded`; `guard/grounding.py` đo con số trong câu trả lời chat | Chưa chứng minh bằng chứng ủng hộ (mới kiểm có nhắc tới); chat chưa chặn; chưa đo trên mô hình thật |
 | 2. Cổng chất lượng trong CI | Job `ai-agent` trong `ci.yml`; `push-images` cần nó | Chưa chạy trên GitHub; chưa có ngưỡng điểm cho eval live |
 | 3. Tập giữ kín và chạy lặp | `--split dev/heldout`, nhóm `clarify` mới (16 ca), `--repeat k` với khoảng tin cậy Wilson | Chưa chạy live lần nào; quy ước dev/heldout chưa được ép bằng mã |
-| 4. Chịu lỗi nhà cung cấp LLM | `llm/resilience.py`: phân loại lỗi, breaker theo profile, dự phòng `llm.fallbacks`, `max_retries` ghi rõ; chat báo `model_unavailable`; RCA ghi lý do lỗi | Chưa cấu hình profile dự phòng thật; chưa có cảnh báo Prometheus cho `mm_ai_llm_fallback_total` |
+| 4. Chịu lỗi nhà cung cấp LLM | `llm/resilience.py`: phân loại lỗi, breaker theo profile, dự phòng `llm.fallbacks`, `max_retries` ghi rõ; chat báo `model_unavailable`; RCA ghi lý do lỗi | Chưa cấu hình profile dự phòng thật; đã có cảnh báo `AILlmFallbackUsed` (2026-11-17) |
 
 **Việc cần chi phí mô hình, CHƯA làm (chờ đồng ý từng lần):** chạy `run_rca_evals.py --live --repeat 3` (22 ca x 3 lần, tối đa khoảng 792 lượt gọi); chạy 3 ca `inject-*` thật; chạy `run_evals.py --live --split heldout` một lần khi chốt prompt; red team live cho `leak.py`.
 
@@ -155,7 +155,7 @@ Mục này liệt kê những chỗ code đã chạy qua test nhưng CHƯA chứ
 - Chỉ là quy ước (`--split`), không có cơ chế ép; chạy `heldout` hằng ngày là làm mất tác dụng.
 - Cùng người viết và cùng phong cách với tập dev, nên chỉ chống được quá khớp "học thuộc ca"; chống chắc hơn cần ca VIẾT MỚI sau khi chốt prompt.
 - Băm 1/5 theo câu hỏi cho tỷ lệ khoảng 12-20% mỗi persona (test chấp nhận 8-35%): một số nhóm nhỏ (vd `propose` của buyer) có thể không có ca heldout nào. Kiểm bằng `python evals/run_evals.py --split heldout` xem từng nhóm.
-- **Đã kiểm 2026-11-17** (`run_evals.py --split heldout`, 64 câu): nhóm rỗng ở heldout: `propose` của buyer và seller (0), `clarify` của buyer, seller, admin (0; operator 2); `adversarial` của admin 0, `scope` của operator 0. Nghĩa là heldout hiện KHÔNG đo được các nhóm này cho persona đó. Cách chữa (chưa làm, cần bạn quyết): chọn heldout theo từng nhóm (1/5 mỗi nhóm) thay vì theo toàn bộ, hoặc viết thêm ca cho nhóm nhỏ.
+- **Đã kiểm và đã sửa 2026-11-17** (§16.38): trước khi sửa, heldout (64 câu) có nhóm rỗng: `propose` của buyer và seller (0), `clarify` của buyer, seller, admin (0; operator 2); `adversarial` của admin 0, `scope` của operator 0. Nghĩa là heldout hiện KHÔNG đo được các nhóm này cho persona đó. Đã chữa: mỗi (persona, nhóm) từ 2 ca trở lên mà băm không chọn ca nào thì lấy ca có băm nhỏ nhất làm heldout; nay heldout 71 câu, dev 351 câu, mọi nhóm đều có mặt ở cả hai tập (có test).
 - Chưa chạy `heldout` live lần nào, nên chưa có điểm gốc để so.
 
 ### 6.5 Chịu lỗi nhà cung cấp LLM (`llm/resilience.py`)
@@ -165,7 +165,7 @@ Mục này liệt kê những chỗ code đã chạy qua test nhưng CHƯA chứ
 - Lượt chat đang stream mà lỗi giữa chừng vẫn báo lỗi (không ghép mô hình dự phòng).
 - `llm.fallbacks` để trống: chưa có profile dự phòng, chưa có kiểm tương thích tool calling tự động (chọn nhầm profile không hỗ trợ tool sẽ lỗi lúc chạy).
 - Đã kiểm đường `create_agent` thật với một mô hình lỗi giả; chưa kiểm với `ModelCallLimitMiddleware` lồng cùng trong agent chạy thật dài (gọi nhiều vòng, có công cụ).
-- Chưa có cảnh báo Prometheus cho `mm_ai_llm_fallback_total`.
+- Cảnh báo `AILlmFallbackUsed`, `AIModelUnavailable` đã có (2026-11-17, test promtool); chưa chạy trên Prometheus thật.
 
 ### 6.6 CI và triển khai
 

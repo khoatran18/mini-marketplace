@@ -303,3 +303,9 @@ Nguồn: `docs/ai/12_CRITERIA_VS_RESEARCH_NOTES.md`. Toàn bộ test ai-agent: 2
 - `rca/grounding.py`: số so theo tập dạng chuẩn (hết "50" khớp trong "500"); tên khớp theo ranh giới chữ-số; loại "v1.2", "e.g.", "vs", "etc" khỏi danh sách tên cần đối chiếu. `guard/grounding.py` (chat) dùng cùng hàm.
 - Test: chuẩn hoá và ranh giới (`test_guard_grounding.py`, `test_rca_grounding.py`); test chỉ số chat viết lại với số có thật và số bịa. 257 passed, 13 skipped; oracle RCA vẫn 22/22.
 - **Chưa làm:** số viết chữ ("5 nghìn", "1,5 triệu"); tên không có gạch và ngoài danh sách cứng vẫn lọt (`grounded=None`); vẫn chỉ kiểm "có nhắc tới". Đo tỷ lệ trên model thật vẫn cần chạy live.
+
+### 16.38 Cảnh báo AI, khung "cần người xử lý", heldout theo nhóm (2026-11-17, không gọi LLM)
+
+- **Cảnh báo** (`deploy/prometheus/alerts.yml`, cả ba `warning` nên không tự mở phiên RCA cho chính chúng): `AIRcaRunsErroring` (SLO nhẹ: > 50% phiên RCA kết thúc `error` trong 1 giờ, tối thiểu 3 phiên), `AIModelUnavailable` (> 3 lượt chat `model_unavailable` trong 10 phút), `AILlmFallbackUsed` (profile chính bị bỏ qua; với `fallbacks: {}` không bao giờ bắn). Thêm vào `docs/playbooks/ai-agent.yml`, runbook §19c, 7 ca test trong `alerts_test.yml`. `promtool check rules` (24 luật) và `promtool test rules` đạt (chạy bằng image `prom/prometheus:v2.55.1` có sẵn trên máy). Chưa chạy trên Prometheus thật; chưa đặt cảnh báo cho `mm_ai_answer_numbers_total{result="ungrounded"}` vì chưa có đường cơ sở (cố ý).
+- **Giao diện** (`apps/frontend/.../IncidentsClient.tsx`, `lib/rca.ts`): phiên `error` hiện khung đỏ "cần người xử lý sự cố này" kèm `report.error_reason`. Đính chính: §16.35 viết lý do lỗi "hiện cho người", nhưng trước đây giao diện chưa hiện trường này. Không thêm trạng thái DB mới (tránh đổi schema/luồng); `tsc` và `next lint` sạch, chưa xem bằng mắt trên trình duyệt.
+- **Heldout theo nhóm** (`evalkit.select_split`): xem doc 12 mục 6.4. 71 câu heldout, 351 dev.

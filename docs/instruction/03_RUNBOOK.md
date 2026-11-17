@@ -453,3 +453,11 @@ Chỉ có khi `AI_RCA_ENABLED=true`. ai-agent vẫn chạy (chat bình thường
 2. `docker service logs marketplace_ai-agent --tail 200 | grep "rca watcher"`: tìm `tick failed: <loại lỗi>: <nội dung>`.
 3. Không có dòng nào, hoặc đã lỗi quá lâu: `docker service update --force marketplace_ai-agent` (phiên chờ người nằm trong checkpoint Postgres nên không mất; phiên đang `running` lúc restart bị đánh dấu `error/interrupted`).
 Playbook cho agent: `docs/playbooks/ai-agent.yml`.
+
+## 19c. Mô hình AI lỗi hoặc đang dùng dự phòng (`AIModelUnavailable`, `AIRcaRunsErroring`, `AILlmFallbackUsed`)
+ai-agent chạy nhưng nhà cung cấp mô hình không trả lời được: chat trả `model_unavailable`, phiên RCA kết thúc ở `error`, hoặc (khi có `llm.fallbacks`) đang chạy bằng mô hình phụ. Shop vẫn bán bình thường.
+1. Lý do cụ thể: lượt chat báo trong thông báo lỗi (hết hạn mức, quá tải, hết thời gian, lỗi khoá); phiên RCA ghi ở `report.error_reason` (trang `/admin/incidents`). `sum by (profile) (rate(mm_ai_llm_errors_total[10m]))` cho biết profile nào.
+2. Hết hạn mức hoặc khoá hỏng (`quota`, `auth`): nạp hạn mức / sửa khoá ở nhà cung cấp rồi `docker service update --force marketplace_ai-agent` (đọc lại cấu hình; hội thoại và phiên chờ người nằm trong Postgres nên không mất).
+3. Quá tải hoặc hết thời gian (`overloaded`, `timeout`, `rate_limit`): thường tự hết; breaker mở 30 giây rồi thăm dò lại. Kéo dài thì cấu hình `llm.fallbacks.<role>` trỏ tới profile của nhà cung cấp KHÁC (phải hỗ trợ tool calling).
+4. `AILlmFallbackUsed` bắn nghĩa là hệ thống đang chạy bằng mô hình phụ: chất lượng có thể khác, kiểm profile chính ở bước 1.
+Playbook cho agent: `docs/playbooks/ai-agent.yml`.

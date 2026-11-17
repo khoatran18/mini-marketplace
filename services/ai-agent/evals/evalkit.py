@@ -39,12 +39,26 @@ HELDOUT_EVERY = 5  # một trong năm câu (theo băm của câu hỏi) là tậ
 def split_of(q: str) -> str:
     """"dev" hoặc "heldout". Theo băm của câu hỏi nên ổn định khi thêm/bớt/đổi thứ tự case (id theo vị trí thì không).
     Quy ước: khi chỉnh prompt/mô tả tool chỉ chạy `--split dev`; `--split heldout` chỉ chạy khi chốt một phiên bản, để không vừa sửa vừa chấm."""
-    h = hashlib.sha1(re.sub(r"\s+", " ", q.strip().lower()).encode("utf-8")).digest()
-    return "heldout" if int.from_bytes(h[:4], "big") % HELDOUT_EVERY == 0 else "dev"
+    return "heldout" if _hash_key(q) % HELDOUT_EVERY == 0 else "dev"
+
+
+def _hash_key(q: str) -> int:
+    return int.from_bytes(hashlib.sha1(re.sub(r"\s+", " ", q.strip().lower()).encode("utf-8")).digest()[:4], "big")
 
 
 def select_split(cases: list["Case"], split: str) -> list["Case"]:
-    return list(cases) if split == "all" else [c for c in cases if split_of(c.q) == split]
+    """Tập giữ kín = ca có split_of == "heldout" CỘNG, với mỗi (persona, nhóm) từ 2 ca trở lên mà băm không chọn ca nào, ca có băm nhỏ nhất
+    (để không nhóm nào vắng hẳn ở heldout: trước đây propose/clarify của vài persona không có ca giữ kín). Vẫn ổn định theo nội dung câu hỏi."""
+    if split == "all":
+        return list(cases)
+    held = {c.id for c in cases if split_of(c.q) == "heldout"}
+    groups: dict[tuple[str, str], list["Case"]] = {}
+    for c in cases:
+        groups.setdefault((c.persona, c.g), []).append(c)
+    for members in groups.values():
+        if len(members) >= 2 and not any(c.id in held for c in members):
+            held.add(min(members, key=lambda c: _hash_key(c.q)).id)
+    return [c for c in cases if (c.id in held) == (split == "heldout")]
 
 
 @dataclass

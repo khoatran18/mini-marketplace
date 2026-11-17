@@ -275,3 +275,72 @@ tests:
               summary: "bộ theo dõi RCA của ai-agent không tick quá 5 phút (RCA tự chạy ngừng, phiên chờ người không được đánh thức)"
               runbook: "§19"
               action: low
+  # AIRcaRunsErroring: 4 phiên lỗi / 1 phiên ổn trong 1 giờ thì bắn; chỉ 1 phiên lỗi lẻ (tổng < 3) thì im lặng.
+  - interval: 1m
+    input_series:
+      - series: 'mm_ai_rca_runs_finished_total{job="ai-agent",swarm_service="ai-agent",instance="10.0.0.20:8090",outcome="error"}'
+        values: '0 0 0 1 2 3 4 4x60'
+      - series: 'mm_ai_rca_runs_finished_total{job="ai-agent",swarm_service="ai-agent",instance="10.0.0.20:8090",outcome="recovered"}'
+        values: '0 0 0 0 0 0 1 1x60'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: AIRcaRunsErroring
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: AIRcaRunsErroring
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: "hơn một nửa phiên RCA kết thúc ở error trong 1 giờ qua (lý do nằm ở report.error_reason của từng phiên)"
+              runbook: "§19c"
+              action: observe
+  - interval: 1m
+    input_series:
+      - series: 'mm_ai_rca_runs_finished_total{job="ai-agent",swarm_service="ai-agent",instance="10.0.0.20:8090",outcome="error"}'
+        values: '0 0 0 1 1x60'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: AIRcaRunsErroring
+        exp_alerts: []
+  # AIModelUnavailable: lượt chat model_unavailable liên tục thì bắn; một lượt lẻ thì không.
+  - interval: 30s
+    input_series:
+      - series: 'mm_ai_runs_total{job="ai-agent",swarm_service="ai-agent",instance="10.0.0.20:8090",persona="buyer",status="model_unavailable"}'
+        values: '0+1x40'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: AIModelUnavailable
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: AIModelUnavailable
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: "chat AI trả model_unavailable hơn 3 lượt trong 10 phút (nhà cung cấp mô hình lỗi, hết hạn mức hoặc breaker đang mở)"
+              runbook: "§19c"
+              action: observe
+  - interval: 30s
+    input_series:
+      - series: 'mm_ai_runs_total{job="ai-agent",swarm_service="ai-agent",instance="10.0.0.20:8090",persona="buyer",status="model_unavailable"}'
+        values: '0 0 0 1 1x40'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: AIModelUnavailable
+        exp_alerts: []
+  # AILlmFallbackUsed: profile chính bị bỏ qua thì bắn (kèm profile và lý do); không có mẫu nào thì im lặng.
+  - interval: 30s
+    input_series:
+      - series: 'mm_ai_llm_fallback_total{job="ai-agent",swarm_service="ai-agent",instance="10.0.0.20:8090",profile="opencode_deepseek_flash",reason="rate_limit"}'
+        values: '0 0 0 1 2 3 3x40'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: AILlmFallbackUsed
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: AILlmFallbackUsed
+        exp_alerts:
+          - exp_labels: {severity: warning, profile: opencode_deepseek_flash, reason: rate_limit}
+            exp_annotations:
+              summary: "ai-agent đang dùng mô hình dự phòng vì profile opencode_deepseek_flash (rate_limit)"
+              runbook: "§19c"
+              action: observe

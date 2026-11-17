@@ -335,6 +335,16 @@ function RunDetail({ incidentId, runId, role, onChanged }: { incidentId: number;
       <RunLog runId={run.id} status={run.status} />
       <Proposals proposals={proposals} currentId={run.proposal_id} busy={busy} act={act} />
 
+      {run.status === 'error' || run.outcome === 'error' ? (
+        <div role="alert" className="card grid gap-1 border border-danger bg-danger-soft">
+          <h2 className="text-sm font-bold text-danger">Phiên điều tra tự động bị lỗi: cần người xử lý sự cố này</h2>
+          <p className="text-sm">
+            {view.report?.error_reason ? `${cap(view.report.error_reason)}. ` : 'Chưa rõ lý do (xem dòng thời gian bên dưới). '}
+            Trợ lý không kết luận được nguyên nhân, nên đừng dựa vào phần giả thuyết bên dưới (nếu có). Làm theo runbook của cảnh báo, hoặc bấm «Điều tra lại» ở danh sách sự cố khi nhà cung cấp mô hình đã ổn.
+          </p>
+        </div>
+      ) : null}
+
       {view.report ? (
         <div className="card grid gap-1">
           <h2 className="text-sm font-bold">Báo cáo của trợ lý</h2>

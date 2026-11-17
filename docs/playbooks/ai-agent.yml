@@ -1,7 +1,7 @@
 id: ai-agent
 title: ai-agent ngừng hoạt động (chat AI báo không khả dụng)
 triggers:
-  alerts: [AIAgentDown, AIRcaWatcherStalled]
+  alerts: [AIAgentDown, AIRcaWatcherStalled, AIRcaRunsErroring, AIModelUnavailable, AILlmFallbackUsed]
 runbook: "§19"
 diagnose:
   - id: agent-up
