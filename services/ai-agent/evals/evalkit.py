@@ -86,6 +86,24 @@ def load_cases(persona: str, root: Path = HERE / "cases") -> list[Case]:
     return out
 
 
+def load_env(path: Path | None = None, prefixes: tuple[str, ...] = ("OPENCODE_", "DEEPSEEK_", "ANTHROPIC_")) -> list[str]:
+    """Nạp khoá mô hình từ deploy/.env vào môi trường tiến trình này (không cần `export` tay). Chỉ lấy biến có tiền tố trong `prefixes`, giá trị
+    không rỗng, và KHÔNG đè biến đã có sẵn. Trả về TÊN các biến đã nạp (không bao giờ trả hay in giá trị)."""
+    import os
+
+    from dotenv import dotenv_values
+
+    env_file = path or HERE.parents[2] / "deploy" / ".env"
+    if not env_file.is_file():
+        return []
+    loaded = []
+    for k, v in dotenv_values(env_file).items():
+        if v and k.startswith(prefixes) and k not in os.environ:
+            os.environ[k] = v
+            loaded.append(k)
+    return loaded
+
+
 def _h(data: bytes) -> str:
     return hashlib.sha1(data).hexdigest()[:10]
 

@@ -133,12 +133,18 @@ def test_clarify_cases_ask_back_instead_of_guessing():
         for c in cl:
             assert "none" in c.tool and not c.propose, c.id                       # không gọi tool thì cũng đạt; không bao giờ đề xuất
             assert len(c.tool) <= 2 and not c.args, c.id                          # nới tối đa một tool tra danh sách, không đòi tham số
-            assert len(c.need) == 2 and "?" in c.need[0] and "nào" in c.need[1], c.id   # dấu hỏi VÀ từ ngữ hỏi lại cụ thể
+            assert len(c.need) == 3 and "?" in c.need[0] and "nào" in c.need[1], c.id   # dấu hiệu hỏi lại, từ ngữ hỏi lại cụ thể, VÀ nhắc đúng thứ còn thiếu
     strict = next(c for c in evalkit.load_cases("buyer") if c.q == "Sản phẩm đó còn hàng không?")
     assert evalkit.score(strict, [], "Bạn muốn hỏi sản phẩm nào vậy?", [], today).ok
     assert not evalkit.score(strict, [], "Mình đã kiểm tra, còn hàng nhé.", [], today).ok               # đoán/trả lời bừa
     assert not evalkit.score(strict, [], "Mình giúp được gì cho bạn?", [], today).ok                    # có "?" nhưng không hỏi đúng chỗ thiếu
-    assert not evalkit.score(strict, [], "Bạn cho mình biết tên sản phẩm", [], today).ok                # hỏi nhưng không có dấu "?"
+    assert evalkit.score(strict, [], "Bạn cho mình tên sản phẩm cần hỏi nhé.", [], today).ok            # đề nghị lịch sự không có "?" vẫn là hỏi lại (model thật hay viết vậy)
+    assert evalkit.score(strict, [], "Bạn cần cho mình mã sản phẩm thì mình mới tra được.", [], today).ok
+    assert not evalkit.score(strict, [], "Đã kiểm tra: sản phẩm còn 12 cái trong kho.", [], today).ok   # trả lời bừa không có từ nào của câu hỏi lại
+    assert not evalkit.score(strict, [], "Bạn cho mình biết thêm chi tiết nhé.", [], today).ok          # hỏi chung chung, không nói thiếu thứ gì
+    assert not evalkit.score(strict, [], "Bạn muốn hỏi về mã giảm giá nào nhé?", [], today).ok          # hỏi lạc đề (không nhắc sản phẩm)
+    assert evalkit.score(strict, [], "Bạn muốn hỏi sản phẩm nào nhé?", [], today).ok
+    assert not evalkit.score(strict, [], "Mình không có thông tin về sản phẩm này.", [], today).ok       # từ chối, không hỏi lại
     assert not evalkit.score(strict, [{"tool": "get_product", "args": {}}], "Bạn muốn sản phẩm nào?", [], today).ok
     lenient = next(c for c in evalkit.load_cases("buyer") if c.q == "Hủy đơn giúp mình")
     assert evalkit.score(lenient, [{"tool": "list_my_orders", "args": {}}], "Bạn có 2 đơn, muốn hủy đơn nào?", [], today).ok   # tra danh sách rồi hỏi: chấp nhận

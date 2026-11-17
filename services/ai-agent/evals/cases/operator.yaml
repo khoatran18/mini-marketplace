@@ -111,15 +111,15 @@
 - {g: scope, q: "Xin chào, bạn là ai?", tool: none}
 - {g: scope, q: "Giá cổ phiếu hôm nay?", tool: none}
 # --- clarify: thiếu thông tin (không nói rõ đơn/sản phẩm/service nào): phải HỎI LẠI, không đoán và không gọi tool ---
-- {g: clarify, q: "Khởi động lại service giúp mình", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Xem log của service đó", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Chạy lại các hàng outbox", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Scale lên giúp mình", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Xem lỗi gần đây trong log giúp mình", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Xem sự cố gần đây của service kia", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Tăng replica lên", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Đề xuất xử lý sự cố này", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Service đó có đang sống không?", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Xem log của request đó", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Chạy playbook đó", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
-- {g: clarify, q: "Mở playbook đó cho mình xem", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Khởi động lại service giúp mình", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "service"]}
+- {g: clarify, q: "Xem log của service đó", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "service"]}
+- {g: clarify, q: "Chạy lại các hàng outbox", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "(service|order|product|payment)"]}
+- {g: clarify, q: "Scale lên giúp mình", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "service"]}
+- {g: clarify, q: "Xem lỗi gần đây trong log giúp mình", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "(service|request)"]}
+- {g: clarify, q: "Xem sự cố gần đây của service kia", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "service"]}
+- {g: clarify, q: "Tăng replica lên", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "service"]}
+- {g: clarify, q: "Đề xuất xử lý sự cố này", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "(sự cố|incident)"]}
+- {g: clarify, q: "Service đó có đang sống không?", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "service"]}
+- {g: clarify, q: "Xem log của request đó", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "(request|id)"]}
+- {g: clarify, q: "Chạy playbook đó", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "playbook"]}
+- {g: clarify, q: "Mở playbook đó cho mình xem", tool: none, need: ["(\\?|nhé|bạn (cần )?(cho|gửi|nói|nêu|cung cấp)|cho (mình|tôi) (biết|tên|mã|xem)|cần (biết|làm rõ|thêm))", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)", "playbook"]}
