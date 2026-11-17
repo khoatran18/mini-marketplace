@@ -35,7 +35,7 @@ class ScriptedBrain:
     """Mỗi phương thức lấy phần tử kế tiếp của danh sách (phần tử cuối lặp lại). Ghi lại mọi lần gọi trong `calls`."""
 
     def __init__(self, *, collect=None, hypothesize=None, choose=None, verify=None, report=None, raises: str | None = None) -> None:
-        self.s = {"collect": collect or [{"evidence": [{"source": "ops_list_incidents", "args": {}, "summary": "service down"}], "queries": 1, "model_calls": 1}],
+        self.s = {"collect": collect or [{"evidence": [{"source": "ops_list_incidents", "args": {}, "summary": "payment-service replicas 0/1: service down"}], "queries": 1, "model_calls": 1}],
                   "hypothesize": hypothesize or [{"hypotheses": [{"cause": "payment-service dừng", "confidence": 0.9, "evidence_ids": ["e1"], "refuted_by": "replica > 0"}], "model_calls": 1}],
                   "choose": choose or [{"action_id": "restart_service", "params": {"service": "payment-service"}, "rationale": "replica 0/1", "evidence_ids": ["e1"], "model_calls": 1}],
                   "verify": verify or [{"recovered": True, "note": "ok", "queries": 1, "model_calls": 1}],
@@ -114,7 +114,7 @@ OPS_TOOLS = {"role": "operator", "tools": [
         {"name": "action_id", "in": "body", "type": "string", "required": True}]}]}
 
 
-def ops_gateway(calls: list | None = None, metric: str = "up=0", metric_status: int = 200) -> GatewayClient:
+def ops_gateway(calls: list | None = None, metric: str = "payment-service up=0", metric_status: int = 200) -> GatewayClient:
     def handler(req: _httpx.Request) -> _httpx.Response:
         if calls is not None:
             calls.append((req.method, req.url.path, dict(req.url.params)))

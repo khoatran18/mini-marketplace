@@ -91,7 +91,7 @@ async def test_operator_does_not_confirm_or_approval_rejected_or_expired_end_the
 
 async def test_verify_failure_runs_one_more_round_then_reports_to_a_human():
     bad = [{"recovered": False, "note": "vẫn 0/1", "queries": 1, "model_calls": 1}]
-    coll = [{"evidence": [{"source": f"t{i}", "args": {"i": i}, "summary": "x"}], "queries": 1, "model_calls": 1} for i in range(9)]
+    coll = [{"evidence": [{"source": f"t{i}", "args": {"i": i}, "summary": "payment-service x"}], "queries": 1, "model_calls": 1} for i in range(9)]
     choose = [{"action_id": "restart_service", "params": {"service": "payment-service"}, "rationale": "a", "evidence_ids": ["e1"], "model_calls": 1},
               {"action_id": "scale_service", "params": {"service": "payment-service", "replicas": 2}, "rationale": "b", "evidence_ids": ["e1"], "model_calls": 1}]
     g, brain = make(ScriptedBrain(collect=coll, verify=bad, choose=choose))
@@ -107,7 +107,7 @@ async def test_verify_failure_runs_one_more_round_then_reports_to_a_human():
 
 async def test_does_not_repeat_a_failed_action_without_new_evidence():
     bad = [{"recovered": False, "note": "x", "queries": 0, "model_calls": 1}]
-    same = [{"evidence": [{"source": "ops_list_incidents", "args": {}, "summary": "service down"}], "queries": 0, "model_calls": 0}]  # không có bằng chứng mới
+    same = [{"evidence": [{"source": "ops_list_incidents", "args": {}, "summary": "payment-service replicas 0/1: service down"}], "queries": 0, "model_calls": 0}]  # không có bằng chứng mới
     g, _ = make(ScriptedBrain(collect=same, verify=bad))  # choose luôn trả restart payment-service
     await start(g)
     await g.ainvoke(Command(resume={"event": "confirmed", "proposal_id": 1}), cfg())

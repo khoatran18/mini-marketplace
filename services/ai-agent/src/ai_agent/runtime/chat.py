@@ -12,7 +12,9 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from ai_agent import metrics
 from ai_agent.config.logging import get_logger, request_id_var, run_id_var
+from ai_agent.guard.grounding import ungrounded_numbers
 from ai_agent.guard.leak import LeakFilter
+from ai_agent.llm.resilience import LlmUnavailable, label
 from ai_agent.personas.base import Persona
 from ai_agent.runtime import events
 from ai_agent.runtime.agent_factory import AgentRuntime
@@ -108,11 +110,20 @@ async def run_turn(rt: AgentRuntime, store: Store, persona: Persona, ctx: RunCon
                 elif isinstance(exc, TurnAborted):
                     status = "session_expired"
                     yield _error(ctx, "session_expired", str(exc))
+                elif isinstance(exc, LlmUnavailable):
+                    status = "model_unavailable"
+                    logger.warning("model unavailable", extra={"kind": exc.kind.value, "tried": exc.tried})
+                    yield _error(ctx, "model_unavailable", f"Trợ lý tạm thời không dùng được ({label(exc.kind)}). Bạn thử lại sau ít phút nhé.")
                 else:
                     logger.error("turn failed", extra={"error": type(exc).__name__}, exc_info=exc)
                     yield _error(ctx, "model_error", "Có lỗi khi xử lý, hãy thử lại.")
                 return
             yield item
+        if answer.strip():  # đo (không chặn) con số lớn trong câu trả lời không có trong dữ liệu công cụ hay câu hỏi
+            total, bad = ungrounded_numbers(answer, usage.tool_text, text)
+            if total:
+                metrics.ANSWER_NUMBERS.labels(persona.name, "grounded").inc(total - bad)
+                metrics.ANSWER_NUMBERS.labels(persona.name, "ungrounded").inc(bad)
         if not answer.strip():  # hết vòng gọi mô hình trước khi kịp viết câu trả lời: không để người dùng nhìn khung trống
             answer = ("Mình chưa tổng hợp xong câu trả lời trong giới hạn cho phép. Dữ liệu tìm được (nếu có) nằm ở thẻ bên dưới; "
                       "bạn thử hỏi cụ thể hơn giúp mình nhé.")

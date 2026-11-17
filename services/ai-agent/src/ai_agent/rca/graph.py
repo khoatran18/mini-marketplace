@@ -21,6 +21,7 @@ from langgraph.types import interrupt
 from ai_agent.config.logging import get_logger
 from ai_agent.rca.budget import Budget
 from ai_agent.rca.events import NullEvents
+from ai_agent.rca.grounding import hypothesis_supported, ungrounded_params
 from ai_agent.rca.ports import Brain, OpsPort
 from ai_agent.rca.state import RcaState
 from ai_agent.rca.validate import ESCALATE, check_params
@@ -34,6 +35,14 @@ def _tok(state: Any, r: dict[str, Any]) -> dict[str, int]:
             "output_tokens": int(state.get("output_tokens", 0)) + int(r.get("output_tokens", 0))}
 
 LOW_CONFIDENCE = 0.4  # dưới mức này không dám đề xuất hành động thật: chuyển cho người
+
+
+def _why(exc: BaseException) -> str:
+    """Lý do lỗi cho người đọc: nhà cung cấp quá tải / hết hạn mức / 400... (llm/resilience.py), không thì tên lớp lỗi."""
+    from ai_agent.llm.resilience import ErrorKind, LlmUnavailable, classify, label
+
+    kind = exc.kind if isinstance(exc, LlmUnavailable) else classify(exc)
+    return label(kind) if kind is not ErrorKind.UNKNOWN else f"lỗi {type(exc).__name__}"
 
 
 def _note(node: str, note: str) -> list[dict[str, Any]]:
@@ -82,7 +91,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
             r = await brain.collect(full)
         except Exception as exc:  # noqa: BLE001 - lỗi mô hình/tool không được làm sập phiên
             logger.warning("rca collect failed: %s: %s", type(exc).__name__, str(exc)[:300])
-            return {**out, "abort": "error", "timeline": _note("collect", f"lỗi khi thu bằng chứng: {type(exc).__name__}")}
+            return {**out, "abort": "error", "error_reason": _why(exc), "timeline": _note("collect", f"lỗi khi thu bằng chứng: {_why(exc)}")}
         have = {(e["source"], json.dumps(e.get("args"), sort_keys=True)) for e in state.get("evidence", [])}
         merged = list(state.get("evidence", []))
         for e in r.get("evidence", []):
@@ -107,21 +116,28 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
             r = await brain.hypothesize(dict(state))
         except Exception as exc:  # noqa: BLE001
             logger.warning("rca hypothesize failed: %s: %s", type(exc).__name__, str(exc)[:300])
-            return {"abort": "error", "timeline": _note("hypothesize", f"lỗi khi lập giả thuyết: {type(exc).__name__}")}
+            return {"abort": "error", "error_reason": _why(exc), "timeline": _note("hypothesize", f"lỗi khi lập giả thuyết: {_why(exc)}")}
         ids = {e["id"] for e in state["evidence"]}
         hyps: list[dict[str, Any]] = []
         for h in r.get("hypotheses", []):
             conf = max(0.0, min(1.0, float(h.get("confidence", 0))))
             cited = [i for i in h.get("evidence_ids", []) if i in ids]
-            if not cited:
-                conf = min(conf, 0.3)  # giả thuyết không dẫn được bằng chứng nào thì không được tin cao
-            hyps.append({"cause": str(h.get("cause", "")), "confidence": conf, "evidence_ids": cited, "refuted_by": str(h.get("refuted_by", ""))})
+            bogus = [i for i in h.get("evidence_ids", []) if i not in ids]  # mã bằng chứng không tồn tại: mô hình tự nghĩ ra
+            cause = str(h.get("cause", ""))
+            grounded = hypothesis_supported(cause, [e for e in state["evidence"] if e["id"] in cited]) if cited else False
+            if not cited or grounded is False:
+                conf = min(conf, 0.3)  # không dẫn được bằng chứng nào, hoặc bằng chứng dẫn không nhắc gì tới điều nó khẳng định: không được tin cao
+            hyps.append({"cause": cause, "confidence": conf, "evidence_ids": cited, "refuted_by": str(h.get("refuted_by", "")),
+                         "grounded": grounded, **({"bogus_refs": bogus} if bogus else {})})
         hyps = sorted(hyps, key=lambda h: -h["confidence"])[: budget.max_hypotheses]
         for n, h in enumerate(hyps, start=1):
             h["id"] = f"h{n}"
         top = f"{hyps[0]['cause']} ({hyps[0]['confidence']:.0%})" if hyps else "không có"
+        weak = sum(1 for h in hyps if h["grounded"] is False)
+        bogus_n = sum(len(h.get("bogus_refs", [])) for h in hyps)
+        extra = (f"; {weak} giả thuyết không được bằng chứng đã dẫn ủng hộ (độ tin cậy bị hạ)" if weak else "") + (f"; {bogus_n} mã bằng chứng không tồn tại bị bỏ" if bogus_n else "")
         return {"hypotheses": hyps, "model_calls": state.get("model_calls", 0) + int(r.get("model_calls", 0)), **_tok(state, r),
-                "timeline": _note("hypothesize", f"{len(hyps)} giả thuyết; hàng đầu: {top}")}
+                "timeline": _note("hypothesize", f"{len(hyps)} giả thuyết; hàng đầu: {top}{extra}")}
 
     async def decide(state: RcaState) -> dict[str, Any]:
         hyps = state.get("hypotheses", [])
@@ -153,7 +169,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
             try:
                 r = await brain.choose_action(dict(state), catalog)
             except Exception as exc:  # noqa: BLE001
-                r, reason = {}, f"lỗi khi chọn hành động: {type(exc).__name__}"
+                r, reason = {}, f"lỗi khi chọn hành động: {_why(exc)}"
             out_calls = int(r.get("model_calls", 0))
             aid, params = str(r.get("action_id") or ""), dict(r.get("params") or {})
             if not aid:
@@ -162,6 +178,8 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
                 reason = f"hành động {aid!r} không có trong sổ"
             elif aid != ESCALATE and (bad := check_params(by_id[aid], params)):
                 reason = f"tham số không hợp lệ: {bad}"
+            elif aid != ESCALATE and (loose := ungrounded_params(params, state.get("evidence", []), state["incident"])):
+                reason = f"tham số {', '.join(loose)} không có trong bằng chứng hay thông tin sự cố (mô hình không được tự chọn đích tác động)"
             elif any(_key(f["action_id"], f["params"]) == _key(aid, params) and len(state.get("evidence", [])) <= f["evidence_count"] for f in state.get("failed", [])):
                 reason = "hành động này đã thất bại/bị từ chối và chưa có bằng chứng mới"
             else:
@@ -201,7 +219,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
             r = await brain.verify(dict(state))
         except Exception as exc:  # noqa: BLE001
             logger.warning("rca verify failed: %s: %s", type(exc).__name__, str(exc)[:300])
-            return {"verify_attempts": attempts, "outcome": "error", "timeline": _note("verify", f"lỗi khi kiểm tra lại: {type(exc).__name__}")}
+            return {"verify_attempts": attempts, "outcome": "error", "error_reason": _why(exc), "timeline": _note("verify", f"lỗi khi kiểm tra lại: {_why(exc)}")}
         out: dict[str, Any] = {"verify_attempts": attempts, "model_calls": state.get("model_calls", 0) + int(r.get("model_calls", 0)), **_tok(state, r),
                                "queries": state.get("queries", 0) + int(r.get("queries", 0))}
         if r.get("recovered"):
@@ -227,6 +245,8 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
         ready = bool(r.get("ready_to_close")) and outcome == "recovered"  # chỉ khi verify xác nhận hồi phục
         rep = {"summary": str(r.get("summary", "")), "ready_to_close": ready,
                "reason": str(r.get("reason", "")) if ready or not r.get("ready_to_close") else "chưa có xác nhận hồi phục từ bước kiểm tra lại: người quyết định"}
+        if outcome == "error" and state.get("error_reason"):
+            rep["error_reason"] = str(state["error_reason"])  # vì sao phiên lỗi (hiện cho người, không cần mở log)
         return {"outcome": outcome, "report": rep, "model_calls": state.get("model_calls", 0) + int(r.get("model_calls", 0)), **_tok(state, r),
                 "timeline": _note("report", f"kết thúc: {outcome}; đủ điều kiện đóng: {'có' if ready else 'chưa'}")}
 

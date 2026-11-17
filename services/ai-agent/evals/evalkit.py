@@ -1,7 +1,7 @@
 """Bộ eval của ai-agent: đọc case, kiểm tra tĩnh theo bảng tool của gateway, và chấm một lượt chat. KHÔNG gọi mô hình.
 
 Một case (cases/<persona>.yaml, mỗi dòng một case):
-  g       nhóm: lookup | filter | variant | propose | adversarial | scope
+  g       nhóm: lookup | filter | variant | propose | adversarial | scope | clarify (thiếu thông tin: phải HỎI LẠI, không đoán, không gọi tool; need là dấu hỏi)
   q       câu hỏi người dùng gõ
   tool    tên tool mong đợi (chuỗi hoặc danh sách: gọi MỘT trong số đó là đạt); "none" = không được gọi tool nào
   args    tham số bắt buộc có trong lần gọi đó (khớp đúng giá trị; "*" = chỉ cần có; "@today" v.v. = mốc ngày, xem resolve_token; "@days_ago_7~1" = cho phép lệch 1 ngày)
@@ -12,6 +12,7 @@ Một case (cases/<persona>.yaml, mỗi dòng một case):
 Người chấm chỉ đối chiếu máy móc (tool, tham số, regex). Số liệu trong câu trả lời so với DB do runner kiểm riêng khi có dữ liệu seed."""
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -22,14 +23,28 @@ from typing import Any
 import yaml
 
 HERE = Path(__file__).resolve().parent
-GROUPS = ("lookup", "filter", "variant", "propose", "adversarial", "scope")
+GROUPS = ("lookup", "filter", "variant", "propose", "adversarial", "scope", "clarify")
 PERSONA_TOOL_ROLE = {"buyer": "buyer", "seller": "seller_admin", "admin": "admin", "operator": "operator"}
 READ_ONLY = ("admin",)  # đọc thôi: yêu cầu ghi phải được từ chối, không có đề xuất
 KNOWN_KEYS = {"g", "q", "tool", "args", "max", "propose", "deny", "need", "note"}
 # Số câu tối thiểu mỗi persona (xem docs/ai/08_AGENT_BUILD_ROADMAP.md, mục eval): dưới mức này dao động ngẫu nhiên che mất tín hiệu.
 MIN_PER_PERSONA = 90
-MIN_PER_GROUP = {"lookup": 20, "filter": 12, "variant": 10, "propose": 6, "adversarial": 10, "scope": 5}
+MIN_PER_GROUP = {"lookup": 20, "filter": 12, "variant": 10, "propose": 6, "adversarial": 10, "scope": 5, "clarify": 4}
 DATE_TOKENS = ("@today", "@yesterday", "@week_start", "@month_start", "@last_month_start", "@last_month_end", "@year_start", "@days_ago_7", "@days_ago_30")
+
+
+HELDOUT_EVERY = 5  # một trong năm câu (theo băm của câu hỏi) là tập GIỮ KÍN
+
+
+def split_of(q: str) -> str:
+    """"dev" hoặc "heldout". Theo băm của câu hỏi nên ổn định khi thêm/bớt/đổi thứ tự case (id theo vị trí thì không).
+    Quy ước: khi chỉnh prompt/mô tả tool chỉ chạy `--split dev`; `--split heldout` chỉ chạy khi chốt một phiên bản, để không vừa sửa vừa chấm."""
+    h = hashlib.sha1(re.sub(r"\s+", " ", q.strip().lower()).encode("utf-8")).digest()
+    return "heldout" if int.from_bytes(h[:4], "big") % HELDOUT_EVERY == 0 else "dev"
+
+
+def select_split(cases: list["Case"], split: str) -> list["Case"]:
+    return list(cases) if split == "all" else [c for c in cases if split_of(c.q) == split]
 
 
 @dataclass

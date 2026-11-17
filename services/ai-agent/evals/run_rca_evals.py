@@ -20,7 +20,7 @@ MAX_CALLS_PER_CASE = 12  # trần lượt mô hình mỗi case (rca.max_model_ca
 async def run_all(args) -> list[dict]:
     cases = [c for c in rcakit.load_cases() if (not args.ids or c["id"] in args.ids)]
     rows = []
-    for c in cases:
+    for c in [c for _ in range(max(1, args.repeat)) for c in cases]:  # lặp k lần cả bộ (ca nào cũng chạy k lần)
         world = rcakit.World(c)
         started = time.monotonic()
         if args.oracle:
@@ -64,6 +64,7 @@ def main() -> int:
     ap.add_argument("--live", action="store_true", help="gọi mô hình thật (tốn tiền)")
     ap.add_argument("--oracle", action="store_true", help="Brain đáp án, không LLM (kiểm bộ eval)")
     ap.add_argument("--ids", nargs="+")
+    ap.add_argument("--repeat", type=int, default=1, help="chạy mỗi ca k lần để thấy độ dao động (--live: tốn k lần chi phí)")
     ap.add_argument("--out")
     args = ap.parse_args()
     cases = rcakit.load_cases()
@@ -73,7 +74,8 @@ def main() -> int:
         return 2
     if not (args.live or args.oracle):
         n = len(args.ids or cases)
-        print(f"{len(cases)} case RCA hợp lệ (9 kịch bản A-M có cảnh báo của resilience.sh + biến thể; đủ 10 playbook). Ước tính --live: {n} case x tối đa {MAX_CALLS_PER_CASE} lượt mô hình = tối đa {n * MAX_CALLS_PER_CASE} lượt gọi.")
+        k = max(1, args.repeat)
+        print(f"{len(cases)} case RCA hợp lệ (9 kịch bản A-M có cảnh báo của resilience.sh + biến thể; đủ 10 playbook). Ước tính --live: {n} case x {k} lần x tối đa {MAX_CALLS_PER_CASE} lượt mô hình = tối đa {n * k * MAX_CALLS_PER_CASE} lượt gọi.")
         for c in cases:
             print(f"  {c['id']:34} playbook={c['expect']['playbook']}  hành động={(c['expect'].get('action') or c['expect']['action_any'][0])['id']}")
         print("Chưa gọi gì. Thêm --oracle (không LLM) hoặc --live (gọi mô hình thật).")
@@ -81,9 +83,13 @@ def main() -> int:
     rows = asyncio.run(run_all(args))
     ok = sum(1 for r in rows if r["ok"])
     print(f"\ntổng: {ok}/{len(rows)} đạt")
-    for k in ("cause", "playbook", "action", "forbid", "outcome", "budget", "read_only"):
+    for k in ("cause", "playbook", "action", "forbid", "outcome", "budget", "read_only", "grounded"):
         have = [r["checks"][k] for r in rows if r.get("checks")]
         print(f"  {k:10} {sum(have)}/{len(have)}")
+    if args.repeat > 1:
+        sm = rcakit.summarize_repeats(rows)
+        print(f"lặp {args.repeat} lần: đạt {sm['ok']}/{sm['runs']} = {sm['rate']:.0%}, khoảng tin cậy 95% {sm['ci95'][0]:.0%}-{sm['ci95'][1]:.0%}; "
+              f"luôn đạt {sm['always_ok']}/{sm['cases']}, không bao giờ đạt {sm['never_ok']}; ca dao động: {', '.join(sm['flaky']) or 'không'}")
     if args.out:
         Path(args.out).write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"đã ghi {args.out}")

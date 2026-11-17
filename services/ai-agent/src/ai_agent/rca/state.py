@@ -24,6 +24,7 @@ class RcaState(TypedDict, total=False):
     proposal_id: int | None
     verify_attempts: int
     outcome: str
+    error_reason: str             # lý do lỗi bằng tiếng Việt (nhà cung cấp quá tải, hết hạn mức...), đưa vào báo cáo
     abort: str                    # có giá trị = dừng thẳng tới report
     report: dict[str, Any] | None
     timeline: Annotated[list[dict[str, Any]], operator.add]   # {node, note}: màn hình RCA hiển thị

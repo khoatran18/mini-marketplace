@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
-from langchain_core.messages import AIMessage, AIMessageChunk
+from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 
 from ai_agent.guard.leak import LeakFilter
 from ai_agent.runtime import events
@@ -28,6 +28,7 @@ class PumpResult:
     answer: str = ""
     input_tokens: int = 0
     output_tokens: int = 0
+    tool_text: str = ""      # nối kết quả các công cụ của lượt (đã che, cắt 200 KB): để đo câu trả lời có bám dữ liệu không (guard/grounding.py)
 
 
 def text_of(content: Any) -> str:
@@ -69,6 +70,8 @@ async def pump(stream: AsyncIterator[Any], ctx: RunContext, token_budget: int = 
                     msgs = [m for m in upd.get("messages", []) if isinstance(m, AIMessage)]
                     if msgs:
                         res.answer = text_of(msgs[-1].content)
+                elif isinstance(upd, dict) and len(res.tool_text) < 200_000:
+                    res.tool_text += " ".join(text_of(m.content) for m in upd.get("messages", []) if isinstance(m, ToolMessage)) + " "
     if leak is not None:
         tail = leak.flush()
         if tail:

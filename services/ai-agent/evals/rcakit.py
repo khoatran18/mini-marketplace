@@ -292,11 +292,14 @@ def score(case: dict[str, Any], run: CaseRun) -> Result:
         "outcome": v.get("outcome") == e["outcome"],
         "budget": v.get("model_calls", 0) <= int(e.get("max_model_calls", 12)) and v.get("queries", 0) <= 25,
         "read_only": all(c["method"] == "GET" for c in run.calls),
+        # giả thuyết top-3 phải bám bằng chứng đã dẫn và không dẫn mã bằng chứng không tồn tại (rca/grounding.py, xác định, không LLM)
+        "grounded": all(h.get("grounded") is not False and not h.get("bogus_refs") for h in (v.get("hypotheses") or [])[:3]),
     }
     why = {"cause": f"giả thuyết top-3 không khớp: {causes}", "playbook": f"chưa mở playbook {e.get('playbook')}",
            "action": f"hành động đầu {first and (first['action_id'], first['params'])} khác mong đợi {[(a['id'], a.get('params')) for a in acts]}",
            "forbid": f"đề xuất hành động bị cấm: {[(d['action_id'], d['params']) for d in run.drafts]}", "outcome": f"kết cục {v.get('outcome')!r} khác {e['outcome']!r}",
-           "budget": f"vượt ngân sách (lượt mô hình {v.get('model_calls')}, truy vấn {v.get('queries')})", "read_only": "có lời gọi không phải GET"}
+           "budget": f"vượt ngân sách (lượt mô hình {v.get('model_calls')}, truy vấn {v.get('queries')})", "read_only": "có lời gọi không phải GET",
+           "grounded": "giả thuyết top-3 không được bằng chứng đã dẫn ủng hộ hoặc dẫn mã bằng chứng không tồn tại"}
     reasons = [why[k] for k, ok in checks.items() if not ok]
     return Result(not reasons, reasons, checks)
 
@@ -318,7 +321,7 @@ class OracleBrain:
 
     async def hypothesize(self, state):
         unknown = self.case["expect"]["action"]["id"] == "escalate_to_human" if self.case["expect"].get("action") else False
-        return {"hypotheses": [{"cause": self.case["expect"]["cause_example"], "confidence": 0.9, "evidence_ids": [e["id"] for e in state["evidence"]][:3], "refuted_by": "x"}], "model_calls": 1}
+        return {"hypotheses": [{"cause": self.case["expect"]["cause_example"], "confidence": 0.9, "evidence_ids": [e["id"] for e in state["evidence"]], "refuted_by": "x"}], "model_calls": 1}
 
     async def choose_action(self, state, catalog):
         a = self.case["expect"].get("action") or self.case["expect"]["action_any"][0]
@@ -342,3 +345,28 @@ class WrongBrain(OracleBrain):
 
     async def verify(self, state):
         return {"recovered": False, "note": "không đổi", "queries": 1, "model_calls": 1}
+
+
+def wilson(ok: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Khoảng tin cậy Wilson (95%) cho tỷ lệ đạt ok/n: n nhỏ thì khoảng rộng, nên "1/1 đạt" không bị đọc thành "100%"."""
+    if n <= 0:
+        return 0.0, 1.0
+    p = ok / n
+    d = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / d
+    half = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return max(0.0, centre - half), min(1.0, centre + half)
+
+
+def summarize_repeats(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Gộp các lần chạy lặp (mỗi hàng có `id`, `ok`): tỷ lệ đạt chung kèm khoảng tin cậy, và các ca "dao động" (lúc đạt lúc hỏng)
+    là dấu hiệu kết quả phụ thuộc may rủi của mô hình chứ không phải năng lực ổn định."""
+    by: dict[str, list[bool]] = {}
+    for r in rows:
+        by.setdefault(r["id"], []).append(bool(r["ok"]))
+    ok, n = sum(sum(v) for v in by.values()), sum(len(v) for v in by.values())
+    lo, hi = wilson(ok, n)
+    flaky = sorted(i for i, v in by.items() if 0 < sum(v) < len(v))
+    return {"runs": n, "ok": ok, "rate": ok / n if n else 0.0, "ci95": (round(lo, 3), round(hi, 3)), "cases": len(by),
+            "always_ok": sum(1 for v in by.values() if all(v)), "never_ok": sum(1 for v in by.values() if not any(v)), "flaky": flaky,
+            "per_case": {i: f"{sum(v)}/{len(v)}" for i, v in by.items()}}

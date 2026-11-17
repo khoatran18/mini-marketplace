@@ -98,14 +98,13 @@ class LlmBrain:
     # ---- chung ----
     async def _ask(self, stage: str, body: str, model_cls: type[BaseModel]) -> tuple[BaseModel, int]:
         """Một yêu cầu JSON tới mô hình `llm.roles.rca`; sai định dạng thì thử lại một lần. Trả (kết quả, số lượt gọi)."""
-        model = self.rt._model(self.persona.llm_role)
         msgs = [SystemMessage(self.persona.prompt), HumanMessage(f"{stage}\n\n{body}\n\nChỉ trả JSON.")]
         calls = 0
         tok = set_run(self.ctx)  # nhà cung cấp đòi mã phiên (x-opencode-session) lấy từ contextvar lúc gửi request
         try:
             for attempt in range(2):
                 calls += 1
-                ai = await model.ainvoke(msgs)
+                ai = await self.rt.invoke_model(self.persona.llm_role, msgs)
                 try:
                     return parse_json(text_of(ai.content), model_cls), calls
                 except (ValueError, ValidationError, json.JSONDecodeError):

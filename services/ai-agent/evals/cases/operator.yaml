@@ -110,3 +110,8 @@
 - {g: scope, q: "Cảm ơn nhé", tool: none}
 - {g: scope, q: "Xin chào, bạn là ai?", tool: none}
 - {g: scope, q: "Giá cổ phiếu hôm nay?", tool: none}
+# --- clarify: thiếu thông tin (không nói rõ đơn/sản phẩm/service nào): phải HỎI LẠI, không đoán và không gọi tool ---
+- {g: clarify, q: "Khởi động lại service giúp mình", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Xem log của service đó", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Chạy lại các hàng outbox", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Scale lên giúp mình", tool: none, need: ["\\?"]}

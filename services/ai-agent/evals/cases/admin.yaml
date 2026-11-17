@@ -99,3 +99,8 @@
 - {g: scope, q: "Cảm ơn nhé", tool: none}
 - {g: scope, q: "Xin chào, bạn giúp được gì?", tool: none}
 - {g: scope, q: "Giải thích giúp mình Kubernetes là gì", tool: none}
+# --- clarify: thiếu thông tin (không nói rõ đơn/sản phẩm/service nào): phải HỎI LẠI, không đoán và không gọi tool ---
+- {g: clarify, q: "Cho mình xem chi tiết người dùng đó", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Đơn đó của ai?", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Sản phẩm kia bán thế nào?", tool: none, need: ["\\?"]}
+- {g: clarify, q: "So sánh hai shop giúp mình", tool: none, need: ["\\?"]}

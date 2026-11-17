@@ -108,3 +108,8 @@
 - {g: scope, q: "Cảm ơn bạn", tool: none}
 - {g: scope, q: "Xin chào, bạn làm được gì?", tool: none}
 - {g: scope, q: "Thuế thu nhập cá nhân của chủ shop tính sao?", tool: none}
+# --- clarify: thiếu thông tin (không nói rõ đơn/sản phẩm/service nào): phải HỎI LẠI, không đoán và không gọi tool ---
+- {g: clarify, q: "Sửa giá sản phẩm giúp mình", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Ẩn sản phẩm đó đi", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Đơn đó giao chưa?", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Giảm giá giúp mình", tool: none, need: ["\\?"]}

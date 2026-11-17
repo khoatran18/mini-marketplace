@@ -12,7 +12,7 @@ from ai_agent.llm.registry import register_llm
 @register_llm("openai")
 def build(profile: dict[str, Any]) -> BaseChatModel:
     """Khoá dùng: model_id, api_key, temperature, base_url, timeout, extra_body (tham số riêng của nhà cung cấp, vd bật/tắt
-    thinking của DeepSeek), default_headers, session_header (tên header chứa mã phiên = conversation_id của lượt đang chạy;
+    thinking của DeepSeek), max_retries (số lần SDK tự thử lại 408/409/429/5xx và lỗi kết nối), default_headers, session_header (tên header chứa mã phiên = conversation_id của lượt đang chạy;
     OpenCode đòi `x-opencode-session`, thiếu thì trả 400), stream_usage (true: streaming trả kèm token vào/ra; langchain-openai mặc định
     TẮT khi có base_url tuỳ chỉnh, mà ta cần usage để đếm token và áp trần)."""
     from langchain_openai import ChatOpenAI
@@ -27,6 +27,8 @@ def build(profile: dict[str, Any]) -> BaseChatModel:
         extra.update(_session_clients(str(session_header)))
     if profile.get("timeout"):
         extra["timeout"] = float(profile["timeout"])
+    if profile.get("max_retries") is not None:  # tầng thử lại DUY NHẤT (SDK: backoff có jitter, tôn trọng Retry-After); xem llm/resilience.py
+        extra["max_retries"] = int(profile["max_retries"])
     return ChatOpenAI(
         **extra,
         model=model_id(profile),

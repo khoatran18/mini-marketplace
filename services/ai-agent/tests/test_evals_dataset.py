@@ -102,3 +102,30 @@ def test_date_token_tolerance():
     assert evalkit._same("@days_ago_7~1", "2026-11-08", today)
     assert not evalkit._same("@days_ago_7~1", "2026-11-05", today)
     assert not evalkit._same("@days_ago_7", "2026-11-09", today)    # không có ~N thì khớp đúng
+
+
+def test_heldout_split_is_stable_and_about_a_fifth_for_every_persona():
+    import evalkit
+
+    # giá trị cố định: đổi hàm băm sẽ xáo tập giữ kín, làm mất ý nghĩa của nó
+    assert evalkit.split_of("Đơn hàng của tôi đâu rồi?") == evalkit.split_of("  đơn hàng của TÔI đâu   rồi?  ")
+    for persona in evalkit.PERSONA_TOOL_ROLE:
+        cases = evalkit.load_cases(persona)
+        held = evalkit.select_split(cases, "heldout")
+        dev = evalkit.select_split(cases, "dev")
+        assert len(held) + len(dev) == len(cases) and not {c.id for c in held} & {c.id for c in dev}
+        assert 0.08 <= len(held) / len(cases) <= 0.35, (persona, len(held), len(cases))
+        assert len(evalkit.select_split(cases, "all")) == len(cases)
+
+
+def test_clarify_cases_ask_back_instead_of_guessing():
+    import evalkit
+
+    for persona in evalkit.PERSONA_TOOL_ROLE:
+        cl = [c for c in evalkit.load_cases(persona) if c.g == "clarify"]
+        assert len(cl) >= 4 and all(c.tool == ["none"] and c.need for c in cl)
+    case = next(c for c in evalkit.load_cases("buyer") if c.g == "clarify")
+    from datetime import date
+    assert evalkit.score(case, [], "Bạn muốn hủy đơn nào vậy?", [], date(2026, 11, 17)).ok
+    assert not evalkit.score(case, [], "Mình đã hủy đơn #5.", [], date(2026, 11, 17)).ok
+    assert not evalkit.score(case, [{"tool": "list_my_orders", "args": {}}], "Bạn muốn hủy đơn nào?", [], date(2026, 11, 17)).ok

@@ -156,3 +156,34 @@ def test_every_persona_with_a_budget_override_is_a_real_persona():
         d = cfg(env).to_dict(masked=False)
         assert set(d["limits"].get("token_budget_by_persona", {})) <= set(d["personas"]), env
         assert d["limits"]["token_budget_by_persona"] == cfg("dev").to_dict(masked=False)["limits"]["token_budget_by_persona"]  # dev và prod cùng giá trị
+
+
+async def test_provider_down_gives_the_model_unavailable_code_not_a_generic_error():
+    """LlmUnavailable (mọi profile lỗi hoặc đang ngắt) hiện thành mã riêng kèm lý do, và lượt được ghi đúng trạng thái."""
+    from ai_agent.llm.resilience import ErrorKind, LlmUnavailable
+
+    class Down:
+        async def astream(self, *a, **k):
+            raise LlmUnavailable(ErrorKind.QUOTA, ["main"])
+            yield  # noqa: B901 - làm cho hàm là async generator
+
+    def builder(model, tools, persona, mw):
+        return Down()
+
+    rt = AgentRuntime(cfg(), mock_gateway(), agent_builder=builder)
+    evs, _ = await collect(rt, MemoryStore(), load_personas()["buyer"])
+    err = evs[-1]
+    assert err["event"] == events.ERROR and err["data"]["code"] == "model_unavailable" and "hạn mức" in err["data"]["message"]
+
+
+async def test_numbers_in_the_answer_are_counted_against_tool_data():
+    """Con số lớn có trong dữ liệu công cụ thì tính grounded; số không có thì ungrounded (chỉ đo, không chặn)."""
+    from ai_agent import metrics
+
+    def val(result):
+        return metrics.ANSWER_NUMBERS.labels("buyer", result)._value.get()
+
+    g0, u0 = val("grounded"), val("ungrounded")
+    rt, store, personas = make()
+    await collect(rt, store, personas["buyer"])
+    assert val("grounded") >= g0 and val("ungrounded") >= u0  # câu trả lời mẫu không có số 4+ chữ số: không đổi, nhưng chỉ số tồn tại

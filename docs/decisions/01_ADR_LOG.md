@@ -297,3 +297,13 @@ Kiểm thật trên Swarm: "agent" `admin:99` tạo đề xuất `requeue_outbox
 **Thứ tự nếu làm.** (1) lớp bằng chứng dùng chung cho chat và RCA (a+b); (2) Verifier cho câu trả lời (c); (3) chỉ khi cần trình bày: MCP mỏng chỉ đọc.
 **Hệ quả.** Không có thay đổi mã trong ADR này; nó ghi lại vì sao hệ thống chưa đáp ứng đầy đủ mô hình "Evidence Gateway/multi-agent" của đề tham khảo và phần nào đã có. Bảng so sánh chi tiết: `docs/ai/02_AGENT_ARCHITECTURE.md` §6.1.
 
+
+## ADR-50 Kiểm chứng kết luận RCA bằng bước xác định, chịu lỗi nhà cung cấp LLM bằng một tầng thử lại và breaker (2026-11-17)
+**Bối cảnh.** So với các tiêu chí rút từ ghi chú nghiên cứu (`docs/ai/12_CRITERIA_VS_RESEARCH_NOTES.md`), bốn khoảng trống cần xử lý mà không gọi mô hình thật: kết luận chưa được kiểm với bằng chứng, ai-agent không nằm trong CI, tập eval không có phần giữ kín và chưa chạy lặp, lỗi nhà cung cấp LLM chưa được phân loại hay chịu.
+**Quyết định.**
+1. Bằng chứng RCA vẫn do HỆ THỐNG cấp mã (`e1..eN`, từ kết quả công cụ thật); thêm Verifier xác định `rca/grounding.py`, không dùng LLM: mã không tồn tại bị bỏ và ghi lại; giả thuyết mà bằng chứng dẫn không nhắc tên service/thành phần/con số nó khẳng định bị hạ độ tin cậy xuống 0.3 (tên: ít nhất một; con số: mọi số); tham số chuỗi của nháp hành động phải có trong bằng chứng hoặc thông tin sự cố, không thì nháp thành `escalate_to_human`. Chat chỉ ĐO (`mm_ai_answer_numbers_total`), không chặn, vì số suy ra (tổng, làm tròn) có thể hợp lệ.
+2. Đúng MỘT tầng thử lại: SDK của nhà cung cấp (`max_retries` ghi rõ trong profile). Lớp `llm/resilience.py` đứng trên: phân loại lỗi, breaker theo profile (cửa sổ trượt, half-open có giới hạn), danh sách dự phòng `llm.fallbacks.<role>`. Lỗi `bad_request` (400) không đổi sang dự phòng và không tính vào breaker. Không thêm retry budget vì không có tầng thử lại thứ hai để kiềm.
+3. CI có job `ai-agent` (pytest với Postgres thật, eval tĩnh, RCA oracle); không bao giờ gọi mô hình thật trong CI.
+4. Eval: tập giữ kín theo băm câu hỏi (1/5), nhóm `clarify`, `--repeat k` với khoảng tin cậy Wilson.
+**Đánh đổi.** Verifier chỉ kiểm "bằng chứng có nhắc tới", chưa chứng minh nó ủng hộ nguyên nhân; có thể hạ nhầm một giả thuyết đúng mà bằng chứng viết tên khác (hậu quả an toàn: chuyển cho người). Lớp resilience có thể ngắt nhầm nếu nhà cung cấp lỗi theo cụm ngắn; cấu hình `failure_ratio/min_calls/window_sec` để chỉnh, `enabled: false` để tắt. Quy ước dev/heldout chưa được ép bằng mã.
+**Không làm (và vì sao).** Memory bền, định tuyến theo độ tin cậy tự báo, semantic cache, metric RAG/LLM giám khảo, multi-agent/MCP/A2A: xem `docs/ai/12` mục 2.

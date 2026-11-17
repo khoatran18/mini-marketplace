@@ -16,6 +16,8 @@ REJECTED = Counter("mm_ai_rejected_total", "Yêu cầu chat bị từ chối tr�
 LLM_SECONDS = Histogram("mm_ai_llm_call_seconds", "Độ trễ một lần gọi mô hình (giây), theo profile", ["profile"],
                         buckets=(0.5, 1, 2, 5, 10, 20, 40, 80), registry=REGISTRY)
 LLM_ERRORS = Counter("mm_ai_llm_errors_total", "Lần gọi mô hình lỗi, theo profile", ["profile"], registry=REGISTRY)
+ANSWER_NUMBERS = Counter("mm_ai_answer_numbers_total", "Con số lớn (4+ chữ số) trong câu trả lời chat, theo persona và kết quả: grounded = có trong kết quả công cụ hoặc câu hỏi, ungrounded = không có (guard/grounding.py; chỉ đo, không chặn)", ["persona", "result"], registry=REGISTRY)
+LLM_FALLBACK = Counter("mm_ai_llm_fallback_total", "Lần một profile mô hình bị bỏ qua để thử profile kế tiếp, theo profile và lý do (loại lỗi hoặc circuit_open)", ["profile", "reason"], registry=REGISTRY)
 
 
 # ---- RCA (rca/): nhãn chỉ có tập hữu hạn (trigger auto|manual, kết cục trong rca/state.OUTCOMES); không bao giờ có id sự cố hay nội dung ----

@@ -44,6 +44,7 @@ llm:
       base_url: "${DEEPSEEK_BASE_URL:-https://api.deepseek.com}"
       temperature: 0
       timeout: 60
+      max_retries: 2                     # tầng thử lại duy nhất (SDK, có backoff); breaker ở llm.resilience
       stream_usage: true                 # streaming qua base_url tuỳ chỉnh mặc định không trả usage; cần để đếm token
       # extra_body: {thinking: {type: "disabled"}}   # tắt suy luận cho rẻ/nhanh (kiểm tra tài liệu nhà cung cấp)
       limits: {rpm: 60, tpm: 200000}     # ghi theo tài liệu nhà cung cấp; chưa dùng ở bản này
@@ -56,6 +57,7 @@ llm:
       base_url: "${OPENCODE_BASE_URL:-https://opencode.ai/inference/go/openai/v1}"
       temperature: 0
       timeout: 60
+      max_retries: 2                     # tầng thử lại duy nhất (SDK, có backoff); breaker ở llm.resilience
       stream_usage: true                 # cần để đếm token; OpenCode nhận stream_options.include_usage (đã kiểm)
       default_headers: {User-Agent: "mini-marketplace-agent/0.1"}
       session_header: "x-opencode-session"   # giá trị = conversation_id của lượt chat (gắn lúc gửi request)
@@ -65,6 +67,17 @@ llm:
       model_id: "<điền model id>"
       api_key: "${ANTHROPIC_API_KEY:-}"
       temperature: 0
+
+  # Chịu lỗi nhà cung cấp (llm/resilience.py): breaker theo profile + model dự phòng. Thử lại chỉ ở SDK (`max_retries` của profile), không thử lại chồng thêm.
+  resilience:
+    enabled: true
+    failure_ratio: 0.5       # tỷ lệ lỗi trong cửa sổ để ngắt
+    min_calls: 6             # tối thiểu số lần gọi trong cửa sổ mới xét
+    window_sec: 60
+    open_sec: 30             # ngắt bao lâu thì cho thăm dò
+    probes: 1                # số lượt thăm dò cùng lúc khi half-open
+  # role -> danh sách profile dự phòng theo thứ tự (rỗng = không có). Profile dự phòng phải hỗ trợ tool calling nếu role cần tool.
+  fallbacks: {}
 
   roles:
     buyer: "opencode_deepseek_flash"

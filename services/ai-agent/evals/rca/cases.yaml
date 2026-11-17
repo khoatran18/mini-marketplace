@@ -223,7 +223,7 @@
     - {tool: ops_system_health, before: {}, after: {}}
   expect:
     cause_any: ["(lệch|drift|đối soát|reconcile)"]
-    cause_example: "dữ liệu ClickHouse lệch so với Postgres dù lag đã hết (drift)"
+    cause_example: "analytics-service ready và Kafka lag đã hết nhưng đối soát vẫn lệch (drift)"
     playbook: analytics-data
     action: {id: escalate_to_human}
     forbid: [{id: run_backfill}]

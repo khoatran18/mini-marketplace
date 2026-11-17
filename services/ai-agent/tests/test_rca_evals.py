@@ -116,3 +116,18 @@ async def test_llm_brain_collects_from_the_eval_stub_gateway_using_the_real_oper
     by = {e["source"]: e["summary"] for e in r["evidence"]}
     assert r["playbook"] == "service-unavailable" and r["queries"] == 3
     assert '"value":0' in by["ops_metrics_query"] and "payment-service" in by["ops_system_health"]
+
+
+def test_repeat_summary_reports_rate_interval_and_flaky_cases():
+    import rcakit
+
+    rows = [{"id": "a", "ok": True}, {"id": "a", "ok": True}, {"id": "a", "ok": True},
+            {"id": "b", "ok": True}, {"id": "b", "ok": False}, {"id": "b", "ok": True},
+            {"id": "c", "ok": False}, {"id": "c", "ok": False}, {"id": "c", "ok": False}]
+    sm = rcakit.summarize_repeats(rows)
+    assert (sm["runs"], sm["ok"], sm["always_ok"], sm["never_ok"], sm["flaky"]) == (9, 5, 1, 1, ["b"])
+    assert sm["per_case"] == {"a": "3/3", "b": "2/3", "c": "0/3"}
+    lo, hi = sm["ci95"]
+    assert 0.2 < lo < 5 / 9 < hi < 0.85
+    one = rcakit.wilson(1, 1)
+    assert one[0] < 0.3 and one[1] == 1.0  # "1/1 đạt" không phải "chắc chắn 100%"

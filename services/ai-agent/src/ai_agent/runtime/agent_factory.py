@@ -10,6 +10,7 @@ from ai_agent.config.loader import Config
 from ai_agent.config.logging import get_logger
 from ai_agent.guard.limits import build_middleware
 from ai_agent.llm import get_llm_for_role
+from ai_agent.llm.resilience import Resilience, build_middleware_for
 from ai_agent.personas.base import Persona
 from ai_agent.runtime.context import RunContext
 from ai_agent.tools.gateway import GatewayClient
@@ -29,6 +30,11 @@ class AgentRuntime:
         self._specs: dict[str, tuple[float, list[ToolSpec], list[ActionSpec]]] = {}
         self._agents: dict[tuple, Any] = {}
         self._models: dict[str, Any] = {}
+        raw = (cfg._data.get("llm") or {}) if hasattr(cfg, "_data") else {}
+        rc = dict(raw.get("resilience") or {})
+        self.resilience = Resilience(enabled=bool(rc.pop("enabled", True)), **{k: v for k, v in rc.items() if k in ("failure_ratio", "min_calls", "window_sec", "open_sec", "probes")})
+        self._fallbacks: dict[str, list[str]] = {k: list(v or []) for k, v in (raw.get("fallbacks") or {}).items()}
+        self._fb_models: dict[str, Any] = {}
 
     async def specs_for(self, ctx: RunContext) -> tuple[list[ToolSpec], list[ActionSpec]]:
         """Tool đọc và hành động đề xuất của role trong token, lưu tạm theo role (TTL gateway.tools_cache_ttl_sec)."""
@@ -45,6 +51,31 @@ class AgentRuntime:
         """Tên mọi tool (đọc + đề xuất) của role, đã lấy ở specs_for. Dùng cho bộ lọc lộ tên công cụ."""
         hit = self._specs.get(role)
         return [t.name for t in (*hit[1], *hit[2])] if hit else []
+
+    def profile_of(self, llm_role: str) -> str:
+        """Tên profile của một role (để đặt tên breaker và nhãn số liệu); không có thì dùng chính tên role."""
+        try:
+            return str(self.cfg.llm.roles[llm_role])
+        except Exception:  # noqa: BLE001 - test dùng llm_factory riêng, không có llm.roles
+            return llm_role
+
+    def fallback_models(self, llm_role: str) -> list[tuple[str, Any]]:
+        """Mô hình dự phòng của role theo `llm.fallbacks.<role>` (danh sách tên profile), dựng khi cần. Rỗng = không có dự phòng."""
+        from ai_agent.llm.factory import get_llm
+
+        out = []
+        for name in self._fallbacks.get(llm_role, []):
+            if name not in self._fb_models:
+                self._fb_models[name] = get_llm(self.cfg, name)
+            out.append((name, self._fb_models[name]))
+        return out
+
+    async def invoke_model(self, llm_role: str, msgs: list[Any]):
+        """Một lần gọi mô hình ngoài agent chat (RCA): qua breaker và danh sách dự phòng."""
+        primary = self._model(llm_role)
+        cands = [(self.profile_of(llm_role), lambda: primary.ainvoke(msgs))]
+        cands += [(n, (lambda m=m: m.ainvoke(msgs))) for n, m in self.fallback_models(llm_role)]
+        return await self.resilience.run(cands)
 
     def _model(self, llm_role: str):
         if llm_role not in self._models:
@@ -86,7 +117,8 @@ class AgentRuntime:
             else:
                 from langchain.agents import create_agent
 
-                agent = create_agent(model=model, tools=tools, system_prompt=persona.prompt, middleware=build_middleware(limits, *self._own_limits(persona)))
+                agent = create_agent(model=model, tools=tools, system_prompt=persona.prompt, middleware=[*build_middleware(limits, *self._own_limits(persona)),
+                                                                                             build_middleware_for(self.resilience, self.profile_of(persona.llm_role), self.fallback_models(persona.llm_role))])
             self._agents[key] = agent
             logger.info("agent built", extra={"persona": persona.name, "tools": [s.name for s in specs], "actions": [a.name for a in actions]})
         return self._agents[key]

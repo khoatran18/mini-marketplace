@@ -11,12 +11,14 @@ from ai_agent.llm.registry import register_llm
 
 @register_llm("anthropic")
 def build(profile: dict[str, Any]) -> BaseChatModel:
-    """Khoá dùng: model_id, api_key, temperature, timeout, max_tokens."""
+    """Khoá dùng: model_id, api_key, temperature, timeout, max_tokens, max_retries."""
     from langchain_anthropic import ChatAnthropic
 
     kwargs: dict[str, Any] = {}
     if profile.get("timeout"):
         kwargs["timeout"] = float(profile["timeout"])
+    if profile.get("max_retries") is not None:
+        kwargs["max_retries"] = int(profile["max_retries"])
     if profile.get("max_tokens"):
         kwargs["max_tokens"] = int(profile["max_tokens"])
     return ChatAnthropic(

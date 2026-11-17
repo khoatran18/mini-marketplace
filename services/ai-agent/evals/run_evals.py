@@ -134,7 +134,7 @@ async def main_live(args) -> int:
     names = [args.persona] if args.persona else list(evalkit.PERSONA_TOOL_ROLE)
     report: list[dict[str, Any]] = []
     for name in names:
-        cases = [c for c in evalkit.load_cases(name) if not args.group or c.g == args.group]
+        cases = [c for c in evalkit.select_split(evalkit.load_cases(name), args.split) if not args.group or c.g == args.group]
         if args.ids:
             cases = [c for c in cases if c.id in args.ids]
         if args.only_failed:
@@ -178,6 +178,7 @@ def main() -> int:
     ap.add_argument("--live", action="store_true", help="gọi mô hình thật (tốn tiền); không có cờ này chỉ in kế hoạch")
     ap.add_argument("--persona", choices=list(evalkit.PERSONA_TOOL_ROLE))
     ap.add_argument("--group", choices=evalkit.GROUPS)
+    ap.add_argument("--split", choices=("dev", "heldout", "all"), default="all", help="dev = chỉnh prompt trên đây; heldout = tập giữ kín (1/5 số câu, theo băm câu hỏi), chỉ chạy khi chốt phiên bản")
     ap.add_argument("--limit", type=int, default=0, help="chỉ chạy N câu đầu mỗi persona")
     ap.add_argument("--env", default="dev", help="config.<env>.yaml dùng cho llm.roles")
     ap.add_argument("--out", help="ghi báo cáo JSON")
@@ -187,7 +188,7 @@ def main() -> int:
     if not args.live:
         total = 0
         for name in evalkit.PERSONA_TOOL_ROLE:
-            cases = evalkit.load_cases(name)
+            cases = evalkit.select_split(evalkit.load_cases(name), args.split)
             total += len(cases)
             groups = Counter(c.g for c in cases)
             print(f"{name:9} {len(cases):3} câu  " + "  ".join(f"{g}={groups[g]}" for g in evalkit.GROUPS))
