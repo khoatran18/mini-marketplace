@@ -109,7 +109,15 @@
 - {g: scope, q: "Xin chào, bạn làm được gì?", tool: none}
 - {g: scope, q: "Thuế thu nhập cá nhân của chủ shop tính sao?", tool: none}
 # --- clarify: thiếu thông tin (không nói rõ đơn/sản phẩm/service nào): phải HỎI LẠI, không đoán và không gọi tool ---
-- {g: clarify, q: "Sửa giá sản phẩm giúp mình", tool: none, need: ["\\?"]}
-- {g: clarify, q: "Ẩn sản phẩm đó đi", tool: none, need: ["\\?"]}
-- {g: clarify, q: "Đơn đó giao chưa?", tool: none, need: ["\\?"]}
-- {g: clarify, q: "Giảm giá giúp mình", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Điều chỉnh kho giúp mình", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Đồng ý cho khách trả hàng", tool: [none, list_store_orders], need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"], max: 2}
+- {g: clarify, q: "Đơn đó giao chưa?", tool: [none, list_store_orders], need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"], max: 2}
+- {g: clarify, q: "Còn bao nhiêu cái của sản phẩm đó?", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Tăng tồn kho giúp mình", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Duyệt trả hàng đi", tool: [none, list_store_orders], need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"], max: 2}
+- {g: clarify, q: "Từ chối yêu cầu đó", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Hủy đơn giúp mình", tool: [none, list_store_orders], need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"], max: 2}
+- {g: clarify, q: "Sản phẩm này bán sao rồi?", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Giảm tồn kho cái kia 5 cái", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Cập nhật số lượng", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Xem lịch sử kho của sản phẩm đó", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}

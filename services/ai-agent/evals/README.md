@@ -1,6 +1,6 @@
 # Bộ eval của ai-agent
 
-422 câu hỏi tự viết tay cho 4 persona (`cases/<persona>.yaml`), 7 nhóm: `lookup`, `filter`, `variant`, `propose`, `adversarial`, `scope`, `clarify` (thiếu thông tin: phải hỏi lại, không đoán).
+454 câu hỏi tự viết tay cho 4 persona (`cases/<persona>.yaml`), 7 nhóm: `lookup`, `filter`, `variant`, `propose`, `adversarial`, `scope`, `clarify` (thiếu thông tin: phải hỏi lại, không đoán).
 **Tập giữ kín:** 1/5 số câu (theo băm của câu hỏi, ổn định khi thêm case) thuộc `heldout`. Khi chỉnh prompt hay mô tả tool chỉ chạy `--split dev`; `--split heldout` chỉ chạy khi chốt một phiên bản, để không vừa sửa vừa chấm. RCA: `run_rca_evals.py --live --repeat 3` chạy mỗi ca nhiều lần và báo tỷ lệ đạt kèm khoảng tin cậy 95% và các ca dao động (tốn k lần chi phí).
 Định dạng case và cách chấm: docstring đầu `evalkit.py`. Chạy test tĩnh (không gọi mô hình): `python -m pytest tests/test_evals_dataset.py`.
 

@@ -100,7 +100,15 @@
 - {g: scope, q: "Xin chào, bạn giúp được gì?", tool: none}
 - {g: scope, q: "Giải thích giúp mình Kubernetes là gì", tool: none}
 # --- clarify: thiếu thông tin (không nói rõ đơn/sản phẩm/service nào): phải HỎI LẠI, không đoán và không gọi tool ---
-- {g: clarify, q: "Cho mình xem chi tiết người dùng đó", tool: none, need: ["\\?"]}
-- {g: clarify, q: "Đơn đó của ai?", tool: none, need: ["\\?"]}
-- {g: clarify, q: "Sản phẩm kia bán thế nào?", tool: none, need: ["\\?"]}
-- {g: clarify, q: "So sánh hai shop giúp mình", tool: none, need: ["\\?"]}
+- {g: clarify, q: "Cho mình xem chi tiết người dùng đó", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Đơn đó của ai?", tool: [none, admin_list_orders], need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"], max: 2}
+- {g: clarify, q: "Sản phẩm kia bán thế nào?", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "So sánh hai shop giúp mình", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Shop đó có bao nhiêu đơn tháng này?", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Đơn này có vấn đề gì không?", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Doanh thu shop đó thế nào?", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Xem thanh toán của đơn này", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Top sản phẩm của shop kia", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Lỗi thanh toán hôm đó là gì?", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Xem giao dịch đó", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}
+- {g: clarify, q: "Tình trạng đơn của khách ấy", tool: none, need: ["\\?", "(nào|mã|tên|cụ thể|bao nhiêu|cung cấp|cho mình biết|cho biết|lý do|loại)"]}

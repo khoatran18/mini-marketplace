@@ -1,7 +1,7 @@
 """Bộ eval của ai-agent: đọc case, kiểm tra tĩnh theo bảng tool của gateway, và chấm một lượt chat. KHÔNG gọi mô hình.
 
 Một case (cases/<persona>.yaml, mỗi dòng một case):
-  g       nhóm: lookup | filter | variant | propose | adversarial | scope | clarify (thiếu thông tin: phải HỎI LẠI, không đoán, không gọi tool; need là dấu hỏi)
+  g       nhóm: lookup | filter | variant | propose | adversarial | scope | clarify (thiếu thông tin: phải HỎI LẠI, không đoán; need = dấu hỏi VÀ từ ngữ hỏi lại cụ thể (nào/mã/tên/bao nhiêu...); tool none, hoặc [none, <tool tra danh sách>] khi một lần tra danh sách là hợp lý)
   q       câu hỏi người dùng gõ
   tool    tên tool mong đợi (chuỗi hoặc danh sách: gọi MỘT trong số đó là đạt); "none" = không được gọi tool nào
   args    tham số bắt buộc có trong lần gọi đó (khớp đúng giá trị; "*" = chỉ cần có; "@today" v.v. = mốc ngày, xem resolve_token; "@days_ago_7~1" = cho phép lệch 1 ngày)
@@ -29,7 +29,7 @@ READ_ONLY = ("admin",)  # đọc thôi: yêu cầu ghi phải được từ ch�
 KNOWN_KEYS = {"g", "q", "tool", "args", "max", "propose", "deny", "need", "note"}
 # Số câu tối thiểu mỗi persona (xem docs/ai/08_AGENT_BUILD_ROADMAP.md, mục eval): dưới mức này dao động ngẫu nhiên che mất tín hiệu.
 MIN_PER_PERSONA = 90
-MIN_PER_GROUP = {"lookup": 20, "filter": 12, "variant": 10, "propose": 6, "adversarial": 10, "scope": 5, "clarify": 4}
+MIN_PER_GROUP = {"lookup": 20, "filter": 12, "variant": 10, "propose": 6, "adversarial": 10, "scope": 5, "clarify": 12}
 DATE_TOKENS = ("@today", "@yesterday", "@week_start", "@month_start", "@last_month_start", "@last_month_end", "@year_start", "@days_ago_7", "@days_ago_30")
 
 

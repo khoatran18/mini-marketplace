@@ -124,15 +124,26 @@ def test_heldout_split_is_stable_and_about_a_fifth_for_every_persona():
 
 def test_clarify_cases_ask_back_instead_of_guessing():
     import evalkit
+    from datetime import date
 
+    today = date(2026, 11, 17)
     for persona in evalkit.PERSONA_TOOL_ROLE:
         cl = [c for c in evalkit.load_cases(persona) if c.g == "clarify"]
-        assert len(cl) >= 4 and all(c.tool == ["none"] and c.need for c in cl)
-    case = next(c for c in evalkit.load_cases("buyer") if c.g == "clarify")
-    from datetime import date
-    assert evalkit.score(case, [], "Bạn muốn hủy đơn nào vậy?", [], date(2026, 11, 17)).ok
-    assert not evalkit.score(case, [], "Mình đã hủy đơn #5.", [], date(2026, 11, 17)).ok
-    assert not evalkit.score(case, [{"tool": "list_my_orders", "args": {}}], "Bạn muốn hủy đơn nào?", [], date(2026, 11, 17)).ok
+        assert len(cl) >= 12, persona
+        for c in cl:
+            assert "none" in c.tool and not c.propose, c.id                       # không gọi tool thì cũng đạt; không bao giờ đề xuất
+            assert len(c.tool) <= 2 and not c.args, c.id                          # nới tối đa một tool tra danh sách, không đòi tham số
+            assert len(c.need) == 2 and "?" in c.need[0] and "nào" in c.need[1], c.id   # dấu hỏi VÀ từ ngữ hỏi lại cụ thể
+    strict = next(c for c in evalkit.load_cases("buyer") if c.q == "Sản phẩm đó còn hàng không?")
+    assert evalkit.score(strict, [], "Bạn muốn hỏi sản phẩm nào vậy?", [], today).ok
+    assert not evalkit.score(strict, [], "Mình đã kiểm tra, còn hàng nhé.", [], today).ok               # đoán/trả lời bừa
+    assert not evalkit.score(strict, [], "Mình giúp được gì cho bạn?", [], today).ok                    # có "?" nhưng không hỏi đúng chỗ thiếu
+    assert not evalkit.score(strict, [], "Bạn cho mình biết tên sản phẩm", [], today).ok                # hỏi nhưng không có dấu "?"
+    assert not evalkit.score(strict, [{"tool": "get_product", "args": {}}], "Bạn muốn sản phẩm nào?", [], today).ok
+    lenient = next(c for c in evalkit.load_cases("buyer") if c.q == "Hủy đơn giúp mình")
+    assert evalkit.score(lenient, [{"tool": "list_my_orders", "args": {}}], "Bạn có 2 đơn, muốn hủy đơn nào?", [], today).ok   # tra danh sách rồi hỏi: chấp nhận
+    assert not evalkit.score(lenient, [{"tool": "get_my_order", "args": {"id": 1}}], "Bạn muốn hủy đơn nào?", [], today).ok
+    assert not evalkit.score(lenient, [], "Đã hủy.", ["cancel_order"], today).ok
 
 
 def test_fingerprint_changes_when_a_prompt_changes_and_hides_keys(tmp_path):
