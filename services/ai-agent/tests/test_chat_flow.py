@@ -177,13 +177,20 @@ async def test_provider_down_gives_the_model_unavailable_code_not_a_generic_erro
 
 
 async def test_numbers_in_the_answer_are_counted_against_tool_data():
-    """Con số lớn có trong dữ liệu công cụ thì tính grounded; số không có thì ungrounded (chỉ đo, không chặn)."""
+    """Con số lớn có trong dữ liệu công cụ (100000 = "100.000") thì grounded; số bịa thì ungrounded; chỉ đo, câu trả lời vẫn được gửi nguyên."""
     from ai_agent import metrics
 
     def val(result):
         return metrics.ANSWER_NUMBERS.labels("buyer", result)._value.get()
 
+    d = cfg().to_dict(masked=False)
+    d["llm"]["profiles"]["fake_buyer"]["script"] = [
+        {"tool_calls": [{"name": "list_my_orders", "args": {"page_size": 3}}]},
+        {"content": "Đơn gần nhất trị giá 100.000đ, còn đơn kia 987.654đ."},
+    ]
     g0, u0 = val("grounded"), val("ungrounded")
-    rt, store, personas = make()
-    await collect(rt, store, personas["buyer"])
-    assert val("grounded") >= g0 and val("ungrounded") >= u0  # câu trả lời mẫu không có số 4+ chữ số: không đổi, nhưng chỉ số tồn tại
+    rt, store, personas = make(config=Config(d))
+    evs, _ = await collect(rt, store, personas["buyer"])
+    answer = "".join(e["data"]["text"] for e in evs if e["event"] == events.TOKEN)
+    assert "987.654" in answer and evs[-1]["event"] == events.DONE  # không chặn
+    assert val("grounded") - g0 == 1 and val("ungrounded") - u0 == 1

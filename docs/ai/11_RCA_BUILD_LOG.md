@@ -291,3 +291,15 @@ Nguồn: `docs/ai/12_CRITERIA_VS_RESEARCH_NOTES.md`. Toàn bộ test ai-agent: 2
 
 **Điểm chưa chắc của §16.35 (xem chi tiết `docs/ai/12_CRITERIA_VS_RESEARCH_NOTES.md` mục 6):** kiểm chứng bằng regex thô (tên lạ lọt, số khác định dạng bị hạ nhầm); nhóm `clarify` xung đột với dòng "KHÔNG hỏi lại" trong prompt nên nhiều khả năng trượt khi chạy thật và 16 ca chưa được người duyệt; tập giữ kín chỉ là quy ước; resilience chưa thử với nhà cung cấp thật; job CI chưa chạy trên GitHub.
 
+
+### 16.36 Mô tả `ops_metrics_query` rõ hơn và dấu vân tay eval (2026-11-17, không gọi LLM)
+
+- **Mô tả công cụ** (`agent/scopes.go`, `opsQueryHelp` và tham số `window`): nói rõ `name` phải đúng một tên trong danh mục (tên khác là 400) và `window` chỉ truy vấn dạng tốc độ/tỉ lệ/độ trễ/increase/log nhận (18 truy vấn có tham số `window` trong `ops-service/internal/queries`); truy vấn trạng thái tức thời (`service_up`, `outbox_*`, `kafka_consumer_lag`, `circuit_state`, `memory_*`, `infra_up`, `alerts_firing`...) thì bỏ trống. Mục tiêu: bớt 400 do mô hình tự gắn `window` (phiên #12 §16.32). Snapshot `evals/tools.snapshot.json` sinh lại. **CHƯA đo** xem mô hình có bớt bịa thật không: cần chạy live (tốn tiền, chờ đồng ý).
+- **Dấu vân tay** (`evalkit.fingerprint`, `write_report`, `read_rows`): file `--out` của `run_evals.py` và `run_rca_evals.py` nay là `{"meta": ..., "results": [...]}`; `meta` có băm 10 ký tự của prompt+policy từng persona, của bảng tool, của từng tệp case, mô hình theo role (profile, nhà cung cấp, model_id, nhiệt độ, `extra_body`; KHÔNG có khoá API), commit git + cờ `dirty`, tham số chạy. `--only-failed` đọc được cả định dạng cũ. Cách dùng: hai lần chạy khác băm = khác đầu vào; giống băm mà khác điểm = dao động của mô hình. Test: `test_fingerprint_...`, `test_report_roundtrip_...`.
+
+### 16.37 Ranh giới từ và chuẩn hoá số dùng chung cho kiểm chứng (2026-11-17, không gọi LLM)
+
+- `guard/numbers.py` mới: rút và chuẩn hoá số; mỗi mẩu là TẬP dạng chuẩn ("1.500" đọc được 1500 hoặc 1,5; khớp nếu có dạng chung). "5,000", "5.000", "5000", "5k" là cùng một số. Mã nhiều dấu (`10.0.0.5`) giữ nguyên.
+- `rca/grounding.py`: số so theo tập dạng chuẩn (hết "50" khớp trong "500"); tên khớp theo ranh giới chữ-số; loại "v1.2", "e.g.", "vs", "etc" khỏi danh sách tên cần đối chiếu. `guard/grounding.py` (chat) dùng cùng hàm.
+- Test: chuẩn hoá và ranh giới (`test_guard_grounding.py`, `test_rca_grounding.py`); test chỉ số chat viết lại với số có thật và số bịa. 257 passed, 13 skipped; oracle RCA vẫn 22/22.
+- **Chưa làm:** số viết chữ ("5 nghìn", "1,5 triệu"); tên không có gạch và ngoài danh sách cứng vẫn lọt (`grounded=None`); vẫn chỉ kiểm "có nhắc tới". Đo tỷ lệ trên model thật vẫn cần chạy live.

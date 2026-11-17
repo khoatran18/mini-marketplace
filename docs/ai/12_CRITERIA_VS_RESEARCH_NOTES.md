@@ -10,9 +10,9 @@ Nhãn kết luận: **Có** (đã làm), **Một phần**, **Chưa** (cần, ch�
 |---|---|---|---|---|
 | 1 | Vòng lặp ReAct có trần số vòng (chatbot-vs-react-agent) | **Có** | [test] `guard/limits.py`: `max_model_calls` 6, `max_tool_calls` 8; RCA có trần riêng 12/12 và dừng sớm sau 3 lỗi công cụ liên tiếp (§16.32) | Cần: chống model kẹt và tốn tiền |
 | 2 | Tool lỗi trả chuỗi lỗi cho model, không làm sập (nt) | **Có** | [test] lỗi công cụ kèm mã HTTP và lời nhắn cho model (`tools/gateway.py`); UI hiện lỗi nguyên văn | Cần |
-| 3 | Mô tả tool nói khi nào dùng, khi nào không, tham số, ranh giới xác nhận (prompt-tool-calling) | **Một phần** | [đọc code] mô tả trong `agent/scopes.go`; hành động ghi chỉ là đề xuất, người xác nhận ở UI. Còn 400 do model tự bịa (`infra_up`, tham số `window` không có) [đo live] §16.32 | Cần: đây là nguồn lỗi công cụ còn lại |
+| 3 | Mô tả tool nói khi nào dùng, khi nào không, tham số, ranh giới xác nhận (prompt-tool-calling) | **Một phần** | [đọc code] mô tả trong `agent/scopes.go`; hành động ghi chỉ là đề xuất, người xác nhận ở UI. Còn 400 do model tự bịa (`infra_up`, tham số `window` không có) [đo live] §16.32; 2026-11-17 mô tả `ops_metrics_query` đã nói rõ tên phải đúng danh mục và `window` chỉ cho truy vấn nào (§16.36), chưa đo lại | Cần: đây là nguồn lỗi công cụ còn lại |
 | 4 | Phân loại lỗi agent (wrong_tool, wrong_arg, wrong_boundary, unnecessary_tool, out_of_scope, missing_info) | **Có** (cập nhật 2026-11-17) | [test] 422 ca chia 7 nhóm `lookup/filter/variant/propose/adversarial/scope/clarify`; nhóm `clarify` mới (16 ca, 4 mỗi persona) = thiếu thông tin thì phải hỏi lại, không đoán, không gọi tool | Cần |
-| 5 | Nhật ký phiên bản prompt/tool kèm giả thuyết (`version_log.csv`) | **Thay thế** | Nhật ký xây `09`/`11` ghi lỗi, nguyên nhân, cách sửa, kết quả; không có băm prompt/tool theo từng lần chạy eval | Nên nhẹ: ghi băm prompt vào file kết quả eval |
+| 5 | Nhật ký phiên bản prompt/tool kèm giả thuyết (`version_log.csv`) | **Có** (cập nhật 2026-11-17) | Nhật ký xây `09`/`11` ghi lỗi, nguyên nhân, cách sửa; file `--out` của eval nay có `meta` với băm prompt, tool, case, mô hình, commit git (§16.36) | Cần nhẹ: đã làm |
 | 6 | Harness: `injection_guard` (dữ liệu là dữ liệu, không là lệnh) (agent-harness-arena, guardrails-hitl) | **Có** | [test] `guard/untrusted.py` bọc mọi kết quả công cụ (`tools/views.py`) và tóm tắt/nhãn sự cố RCA; prompt 4 persona dặn rõ; quyền thật ở gateway nên lệnh bị tiêm cũng không gọi được route ngoài vai | Cần. Chưa đo live tỷ lệ bị lừa (3 ca `inject-*`, tài liệu 10 §2.3) |
 | 7 | Harness: `critic` (câu trả lời phải có trong bằng chứng đã đọc) và `citation_checker` | **Một phần** (cập nhật 2026-11-17) | RCA: `rca/grounding.py` kiểm xác định (không LLM): mã bằng chứng không tồn tại bị bỏ và báo, giả thuyết mà bằng chứng dẫn không nhắc tên service/thành phần/con số nó khẳng định bị hạ độ tin cậy xuống 0.3, tham số hành động (tên service...) phải có trong bằng chứng hoặc thông tin sự cố, không thì nháp thành `escalate_to_human`; tiêu chí eval `grounded` (22/22 với Brain đáp án). Chat: `guard/grounding.py` ĐO (không chặn) con số 4+ chữ số trong câu trả lời có trong kết quả công cụ không, chỉ số `mm_ai_answer_numbers_total`. Còn thiếu: chưa chứng minh bằng chứng THỰC SỰ ủng hộ (chỉ kiểm có nhắc tới); chat chưa chặn | Cần cho RCA; chat vừa phải |
 | 8 | Harness: `budget_policy` (cắt phần thừa) | **Có** | [test] trần vòng/công cụ; `token_budget_per_turn` và theo persona; hạn mức token mỗi ngày mỗi người (429 `daily_token_limit`); RCA có ngân sách mỗi sự cố và trần phiên tự động mỗi ngày | Cần |
@@ -128,9 +128,9 @@ Mục này liệt kê những chỗ code đã chạy qua test nhưng CHƯA chứ
 | Điểm yếu | Hệ quả | Cách kiểm hoặc cải thiện |
 |---|---|---|
 | Rút "mẩu cần đối chiếu" bằng regex: tên có `-`, `_`, `.` (`_IDENT`), danh sách viết tay (`_COMPONENTS`: postgres, kafka, redis, clickhouse, traefik, prometheus, grafana, outbox, loki, tempo, vector), số 2+ chữ số (`_NUM`) | Mô hình viết "gateway" hay "cổng API" thì không rút được gì: giả thuyết thành `grounded=None` (không bị phạt), tức lọt kiểm tra | Chạy live, đếm tỷ lệ giả thuyết `None` trên 22 ca; nếu cao thì thêm tên từ tập thật của hệ thống (enum service trong `ops_list_actions`, kết quả `ops_system_health`) thay cho danh sách cứng |
-| So khớp chuỗi con trên văn bản đã hạ chữ thường | "50" khớp trong "500"; tên ngắn khớp nhầm | Thêm ranh giới từ (`\b`) cho số và tên; thêm test |
-| Chuẩn hoá số khác nhau: RCA chỉ đổi `,` thành `.` ("5,000" thành "5.000", không khớp "5000"); chat bỏ mọi ký tự không phải chữ số (`guard/grounding.py`) | RCA có thể hạ nhầm giả thuyết đúng vì khác định dạng số | Dùng cùng một hàm chuẩn hoá số cho cả hai nơi; test các định dạng "5,000", "5.000", "5000", "5k" |
-| Regex tên bắt cả thứ không phải tên service ("v1.2", "e.g.") | Có thể đòi bằng chứng chứa những chuỗi vô nghĩa, hạ nhầm | Đo số giả thuyết bị hạ trên dữ liệu live và đọc tay từng ca |
+| ~~So khớp chuỗi con~~ **Đã sửa 2026-11-17** | Số so theo tập dạng chuẩn (không còn "50" khớp trong "500"); tên khớp theo ranh giới chữ-số ("postgres" không khớp "postgresql") | Test `test_number_match_...`, `test_name_match_...` |
+| ~~Chuẩn hoá số khác nhau giữa RCA và chat~~ **Đã sửa 2026-11-17** | `guard/numbers.py` dùng chung: "5,000", "5.000", "5000", "5k" cùng một số (mẩu mơ hồ như "1.500" giữ cả hai cách đọc); mã nhiều dấu như `10.0.0.5` giữ nguyên | Còn chưa xử lý: "5 nghìn", "1,5 triệu" (chữ Việt), số thập phân kiểu khác locale |
+| Regex tên bắt cả thứ không phải tên service | "v1.2", "e.g.", "vs", "etc" nay được loại (2026-11-17); các chuỗi lạ khác (tên file, domain) vẫn có thể bị đòi | Đo số giả thuyết bị hạ trên dữ liệu live và đọc tay từng ca |
 | Kiểm "bằng chứng có NHẮC TỚI", không phải "bằng chứng ỦNG HỘ" | "payment-service" xuất hiện trong bằng chứng chưa nói nó đang chết | Hướng chắc hơn: bắt mô hình trả giả thuyết có cấu trúc `{component, metric, value, evidence_id}` rồi đối chiếu từng trường; đổi schema bước giả thuyết nên cần chạy lại eval live |
 | Hạ độ tin cậy xuống 0.3 (dưới ngưỡng đề xuất 0.4) và thành `escalate_to_human` | Hạ nhầm giả thuyết đúng làm RCA ít hữu ích hơn (an toàn nhưng tốn công người) | Theo dõi tỷ lệ `escalated` trước/sau khi bật; so với 22 ca; chỉnh ngưỡng nếu tăng bất thường |
 | Tham số hành động phải có trong bằng chứng hoặc thông tin sự cố | Tham số hợp lệ nhưng không xuất hiện nguyên văn (alias tên service) sẽ bị chuyển cho người | Thử trên tất cả hành động trong sổ với dữ liệu live; nếu cần thì cho phép đối chiếu theo tập enum của sổ hành động |
@@ -140,7 +140,7 @@ Mục này liệt kê những chỗ code đã chạy qua test nhưng CHƯA chứ
 
 - Chỉ xét số từ 4 chữ số trở lên (`MIN_DIGITS = 4`): bỏ sót số nhỏ (số lượng 12, giảm 20%). Số suy ra (tổng, làm tròn) bị tính "ungrounded" dù hợp lệ. Chưa biết tỷ lệ nhiễu: cần quan sát `mm_ai_answer_numbers_total{result="ungrounded"}` trên traffic thật vài ngày rồi mới đặt ngưỡng cảnh báo, và chưa nên chặn.
 - `PumpResult.tool_text` chỉ lấy `ToolMessage` ở các nút không phải nút mô hình, cắt ở 200 KB; chưa kiểm với agent thật (test dùng agent giả) rằng nút công cụ đúng tên và văn bản đã che (model_view) có chứa số cần đối chiếu.
-- Test `test_numbers_in_the_answer_are_counted_against_tool_data` yếu: chỉ kiểm chỉ số tồn tại, chưa kiểm số đếm tăng đúng. Nên viết lại với câu trả lời có số lớn.
+- Test `test_numbers_in_the_answer_are_counted_against_tool_data` đã viết lại (2026-11-17): agent giả gọi `list_my_orders`, trả lời có một số có trong dữ liệu (100.000) và một số bịa (987.654), kiểm grounded +1 và ungrounded +1, câu trả lời không bị chặn. Vẫn là agent giả, chưa phải model thật.
 
 ### 6.3 Nhóm `clarify` (hỏi lại khi thiếu thông tin)
 
@@ -155,6 +155,7 @@ Mục này liệt kê những chỗ code đã chạy qua test nhưng CHƯA chứ
 - Chỉ là quy ước (`--split`), không có cơ chế ép; chạy `heldout` hằng ngày là làm mất tác dụng.
 - Cùng người viết và cùng phong cách với tập dev, nên chỉ chống được quá khớp "học thuộc ca"; chống chắc hơn cần ca VIẾT MỚI sau khi chốt prompt.
 - Băm 1/5 theo câu hỏi cho tỷ lệ khoảng 12-20% mỗi persona (test chấp nhận 8-35%): một số nhóm nhỏ (vd `propose` của buyer) có thể không có ca heldout nào. Kiểm bằng `python evals/run_evals.py --split heldout` xem từng nhóm.
+- **Đã kiểm 2026-11-17** (`run_evals.py --split heldout`, 64 câu): nhóm rỗng ở heldout: `propose` của buyer và seller (0), `clarify` của buyer, seller, admin (0; operator 2); `adversarial` của admin 0, `scope` của operator 0. Nghĩa là heldout hiện KHÔNG đo được các nhóm này cho persona đó. Cách chữa (chưa làm, cần bạn quyết): chọn heldout theo từng nhóm (1/5 mỗi nhóm) thay vì theo toàn bộ, hoặc viết thêm ca cho nhóm nhỏ.
 - Chưa chạy `heldout` live lần nào, nên chưa có điểm gốc để so.
 
 ### 6.5 Chịu lỗi nhà cung cấp LLM (`llm/resilience.py`)
@@ -174,7 +175,7 @@ Mục này liệt kê những chỗ code đã chạy qua test nhưng CHƯA chứ
 
 ### 6.7 Việc kiểm thêm xếp theo thứ tự rẻ đến đắt
 
-1. (Miễn phí) Viết lại test chỉ số `mm_ai_answer_numbers_total`; thêm test ranh giới từ và chuẩn hoá số cho `grounding.py`; thống nhất hàm chuẩn hoá số.
+1. ~~(Miễn phí) Viết lại test chỉ số; ranh giới từ; thống nhất chuẩn hoá số~~ **Đã làm 2026-11-17** (§16.37).
 2. (Miễn phí) Bạn đọc 16 ca `clarify` và quyết chuẩn chấm nghiêm hay lỏng; xem `--split heldout` có nhóm nào rỗng.
 3. (Miễn phí) Đẩy lên GitHub xem job `ai-agent` có xanh không.
 4. (Tốn tiền, cần đồng ý) Chạy `run_evals.py --live --split dev --group clarify` và `--group lookup` để đo xung đột prompt `clarify` ở 6.3, trước khi sửa prompt.

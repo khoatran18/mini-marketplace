@@ -12,8 +12,10 @@ import json
 import re
 from typing import Any
 
+from ai_agent.guard import numbers
+
 _IDENT = re.compile(r"[A-Za-z][A-Za-z0-9]*(?:[-_.][A-Za-z0-9]+)+")
-_NUM = re.compile(r"\d{2,}(?:[.,]\d+)?")
+_NOT_NAME = re.compile(r"^(?:v\d+(?:\.\d+)+|e\.g|i\.e|vs|etc)$", re.I)  # "v1.2", "e.g." trông như tên có dấu nhưng không phải thành phần hệ thống
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _COMPONENTS = ("postgres", "kafka", "redis", "clickhouse", "traefik", "prometheus", "grafana", "outbox", "loki", "tempo", "vector")
 
@@ -22,17 +24,21 @@ def _text(e: dict[str, Any]) -> str:
     return f"{e.get('source', '')} {json.dumps(e.get('args') or {}, ensure_ascii=False)} {e.get('summary', '')}".lower()
 
 
-def _split(cause: str) -> tuple[list[str], list[str]]:
-    low = cause.lower()
-    names = [m.group(0).lower() for m in _IDENT.finditer(cause)] + [c for c in _COMPONENTS if c in low]
-    nums = [m.group(0).replace(",", ".") for m in _NUM.finditer(cause)]
-    return list(dict.fromkeys(names)), list(dict.fromkeys(nums))
+def _has_name(name: str, hay: str) -> bool:
+    """Khớp theo ranh giới chữ và số: "kafka" khớp trong "kafka_consumer_lag" nhưng không khớp trong "kafkaesque"."""
+    return re.search(rf"(?<![a-z0-9]){re.escape(name)}(?![a-z0-9])", hay) is not None
+
+
+def _split(cause: str) -> tuple[list[str], list[frozenset[str]]]:
+    names = [m.group(0).lower() for m in _IDENT.finditer(cause) if not _NOT_NAME.match(m.group(0))] + [c for c in _COMPONENTS if _has_name(c, cause.lower())]
+    nums = list(dict.fromkeys(numbers.extract(cause, min_digits=2)))
+    return list(dict.fromkeys(names)), nums
 
 
 def checkable(cause: str) -> list[str]:
     """Các mẩu trong câu nguyên nhân có thể đối chiếu máy móc với bằng chứng."""
     names, nums = _split(cause)
-    return names + nums
+    return names + ["/".join(sorted(n)) for n in nums]
 
 
 def hypothesis_supported(cause: str, cited: list[dict[str, Any]]) -> bool | None:
@@ -41,8 +47,9 @@ def hypothesis_supported(cause: str, cited: list[dict[str, Any]]) -> bool | None
     names, nums = _split(cause)
     if not names and not nums:
         return None
-    hay = " ".join(_text(e) for e in cited).replace(",", ".")
-    return (not names or any(t in hay for t in names)) and all(n in hay for n in nums)
+    hay = " ".join(_text(e) for e in cited)
+    have = numbers.pool(hay)
+    return (not names or any(_has_name(t, hay) for t in names)) and all(n & have for n in nums)
 
 
 def ungrounded_params(params: dict[str, Any], evidence: list[dict[str, Any]], incident: dict[str, Any]) -> list[str]:

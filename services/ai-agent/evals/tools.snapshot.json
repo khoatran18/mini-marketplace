@@ -957,7 +957,7 @@
     "name": "ops_metrics_query",
     "method": "GET",
     "path": "/ops/queries/:name",
-    "description": "Run one named metrics/log lookup (Prometheus, Loki). Latency: gateway_latency_p95 (per route), grpc_latency_p95 (per service) - use these for 'which service is slowest'. Errors: gateway_5xx_ratio, grpc_error_rate, logs_errors(service). Load: gateway_request_rate, grpc_request_rate. State: alerts_firing, service_up/service_ready(service), service_replicas(_up), circuit_state, infra_up. Data flow: outbox_pending, outbox_oldest_age, outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id). Frontend (measured at Traefik): frontend_request_rate, frontend_5xx_ratio, frontend_latency_p95. The AI assistant itself: ai_runs_rate, ai_tokens_rate, ai_tool_errors, ai_llm_latency_p95, ai_rejected.",
+    "description": "Run one named metrics/log lookup (Prometheus, Loki). Latency: gateway_latency_p95 (per route), grpc_latency_p95 (per service) - use these for 'which service is slowest'. Errors: gateway_5xx_ratio, grpc_error_rate, logs_errors(service). Load: gateway_request_rate, grpc_request_rate. State: alerts_firing, service_up/service_ready(service), service_replicas(_up), circuit_state, infra_up. Data flow: outbox_pending, outbox_oldest_age, outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id). Frontend (measured at Traefik): frontend_request_rate, frontend_5xx_ratio, frontend_latency_p95. The AI assistant itself: ai_runs_rate, ai_tokens_rate, ai_tool_errors, ai_llm_latency_p95, ai_rejected. `name` must be exactly one of the listed names (anything else is a 400). `window` is accepted only by the rate/ratio/latency/increase/log queries (the *_rate, *_5xx_ratio, *_latency_p95, grpc_error_rate, dlq_increase, db_pool_wait, ai_* and logs_* ones); for point-in-time state (service_up, service_ready, service_replicas*, circuit_state, outbox_*, kafka_consumer_lag, memory_*, disk_free_ratio, infra_up, alerts_firing) leave it out.",
     "params": [
      {
       "name": "name",
@@ -1020,7 +1020,7 @@
       "name": "window",
       "in": "query",
       "type": "string",
-      "description": "look-back window; each query has its own default",
+      "description": "look-back window; leave empty for point-in-time queries (service_up, outbox_*, kafka_consumer_lag, circuit_state, memory_*, infra_up...); each query that takes it has its own default",
       "enum": [
        "5m",
        "15m",
@@ -1465,7 +1465,7 @@
     "name": "ops_metrics_query",
     "method": "GET",
     "path": "/ops/queries/:name",
-    "description": "Run one named metrics/log lookup (Prometheus, Loki). Latency: gateway_latency_p95 (per route), grpc_latency_p95 (per service) - use these for 'which service is slowest'. Errors: gateway_5xx_ratio, grpc_error_rate, logs_errors(service). Load: gateway_request_rate, grpc_request_rate. State: alerts_firing, service_up/service_ready(service), service_replicas(_up), circuit_state, infra_up. Data flow: outbox_pending, outbox_oldest_age, outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id). Frontend (measured at Traefik): frontend_request_rate, frontend_5xx_ratio, frontend_latency_p95. The AI assistant itself: ai_runs_rate, ai_tokens_rate, ai_tool_errors, ai_llm_latency_p95, ai_rejected.",
+    "description": "Run one named metrics/log lookup (Prometheus, Loki). Latency: gateway_latency_p95 (per route), grpc_latency_p95 (per service) - use these for 'which service is slowest'. Errors: gateway_5xx_ratio, grpc_error_rate, logs_errors(service). Load: gateway_request_rate, grpc_request_rate. State: alerts_firing, service_up/service_ready(service), service_replicas(_up), circuit_state, infra_up. Data flow: outbox_pending, outbox_oldest_age, outbox_dead, dlq_increase, kafka_consumer_lag. Resources: memory_ratio, memory_growth, db_pool_wait, disk_free_ratio. Trace one request: logs_by_request(request_id). Frontend (measured at Traefik): frontend_request_rate, frontend_5xx_ratio, frontend_latency_p95. The AI assistant itself: ai_runs_rate, ai_tokens_rate, ai_tool_errors, ai_llm_latency_p95, ai_rejected. `name` must be exactly one of the listed names (anything else is a 400). `window` is accepted only by the rate/ratio/latency/increase/log queries (the *_rate, *_5xx_ratio, *_latency_p95, grpc_error_rate, dlq_increase, db_pool_wait, ai_* and logs_* ones); for point-in-time state (service_up, service_ready, service_replicas*, circuit_state, outbox_*, kafka_consumer_lag, memory_*, disk_free_ratio, infra_up, alerts_firing) leave it out.",
     "params": [
      {
       "name": "name",
@@ -1528,7 +1528,7 @@
       "name": "window",
       "in": "query",
       "type": "string",
-      "description": "look-back window; each query has its own default",
+      "description": "look-back window; leave empty for point-in-time queries (service_up, outbox_*, kafka_consumer_lag, circuit_state, memory_*, infra_up...); each query that takes it has its own default",
       "enum": [
        "5m",
        "15m",

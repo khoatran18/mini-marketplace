@@ -91,8 +91,15 @@ def main() -> int:
         print(f"lặp {args.repeat} lần: đạt {sm['ok']}/{sm['runs']} = {sm['rate']:.0%}, khoảng tin cậy 95% {sm['ci95'][0]:.0%}-{sm['ci95'][1]:.0%}; "
               f"luôn đạt {sm['always_ok']}/{sm['cases']}, không bao giờ đạt {sm['never_ok']}; ca dao động: {', '.join(sm['flaky']) or 'không'}")
     if args.out:
-        Path(args.out).write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
-        print(f"đã ghi {args.out}")
+        from datetime import datetime, timezone
+
+        import evalkit
+        from ai_agent.config import load_config
+        cfg = load_config("dev", rcakit.HERE.parent / "configs")
+        meta = {**evalkit.fingerprint(cfg._data["llm"]), "run": {"mode": "live" if args.live else "oracle", "repeat": args.repeat, "ids": args.ids,
+                "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}}
+        evalkit.write_report(args.out, rows, meta)
+        print(f"đã ghi {args.out} (dấu vân tay prompt/tool/mô hình nằm ở trường meta)")
     return 0 if ok == len(rows) else 1
 
 

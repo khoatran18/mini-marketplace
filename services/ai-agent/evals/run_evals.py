@@ -138,7 +138,7 @@ async def main_live(args) -> int:
         if args.ids:
             cases = [c for c in cases if c.id in args.ids]
         if args.only_failed:
-            failed = {r["id"] for f in args.only_failed for r in json.loads(Path(f).read_text(encoding="utf-8")) if not r["ok"]}
+            failed = {r["id"] for f in args.only_failed for r in evalkit.read_rows(f) if not r["ok"]}
             cases = [c for c in cases if c.id in failed]
         if args.limit:
             cases = cases[: args.limit]
@@ -154,8 +154,10 @@ async def main_live(args) -> int:
             print(f"{'PASS' if row['ok'] else 'FAIL'} {case.id} [{case.g}] {case.q[:60]}" + ("" if row["ok"] else f"  <- {'; '.join(row['reasons'])[:140]}"), flush=True)
     summarize(report)
     if args.out:
-        Path(args.out).write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
-        print(f"đã ghi {args.out}")
+        meta = {**evalkit.fingerprint(cfg._data["llm"]), "run": {"split": args.split, "group": args.group, "persona": args.persona, "limit": args.limit,
+                "ids": args.ids, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}}
+        evalkit.write_report(args.out, report, meta)
+        print(f"đã ghi {args.out} (dấu vân tay prompt/tool/mô hình nằm ở trường meta)")
     return 0 if all(r["ok"] for r in report) else 1
 
 

@@ -72,6 +72,47 @@ def load_cases(persona: str, root: Path = HERE / "cases") -> list[Case]:
     return out
 
 
+def _h(data: bytes) -> str:
+    return hashlib.sha1(data).hexdigest()[:10]
+
+
+def fingerprint(llm: dict[str, Any] | None = None, *, root: Path | None = None) -> dict[str, Any]:
+    """Dấu vân tay của MỌI thứ ảnh hưởng điểm eval: prompt/policy từng persona, bảng tool, tệp case, mô hình dùng, commit git.
+    Ghi vào file kết quả để hai lần chạy so được: khác băm = khác đầu vào, giống băm mà khác điểm = dao động của mô hình.
+    Không ghi khoá API: chỉ tên profile, nhà cung cấp, model_id, nhiệt độ."""
+    base = root or HERE.parent
+    prompts: dict[str, str] = {}
+    for d in sorted((base / "src" / "ai_agent" / "personas").iterdir()):
+        files = [f for f in (d / "prompt.md", d / "policy.md") if f.is_file()]
+        if files:
+            prompts[d.name] = _h(b"\0".join(f.read_bytes() for f in files))
+    cases = {f.stem: _h(f.read_bytes()) for f in sorted((base / "evals" / "cases").glob("*.yaml"))}
+    meta: dict[str, Any] = {"prompts": prompts, "tools": _h((base / "evals" / "tools.snapshot.json").read_bytes()), "cases": cases}
+    if llm:
+        profiles = llm.get("profiles") or {}
+        used = {role: name for role, name in (llm.get("roles") or {}).items()}
+        meta["models"] = {role: {"profile": name, **{k: profiles.get(name, {}).get(k) for k in ("provider", "model_id", "temperature", "extra_body") if k in profiles.get(name, {})}}
+                          for role, name in used.items()}
+    try:
+        import subprocess
+        run = lambda *a: subprocess.run(["git", *a], cwd=base, capture_output=True, text=True, timeout=5).stdout.strip()  # noqa: E731
+        meta["git"] = {"commit": run("rev-parse", "--short", "HEAD") or None, "dirty": bool(run("status", "--porcelain", "--", "src", "evals", "configs"))}
+    except Exception:  # noqa: BLE001 - không có git thì bỏ qua
+        meta["git"] = None
+    return meta
+
+
+def write_report(path: str | Path, rows: list[dict[str, Any]], meta: dict[str, Any]) -> None:
+    """{"meta": dấu vân tay + tham số chạy, "results": các hàng}."""
+    Path(path).write_text(json.dumps({"meta": meta, "results": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def read_rows(path: str | Path) -> list[dict[str, Any]]:
+    """Đọc cả định dạng mới ({"results": [...]}) lẫn báo cáo cũ (danh sách trần)."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return data["results"] if isinstance(data, dict) else data
+
+
 def load_snapshot(path: Path = HERE / "tools.snapshot.json") -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 

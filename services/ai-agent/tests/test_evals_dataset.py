@@ -1,4 +1,5 @@
 """Bộ eval (evals/): kiểm tĩnh, KHÔNG gọi mô hình. Đổi tên tool/tham số ở gateway thì tools.snapshot.json lệch (test Go canh) và case ở đây báo lỗi."""
+import json
 import sys
 from datetime import date
 from pathlib import Path
@@ -129,3 +130,29 @@ def test_clarify_cases_ask_back_instead_of_guessing():
     assert evalkit.score(case, [], "Bạn muốn hủy đơn nào vậy?", [], date(2026, 11, 17)).ok
     assert not evalkit.score(case, [], "Mình đã hủy đơn #5.", [], date(2026, 11, 17)).ok
     assert not evalkit.score(case, [{"tool": "list_my_orders", "args": {}}], "Bạn muốn hủy đơn nào?", [], date(2026, 11, 17)).ok
+
+
+def test_fingerprint_changes_when_a_prompt_changes_and_hides_keys(tmp_path):
+    import shutil
+    root = tmp_path / "ai-agent"
+    shutil.copytree(evalkit.HERE.parent / "src" / "ai_agent" / "personas", root / "src" / "ai_agent" / "personas", ignore=shutil.ignore_patterns("__pycache__"))
+    (root / "evals").mkdir()
+    shutil.copytree(evalkit.HERE / "cases", root / "evals" / "cases")
+    shutil.copy(evalkit.HERE / "tools.snapshot.json", root / "evals" / "tools.snapshot.json")
+    llm = {"profiles": {"p": {"provider": "openai", "model_id": "m1", "api_key": "SECRET-KEY", "temperature": 0}}, "roles": {"buyer": "p"}}
+    a = evalkit.fingerprint(llm, root=root)
+    assert a["models"]["buyer"] == {"profile": "p", "provider": "openai", "model_id": "m1", "temperature": 0}
+    assert "SECRET-KEY" not in str(a)
+    assert set(a["prompts"]) >= {"buyer", "seller", "admin", "operator", "rca"} and set(a["cases"]) == {"buyer", "seller", "admin", "operator"}
+    assert a == evalkit.fingerprint(llm, root=root)  # ổn định
+    with (root / "src" / "ai_agent" / "personas" / "buyer" / "prompt.md").open("a", encoding="utf-8") as f:
+        f.write("\nthêm một dòng")
+    b = evalkit.fingerprint(llm, root=root)
+    assert b["prompts"]["buyer"] != a["prompts"]["buyer"] and b["prompts"]["seller"] == a["prompts"]["seller"]
+
+
+def test_report_roundtrip_reads_both_old_and_new_formats(tmp_path):
+    rows = [{"id": "buyer-1", "ok": False}, {"id": "buyer-2", "ok": True}]
+    evalkit.write_report(tmp_path / "new.json", rows, {"x": 1})
+    (tmp_path / "old.json").write_text(json.dumps(rows), encoding="utf-8")
+    assert evalkit.read_rows(tmp_path / "new.json") == rows == evalkit.read_rows(tmp_path / "old.json")

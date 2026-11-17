@@ -59,3 +59,22 @@ async def test_a_param_that_is_in_the_evidence_is_allowed():
     r = await start(g)
     assert r["__interrupt__"][0].value["draft"]["action_id"] == "restart_service"
     assert INCIDENT["component"] == "payment-service" and FakeOps is not None
+
+
+def _ev(summary):
+    return {"id": "e1", "source": "ops_metrics_query", "args": {"name": "outbox_pending"}, "summary": summary}
+
+
+def test_number_match_respects_boundaries_and_format():
+    assert hypothesis_supported("outbox tồn 50 dòng", [_ev("outbox_pending = 500")]) is False        # "50" không khớp trong "500"
+    assert hypothesis_supported("outbox tồn 500 dòng", [_ev("outbox_pending = 500")]) is True
+    for claim in ("5,000", "5.000", "5000", "5k"):
+        assert hypothesis_supported(f"outbox tồn {claim} dòng", [_ev("outbox_pending = 5000")]) is True, claim
+    assert hypothesis_supported("outbox tồn 5000 dòng", [_ev("outbox_pending = 5,000")]) is True
+    assert hypothesis_supported("outbox tồn 9000 dòng", [_ev("outbox_pending = 5000")]) is False
+
+
+def test_name_match_respects_boundaries_and_ignores_versions():
+    assert hypothesis_supported("kafka bị lag", [_ev("kafka_consumer_lag cao")]) is True               # tên thành phần nằm trong tên metric
+    assert hypothesis_supported("postgres hết kết nối", [_ev("postgresql pool wait")]) is False        # "postgres" không khớp trong "postgresql"
+    assert checkable("sau khi nâng lên v1.2 hệ thống chậm, ví dụ e.g. gateway") == []                 # phiên bản và "e.g." không phải tên cần đối chiếu

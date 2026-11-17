@@ -4,26 +4,16 @@
 theo persona để thấy mô hình có bịa số hay không, rồi mới quyết định có cần chặn."""
 from __future__ import annotations
 
-import re
+from ai_agent.guard.numbers import extract, missing
 
-_NUM = re.compile(r"\d[\d.,]*\d|\d")
 MIN_DIGITS = 4  # chỉ xét số từ 4 chữ số trở lên (giá, số lượng, mã đơn lớn); số nhỏ quá hay là thứ tự, phần trăm, ngày
 
 
-def _norm(s: str) -> str:
-    return re.sub(r"\D", "", s)  # "1.250.000" và "1,250,000" đều thành "1250000"
-
-
 def numbers_in(text: str) -> set[str]:
-    return {n for n in (_norm(m.group(0)) for m in _NUM.finditer(text)) if len(n) >= MIN_DIGITS}
+    """Các con số lớn trong văn bản, mỗi số một dạng chuẩn đại diện (để đếm/so sánh trong test)."""
+    return {max(fs, key=len) for fs in extract(text, MIN_DIGITS)}
 
 
 def ungrounded_numbers(answer: str, *sources: str) -> tuple[int, int]:
     """(số con số lớn trong câu trả lời, số con số không có trong các nguồn). Nguồn: kết quả công cụ, câu hỏi người dùng."""
-    mine = numbers_in(answer)
-    if not mine:
-        return 0, 0
-    have: set[str] = set()
-    for s in sources:
-        have |= numbers_in(s)
-    return len(mine), len(mine - have)
+    return missing(answer, *sources, min_digits=MIN_DIGITS)
