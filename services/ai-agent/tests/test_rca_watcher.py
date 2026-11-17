@@ -212,6 +212,14 @@ async def test_postgres_run_store_round_trip_and_migration_is_idempotent():
         assert await st.fail_running() == 1  # b (đang running) bị ngắt; a đang chờ người thì giữ nguyên
         assert (await st.get(b["id"]))["status"] == "error" and (await st.get(b["id"]))["outcome"] == "interrupted"
         assert (await st.get(a["id"]))["status"] == "waiting_approval"
+        # dọn lịch sử cũ: chỉ phiên done/error quá hạn bị xoá (kèm nhật ký); phiên đang chờ giữ nguyên
+        await st.add_event(run["id"], "note", "x")
+        await st.add_event(a["id"], "note", "y")
+        await pool.execute("UPDATE ai_rca_runs SET updated_at = now() - interval '40 days' WHERE id = ANY($1::bigint[])", [run["id"], a["id"], b["id"]])
+        assert sorted(await st.purge_finished(30)) == sorted([run["thread_id"], b["thread_id"]])
+        assert await st.get(run["id"]) is None and await st.get(b["id"]) is None and (await st.get(a["id"]))["status"] == "waiting_approval"
+        assert await st.events(run["id"]) == [] and len(await st.events(a["id"])) == 1
+        assert await st.purge_finished(30) == []
     finally:
         await pool.close()
         await admin.execute(f'DROP DATABASE "{name}" WITH (FORCE)')

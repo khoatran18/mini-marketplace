@@ -43,6 +43,28 @@ async def _purge_loop(store, every_sec: float = 3600.0) -> None:
         await asyncio.sleep(every_sec)
 
 
+async def purge_rca(runs, saver, days: int) -> int:
+    """Xoá phiên RCA đã kết thúc quá `days` ngày, kèm nhật ký và checkpoint của nó. Phiên đang chờ xác nhận/duyệt được giữ nguyên."""
+    threads = await runs.purge_finished(days)
+    for t in threads:
+        try:
+            await saver.adelete_thread(t)
+        except Exception as exc:  # noqa: BLE001 - một checkpoint lỗi không được chặn các cái còn lại
+            logger.warning("rca checkpoint purge failed", extra={"error": type(exc).__name__})
+    if threads:
+        logger.info("rca history purged", extra={"runs": len(threads), "retention_days": days})
+    return len(threads)
+
+
+async def _rca_purge_loop(runs, saver, days: int, every_sec: float = 3600.0) -> None:
+    while True:
+        try:
+            await purge_rca(runs, saver, days)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("rca purge failed", extra={"error": type(exc).__name__})
+        await asyncio.sleep(every_sec)
+
+
 def _truthy(v) -> bool:
     """Cờ trong yaml có thể là bool hoặc chuỗi từ biến môi trường ("false" không được tính là bật)."""
     return v is True or str(v).strip().lower() in ("1", "true", "yes", "on")
@@ -67,6 +89,15 @@ async def _start_rca(stack: AsyncExitStack, cfg: Config, rt, gateway, store, per
                      system_key=str(rca.get("system_key", "") or ""), max_concurrent=int(rca.get("max_concurrent", 2)))
     await svc.start()
     stack.push_async_callback(svc.stop)
+    days = int(rca.get("retention_days", 30) or 0)
+    if days > 0:
+        task = asyncio.create_task(_rca_purge_loop(runs, saver, days))
+
+        async def _stop_purge() -> None:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+        stack.push_async_callback(_stop_purge)
     return svc
 
 

@@ -126,6 +126,22 @@ LangSmith (của LangChain) cung cấp: tracing từng lần chạy (prompt, too
 - **MCP (Model Context Protocol):** chuẩn mở để phơi tool / tài nguyên cho nhiều client; hợp khi muốn cùng một bộ tool dùng cho agent trong sản phẩm lẫn công cụ nội bộ của dev. Với dự án, tool vẫn nên là REST của gateway; MCP chỉ là lớp bọc nếu cần.
 - **Pydantic AI, OpenAI Agents SDK, Claude Agent SDK, LlamaIndex, DSPy:** các lựa chọn thay thế cho vòng lặp agent / RAG / tối ưu prompt; chọn theo ngôn ngữ và mô hình đang dùng.
 
+### 6.1 So sánh với mô hình "MCP + Evidence Gateway + multi-agent" (2026-11-16, ADR-49)
+
+Đề tham khảo: điều tra khiếu nại Olist (coordinator, order/seller, payment, delivery, policy, verifier; bằng chứng qua Evidence Gateway, trace mỗi lần dùng kết quả). So với hệ thống hiện tại:
+
+| Nhu cầu | Hiện trạng | Còn thiếu |
+|---|---|---|
+| Công cụ được phát hiện, không đoán tên | Có: `GET /ai/tools` của gateway theo role (`agent/scopes.go`), ai-agent cache theo `tools_cache_ttl_sec`. Không theo chuẩn MCP, cùng ý. | Không |
+| Mọi lần gọi bị audit | Một phần: log gateway kèm `agent_run_id`; ghi qua ops-service có audit bất biến; RCA có `ai_rca_events` từng lần gọi | Chat chưa lưu từng lần gọi công cụ |
+| `evidence_ref` do hệ thống cấp | RCA: `e1..eN` do ai-agent đánh số từ kết quả thật; chat: chỉ nhãn trích dẫn | Mã cấp ở lớp chung cho chat và RCA |
+| Không tự tạo/sửa mã, không dùng chéo | RCA: bằng chứng chỉ từ kết quả công cụ (lỗi không thành bằng chứng) | Kiểm chéo id trích dẫn thuộc đúng run |
+| Verifier kiểm ID, số tiền, schema | Nháp RCA qua `validate` với sổ hành động; có bước `verify` sau hành động | Verifier xác định cho câu trả lời |
+| Chia việc nhiều agent, A2A | Không: chat một agent; RCA một đồ thị nhiều bước, chung persona | Chưa cần (ADR-49) |
+| Lời khách không phải sự thật | Dữ liệu công cụ bọc "không tin cậy" + quy tắc chống injection, đo bằng 3 ca eval | Không |
+
+Kết luận (ADR-49): không thêm MCP server hay Evidence Gateway tách riêng; làm lớp bằng chứng bên trong ai-agent, MCP chỉ là lớp bọc mỏng chỉ đọc nếu cần trình diễn.
+
 ## 7. Kiến trúc đề xuất (khi bắt đầu làm)
 
 ```mermaid

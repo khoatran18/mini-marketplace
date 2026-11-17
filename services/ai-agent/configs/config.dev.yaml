@@ -121,6 +121,7 @@ store:
 rca:
   enabled: "${AI_RCA_ENABLED:-false}"   # bật = dựng RCA khi khởi động (bảng ai_rca_runs, checkpoint, bộ theo dõi). Cần AI_SYSTEM_KEY để chạy được (ADR-47)
   system_key: "${AI_SYSTEM_KEY:-}"   # khớp AI_SYSTEM_KEY của gateway; rỗng = không có danh tính hệ thống (không tự chạy, nút Điều tra báo 503)
+  retention_days: 30          # xoá phiên đã xong/lỗi (kèm nhật ký, checkpoint) sau số ngày này; 0 = giữ mãi. Phiên đang chờ không bị xoá
   max_concurrent: 2           # số phiên chạy cùng lúc
   max_rounds: 3               # vòng collect -> hypothesize -> decide
   max_model_calls: 12

@@ -21,6 +21,7 @@ class RunStore(Protocol):
     async def tokens_since(self, since: float) -> int: ...
     async def recent(self, incident_id: int | None = None, limit: int = 30) -> list[dict[str, Any]]: ...
     async def fail_running(self) -> int: ...
+    async def purge_finished(self, days: int) -> list[str]: ...
     async def add_event(self, run_id: int, kind: str, title: str, data: dict[str, Any] | None = None) -> None: ...
     async def events(self, run_id: int, after: int = 0, limit: int = 200) -> list[dict[str, Any]]: ...
 
@@ -72,6 +73,15 @@ class MemoryRunStore:
 
     async def events(self, run_id: int, after: int = 0, limit: int = 200) -> list[dict[str, Any]]:
         return [{k: v for k, v in e.items() if k != "run_id"} for e in self._events if e["run_id"] == run_id and e["id"] > after][:limit]
+
+    async def purge_finished(self, days: int) -> list[str]:
+        cutoff = self._clock() - days * 86400
+        gone = [r for r in self.rows.values() if r["status"] in ("done", "error") and r["created_at"] < cutoff]
+        for r in gone:
+            del self.rows[r["id"]]
+        ids = {r["id"] for r in gone}
+        self._events = [e for e in self._events if e.get("run_id") not in ids]
+        return [r["thread_id"] for r in gone]
 
     async def tokens_since(self, since: float) -> int:
         return sum(int(r.get("tokens") or 0) for r in self.rows.values() if r["created_at"] >= since)
@@ -200,6 +210,15 @@ class PostgresRunStore:
                 d["data"] = json.loads(d["data"])
             out.append(d)
         return out
+
+    async def purge_finished(self, days: int) -> list[str]:
+        """Xoá phiên đã kết thúc (done/error) không đổi quá `days` ngày cùng nhật ký của nó. KHÔNG đụng phiên đang chạy hay đang chờ.
+        Trả thread_id để người gọi xoá checkpoint tương ứng."""
+        async with self._pool.acquire() as con, con.transaction():
+            rows = await con.fetch("DELETE FROM ai_rca_runs WHERE status IN ('done', 'error') AND updated_at < now() - make_interval(days => $1) RETURNING id, thread_id", int(days))
+            if rows:
+                await con.execute("DELETE FROM ai_rca_events WHERE run_id = ANY($1::bigint[])", [r["id"] for r in rows])
+        return [r["thread_id"] for r in rows if r["thread_id"]]
 
     async def tokens_since(self, since: float) -> int:
         async with self._pool.acquire() as con:
