@@ -289,3 +289,5 @@ Nguồn: `docs/ai/12_CRITERIA_VS_RESEARCH_NOTES.md`. Toàn bộ test ai-agent: 2
 
 **Chưa kiểm:** CI trên GitHub; breaker/dự phòng với nhà cung cấp thật (mới test bằng lỗi giả); số đo `grounded` với mô hình thật (có thể hạ nhầm giả thuyết đúng); ai-agent chưa triển khai lại cho các thay đổi này (cùng §16.34).
 
+**Điểm chưa chắc của §16.35 (xem chi tiết `docs/ai/12_CRITERIA_VS_RESEARCH_NOTES.md` mục 6):** kiểm chứng bằng regex thô (tên lạ lọt, số khác định dạng bị hạ nhầm); nhóm `clarify` xung đột với dòng "KHÔNG hỏi lại" trong prompt nên nhiều khả năng trượt khi chạy thật và 16 ca chưa được người duyệt; tập giữ kín chỉ là quy ước; resilience chưa thử với nhà cung cấp thật; job CI chưa chạy trên GitHub.
+

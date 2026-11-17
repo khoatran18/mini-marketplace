@@ -118,3 +118,65 @@ Bốn khoảng trống ở mục 3 đã được xử lý trong phạm vi không
 ## 5. Ghi chú về độ tin cậy của bản so sánh
 
 Các mục [đọc code] đã đối chiếu với mã ngày 2026-11-17; chưa chạy riêng từng mục. Mục "không có thử lại ở `GatewayClient`" dựa trên tìm kiếm trong `tools/gateway.py` (không thấy từ khoá retry/breaker). Mặc định thử lại của SDK OpenAI chưa được kiểm tra trong lần chạy thật. Các bài nghiên cứu là ghi chú học tập ở trạng thái `draft`: dùng làm danh mục kiểm tra, không phải bằng chứng rằng mỗi tiêu chí là bắt buộc.
+
+## 6. Điểm chưa chắc, cần kiểm thêm (ghi 2026-11-17, sau khi làm bốn khoảng trống)
+
+Mục này liệt kê những chỗ code đã chạy qua test nhưng CHƯA chứng minh là đúng với mô hình thật hoặc dữ liệu thật. Mỗi dòng ghi rõ cách kiểm.
+
+### 6.1 Kiểm chứng RCA bằng regex (`rca/grounding.py`)
+
+| Điểm yếu | Hệ quả | Cách kiểm hoặc cải thiện |
+|---|---|---|
+| Rút "mẩu cần đối chiếu" bằng regex: tên có `-`, `_`, `.` (`_IDENT`), danh sách viết tay (`_COMPONENTS`: postgres, kafka, redis, clickhouse, traefik, prometheus, grafana, outbox, loki, tempo, vector), số 2+ chữ số (`_NUM`) | Mô hình viết "gateway" hay "cổng API" thì không rút được gì: giả thuyết thành `grounded=None` (không bị phạt), tức lọt kiểm tra | Chạy live, đếm tỷ lệ giả thuyết `None` trên 22 ca; nếu cao thì thêm tên từ tập thật của hệ thống (enum service trong `ops_list_actions`, kết quả `ops_system_health`) thay cho danh sách cứng |
+| So khớp chuỗi con trên văn bản đã hạ chữ thường | "50" khớp trong "500"; tên ngắn khớp nhầm | Thêm ranh giới từ (`\b`) cho số và tên; thêm test |
+| Chuẩn hoá số khác nhau: RCA chỉ đổi `,` thành `.` ("5,000" thành "5.000", không khớp "5000"); chat bỏ mọi ký tự không phải chữ số (`guard/grounding.py`) | RCA có thể hạ nhầm giả thuyết đúng vì khác định dạng số | Dùng cùng một hàm chuẩn hoá số cho cả hai nơi; test các định dạng "5,000", "5.000", "5000", "5k" |
+| Regex tên bắt cả thứ không phải tên service ("v1.2", "e.g.") | Có thể đòi bằng chứng chứa những chuỗi vô nghĩa, hạ nhầm | Đo số giả thuyết bị hạ trên dữ liệu live và đọc tay từng ca |
+| Kiểm "bằng chứng có NHẮC TỚI", không phải "bằng chứng ỦNG HỘ" | "payment-service" xuất hiện trong bằng chứng chưa nói nó đang chết | Hướng chắc hơn: bắt mô hình trả giả thuyết có cấu trúc `{component, metric, value, evidence_id}` rồi đối chiếu từng trường; đổi schema bước giả thuyết nên cần chạy lại eval live |
+| Hạ độ tin cậy xuống 0.3 (dưới ngưỡng đề xuất 0.4) và thành `escalate_to_human` | Hạ nhầm giả thuyết đúng làm RCA ít hữu ích hơn (an toàn nhưng tốn công người) | Theo dõi tỷ lệ `escalated` trước/sau khi bật; so với 22 ca; chỉnh ngưỡng nếu tăng bất thường |
+| Tham số hành động phải có trong bằng chứng hoặc thông tin sự cố | Tham số hợp lệ nhưng không xuất hiện nguyên văn (alias tên service) sẽ bị chuyển cho người | Thử trên tất cả hành động trong sổ với dữ liệu live; nếu cần thì cho phép đối chiếu theo tập enum của sổ hành động |
+| Chưa chạy với mô hình thật | Mọi con số trong tài liệu này là với Brain đáp án và dữ liệu giả | Chạy live `run_rca_evals.py --repeat 3` (cần đồng ý chi phí) và xem tiêu chí `grounded` |
+
+### 6.2 Chat: đo con số (`guard/grounding.py`)
+
+- Chỉ xét số từ 4 chữ số trở lên (`MIN_DIGITS = 4`): bỏ sót số nhỏ (số lượng 12, giảm 20%). Số suy ra (tổng, làm tròn) bị tính "ungrounded" dù hợp lệ. Chưa biết tỷ lệ nhiễu: cần quan sát `mm_ai_answer_numbers_total{result="ungrounded"}` trên traffic thật vài ngày rồi mới đặt ngưỡng cảnh báo, và chưa nên chặn.
+- `PumpResult.tool_text` chỉ lấy `ToolMessage` ở các nút không phải nút mô hình, cắt ở 200 KB; chưa kiểm với agent thật (test dùng agent giả) rằng nút công cụ đúng tên và văn bản đã che (model_view) có chứa số cần đối chiếu.
+- Test `test_numbers_in_the_answer_are_counted_against_tool_data` yếu: chỉ kiểm chỉ số tồn tại, chưa kiểm số đếm tăng đúng. Nên viết lại với câu trả lời có số lớn.
+
+### 6.3 Nhóm `clarify` (hỏi lại khi thiếu thông tin)
+
+- **Xung đột với prompt hiện tại (đã kiểm bằng grep).** Prompt của buyer, seller, admin, operator có quy tắc "khi câu hỏi đã đủ để chọn bộ lọc thì gọi công cụ ngay, KHÔNG hỏi lại"; KHÔNG có quy tắc "thiếu thông tin bắt buộc thì hỏi lại". Nên 16 ca `clarify` nhiều khả năng TRƯỢT với mô hình thật. Chưa chạy nên chưa biết tỷ lệ.
+- **Chữa nếu trượt:** sửa prompt (thêm một quy tắc ngắn: thiếu mã đơn/tên service/sản phẩm thì hỏi lại đúng một câu, không đoán), KHÔNG sửa vòng lặp hay thêm công cụ. Phải đo cân bằng hai chiều: nhóm `lookup`/`filter` (không được hỏi thừa, vì dòng "KHÔNG hỏi lại" được thêm để chữa lỗi hỏi thừa) và nhóm `clarify`. Chạy `run_evals.py --live --split dev` cả hai nhóm trước và sau (cần đồng ý chi phí).
+- **Chuẩn chấm nghiêm có thể chưa hợp lý:** ca yêu cầu KHÔNG gọi công cụ nào và có dấu "?". Agent gọi `list_my_orders` rồi hỏi "đơn nào?" bị tính trượt dù có thể là hành vi tốt. Quyết định cần người: giữ nghiêm hay cho phép (`tool: [none, list_my_orders]`).
+- **16 ca do AI viết, chưa được người duyệt.** Một số câu mơ hồ có thể có đáp án hợp lệ khác (vd admin: "Sản phẩm kia bán thế nào?", "Đơn đó của ai?"); cần bạn đọc lại và sửa hoặc bỏ.
+- Dấu "?" là điều kiện duy nhất của `need`: câu trả lời có "?" ở chỗ khác (không phải hỏi lại) vẫn đạt. Nên thêm kiểm ngữ nghĩa nhẹ (nhắc tới "đơn nào", "service nào", "mã") hoặc đọc tay mẫu.
+
+### 6.4 Tập giữ kín (held-out)
+
+- Chỉ là quy ước (`--split`), không có cơ chế ép; chạy `heldout` hằng ngày là làm mất tác dụng.
+- Cùng người viết và cùng phong cách với tập dev, nên chỉ chống được quá khớp "học thuộc ca"; chống chắc hơn cần ca VIẾT MỚI sau khi chốt prompt.
+- Băm 1/5 theo câu hỏi cho tỷ lệ khoảng 12-20% mỗi persona (test chấp nhận 8-35%): một số nhóm nhỏ (vd `propose` của buyer) có thể không có ca heldout nào. Kiểm bằng `python evals/run_evals.py --split heldout` xem từng nhóm.
+- Chưa chạy `heldout` live lần nào, nên chưa có điểm gốc để so.
+
+### 6.5 Chịu lỗi nhà cung cấp LLM (`llm/resilience.py`)
+
+- Mới thử bằng lỗi giả và mô hình giả; chưa thử với nhà cung cấp thật (OpenCode) trả 429/5xx/timeout. Cần kiểm xem SDK ném lỗi có thuộc tính `status_code` đúng như `classify` giả định (openai và anthropic có; lỗi từ lớp `httpx` thuần thì không, sẽ rơi vào `unknown` hoặc theo tên lớp).
+- `max_retries: 2` của SDK và ngưỡng breaker (≥50% lỗi, ≥6 lần trong 60 s, ngắt 30 s) là giá trị khởi đầu, chưa chỉnh theo traffic thật. Với lưu lượng thấp (vài lượt mỗi phút) thì `min_calls: 6` có thể mất cả phút mới ngắt, hoặc ngắt vì một cụm lỗi ngắn.
+- Lượt chat đang stream mà lỗi giữa chừng vẫn báo lỗi (không ghép mô hình dự phòng).
+- `llm.fallbacks` để trống: chưa có profile dự phòng, chưa có kiểm tương thích tool calling tự động (chọn nhầm profile không hỗ trợ tool sẽ lỗi lúc chạy).
+- Đã kiểm đường `create_agent` thật với một mô hình lỗi giả; chưa kiểm với `ModelCallLimitMiddleware` lồng cùng trong agent chạy thật dài (gọi nhiều vòng, có công cụ).
+- Chưa có cảnh báo Prometheus cho `mm_ai_llm_fallback_total`.
+
+### 6.6 CI và triển khai
+
+- Job `ai-agent` chưa chạy trên GitHub; `requirements.lock.txt` được tạo trên máy dev (có thể có gói chỉ có ở máy này hoặc khác nền tảng).
+- 252 test (13 bỏ qua) khi không có Postgres; 264 khi có (trước khi thêm test `create_agent` thật). Con số có thể đổi.
+- ai-agent chưa được triển khai lại với các thay đổi này (tránh ngắt phiên `running`); cấu hình `llm.resilience`, `llm.fallbacks`, `rca.retention_days` chưa chạy trên Swarm. Nên chạy `scripts/smoke-rca-tools.sh` (không LLM) sau khi triển khai.
+
+### 6.7 Việc kiểm thêm xếp theo thứ tự rẻ đến đắt
+
+1. (Miễn phí) Viết lại test chỉ số `mm_ai_answer_numbers_total`; thêm test ranh giới từ và chuẩn hoá số cho `grounding.py`; thống nhất hàm chuẩn hoá số.
+2. (Miễn phí) Bạn đọc 16 ca `clarify` và quyết chuẩn chấm nghiêm hay lỏng; xem `--split heldout` có nhóm nào rỗng.
+3. (Miễn phí) Đẩy lên GitHub xem job `ai-agent` có xanh không.
+4. (Tốn tiền, cần đồng ý) Chạy `run_evals.py --live --split dev --group clarify` và `--group lookup` để đo xung đột prompt `clarify` ở 6.3, trước khi sửa prompt.
+5. (Tốn tiền) `run_rca_evals.py --live --repeat 3` để xem tiêu chí `grounded`, tỷ lệ giả thuyết `None`, và số ca bị hạ nhầm.
+
