@@ -1,6 +1,7 @@
 package router
 
 import (
+	"api-gateway/internal/agent"
 	"api-gateway/internal/client"
 	"api-gateway/internal/config"
 	"api-gateway/internal/handler"
@@ -30,6 +31,13 @@ func newEngine(t *testing.T) *gin.Engine {
 // newEngineEnv builds the engine and lets the test adjust the environment config first.
 func newEngineEnv(t *testing.T, mutate func(*config.EnvConfig)) *gin.Engine {
 	t.Helper()
+	e, _ := newEngineRedis(t, mutate)
+	return e
+}
+
+// newEngineRedis is newEngineEnv that also returns the fake Redis, so a test can stop it ("Redis is down").
+func newEngineRedis(t *testing.T, mutate func(*config.EnvConfig)) (*gin.Engine, *miniredis.Miniredis) {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 	mr := miniredis.RunT(t)
 	// Redis "đã chạy đủ lâu" (cửa sổ an toàn của middleware đã qua) nên đường nhanh được tin; không có auth-service trong test
@@ -42,7 +50,7 @@ func newEngineEnv(t *testing.T, mutate func(*config.EnvConfig)) *gin.Engine {
 	}
 	engine := gin.New()
 	SetupRouter(engine, handler.NewHandlerManager(client.NewClientManager(), "test-secret", logger), serviceConfig, envConfig)
-	return engine
+	return engine, mr
 }
 
 func token(t *testing.T, role string) string {
@@ -325,6 +333,7 @@ func TestOpsRoutesAdminOnlyAndProxied(t *testing.T) {
 	e := newEngineEnv(t, func(c *config.EnvConfig) { c.OpsServiceURL, c.OpsAPIToken = up.URL, "ops-secret" })
 	for _, route := range []struct{ method, path string }{
 		{"GET", "/ops/incidents"}, {"GET", "/ops/incidents/1"}, {"POST", "/ops/incidents/1/investigate"}, {"GET", "/ops/audit"},
+		{"GET", "/ops/ai/kill"}, {"PUT", "/ops/ai/kill"},
 		{"GET", "/ops/actions"}, {"GET", "/ops/proposals"}, {"POST", "/ops/proposals"}, {"GET", "/ops/proposals/1"},
 		{"POST", "/ops/proposals/1/review"}, {"POST", "/ops/proposals/1/decision"}, {"POST", "/ops/proposals/1/withdraw"},
 		{"POST", "/ops/proposals/1/execute"}, {"POST", "/ops/proposals/1/executed"}, {"GET", "/ops/queries"}, {"GET", "/ops/queries/service_up"}, {"POST", "/ops/queries/service_up"}, {"GET", "/ops/outbox/order-service/dead"}, {"GET", "/ops/playbooks"}, {"GET", "/ops/playbooks/outbox-stuck"}, {"POST", "/ops/queries/gateway_latency_p95"},
@@ -622,5 +631,121 @@ func TestOpsPlaybookSlugIsForwarded(t *testing.T) {
 		if w := request(e, "GET", "/ops/playbooks/"+id, token(t, "operator")); w.Code != 400 || gotPath != "" {
 			t.Errorf("playbook %q: %d path=%q, want 400 and no upstream call", id, w.Code, gotPath)
 		}
+	}
+}
+
+// The emergency switch: admin or operator flips it in Redis; while on, every agent path answers 503 ai_paused (chat, the agent's own
+// tool calls and proposals, the RCA system token) and people keep using the shop; a Redis outage refuses the agent too.
+func TestAIKillSwitch(t *testing.T) {
+	keys := "k1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-A"
+	chatHits := 0
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		chatHits++
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("event: done\ndata: {}\n\n"))
+	}))
+	defer up.Close()
+	var audits []string // what ops-service received: "<actor> <path> <body>"
+	ops := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		audits = append(audits, r.Header.Get("X-Actor")+" "+r.URL.Path+" "+r.Header.Get("Authorization")+" "+string(raw))
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer ops.Close()
+	e, mr := newEngineRedis(t, func(c *config.EnvConfig) {
+		c.AgentKeys, c.AISystemKey, c.FeatureAIChat, c.AIServiceURL, c.AIStreamTimeout = keys, sysKey, true, up.URL, 5*time.Second
+		c.OpsServiceURL, c.OpsAPIToken = ops.URL, "ops-secret"
+	})
+	chat := func() int { return requestWith(e, "POST", "/ai/chat", token(t, "buyer"), nil, `{"message":"hi"}`).Code }
+	sysTok := func() int {
+		return requestWith(e, "POST", "/ai/system-token", "", map[string]string{"X-System-Key": sysKey}, "").Code
+	}
+	ring, _ := agent.ParseKeyRing(keys)
+	agentTok, _, err := (&agent.Signer{Keys: ring}).IssueAgentToken(1, "u", "buyer", 0, time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tools := func() int { return requestWith(e, "GET", "/ai/tools", agentTok, nil, "").Code }
+	if chat() != 200 || sysTok() != 200 || tools() != 200 {
+		t.Fatalf("switch off: chat %d system-token %d tools %d, want 200 each", chat(), sysTok(), tools())
+	}
+
+	// who may flip it: admin and operator only
+	for _, role := range []string{"buyer", "seller_admin"} {
+		if w := requestWith(e, "PUT", "/ops/ai/kill", token(t, role), nil, `{"paused":true}`); w.Code != http.StatusForbidden {
+			t.Errorf("%s flipping the switch: %d, want 403", role, w.Code)
+		}
+	}
+	if w := requestWith(e, "PUT", "/ops/ai/kill", "", nil, `{"paused":true}`); w.Code != http.StatusUnauthorized {
+		t.Errorf("anonymous: %d, want 401", w.Code)
+	}
+	if w := requestWith(e, "PUT", "/ops/ai/kill", token(t, "operator"), nil, `{}`); w.Code != http.StatusBadRequest {
+		t.Errorf("missing paused: %d, want 400", w.Code)
+	}
+	if w := requestWith(e, "PUT", "/ops/ai/kill", token(t, "operator"), nil, `{"paused":true,"reason":"`+strings.Repeat("x", 201)+`"}`); w.Code != http.StatusBadRequest {
+		t.Errorf("long reason: %d, want 400", w.Code)
+	}
+
+	// on
+	w := requestWith(e, "PUT", "/ops/ai/kill", token(t, "operator"), nil, `{"paused":true,"reason":"spend spike"}`)
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"paused":true`) || !strings.Contains(w.Body.String(), "operator:1") || !strings.Contains(w.Body.String(), "spend spike") {
+		t.Fatalf("switch on: %d %s", w.Code, w.Body.String())
+	}
+	if len(audits) != 1 || audits[0] != `operator:1 /audit/events Bearer ops-secret {"paused":true,"reason":"spend spike"}` || !strings.Contains(w.Body.String(), `"audited":true`) {
+		t.Errorf("audit row for the switch-on: %v (answer %s)", audits, w.Body.String())
+	}
+	hitsBefore := chatHits
+	if c := chat(); c != http.StatusServiceUnavailable {
+		t.Errorf("chat while paused: %d, want 503", c)
+	}
+	if chatHits != hitsBefore {
+		t.Errorf("a paused chat still reached ai-agent")
+	}
+	if c := sysTok(); c != http.StatusServiceUnavailable {
+		t.Errorf("system token while paused: %d, want 503 (the RCA watcher can then read and start nothing)", c)
+	}
+	if c := tools(); c != http.StatusServiceUnavailable {
+		t.Errorf("agent token while paused: %d, want 503", c)
+	}
+	if w := requestWith(e, "GET", "/ops/ai/kill", token(t, "admin"), nil, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"paused":true`) {
+		t.Errorf("status: %d %s", w.Code, w.Body.String())
+	}
+	if c := requestWith(e, "GET", "/healthz", "", nil, "").Code; c != 200 {
+		t.Errorf("the shop itself must keep working: %d", c)
+	}
+
+	// off
+	if w := requestWith(e, "PUT", "/ops/ai/kill", token(t, "admin"), nil, `{"paused":false}`); w.Code != 200 || !strings.Contains(w.Body.String(), `"paused":false`) {
+		t.Fatalf("switch off: %d %s", w.Code, w.Body.String())
+	}
+	if len(audits) != 2 || !strings.Contains(audits[1], `admin:1 /audit/events`) || !strings.Contains(audits[1], `"paused":false`) {
+		t.Errorf("audit row for the switch-off: %v", audits)
+	}
+	if chat() != 200 || sysTok() != 200 || tools() != 200 {
+		t.Errorf("after switching off the agent must work again")
+	}
+
+	// Redis down: cannot tell, so the agent is refused (fail closed); the status route says so
+	mr.Close()
+	if c := tools(); c != http.StatusServiceUnavailable {
+		t.Errorf("agent token with Redis down: %d, want 503", c)
+	}
+	if c := sysTok(); c != http.StatusServiceUnavailable {
+		t.Errorf("system token with Redis down: %d, want 503", c)
+	}
+}
+
+// An emergency stop must not depend on ops-service: when the audit row cannot be written the switch is still flipped, and the answer says
+// audited=false (the gateway log keeps who and why).
+func TestAIKillSwitchStillWorksWhenTheAuditWriteFails(t *testing.T) {
+	down := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusInternalServerError) }))
+	defer down.Close()
+	e := newEngineEnv(t, func(c *config.EnvConfig) { c.OpsServiceURL, c.OpsAPIToken = down.URL, "ops-secret" })
+	w := requestWith(e, "PUT", "/ops/ai/kill", token(t, "operator"), nil, `{"paused":true,"reason":"x"}`)
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"paused":true`) || !strings.Contains(w.Body.String(), `"audited":false`) {
+		t.Fatalf("%d %s", w.Code, w.Body.String())
+	}
+	if w := requestWith(e, "GET", "/ops/ai/kill", token(t, "admin"), nil, ""); !strings.Contains(w.Body.String(), `"paused":true`) {
+		t.Errorf("the switch must be on even though the audit write failed: %s", w.Body.String())
 	}
 }

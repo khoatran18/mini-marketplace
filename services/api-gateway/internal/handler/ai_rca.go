@@ -32,6 +32,7 @@ type SystemTokenHandler struct {
 	Signer *agent.Signer
 	Key    string
 	Logger *zap.Logger
+	Kill   agent.Kill // switched on = no new system token, so the watcher can read nothing and starts nothing
 }
 
 func (h SystemTokenHandler) Issue(c *gin.Context) {
@@ -44,6 +45,11 @@ func (h SystemTokenHandler) Issue(c *gin.Context) {
 	if subtle.ConstantTimeCompare(got[:], want[:]) != 1 {
 		h.Logger.Warn("SystemTokenHandler: wrong system key", zap.String("ip", c.ClientIP()))
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid system key"})
+		return
+	}
+	if st, blocked := agent.Blocked(c.Request.Context(), h.Kill); blocked {
+		h.Logger.Warn("SystemTokenHandler: AI is switched off, no system token", zap.String("by", st.By))
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai_paused"})
 		return
 	}
 	tok, jti, err := h.Signer.IssueSystemToken(SystemName, SystemTokenTTL)
@@ -67,6 +73,9 @@ func (h *AIHandler) Forward(method, upstream string, queryKeys ...string) gin.Ha
 		}
 		if h.BaseURL == "" || h.Signer == nil || !h.Signer.Keys.Enabled() {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai service is not configured"})
+			return
+		}
+		if h.paused(c) {
 			return
 		}
 		path := strings.ReplaceAll(upstream, ":id", url.PathEscape(c.Param("id")))

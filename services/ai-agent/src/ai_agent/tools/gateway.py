@@ -32,6 +32,22 @@ def _safe(status: int) -> GatewayError:
     return GatewayError(status, "dịch vụ tạm thời không phản hồi")
 
 
+class AiPaused(GatewayError):
+    """Gateway báo công tắc dừng khẩn đang bật (503 `ai_paused`). Không phải lỗi: người vận hành chủ động tắt AI, nên bộ theo dõi RCA chỉ nghỉ."""
+
+    def __init__(self) -> None:
+        super().__init__(503, "AI đang bị tắt khẩn")
+
+
+def is_paused(resp: httpx.Response) -> bool:
+    if resp.status_code != 503:
+        return False
+    try:
+        return resp.json().get("error") == "ai_paused"
+    except (ValueError, AttributeError):
+        return False
+
+
 class GatewayClient:
     def __init__(self, base_url: str, timeout: float = 5.0, client: httpx.AsyncClient | None = None) -> None:
         self.base_url = base_url.rstrip("/")
@@ -90,6 +106,8 @@ class GatewayClient:
         except httpx.HTTPError as exc:
             logger.warning("gateway unreachable (system token)", extra={"error": type(exc).__name__})
             raise GatewayError(503, "dịch vụ tạm thời không phản hồi") from None
+        if is_paused(resp):
+            raise AiPaused()
         if resp.status_code >= 400:
             logger.warning("system token refused", extra={"status": resp.status_code})
             raise GatewayError(resp.status_code, "gateway từ chối cấp token hệ thống")

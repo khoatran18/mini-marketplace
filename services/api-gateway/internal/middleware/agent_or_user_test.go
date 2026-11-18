@@ -27,10 +27,10 @@ func agentOrUserEngine(t *testing.T) (*gin.Engine, *agent.Signer, *miniredis.Min
 	pwd := NewPwdVerifier(zap.NewNop(), rdb)
 	userAuth := func(c *gin.Context) { c.JSON(401, gin.H{"error": "user path"}); c.Abort() }
 	e := gin.New()
-	e.GET("/orders/:id", AgentOrUser(signer, agent.DefaultScopes, pwd, userAuth, zap.NewNop()), func(c *gin.Context) {
+	e.GET("/orders/:id", AgentOrUser(signer, agent.DefaultScopes, pwd, userAuth, nil, zap.NewNop()), func(c *gin.Context) {
 		c.JSON(200, gin.H{"user": c.Value("userID"), "role": c.Value("userRole"), "run": c.Value("agentRunID")})
 	})
-	e.POST("/orders/:id", AgentOrUser(signer, agent.DefaultScopes, pwd, userAuth, zap.NewNop()), func(c *gin.Context) { c.Status(200) })
+	e.POST("/orders/:id", AgentOrUser(signer, agent.DefaultScopes, pwd, userAuth, nil, zap.NewNop()), func(c *gin.Context) { c.Status(200) })
 	return e, signer, mr
 }
 
@@ -108,7 +108,7 @@ func TestAgentOrUserSystemToken(t *testing.T) {
 	signer := &agent.Signer{Keys: ring}
 	pwd := NewPwdVerifier(zap.NewNop(), redis.NewClient(&redis.Options{Addr: mr.Addr()}))
 	userAuth := func(c *gin.Context) { c.JSON(401, gin.H{"error": "user path"}); c.Abort() }
-	mw := AgentOrUser(signer, agent.DefaultScopes, pwd, userAuth, zap.NewNop())
+	mw := AgentOrUser(signer, agent.DefaultScopes, pwd, userAuth, nil, zap.NewNop())
 	e := gin.New()
 	ok := func(c *gin.Context) {
 		c.JSON(200, gin.H{"user": c.Value("userID"), "role": c.Value("userRole"), "name": c.Value("username")})
@@ -133,7 +133,7 @@ func TestAgentOrUserSystemToken(t *testing.T) {
 	}
 	// a route outside /ops is refused even if some table row pointed there
 	e2 := gin.New()
-	e2.GET("/orders/:id", AgentOrUser(signer, agent.Scopes{"operator": {{Name: "x", Method: "GET", Path: "/orders/:id"}}}, pwd, userAuth, zap.NewNop()), ok)
+	e2.GET("/orders/:id", AgentOrUser(signer, agent.Scopes{"operator": {{Name: "x", Method: "GET", Path: "/orders/:id"}}}, pwd, userAuth, nil, zap.NewNop()), ok)
 	req := httptest.NewRequest("GET", "/orders/7", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	w2 := httptest.NewRecorder()

@@ -149,3 +149,26 @@ func TestPlaybooksEndpoints(t *testing.T) {
 		t.Fatalf("thiếu thư viện = danh sách rỗng: %d %s", w.Code, w.Body.String())
 	}
 }
+
+// POST /audit/events (gateway, kill switch): only the full token, a closed set of events, validated before the DB is touched.
+func TestAIKillSwitchAuditValidationAndScope(t *testing.T) {
+	h := (&API{Token: "full-token", AgentToken: "agent-token"}).Handler()
+	post := func(token, body string) int {
+		r := httptest.NewRequest("POST", "/audit/events", strings.NewReader(body))
+		r.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w.Code
+	}
+	if c := post("agent-token", `{"paused":true}`); c != 403 {
+		t.Errorf("a token with agent scope must not write audit events: %d", c)
+	}
+	if c := post("nope", `{"paused":true}`); c != 401 {
+		t.Errorf("wrong token: %d", c)
+	}
+	for name, body := range map[string]string{"missing paused": `{}`, "not json": `x`, "reason too long": `{"paused":true,"reason":"` + strings.Repeat("x", 201) + `"}`} {
+		if c := post("full-token", body); c != 400 {
+			t.Errorf("%s: %d, want 400", name, c)
+		}
+	}
+}

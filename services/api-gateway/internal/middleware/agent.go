@@ -17,8 +17,11 @@ const ProposalHeader = "X-Agent-Proposal"
 // AgentAuth authenticates the AI agent with its own short-lived token (not a user JWT) and stores the claims under
 // "agentClaims". It is attached per route (only POST /ai/proposals). It does not check pwd_version: a proposal does nothing
 // until the user confirms it with their own, fully checked token.
-func AgentAuth(signer *agent.Signer, logger *zap.Logger) gin.HandlerFunc {
+func AgentAuth(signer *agent.Signer, kill agent.Kill, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if refuseWhenKilled(c, kill, logger) {
+			return
+		}
 		if !signer.Keys.Enabled() {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "agent actions are not configured"})
 			c.Abort()
@@ -47,7 +50,7 @@ func AgentAuth(signer *agent.Signer, logger *zap.Logger) gin.HandlerFunc {
 // exact user, method, path and body, be unexpired and unused; then the run id is put in the request context so it travels
 // to the service (gRPC metadata) and is stored with the action (agent_run_id). Any client-sent run id is never read.
 // The action itself still runs with the user's real token and the route's own RBAC/ownership checks.
-func ConfirmProposal(signer *agent.Signer, once agent.Once, logger *zap.Logger) gin.HandlerFunc {
+func ConfirmProposal(signer *agent.Signer, once agent.Once, kill agent.Kill, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tok := c.GetHeader(ProposalHeader)
 		if tok == "" {
@@ -57,6 +60,10 @@ func ConfirmProposal(signer *agent.Signer, once agent.Once, logger *zap.Logger) 
 		deny := func(code int, msg string) {
 			c.JSON(code, gin.H{"error": msg})
 			c.Abort()
+		}
+		// a proposal made by an agent that has since been switched off is not honoured; the user can still do the action by hand
+		if refuseWhenKilled(c, kill, logger) {
+			return
 		}
 		if !signer.Keys.Enabled() {
 			deny(http.StatusServiceUnavailable, "agent actions are not configured")
@@ -109,7 +116,7 @@ func ConfirmProposal(signer *agent.Signer, once agent.Once, logger *zap.Logger) 
 // the route's own role check, ownership scoping and handlers run unchanged. The password version is checked like for a
 // JWT, so a password change also stops running agents. Anything that is not an agent token goes to userAuth untouched,
 // which rejects it if invalid. userAuth is the strict middleware, or OptionalAuth(strict) on public routes.
-func AgentOrUser(signer *agent.Signer, scopes agent.Scopes, pwd *PwdVerifier, userAuth gin.HandlerFunc, logger *zap.Logger) gin.HandlerFunc {
+func AgentOrUser(signer *agent.Signer, scopes agent.Scopes, pwd *PwdVerifier, userAuth gin.HandlerFunc, kill agent.Kill, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tok, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer ")
 		if !ok || !signer.Keys.Enabled() {
@@ -119,6 +126,9 @@ func AgentOrUser(signer *agent.Signer, scopes agent.Scopes, pwd *PwdVerifier, us
 		claims, err := signer.Verify(tok, agent.TypeAgent)
 		if err != nil {
 			userAuth(c) // not an agent token (or a bad one): the user path decides
+			return
+		}
+		if refuseWhenKilled(c, kill, logger) { // only agent tokens get here: people keep using the site
 			return
 		}
 		if !scopes.Allows(claims.Role, c.Request.Method, c.FullPath()) {
@@ -155,4 +165,17 @@ func AgentOrUser(signer *agent.Signer, scopes agent.Scopes, pwd *PwdVerifier, us
 		c.Request = c.Request.WithContext(reqctx.WithAgentRun(c.Request.Context(), claims.ID))
 		c.Next()
 	}
+}
+
+// refuseWhenKilled answers 503 and aborts when the AI kill switch is on (or cannot be read). It reports whether it did.
+func refuseWhenKilled(c *gin.Context, kill agent.Kill, logger *zap.Logger) bool {
+	st, blocked := agent.Blocked(c.Request.Context(), kill)
+	if !blocked {
+		return false
+	}
+	logger.Warn("Middleware: AI is switched off, agent request refused", zap.String("path", c.FullPath()), zap.String("by", st.By))
+	c.Header("Retry-After", "60")
+	c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai_paused", "message": "the AI assistant is temporarily switched off"})
+	c.Abort()
+	return true
 }

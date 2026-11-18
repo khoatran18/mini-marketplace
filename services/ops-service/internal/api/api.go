@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"ops-service/internal/approval"
 	"ops-service/internal/playbooks"
@@ -72,6 +73,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /incidents/{id}", a.getIncident)
 	mux.HandleFunc("POST /incidents/{id}/investigate", a.investigate)
 	mux.HandleFunc("GET /audit", a.listAudit)
+	mux.HandleFunc("POST /audit/events", human(a.recordAIKillSwitch))
 	mux.HandleFunc("GET /queries", a.listQueries)
 	mux.HandleFunc("POST /queries/{name}", a.runQuery)
 	mux.HandleFunc("GET /outbox/{service}/dead", a.outboxDead)
@@ -280,4 +282,39 @@ func (a *API) outboxDead(w http.ResponseWriter, r *http.Request) {
 	_ = a.Store.Audit(r.Context(), actor(r), "outbox.read", "service", svc, r.Header.Get("X-Request-ID"), map[string]any{"limit": limit})
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(raw)
+}
+
+// Sự kiện kiểm toán mà gateway được phép ghi qua POST /audit/events. Danh sách đóng: route này không phải chỗ ghi tuỳ ý vào sổ chỉ-thêm.
+const (
+	eventAIKillOn  = "ai_kill_switch_on"
+	eventAIKillOff = "ai_kill_switch_off"
+	killReasonMax  = 200
+)
+
+// recordAIKillSwitch ghi vào sổ kiểm toán việc người vận hành bật hoặc tắt công tắc dừng khẩn AI của gateway (Redis `ai_kill`).
+// Chỉ token đầy đủ (gateway); người thực hiện lấy từ X-Actor, không từ body. Body: {"paused": bool, "reason": "..."}.
+func (a *API) recordAIKillSwitch(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
+	var body struct {
+		Paused *bool  `json:"paused"`
+		Reason string `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Paused == nil {
+		writeErr(w, http.StatusBadRequest, "paused (true hoặc false) là bắt buộc")
+		return
+	}
+	reason := strings.TrimSpace(body.Reason)
+	if utf8.RuneCountInString(reason) > killReasonMax {
+		writeErr(w, http.StatusBadRequest, "reason tối đa 200 ký tự")
+		return
+	}
+	event := eventAIKillOff
+	if *body.Paused {
+		event = eventAIKillOn
+	}
+	if err := a.Store.Audit(r.Context(), actor(r), event, "ai", "kill_switch", r.Header.Get("X-Request-ID"), map[string]any{"reason": reason}); err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]string{"event": event})
 }

@@ -17,6 +17,7 @@ from ai_agent import metrics
 from ai_agent.config.logging import get_logger
 from ai_agent.rca.budget import Budget
 from ai_agent.rca.runner import Runner
+from ai_agent.tools.gateway import AiPaused
 
 logger = get_logger(__name__)
 DAY = 86400.0
@@ -61,6 +62,8 @@ class Watcher:
             try:
                 if await self.check_run(run) is not None:
                     woken += 1
+            except AiPaused:
+                raise  # công tắc dừng khẩn: bỏ cả tick, không phải lỗi của phiên này
             except Exception as exc:  # noqa: BLE001 - một phiên lỗi không chặn các phiên khác
                 logger.warning("rca watcher: run %s failed: %s: %s", run["id"], type(exc).__name__, str(exc)[:300])
         waiting = await self.runs.waiting()
@@ -126,6 +129,12 @@ class Watcher:
         while True:
             try:
                 await self.tick()
+            except AiPaused:
+                # Người vận hành bật công tắc dừng khẩn (gateway không cấp token hệ thống): không bắt phiên mới, không đánh thức phiên chờ.
+                # Vẫn cập nhật nhịp tim để AIRcaWatcherStalled không bắn giả; phiên chờ hết hạn theo wait_timeout_sec như thường.
+                metrics.RCA_WATCHER_TICKS.labels("paused").inc()
+                metrics.RCA_WATCHER_LAST_TICK.labels("rca").set(self.clock())
+                logger.info("rca watcher: AI is switched off at the gateway, tick skipped")
             except Exception as exc:  # noqa: BLE001
                 metrics.RCA_WATCHER_TICKS.labels("error").inc()
                 logger.warning("rca watcher tick failed: %s: %s", type(exc).__name__, str(exc)[:300])

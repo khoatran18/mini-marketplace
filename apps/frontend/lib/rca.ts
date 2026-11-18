@@ -185,3 +185,24 @@ export interface RcaEvent {
 export function getRcaEvents(token: string, runId: number, after = 0): Promise<{ status: RunStatus; items: RcaEvent[] }> {
   return apiFetch(`/ops/rca/runs/${runId}/events?after=${after}`, { method: 'GET', token });
 }
+
+/** Công tắc dừng khẩn cho mọi đường của AI (chat, tool của agent, đề xuất, RCA). Lưu ở Redis của gateway, đổi là có hiệu lực ngay. */
+export interface AiKillState {
+  paused: boolean;
+  available: boolean;
+  /** Redis không đọc được: gateway cũng từ chối agent (đóng khi không chắc). */
+  unknown?: boolean;
+  by?: string;
+  reason?: string;
+  at?: string;
+  /** Chỉ có sau khi bấm: false = công tắc đã đổi nhưng chưa ghi được vào sổ kiểm toán của ops-service (gateway vẫn có log). */
+  audited?: boolean;
+}
+
+export function getAiKill(token: string): Promise<AiKillState> {
+  return apiFetch('/ops/ai/kill', { method: 'GET', token });
+}
+
+export function setAiKill(token: string, paused: boolean, reason: string): Promise<AiKillState> {
+  return apiFetch('/ops/ai/kill', { method: 'PUT', token, body: JSON.stringify({ paused, reason }) });
+}

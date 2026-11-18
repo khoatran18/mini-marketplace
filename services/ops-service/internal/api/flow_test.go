@@ -293,3 +293,27 @@ func TestWithdrawIsCreatorOnlyAndDoesNotOpenSelfApproval(t *testing.T) {
 		t.Fatalf("review đề xuất đã rút phải 409, được %d", code)
 	}
 }
+
+// Turning the AI kill switch on or off leaves an append-only audit row: who (X-Actor, never the body), which way, and why.
+func TestAIKillSwitchIsAudited(t *testing.T) {
+	e := newEnv(t)
+	if code, out := e.call("POST", "/audit/events", "operator:5", map[string]any{"paused": true, "reason": "spend spike"}); code != 201 || out["event"] != "ai_kill_switch_on" {
+		t.Fatalf("on: %d %v", code, out)
+	}
+	if code, out := e.call("POST", "/audit/events", "admin:2", map[string]any{"paused": false}); code != 201 || out["event"] != "ai_kill_switch_off" {
+		t.Fatalf("off: %d %v", code, out)
+	}
+	code, out := e.call("GET", "/audit?subject_type=ai&subject_id=kill_switch", "admin:2", nil)
+	rows, _ := out["audit"].([]any)
+	if code != 200 || len(rows) != 2 {
+		t.Fatalf("audit: %d %v", code, out)
+	}
+	seen := map[string]string{}
+	for _, r := range rows {
+		m := r.(map[string]any)
+		seen[m["event"].(string)] = m["actor"].(string)
+	}
+	if seen["ai_kill_switch_on"] != "operator:5" || seen["ai_kill_switch_off"] != "admin:2" {
+		t.Errorf("actors: %v", seen)
+	}
+}

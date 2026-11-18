@@ -338,3 +338,50 @@ async def test_run_is_narrated_in_the_event_log_from_start_to_the_wait_for_confi
     kinds = [e["kind"] for e in await runs.events(run["id"])]
     assert kinds[0] == "step" and "hypotheses" in kinds and "draft" in kinds and kinds[-1] == "wait"
     assert (await runs.events(run["id"]))[-1]["data"]["waiting"] == "confirm"
+
+
+async def test_system_token_refused_because_ai_is_paused_raises_aipaused_not_a_generic_error():
+    import httpx
+
+    from ai_agent.tools.gateway import AiPaused, GatewayClient, GatewayError
+
+    def gw(status, body):
+        return GatewayClient("http://gw", 2.0, client=httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(status, json=body))))
+
+    with pytest.raises(AiPaused):
+        await gw(503, {"error": "ai_paused"}).system_token("k")
+    # a plain 503 (gateway down, no key) is still an ordinary error, so it is still counted and alerted on
+    with pytest.raises(GatewayError) as e:
+        await gw(503, {"error": "cannot issue the token"}).system_token("k")
+    assert not isinstance(e.value, AiPaused)
+
+
+async def test_kill_switch_pauses_the_watcher_without_a_false_stalled_alert_and_resumes_after():
+    import asyncio
+
+    from ai_agent import metrics
+    from ai_agent.tools.gateway import AiPaused
+
+    w, runs, ops, clock = make(budget=Budget(poll_interval_sec=0))
+    ops.incidents = [inc(7)]
+    paused = {"on": True}
+    real = ops.open_incidents
+
+    async def gated():
+        if paused["on"]:
+            raise AiPaused()
+        return await real()
+
+    ops.open_incidents = gated
+    before_paused, before_err = _val(metrics.RCA_WATCHER_TICKS, "paused"), _val(metrics.RCA_WATCHER_TICKS, "error")
+    clock.t += 500  # heartbeat would look stalled if the paused ticks did not refresh it
+    task = asyncio.create_task(w.run_forever())
+    await asyncio.sleep(0.05)
+    assert _val(metrics.RCA_WATCHER_TICKS, "paused") > before_paused
+    assert _val(metrics.RCA_WATCHER_TICKS, "error") == before_err, "a switched-off agent is not an error"
+    assert _val(metrics.RCA_WATCHER_LAST_TICK, "rca") == clock.t
+    assert await runs.latest(7) is None, "no investigation starts while the switch is on"
+    paused["on"] = False
+    await asyncio.sleep(0.2)
+    task.cancel()
+    assert await runs.latest(7) is not None, "the watcher resumes by itself when the switch is turned off"

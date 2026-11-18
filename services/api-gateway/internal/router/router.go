@@ -48,9 +48,13 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	signer := &agent.Signer{Keys: keyRing}
 	pwdVerifier := middleware.NewPwdVerifier(serviceConfig.ZapLogger, serviceConfig.RedisClient, pwdOpt)
 	// confirm sits after auth + role on every proposable write; without X-Agent-Proposal it does nothing (direct action).
-	confirm := middleware.ConfirmProposal(signer, agent.RedisOnce{RDB: serviceConfig.RedisClient}, serviceConfig.ZapLogger)
+	var kill agent.Kill // emergency switch for all AI paths; needs Redis (nil without it: never blocks)
+	if serviceConfig.RedisClient != nil {
+		kill = agent.RedisKill{RDB: serviceConfig.RedisClient}
+	}
+	confirm := middleware.ConfirmProposal(signer, agent.RedisOnce{RDB: serviceConfig.RedisClient}, kill, serviceConfig.ZapLogger)
 	agentOr := func(userAuth gin.HandlerFunc) gin.HandlerFunc {
-		return middleware.AgentOrUser(signer, agent.DefaultScopes, pwdVerifier, userAuth, serviceConfig.ZapLogger)
+		return middleware.AgentOrUser(signer, agent.DefaultScopes, pwdVerifier, userAuth, kill, serviceConfig.ZapLogger)
 	}
 
 	authRoute := router.Group("/auth")
@@ -138,6 +142,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	aiHandler := handler.NewAIHandler(envConfig.FeatureAIChat, envConfig.AIServiceURL, envConfig.AIStreamTimeout, serviceConfig.ZapLogger)
 	// ADR-42: agent tokens and signed action proposals, keys only here (never JWT_SECRET). No keys = both off.
 	aiHandler.Signer = signer
+	aiHandler.Kill = kill
 	if serviceConfig.RedisClient != nil {
 		aiHandler.Slots = handler.RedisSlots{RDB: serviceConfig.RedisClient} // one running chat stream per user, across replicas
 	}
@@ -145,7 +150,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		serviceConfig.ZapLogger.Info("agent token keys loaded", zap.Strings("kids", keyRing.IDs())) // ids only, never secrets
 	}
 	// Agent-token routes: limited per user (the token's subject), refusing when Redis is down (every call can cost money).
-	agentRoute := router.Group("/ai", middleware.AgentAuth(signer, serviceConfig.ZapLogger))
+	agentRoute := router.Group("/ai", middleware.AgentAuth(signer, kill, serviceConfig.ZapLogger))
 	if envConfig.AIProposalRateLimit > 0 {
 		agentRoute.Use(middleware.RateLimitByKey("ai_agent", envConfig.AIProposalRateLimit, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient, middleware.UserKey, true))
 	}
@@ -156,7 +161,7 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 	if envConfig.AIProposalRateLimit > 0 {
 		sysTok.Use(middleware.RateLimitByKey("ai_system", 10, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient, func(c *gin.Context) string { return c.ClientIP() }, true))
 	}
-	sysTok.POST("/system-token", handler.SystemTokenHandler{Signer: signer, Key: envConfig.AISystemKey, Logger: serviceConfig.ZapLogger}.Issue)
+	sysTok.POST("/system-token", handler.SystemTokenHandler{Signer: signer, Key: envConfig.AISystemKey, Logger: serviceConfig.ZapLogger, Kill: kill}.Issue)
 	aiRoute := router.Group("/ai", authenticated, middleware.AuthorizationMiddleware([]string{"buyer", "seller_admin", "seller_employee", "admin", "operator"}, serviceConfig.ZapLogger))
 	if envConfig.AIRateLimit > 0 {
 		// per IP (coarse, shared offices stay possible) and refusing when Redis is down: every chat can cost money
@@ -199,6 +204,11 @@ func SetupRouter(router *gin.Engine, h *handler.ManagerHandler, serviceConfig *c
 		// RCA (ADR-46/47): ai-agent runs the investigation; the gateway only forwards with a 60 s agent token. FEATURE_AI_OPS off = 404.
 		rca := *aiHandler
 		rca.Enabled = envConfig.FeatureAIOps
+		// Emergency switch for every AI path (chat, tool calls, proposals, RCA); lives in Redis, no deploy needed.
+		killRoute := router.Group("/ops/ai", authenticated, adminOrOperator)
+		killHandler := handler.KillHandler{Kill: kill, Ops: opsHandler, Logger: serviceConfig.ZapLogger}
+		killRoute.GET("/kill", killHandler.Get)
+		killRoute.PUT("/kill", killHandler.Put)
 		rcaRoute := router.Group("/ops/rca", authenticated, adminOrOperator)
 		if envConfig.AIUserRateLimit > 0 {
 			rcaRoute.Use(middleware.RateLimitByKey("ai_rca", envConfig.AIUserRateLimit*3, time.Minute, serviceConfig.ZapLogger, serviceConfig.RedisClient, middleware.UserKey, true))

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from '../../../components/ui/StateBlock';
+import { AiKillSwitch } from './AiKillSwitch';
 import { RunLog } from './RunLog';
 import { ApiError, listOpsIncidentsRequest } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';
@@ -114,6 +115,8 @@ export function IncidentsClient() {
   };
 
   return (
+    <div className="grid gap-4">
+    <AiKillSwitch />
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
       <section className="card grid content-start gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -192,6 +195,7 @@ export function IncidentsClient() {
           <EmptyBlock>Chọn một sự cố để xem chi tiết và việc trợ lý đã làm.</EmptyBlock>
         )}
       </section>
+    </div>
     </div>
   );
 }

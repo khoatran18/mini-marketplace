@@ -116,6 +116,38 @@ func (h *OpsHandler) forward(c *gin.Context, method, url string, body io.Reader)
 	c.Data(resp.StatusCode, "application/json", out)
 }
 
+// Append POSTs a small JSON document to ops-service and reports only whether it was accepted (no response is relayed to the caller).
+// Used for audit rows the gateway itself must leave, e.g. the AI kill switch. The caller's identity goes in X-Actor like in forward.
+func (h *OpsHandler) Append(c *gin.Context, path string, payload any) error {
+	if h == nil || h.Token == "" || h.BaseURL == "" {
+		return fmt.Errorf("ops service is not configured")
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodPost, h.BaseURL+path, bytes.NewReader(raw))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+h.Token)
+	req.Header.Set("X-Actor", fmt.Sprintf("%v:%v", c.Value("userRole"), c.Value("userID")))
+	if rid, ok := c.Get("requestID"); ok {
+		req.Header.Set("X-Request-ID", fmt.Sprint(rid))
+	}
+	resp, err := h.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("ops-service answered %d", resp.StatusCode)
+	}
+	return nil
+}
+
 // queryParams are the only inputs a named query takes (ops-service validates each against its catalog).
 var queryParams = []string{"service", "window", "request_id"}
 

@@ -34,6 +34,7 @@ type AIHandler struct {
 	Client      *http.Client  // no overall Timeout: a stream outlives any fixed request timeout
 	Logger      *zap.Logger
 	Slots       SlotStore     // one running stream per user (nil = no limit); an unreachable store refuses the chat
+	Kill        agent.Kill    // emergency switch (nil = none): while on, chat and RCA calls answer 503 ai_paused
 	Signer      *agent.Signer // ADR-42: issues the short-lived agent token sent in X-Agent-Token (nil/no keys = not sent)
 }
 
@@ -60,6 +61,9 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	}
 	if h.BaseURL == "" {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai service is not configured"})
+		return
+	}
+	if h.paused(c) {
 		return
 	}
 	body, err := io.ReadAll(io.LimitReader(c.Request.Body, aiMaxBody+1))
