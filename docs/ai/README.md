@@ -15,6 +15,7 @@
 | [11_RCA_BUILD_LOG.md](11_RCA_BUILD_LOG.md) | Nhật ký xây vòng lặp RCA (§16.26-§16.33): đồ thị LangGraph, danh tính hệ thống, lần chạy LLM thật đầu tiên, chạy thử trên Swarm, giao diện duyệt, nhật ký điều tra trực tiếp, lỗi công cụ hàng loạt và cách sửa, hủy điều tra và rút lại đề xuất |
 | [10_AGENT_QUALITY_CRITERIA.md](10_AGENT_QUALITY_CRITERIA.md) | Tiêu chí chất lượng của hệ thống agent (an toàn, bảo mật, injection, riêng tư, chi phí, đúng đắn, tin cậy...): đánh giá hiện trạng kèm mức bằng chứng, ưu nhược, đề xuất và cách kiểm |
 | [12_CRITERIA_VS_RESEARCH_NOTES.md](12_CRITERIA_VS_RESEARCH_NOTES.md) | 40 tiêu chí của hệ thống agent rút từ ghi chú nghiên cứu (harness, memory, guardrails, eval, độ tin cậy, LangGraph...), so từng mục với `ai-agent`: có / một phần / chưa / không cần và vì sao, thứ tự nên làm |
+| [13_AGENT_AUTH_ARCHITECTURES.md](13_AGENT_AUTH_ARCHITECTURES.md) | Các kiểu kiến trúc phân quyền cho agent (token người dùng, tài khoản dịch vụ, IdP + OBO, MCP gateway, API gateway, policy engine), vì sao mình chọn gateway thay MCP/IdP, ưu nhược, công tắc dừng khẩn có ai làm không và các vụ việc liên quan |
 | [05_AI_DRAFT_ORIGINAL.md](05_AI_DRAFT_ORIGINAL.md) | Bản nháp ý tưởng ban đầu (hợp đồng tool, SSE, hệ gợi ý, RAG). Chỉ là điểm xuất phát; khi mâu thuẫn thì các file 01–04 mới hơn |
 
 Bộ dữ liệu để kiểm chứng từng scope: [../dataset/README.md](../dataset/README.md).
