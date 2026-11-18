@@ -19,9 +19,6 @@ const ProposalHeader = "X-Agent-Proposal"
 // until the user confirms it with their own, fully checked token.
 func AgentAuth(signer *agent.Signer, kill agent.Kill, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if refuseWhenKilled(c, kill, logger) {
-			return
-		}
 		if !signer.Keys.Enabled() {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "agent actions are not configured"})
 			c.Abort()
@@ -38,6 +35,9 @@ func AgentAuth(signer *agent.Signer, kill agent.Kill, logger *zap.Logger) gin.Ha
 			logger.Warn("Middleware: invalid agent token")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
+			return
+		}
+		if refuseWhenKilled(c, kill, logger, agent.ScopeOfClaims(claims)) {
 			return
 		}
 		c.Set("agentClaims", claims)
@@ -62,7 +62,9 @@ func ConfirmProposal(signer *agent.Signer, once agent.Once, kill agent.Kill, log
 			c.Abort()
 		}
 		// a proposal made by an agent that has since been switched off is not honoured; the user can still do the action by hand
-		if refuseWhenKilled(c, kill, logger) {
+		scope, _ := c.Get("userRole")
+		role, _ := scope.(string)
+		if refuseWhenKilled(c, kill, logger, agent.ScopeOfRole(role)) {
 			return
 		}
 		if !signer.Keys.Enabled() {
@@ -128,7 +130,7 @@ func AgentOrUser(signer *agent.Signer, scopes agent.Scopes, pwd *PwdVerifier, us
 			userAuth(c) // not an agent token (or a bad one): the user path decides
 			return
 		}
-		if refuseWhenKilled(c, kill, logger) { // only agent tokens get here: people keep using the site
+		if refuseWhenKilled(c, kill, logger, agent.ScopeOfClaims(claims)) { // only agent tokens get here: people keep using the site
 			return
 		}
 		if !scopes.Allows(claims.Role, c.Request.Method, c.FullPath()) {
@@ -168,12 +170,12 @@ func AgentOrUser(signer *agent.Signer, scopes agent.Scopes, pwd *PwdVerifier, us
 }
 
 // refuseWhenKilled answers 503 and aborts when the AI kill switch is on (or cannot be read). It reports whether it did.
-func refuseWhenKilled(c *gin.Context, kill agent.Kill, logger *zap.Logger) bool {
-	st, blocked := agent.Blocked(c.Request.Context(), kill)
+func refuseWhenKilled(c *gin.Context, kill agent.Kill, logger *zap.Logger, scope string) bool {
+	st, blocked := agent.Blocked(c.Request.Context(), kill, scope)
 	if !blocked {
 		return false
 	}
-	logger.Warn("Middleware: AI is switched off, agent request refused", zap.String("path", c.FullPath()), zap.String("by", st.By))
+	logger.Warn("Middleware: AI is switched off, agent request refused", zap.String("path", c.FullPath()), zap.String("scope", st.Scope), zap.String("by", st.By))
 	c.Header("Retry-After", "60")
 	c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai_paused", "message": "the AI assistant is temporarily switched off"})
 	c.Abort()

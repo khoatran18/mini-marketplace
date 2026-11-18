@@ -166,7 +166,7 @@ func TestAIKillSwitchAuditValidationAndScope(t *testing.T) {
 	if c := post("nope", `{"paused":true}`); c != 401 {
 		t.Errorf("wrong token: %d", c)
 	}
-	for name, body := range map[string]string{"missing paused": `{}`, "not json": `x`, "reason too long": `{"paused":true,"reason":"` + strings.Repeat("x", 201) + `"}`} {
+	for name, body := range map[string]string{"missing paused": `{}`, "not json": `x`, "unknown scope": `{"paused":true,"scope":"everyone"}`, "reason too long": `{"paused":true,"reason":"` + strings.Repeat("x", 201) + `"}`} {
 		if c := post("full-token", body); c != 400 {
 			t.Errorf("%s: %d, want 400", name, c)
 		}

@@ -187,8 +187,20 @@ export function getRcaEvents(token: string, runId: number, after = 0): Promise<{
 }
 
 /** Công tắc dừng khẩn cho mọi đường của AI (chat, tool của agent, đề xuất, RCA). Lưu ở Redis của gateway, đổi là có hiệu lực ngay. */
+export type AiKillScope = 'buyer' | 'seller' | 'admin' | 'operator' | 'rca';
+
+/** Công tắc riêng của một phạm vi (chat 4 vai + RCA). `paused` của AiKillState vẫn là công tắc TOÀN CỤC; bật toàn cục thì mọi phạm vi đều dừng. */
+export interface AiKillScopeState {
+  paused: boolean;
+  by?: string;
+  reason?: string;
+  at?: string;
+}
+
 export interface AiKillState {
   paused: boolean;
+  /** Có khi GET; vắng khi gateway cũ hoặc Redis lỗi. */
+  scopes?: Partial<Record<AiKillScope, AiKillScopeState>>;
   available: boolean;
   /** Redis không đọc được: gateway cũng từ chối agent (đóng khi không chắc). */
   unknown?: boolean;
@@ -203,6 +215,7 @@ export function getAiKill(token: string): Promise<AiKillState> {
   return apiFetch('/ops/ai/kill', { method: 'GET', token });
 }
 
-export function setAiKill(token: string, paused: boolean, reason: string): Promise<AiKillState> {
-  return apiFetch('/ops/ai/kill', { method: 'PUT', token, body: JSON.stringify({ paused, reason }) });
+/** Không truyền scope = công tắc toàn cục (như trước). Với scope, gateway chỉ trả trạng thái của phạm vi đó, nên gọi lại getAiKill để có đủ. */
+export function setAiKill(token: string, paused: boolean, reason: string, scope?: AiKillScope): Promise<AiKillState> {
+  return apiFetch('/ops/ai/kill', { method: 'PUT', token, body: JSON.stringify(scope ? { paused, reason, scope } : { paused, reason }) });
 }

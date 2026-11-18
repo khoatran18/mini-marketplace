@@ -15,8 +15,8 @@ func TestRealPlaybooksLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 	all := lib.List("")
-	if len(all) != 10 {
-		t.Fatalf("want 10 playbooks, got %d", len(all))
+	if len(all) != 11 {
+		t.Fatalf("want 11 playbooks, got %d", len(all))
 	}
 	for _, s := range all {
 		p, ok := lib.Get(s.ID)

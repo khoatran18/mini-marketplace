@@ -654,7 +654,7 @@ Công tắc là một khoá Redis (`ai_kill`), đổi bằng `PUT /ops/ai/kill` 
 | `SystemTokenHandler` | `internal/handler/ai_rca.go` | `POST /ai/system-token` | cấp token hệ thống cho watcher RCA |
 | `ConfirmProposal` | `internal/middleware/agent.go` | người dùng bấm Xác nhận đề xuất của agent | thực thi đề xuất do agent tạo |
 
-Rủi ro còn lại: route mới cho agent mà không đi qua các chỗ trên sẽ lách qua công tắc. Hiện chưa có test tự động bắt trường hợp này (đề xuất: test quét bảng route). Chi tiết: `docs/ai/11_RCA_BUILD_LOG.md` §16.42, runbook §19d.
+Rủi ro còn lại: route mới cho agent mà không đi qua các chỗ trên sẽ lách qua công tắc. Test `TestAIKillSwitchCoversEveryRoute` (gateway) quét toàn bộ route với token agent mỗi role và token hệ thống, nên route nối sai cách sẽ hỏng test. Công tắc còn chia 5 phạm vi riêng (`buyer`, `seller`, `admin`, `operator`, `rca`) cạnh công tắc toàn cục (runbook §19d mục 6). Chi tiết: `docs/ai/11_RCA_BUILD_LOG.md` §16.42, runbook §19d.
 
 ---
 

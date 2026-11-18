@@ -47,7 +47,7 @@ func (h SystemTokenHandler) Issue(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid system key"})
 		return
 	}
-	if st, blocked := agent.Blocked(c.Request.Context(), h.Kill); blocked {
+	if st, blocked := agent.Blocked(c.Request.Context(), h.Kill, agent.ScopeRCA); blocked {
 		h.Logger.Warn("SystemTokenHandler: AI is switched off, no system token", zap.String("by", st.By))
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai_paused"})
 		return
@@ -75,7 +75,7 @@ func (h *AIHandler) Forward(method, upstream string, queryKeys ...string) gin.Ha
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai service is not configured"})
 			return
 		}
-		if h.paused(c) {
+		if h.paused(c, agent.ScopeRCA) {
 			return
 		}
 		path := strings.ReplaceAll(upstream, ":id", url.PathEscape(c.Param("id")))

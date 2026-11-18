@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"api-gateway/internal/agent"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -140,5 +141,60 @@ func TestAgentOrUserSystemToken(t *testing.T) {
 	e2.ServeHTTP(w2, req)
 	if w2.Code != http.StatusForbidden {
 		t.Errorf("system token outside /ops: %d, want 403", w2.Code)
+	}
+}
+
+// Confirming an agent's proposal follows the switch of the role in the user's JWT: a stopped buyer scope refuses a buyer's proposal,
+// a seller's proposal still goes through, the global switch refuses both, and without the proposal header nothing is checked (a person
+// can always do the action by hand).
+func TestConfirmProposalFollowsTheScopeSwitch(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	ring, _ := agent.ParseKeyRing("k1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-A")
+	signer := &agent.Signer{Keys: ring}
+	kill := agent.RedisKill{RDB: rdb}
+	asRole := func(role string) gin.HandlerFunc { // stands in for the JWT middleware
+		return func(c *gin.Context) { c.Set("userID", uint64(42)); c.Set("userRole", role); c.Next() }
+	}
+	e := gin.New()
+	confirm := ConfirmProposal(signer, agent.RedisOnce{RDB: rdb}, kill, zap.NewNop())
+	e.POST("/buyer/x", asRole("buyer"), confirm, func(c *gin.Context) { c.Status(200) })
+	e.POST("/seller/x", asRole("seller_admin"), confirm, func(c *gin.Context) { c.Status(200) })
+	send := func(path string, proposal bool) int {
+		req := httptest.NewRequest("POST", path, nil)
+		if proposal {
+			p, _, err := signer.SignProposal(42, "run-12345678", "POST", path, agent.BodyHash(nil), "x", time.Minute)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set(ProposalHeader, p)
+		}
+		w := httptest.NewRecorder()
+		e.ServeHTTP(w, req)
+		return w.Code
+	}
+	ctx := context.Background()
+	if send("/buyer/x", true) != 200 || send("/seller/x", true) != 200 {
+		t.Fatal("switch off: both proposals must be honoured")
+	}
+	if err := kill.Set(ctx, agent.ScopeBuyer, agent.KillState{By: "operator:1"}); err != nil {
+		t.Fatal(err)
+	}
+	if c := send("/buyer/x", true); c != http.StatusServiceUnavailable {
+		t.Errorf("buyer scope paused, buyer proposal: %d, want 503", c)
+	}
+	if c := send("/seller/x", true); c != 200 {
+		t.Errorf("buyer scope paused, seller proposal: %d, want 200", c)
+	}
+	if c := send("/buyer/x", false); c != 200 {
+		t.Errorf("a direct action by the person must not be blocked: %d", c)
+	}
+	_ = kill.Clear(ctx, agent.ScopeBuyer)
+	if err := kill.Set(ctx, agent.ScopeAll, agent.KillState{By: "admin:1"}); err != nil {
+		t.Fatal(err)
+	}
+	if send("/buyer/x", true) != 503 || send("/seller/x", true) != 503 {
+		t.Errorf("global switch must refuse both")
 	}
 }

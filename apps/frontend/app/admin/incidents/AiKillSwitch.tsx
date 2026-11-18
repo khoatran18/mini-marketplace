@@ -4,10 +4,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import { ApiError } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';
-import { getAiKill, setAiKill, type AiKillState } from '../../../lib/rca';
+import { getAiKill, setAiKill, type AiKillScope, type AiKillState } from '../../../lib/rca';
+
+const SCOPES: { id: AiKillScope; label: string }[] = [
+  { id: 'buyer', label: 'Chat người mua' },
+  { id: 'seller', label: 'Chat người bán' },
+  { id: 'admin', label: 'Chat admin' },
+  { id: 'operator', label: 'Chat operator' },
+  { id: 'rca', label: 'Điều tra RCA' },
+];
 
 /**
  * Nút dừng khẩn: tắt ngay mọi đường của AI (chat mới, tool của agent, đề xuất, bộ theo dõi RCA) mà không cần deploy.
+ * Dưới đó là 5 công tắc riêng (chat 4 vai và RCA) để chỉ dừng đúng phần nghi bị lừa; công tắc toàn cục thắng mọi công tắc riêng.
  * Người dùng vẫn mua bán bình thường. Phiên chat/điều tra đang chạy sẽ lỗi ở lần gọi kế tiếp. Mỗi lần bật/tắt được ghi vào sổ kiểm toán của ops-service (kèm log gateway).
  */
 export function AiKillSwitch() {
@@ -38,6 +47,22 @@ export function AiKillSwitch() {
     setError('');
     try {
       setState(await setAiKill((await getValidAccessToken()) ?? '', paused, reason.trim()));
+      if (!paused) setReason('');
+    } catch (err) {
+      setError(err instanceof ApiError ? `${err.message} (HTTP ${err.status})` : 'Không đổi được công tắc.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const flipScope = async (scope: AiKillScope, label: string, paused: boolean) => {
+    if (paused && !window.confirm(`Tắt ${label.toLowerCase()} ngay bây giờ? Các phạm vi khác vẫn chạy.`)) return;
+    setBusy(true);
+    setError('');
+    try {
+      const token = (await getValidAccessToken()) ?? '';
+      await setAiKill(token, paused, reason.trim(), scope);
+      setState(await getAiKill(token));
       if (!paused) setReason('');
     } catch (err) {
       setError(err instanceof ApiError ? `${err.message} (HTTP ${err.status})` : 'Không đổi được công tắc.');
@@ -95,6 +120,33 @@ export function AiKillSwitch() {
           {paused ? 'Bật lại AI' : 'Tắt khẩn AI'}
         </button>
       </div>
+      {state?.scopes && !state.unknown ? (
+        <ul className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="Công tắc theo phạm vi">
+          {SCOPES.map(({ id, label }) => {
+            const sc = state.scopes?.[id];
+            const off = sc?.paused === true;
+            return (
+              <li key={id} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${off ? 'border-danger' : ''}`}>
+                <div className="grid">
+                  <span className="text-xs font-semibold">{label}</span>
+                  <span className="text-xs text-muted">
+                    {paused ? 'dừng (toàn cục)' : off ? `TẮT${sc?.by ? ` bởi ${sc.by}` : ''}${sc?.reason ? `: ${sc.reason}` : ''}` : 'đang chạy'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy || paused}
+                  onClick={() => void flipScope(id, label, !off)}
+                  className={`btn h-8 px-2 text-xs ${off ? '' : 'text-danger'}`}
+                  aria-label={`${off ? 'Bật lại' : 'Tắt'} ${label}`}
+                >
+                  {off ? 'Bật lại' : 'Tắt'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
     </section>
   );
 }

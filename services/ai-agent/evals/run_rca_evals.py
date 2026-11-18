@@ -18,28 +18,37 @@ MAX_CALLS_PER_CASE = 12  # trần lượt mô hình mỗi case (rca.max_model_ca
 
 
 async def run_all(args) -> list[dict]:
+    if args.live:
+        import evalkit
+        evalkit.load_env()  # khoá từ deploy/.env (chỉ nạp biến chưa có), giống run_evals.py
     cases = [c for c in rcakit.load_cases() if (not args.ids or c["id"] in args.ids)]
-    rows = []
-    for c in [c for _ in range(max(1, args.repeat)) for c in cases]:  # lặp k lần cả bộ (ca nào cũng chạy k lần)
-        world = rcakit.World(c)
-        started = time.monotonic()
-        if args.oracle:
-            brain = rcakit.OracleBrain(c, world)
-        elif args.live:
-            brain = await live_brain(world, c)
-        else:
-            raise SystemExit("cần --oracle hoặc --live")
-        try:
-            run = await rcakit.run_case(c, world, brain)
-            res = rcakit.score(c, run)
-            row = {"id": c["id"], "ok": res.ok, "reasons": res.reasons, "checks": res.checks, "model_calls": run.values.get("model_calls"),
-                   "input_tokens": run.values.get("input_tokens", 0), "output_tokens": run.values.get("output_tokens", 0),
-                   "queries": run.values.get("queries"), "outcome": run.values.get("outcome"), "drafts": [(d["action_id"], d["params"]) for d in run.drafts],
-                   "hypotheses": [h["cause"] for h in run.values.get("hypotheses", [])], "seconds": round(time.monotonic() - started, 1)}
-        except Exception as exc:  # noqa: BLE001
-            row = {"id": c["id"], "ok": False, "reasons": [f"ngoại lệ: {type(exc).__name__}: {exc}"], "checks": {}}
-        rows.append(row)
-        print(f"{'PASS' if row['ok'] else 'FAIL'} {c['id']}" + ("" if row["ok"] else f"  <- {'; '.join(row['reasons'])[:200]}"), flush=True)
+    todo = [c for _ in range(max(1, args.repeat)) for c in cases]  # lặp k lần cả bộ (ca nào cũng chạy k lần)
+    rows: list[dict] = []
+    sem = asyncio.Semaphore(max(1, args.concurrency))  # mỗi ca có World + Brain riêng nên chạy song song được
+
+    async def one(c: dict) -> None:
+        async with sem:
+            world = rcakit.World(c)
+            started = time.monotonic()
+            if args.oracle:
+                brain = rcakit.OracleBrain(c, world)
+            elif args.live:
+                brain = await live_brain(world, c)
+            else:
+                raise SystemExit("cần --oracle hoặc --live")
+            try:
+                run = await rcakit.run_case(c, world, brain)
+                res = rcakit.score(c, run)
+                row = {"id": c["id"], "ok": res.ok, "reasons": res.reasons, "checks": res.checks, "model_calls": run.values.get("model_calls"),
+                       "input_tokens": run.values.get("input_tokens", 0), "output_tokens": run.values.get("output_tokens", 0),
+                       "queries": run.values.get("queries"), "outcome": run.values.get("outcome"), "drafts": [(d["action_id"], d["params"]) for d in run.drafts],
+                       "hypotheses": [h["cause"] for h in run.values.get("hypotheses", [])], "seconds": round(time.monotonic() - started, 1)}
+            except Exception as exc:  # noqa: BLE001
+                row = {"id": c["id"], "ok": False, "reasons": [f"ngoại lệ: {type(exc).__name__}: {exc}"], "checks": {}}
+            rows.append(row)
+            print(f"{'PASS' if row['ok'] else 'FAIL'} {c['id']}" + ("" if row["ok"] else f"  <- {'; '.join(row['reasons'])[:200]}"), flush=True)
+
+    await asyncio.gather(*(one(c) for c in todo))
     return rows
 
 
@@ -65,6 +74,8 @@ def main() -> int:
     ap.add_argument("--oracle", action="store_true", help="Brain đáp án, không LLM (kiểm bộ eval)")
     ap.add_argument("--ids", nargs="+")
     ap.add_argument("--repeat", type=int, default=1, help="chạy mỗi ca k lần để thấy độ dao động (--live: tốn k lần chi phí)")
+    ap.add_argument("--concurrency", type=int, default=1, help="số ca chạy song song (mặc định 1 = tuần tự). Nhà cung cấp có thể trả 429")
+    ap.add_argument("--require-model", metavar="MODEL_ID", help="từ chối chạy nếu llm.roles.rca dùng mô hình khác MODEL_ID (chốt chặn tránh gọi nhầm mô hình trả tiền)")
     ap.add_argument("--out")
     args = ap.parse_args()
     cases = rcakit.load_cases()
@@ -80,6 +91,14 @@ def main() -> int:
             print(f"  {c['id']:34} playbook={c['expect']['playbook']}  hành động={(c['expect'].get('action') or c['expect']['action_any'][0])['id']}")
         print("Chưa gọi gì. Thêm --oracle (không LLM) hoặc --live (gọi mô hình thật).")
         return 0
+    if args.require_model and args.live:
+        from ai_agent.config import load_config
+        cfg = load_config("dev", rcakit.HERE.parent / "configs")
+        data = cfg._data["llm"]
+        wrong = {r: data["profiles"][p].get("model_id") for r, p in data["roles"].items() if data["profiles"][p].get("model_id") != args.require_model}
+        if wrong:
+            print(f"DỪNG: --require-model {args.require_model} nhưng role dùng mô hình khác: {wrong}. Chưa gọi gì.", file=sys.stderr)
+            return 2
     rows = asyncio.run(run_all(args))
     ok = sum(1 for r in rows if r["ok"])
     print(f"\ntổng: {ok}/{len(rows)} đạt")

@@ -63,7 +63,9 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai service is not configured"})
 		return
 	}
-	if h.paused(c) {
+	role, _ := c.Get("userRole")
+	roleName, _ := role.(string)
+	if h.paused(c, agent.ScopeOfRole(roleName)) {
 		return
 	}
 	body, err := io.ReadAll(io.LimitReader(c.Request.Body, aiMaxBody+1))

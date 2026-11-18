@@ -292,15 +292,22 @@ const (
 )
 
 // recordAIKillSwitch ghi vào sổ kiểm toán việc người vận hành bật hoặc tắt công tắc dừng khẩn AI của gateway (Redis `ai_kill`).
-// Chỉ token đầy đủ (gateway); người thực hiện lấy từ X-Actor, không từ body. Body: {"paused": bool, "reason": "..."}.
+// Chỉ token đầy đủ (gateway); người thực hiện lấy từ X-Actor, không từ body. Body: {"paused": bool, "reason": "...", "scope": "buyer|seller|admin|operator|rca"}; không có scope = công tắc toàn cục.
 func (a *API) recordAIKillSwitch(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
 	var body struct {
 		Paused *bool  `json:"paused"`
 		Reason string `json:"reason"`
+		Scope  string `json:"scope"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Paused == nil {
 		writeErr(w, http.StatusBadRequest, "paused (true hoặc false) là bắt buộc")
+		return
+	}
+	switch body.Scope {
+	case "", "buyer", "seller", "admin", "operator", "rca":
+	default:
+		writeErr(w, http.StatusBadRequest, "scope phải là buyer, seller, admin, operator hoặc rca (bỏ trống = toàn cục)")
 		return
 	}
 	reason := strings.TrimSpace(body.Reason)
@@ -312,7 +319,11 @@ func (a *API) recordAIKillSwitch(w http.ResponseWriter, r *http.Request) {
 	if *body.Paused {
 		event = eventAIKillOn
 	}
-	if err := a.Store.Audit(r.Context(), actor(r), event, "ai", "kill_switch", r.Header.Get("X-Request-ID"), map[string]any{"reason": reason}); err != nil {
+	target, details := "kill_switch", map[string]any{"reason": reason}
+	if body.Scope != "" {
+		target, details["scope"] = "kill_switch:"+body.Scope, body.Scope
+	}
+	if err := a.Store.Audit(r.Context(), actor(r), event, "ai", target, r.Header.Get("X-Request-ID"), details); err != nil {
 		writeErr(w, http.StatusInternalServerError, "internal error")
 		return
 	}

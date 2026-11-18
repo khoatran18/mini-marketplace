@@ -820,3 +820,132 @@ func TestAIKillSwitchCoversEveryRoute(t *testing.T) {
 	}
 	t.Logf("%d routes x %d tokens scanned, %d agent-reachable probes all answered 503 ai_paused", len(e.Routes()), len(toks), reachable)
 }
+
+// The switch per scope: buyer, seller, admin, operator (chat and the agent's own calls of that role) and rca (the watcher's system token
+// and the /ops/rca routes) each have their own key; the global key still stops everything. A scope never stops another one, in particular a
+// stopped operator chat does not stop the RCA watcher (its system token has role "operator" but belongs to rca) and the other way round.
+func TestAIKillSwitchPerScope(t *testing.T) {
+	keys := "k1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-A"
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("event: done\ndata: {}\n\n"))
+	}))
+	defer up.Close()
+	e, _ := newEngineRedis(t, func(c *config.EnvConfig) {
+		c.AgentKeys, c.AISystemKey, c.FeatureAIChat, c.AIServiceURL, c.AIStreamTimeout = keys, sysKey, true, up.URL, 5*time.Second
+	})
+	ring, _ := agent.ParseKeyRing(keys)
+	signer := &agent.Signer{Keys: ring}
+	chat := func(role string) int {
+		return requestWith(e, "POST", "/ai/chat", token(t, role), nil, `{"message":"hi"}`).Code
+	}
+	tools := func(role string) int { // the agent's own call with an agent token of that role
+		tok, _, err := signer.IssueAgentToken(1, "u", role, 0, time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return requestWith(e, "GET", "/ai/tools", tok, nil, "").Code
+	}
+	system := func() int { // the RCA watcher: system token minted by the gateway, then used like an agent token
+		return requestWith(e, "POST", "/ai/system-token", "", map[string]string{"X-System-Key": sysKey}, "").Code
+	}
+	sysTools := func() int {
+		tok, _, err := signer.IssueSystemToken("rca-watcher", time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return requestWith(e, "GET", "/ai/tools", tok, nil, "").Code
+	}
+	put := func(body string) *httptest.ResponseRecorder {
+		return requestWith(e, "PUT", "/ops/ai/kill", token(t, "operator"), nil, body)
+	}
+	roles := []string{"buyer", "seller_admin", "seller_employee", "admin", "operator"}
+	allUp := func(except ...string) {
+		t.Helper()
+		skip := map[string]bool{}
+		for _, s := range except {
+			skip[s] = true
+		}
+		for _, r := range roles {
+			if skip[r] {
+				continue
+			}
+			if c := chat(r); c != 200 {
+				t.Errorf("chat of %s: %d, want 200", r, c)
+			}
+			if c := tools(r); c != 200 {
+				t.Errorf("agent token of %s: %d, want 200", r, c)
+			}
+		}
+		if !skip["rca"] && (system() != 200 || sysTools() != 200) {
+			t.Errorf("rca must be running: system-token %d, system tools %d", system(), sysTools())
+		}
+	}
+	allUp()
+
+	if w := put(`{"paused":true,"scope":"everyone"}`); w.Code != http.StatusBadRequest {
+		t.Errorf("unknown scope: %d, want 400", w.Code)
+	}
+
+	// seller: both seller roles stop, nobody else does
+	if w := put(`{"paused":true,"scope":"seller","reason":"bad prompt"}`); w.Code != 200 || !strings.Contains(w.Body.String(), `"scope":"seller"`) || !strings.Contains(w.Body.String(), `"paused":true`) {
+		t.Fatalf("seller on: %d %s", w.Code, w.Body.String())
+	}
+	for _, r := range []string{"seller_admin", "seller_employee"} {
+		if chat(r) != 503 || tools(r) != 503 {
+			t.Errorf("%s while the seller scope is paused: chat %d tools %d, want 503", r, chat(r), tools(r))
+		}
+	}
+	allUp("seller_admin", "seller_employee")
+	if w := requestWith(e, "GET", "/ops/ai/kill", token(t, "admin"), nil, ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"paused":false`) ||
+		!strings.Contains(w.Body.String(), `"seller":{"at":`) || !strings.Contains(w.Body.String(), `"reason":"bad prompt"`) {
+		t.Errorf("status: %d %s (global stays false, the seller entry says why)", w.Code, w.Body.String())
+	}
+
+	// operator chat vs the RCA watcher are independent
+	if w := put(`{"paused":true,"scope":"operator"}`); w.Code != 200 {
+		t.Fatalf("operator on: %d", w.Code)
+	}
+	if chat("operator") != 503 || tools("operator") != 503 {
+		t.Errorf("operator chat must be stopped")
+	}
+	if system() != 200 || sysTools() != 200 {
+		t.Errorf("a stopped operator chat must not stop the RCA watcher: system-token %d tools %d", system(), sysTools())
+	}
+	if w := put(`{"paused":false,"scope":"operator"}`); w.Code != 200 {
+		t.Fatalf("operator off: %d", w.Code)
+	}
+	if w := put(`{"paused":true,"scope":"rca"}`); w.Code != 200 {
+		t.Fatalf("rca on: %d", w.Code)
+	}
+	if system() != 503 || sysTools() != 503 {
+		t.Errorf("rca paused: system-token %d tools %d, want 503", system(), sysTools())
+	}
+	if chat("operator") != 200 || tools("operator") != 200 {
+		t.Errorf("a stopped RCA must not stop the operator chat")
+	}
+	if w := put(`{"paused":false,"scope":"rca"}`); w.Code != 200 {
+		t.Fatalf("rca off: %d", w.Code)
+	}
+
+	// the global key wins over scope keys, and switching it off does not clear a scope that was on
+	if w := put(`{"paused":true}`); w.Code != 200 {
+		t.Fatalf("global on: %d", w.Code)
+	}
+	if chat("buyer") != 503 || system() != 503 {
+		t.Errorf("global on must stop every scope")
+	}
+	if w := put(`{"paused":false}`); w.Code != 200 {
+		t.Fatalf("global off: %d", w.Code)
+	}
+	if chat("seller_admin") != 503 {
+		t.Errorf("seller stays paused after the global switch goes off")
+	}
+	if chat("buyer") != 200 || system() != 200 {
+		t.Errorf("the others come back with the global switch")
+	}
+	if w := put(`{"paused":false,"scope":"seller"}`); w.Code != 200 {
+		t.Fatalf("seller off: %d", w.Code)
+	}
+	allUp()
+}
