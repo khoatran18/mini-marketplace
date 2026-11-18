@@ -306,6 +306,25 @@ Các luồng khác: Client Credentials (máy gọi máy, không có người dù
 
 Giống về ý (access + refresh, JWT, hết hạn ngắn) nhưng **không tuân thủ chuẩn**. Với một ứng dụng bên thứ nhất, đây là cách làm rất phổ biến và ổn. OAuth/OIDC chỉ trở thành bắt buộc khi có **bên thứ ba** (client ngoài, SSO, đăng nhập bằng Google). Đường nâng cấp thực tế không phải tự viết: dùng Keycloak/Auth0/Zitadel làm authorization server rồi cho gateway kiểm token bằng JWKS.
 
+### 12.6 LangGraph: DB hay checkpoint, và khi nào thật sự cần
+
+Cả hai, mỗi thứ một việc (`services/ai-agent/src/ai_agent/rca/`):
+- **DB ứng dụng** `ai_rca_runs` (`runs.py`): trạng thái dễ đọc `running | waiting_confirm | waiting_approval | done | error` và bản nháp. UI và watcher đọc bảng này.
+- **Checkpoint của LangGraph** (`checkpoint.py`, cũng ở Postgres): trạng thái bên trong đồ thị (bằng chứng, giả thuyết, đang ở bước nào). `interrupt()` ở `wait_confirm` và `wait_approval` (`graph.py`) dừng đồ thị, không tiến trình nào chạy; khi người xác nhận, `runner.py` gọi lại với cùng `thread_id` và đồ thị chạy tiếp đúng chỗ, kể cả sau khi restart.
+
+Không dùng LangGraph vẫn làm được: lưu trạng thái vào `ai_rca_runs` và tự viết máy trạng thái "đang ở bước nào, làm gì tiếp". LangGraph chỉ đỡ phải tự viết và kiểm phần dừng/tiếp tục đó.
+
+Khi nào thật sự cần họ nhà Lang:
+- quy trình **nhiều bước có nhánh và vòng lặp**, phải **dừng hàng giờ hoặc hàng ngày** chờ người hoặc sự kiện ngoài rồi **tiếp tục đúng chỗ** sau restart;
+- cần phát lại, quay về một bước cũ để gỡ lỗi, chạy nhánh song song, hoặc nhiều agent chuyển việc cho nhau;
+- muốn dùng sẵn tracing/đánh giá của hệ sinh thái (LangSmith).
+
+Không cần khi chỉ là một vòng hỏi, gọi tool, trả lời (chat của mình) và việc xác nhận nằm ngoài vòng lặp (gateway ký proposal, UI xác nhận).
+
+### 12.7 ABAC liên quan agent không
+
+Chủ yếu là việc của hệ thống, agent không liên quan. Service kiểm luật theo dữ liệu (sở hữu, hạn mức, trạng thái đơn) **cho mọi người gọi như nhau**, dù là UI hay agent. Agent chỉ gọi; luật nằm sau cửa và chạy khi hành động thật được thực hiện (với việc ghi là lúc người xác nhận), nên agent không có đường nào bỏ qua luật. Quan hệ duy nhất: thêm tool hoặc hành động ghi cho agent thì phải chắc luật tương ứng đã có ở service, vì agent không tự kiểm hộ.
+
 ## 13. Nguồn tra cứu (2026-11-18)
 
 - Kill switch: [dev.to/waxell](https://dev.to/waxell/the-kill-switch-problem-how-to-stop-an-ai-agent-thats-gone-wrong-224a), [TechTarget: vì sao cần](https://www.techtarget.com/ai/tip/Why-businesses-need-an-AI-agent-kill-switch), [TechTarget: có thể là ngõ cụt](https://www.techtarget.com/cybersecurity/news/366651197/Pulling-the-plug-Why-the-AI-kill-switch-might-be-a-dead-end?amp=1), [CSO: CrowdStrike](https://www.csoonline.com/article/4244509/crowdstrike-launches-ai-kill-switch-to-shut-down-rogue-agents.html), [Axios](https://axios.com/2026/09/10/ai-doomsday-doom-fear-kill-switch), [hackernoon](https://hackernoon.com/your-kill-switch-may-not-stop-your-agent).

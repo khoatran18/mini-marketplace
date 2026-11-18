@@ -142,6 +142,19 @@ LangSmith (của LangChain) cung cấp: tracing từng lần chạy (prompt, too
 
 Kết luận (ADR-49): không thêm MCP server hay Evidence Gateway tách riêng; làm lớp bằng chứng bên trong ai-agent, MCP chỉ là lớp bọc mỏng chỉ đọc nếu cần trình diễn.
 
+### 6.2 Họ nhà Lang trong `services/ai-agent`: dùng gói nào, ở đâu (2026-11-18)
+
+Đếm theo các dòng `import` trong `services/ai-agent/src` (bản khoá: `langchain` 1.4.4, `langchain-core` 1.6.9, `langgraph` 1.2.22, `langgraph-checkpoint-postgres` 3.2.1, `langchain-openai`, `langchain-anthropic`):
+
+| Gói | Dùng ở đâu | Dùng để làm gì |
+|---|---|---|
+| `langchain-core` (nhiều nhất, 11 file) | `llm/` (giao diện `BaseChatModel`, callback đo token, mô hình giả), `tools/` (`StructuredTool`), `runtime/chat.py` và `sse_adapter.py`, `rca/brain.py` (kiểu tin nhắn) | Nền: kiểu tin nhắn, mô hình chat, công cụ |
+| `langchain-openai`, `langchain-anthropic` | `llm/providers/` | Bộ nối với nhà cung cấp mô hình |
+| `langchain` (tầng cao, 3 chỗ) | `runtime/agent_factory.py` (`create_agent`: vòng lặp agent của chat), `guard/limits.py` (giới hạn số lượt gọi mô hình/tool), `llm/resilience.py` (`AgentMiddleware`) | Vòng tool-calling và middleware |
+| `langgraph` (4 file, chỉ ở RCA) | `rca/graph.py` (`StateGraph`, `interrupt`), `rca/runner.py` (`Command`), `rca/checkpoint.py` (checkpointer Postgres/bộ nhớ) | Đồ thị nhiều bước có dừng/tiếp tục |
+
+Kết luận: chủ yếu là **`langchain-core` làm nền**; phần "agent" của chat dùng **`create_agent` của `langchain`** (theo hiểu biết của mình, tầng này chạy trên runtime LangGraph, chưa kiểm trong mã nguồn thư viện); **`langgraph` dùng trực tiếp chỉ ở RCA**. Không dùng LangSmith. Chat một mình có thể thay bằng vòng lặp tự viết, nhưng sẽ phải tự làm lại stream token, middleware giới hạn và bộ nối nhà cung cấp; RCA là chỗ LangGraph xứng đáng vì `interrupt()` + checkpoint (xem `docs/ai/13_AGENT_AUTH_ARCHITECTURES.md` §12.6).
+
 ## 7. Kiến trúc đề xuất (khi bắt đầu làm)
 
 ```mermaid

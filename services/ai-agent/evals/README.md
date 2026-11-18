@@ -8,6 +8,7 @@
 conda activate base_python_3.12 && cd services/ai-agent
 python evals/run_evals.py                                   # kế hoạch, KHÔNG gọi mô hình
 python evals/run_evals.py --live --persona buyer --limit 10 # gọi mô hình thật (tốn tiền)
+python evals/run_evals.py --live --concurrency 20 --require-model <MODEL_ID> --split dev --group clarify   # song song 20 câu; --require-model từ chối chạy nếu có role dùng mô hình khác (chốt chặn). Khi N>1 `metrics_delta` trong trace không đáng tin; tắt llm.resilience khi chạy nhiều luồng
 python evals/run_evals.py --live --out /tmp/eval.json       # cả 4 persona, ghi báo cáo
 ```
 Đổi tên tool hay tham số ở `agent/scopes.go` thì `TestEvalToolSnapshotIsCurrent` (Go) đỏ: chạy `cd services/api-gateway && go run ./cmd/dump-agent-tools > ../ai-agent/evals/tools.snapshot.json`, rồi sửa các case bị `validate` báo lỗi.

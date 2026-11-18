@@ -199,6 +199,12 @@ async def main_live(args) -> int:
 
     cfg = load_config(args.env, HERE.parent / "configs")
     cfg._data["store"]["backend"] = "memory"
+    if args.require_model:  # chốt chặn: không gọi nhầm mô hình khác (vd mô hình trả tiền) khi chạy thử
+        used = {r: cfg._data["llm"]["profiles"][p].get("model_id") for r, p in cfg._data["llm"]["roles"].items()}
+        wrong = {r: m for r, m in used.items() if m != args.require_model}
+        if wrong:
+            print(f"DỪNG: --require-model {args.require_model} nhưng role dùng mô hình khác: {wrong}. Chưa gọi gì.", file=sys.stderr)
+            return 2
     # trần theo lượt của config vẫn áp dụng; bỏ rate/daily vì chạy trong tiến trình, không qua gateway
     snapshot = evalkit.load_snapshot()
     personas = load_personas()
@@ -222,7 +228,7 @@ async def main_live(args) -> int:
     import importlib.metadata as md
     log.write_meta({
         **evalkit.fingerprint(cfg._data["llm"]),
-        "run": {"argv": sys.argv[1:], "split": args.split, "group": args.group, "persona": args.persona, "limit": args.limit, "ids": args.ids, "env": args.env,
+        "run": {"argv": sys.argv[1:], "split": args.split, "group": args.group, "persona": args.persona, "limit": args.limit, "ids": args.ids, "env": args.env, "concurrency": args.concurrency, "repeat": args.repeat, "require_model": args.require_model,
                 "started_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "cases_planned": {k: len(v) for k, v in plan.items()}},
         "env_vars_loaded_from_dotenv": loaded,  # chỉ tên
         "config_masked": {"limits": cfg.to_dict(masked=True).get("limits"), "llm": cfg.to_dict(masked=True).get("llm")},
@@ -230,27 +236,47 @@ async def main_live(args) -> int:
     })
     print(f"ghi log vào {log.dir}", flush=True)
     report: list[dict[str, Any]] = []
-    try:
+    # Hàng đợi chung (persona, câu) cho `--concurrency` luồng. Mỗi luồng giữ RIÊNG một AgentRuntime + gateway giả + `calls`/`state` cho mỗi persona nó gặp
+    # (gateway giả ghi `calls` và `state` theo từng câu nên không dùng chung được). Một luồng = chạy tuần tự như trước.
+    queue: asyncio.Queue[tuple[str, evalkit.Case, int]] = asyncio.Queue()
+    for rep in range(max(1, args.repeat)):  # mỗi lượt lặp là một vòng đủ các câu (câu cùng lượt nằm gần nhau trong hàng đợi)
         for name, cases in plan.items():
-            calls: list[dict[str, Any]] = []
-            state: dict[str, Any] = {}
-            rt = AgentRuntime(cfg, stub_gateway(snapshot, calls, state))
             for case in cases:
-                try:
-                    row = await run_case(rt, calls, personas[name], case, today, snapshot, state=state)
-                except Exception as exc:  # noqa: BLE001
-                    row = {"id": case.id, "g": case.g, "q": case.q, "ok": False, "reasons": [f"ngoại lệ: {type(exc).__name__}: {str(exc)[:200]}"], "calls": [], "proposals": [],
-                           "answer": "", "seconds": 0, "trace": None, "systems": {}}
-                log.add_systems(name, row.pop("systems", {}))
-                row["split"] = evalkit.split_of(case.q)
-                row["expect"] = {"tool": case.tool, "args": case.args, "max": case.max, "propose": case.propose, "deny": case.deny, "need": case.need}
-                log.append(row)
-                report.append(row)
-                t = (row.get("trace") or {}).get("totals") or {}
-                print(f"{'PASS' if row['ok'] else 'FAIL'} {case.id} [{case.g}] {case.q[:50]}  | llm={t.get('model_calls', '?')} tool={t.get('tool_calls', '?')} "
-                      f"tok={t.get('input_tokens', '?')}+{t.get('output_tokens', '?')} {row['seconds']}s" + ("" if row["ok"] else f"  <- {'; '.join(row['reasons'])[:140]}"), flush=True)
+                queue.put_nowait((name, case, rep))
+
+    async def worker() -> None:
+        own: dict[str, tuple[Any, list[dict[str, Any]], dict[str, Any]]] = {}
+        while True:
+            try:
+                name, case, rep = queue.get_nowait()
+            except asyncio.QueueEmpty:
+                return
+            if name not in own:
+                calls: list[dict[str, Any]] = []
+                state: dict[str, Any] = {}
+                own[name] = (AgentRuntime(cfg, stub_gateway(snapshot, calls, state)), calls, state)
+            rt, calls, state = own[name]
+            try:
+                row = await run_case(rt, calls, personas[name], case, today, snapshot, state=state)
+            except Exception as exc:  # noqa: BLE001
+                row = {"id": case.id, "g": case.g, "q": case.q, "ok": False, "reasons": [f"ngoại lệ: {type(exc).__name__}: {str(exc)[:200]}"], "calls": [], "proposals": [],
+                       "answer": "", "seconds": 0, "trace": None, "systems": {}}
+            log.add_systems(name, row.pop("systems", {}))
+            row["split"] = evalkit.split_of(case.q)
+            row["rep"] = rep
+            row["expect"] = {"tool": case.tool, "args": case.args, "max": case.max, "propose": case.propose, "deny": case.deny, "need": case.need}
+            log.append(row)
+            report.append(row)
+            t = (row.get("trace") or {}).get("totals") or {}
+            print(f"{'PASS' if row['ok'] else 'FAIL'} {case.id} [{case.g}] {case.q[:50]}  | llm={t.get('model_calls', '?')} tool={t.get('tool_calls', '?')} "
+                  f"tok={t.get('input_tokens', '?')}+{t.get('output_tokens', '?')} {row['seconds']}s" + ("" if row["ok"] else f"  <- {'; '.join(row['reasons'])[:140]}"), flush=True)
+
+    try:
+        await asyncio.gather(*[worker() for _ in range(max(1, min(args.concurrency, queue.qsize() or 1)))])
     finally:
         summarize(report)
+        if args.repeat > 1:
+            summarize_repeat(report, args.repeat)
         summ = tracekit.summarize(report)
         print(f"model_calls tổng {summ['model_calls']['sum']:.0f} (TB {summ['model_calls']['mean']}/ca, lớn nhất {summ['model_calls']['max']}); tool_calls tổng {summ['tool_calls']['sum']:.0f}; "
               f"token vào {summ['input_tokens']['sum']:.0f} + ra {summ['output_tokens']['sum']:.0f} = {summ['total_tokens']['sum']:.0f}")
@@ -288,6 +314,40 @@ def summarize(report: list[dict[str, Any]]) -> None:
     print(f"\ntổng: {ok}/{total} đạt")
 
 
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Khoảng tin cậy Wilson 95% cho tỉ lệ k/n."""
+    if n == 0:
+        return (0.0, 0.0)
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return (max(0.0, c - h), min(1.0, c + h))
+
+
+def summarize_repeat(report: list[dict[str, Any]], k: int) -> None:
+    """Chạy lặp: tỉ lệ đạt trung bình theo lượt, độ lệch giữa các lượt, và các câu lúc đạt lúc trượt (không ổn định)."""
+    per_rep: dict[int, list[bool]] = {}
+    per_case: dict[str, list[bool]] = {}
+    for r in report:
+        per_rep.setdefault(r.get("rep", 0), []).append(bool(r["ok"]))
+        per_case.setdefault(r["id"], []).append(bool(r["ok"]))
+    rates = [sum(v) / len(v) for _, v in sorted(per_rep.items())]
+    mean = sum(rates) / len(rates)
+    sd = (sum((x - mean) ** 2 for x in rates) / max(1, len(rates) - 1)) ** 0.5
+    ok = sum(sum(v) for v in per_case.values())
+    n = sum(len(v) for v in per_case.values())
+    lo, hi = wilson(ok, n)
+    print(f"\nlặp {k} lượt: đạt theo lượt {[f'{100 * x:.1f}%' for x in rates]}  TB {100 * mean:.1f}%  độ lệch chuẩn {100 * sd:.1f} điểm %")
+    print(f"gộp {ok}/{n} = {100 * ok / n:.1f}%  khoảng tin cậy 95% (Wilson) [{100 * lo:.1f}%, {100 * hi:.1f}%]")
+    always = sum(1 for v in per_case.values() if all(v))
+    never = sum(1 for v in per_case.values() if not any(v))
+    flaky = {i: v for i, v in per_case.items() if any(v) and not all(v)}
+    print(f"{len(per_case)} câu: luôn đạt {always}, luôn trượt {never}, lúc đạt lúc trượt {len(flaky)}")
+    for i, v in sorted(flaky.items())[:40]:
+        print(f"  {i}: {sum(v)}/{len(v)}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--live", action="store_true", help="gọi mô hình thật (tốn tiền); không có cờ này chỉ in kế hoạch")
@@ -298,6 +358,9 @@ def main() -> int:
     ap.add_argument("--env", default="dev", help="config.<env>.yaml dùng cho llm.roles")
     ap.add_argument("--out", help="ghi báo cáo JSON gọn (không có trace), dùng cho --only-failed")
     ap.add_argument("--log-dir", help="thư mục gốc cho log đầy đủ của lần chạy live (mặc định evals/results/runs/); luôn bật khi --live")
+    ap.add_argument("--concurrency", type=int, default=1, help="số câu chạy song song (mặc định 1 = tuần tự như cũ). Mỗi luồng có gateway giả riêng. Khi > 1 thì `metrics_delta` trong trace không đáng tin (bộ đếm Prometheus dùng chung); các số đo theo callback (token, số lần gọi) vẫn đúng. Nhà cung cấp có thể trả 429")
+    ap.add_argument("--repeat", type=int, default=1, help="chạy mỗi câu k lượt rồi báo trung bình, độ lệch, khoảng tin cậy Wilson và các câu không ổn định (mô hình suy luận lệch 3-4 câu/37 giữa hai lần chạy). Tốn k lần số lệnh gọi")
+    ap.add_argument("--require-model", metavar="MODEL_ID", help="từ chối chạy nếu có role dùng mô hình khác MODEL_ID (chốt chặn tránh gọi nhầm mô hình trả tiền)")
     ap.add_argument("--ids", nargs="+", help="chỉ chạy các case có id này")
     ap.add_argument("--only-failed", nargs="+", metavar="REPORT.json", help="chỉ chạy lại các câu có ok=false trong các báo cáo JSON này")
     args = ap.parse_args()

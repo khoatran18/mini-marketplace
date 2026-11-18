@@ -24,7 +24,7 @@ class LeakFilter:
         parts = [_METHOD_PATH, _API_PATH, r"\bpropose_[a-z_]+\b"]
         if names:
             parts.append(r"\b(?:" + "|".join(re.escape(n) for n in names) + r")\b")
-        self._re = re.compile("|".join(parts))
+        self._re = re.compile("|".join(parts), re.I)  # mô hình bị dụ có thể viết hoa/thường lẫn lộn (LIST_MY_ORDERS, /Admin/users)
         self._buf = ""
 
     def scrub(self, text: str) -> str:

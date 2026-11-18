@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -748,4 +749,74 @@ func TestAIKillSwitchStillWorksWhenTheAuditWriteFails(t *testing.T) {
 	if w := requestWith(e, "GET", "/ops/ai/kill", token(t, "admin"), nil, ""); !strings.Contains(w.Body.String(), `"paused":true`) {
 		t.Errorf("the switch must be on even though the audit write failed: %s", w.Body.String())
 	}
+}
+
+// Guards the rule "a new agent-facing route must go through AgentAuth/AgentOrUser or it bypasses the kill switch" by scanning EVERY route of the
+// real router: whichever route accepts an agent token (or the RCA system token) while the switch is off must answer 503 ai_paused once it is on.
+// A route is "agent-reachable" when the same request is rejected (401/403) without a token but not with one, so a future route wired some other
+// way fails here instead of in production.
+func TestAIKillSwitchCoversEveryRoute(t *testing.T) {
+	keys := "k1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-A"
+	e, _ := newEngineRedis(t, func(c *config.EnvConfig) {
+		c.AgentKeys, c.AISystemKey = keys, sysKey
+		c.RateLimit, c.AuthRateLimit = 1_000_000, 1_000_000 // the scan sends thousands of requests
+	})
+	ring, _ := agent.ParseKeyRing(keys)
+	signer := &agent.Signer{Keys: ring}
+	toks := map[string]string{}
+	for _, role := range []string{"buyer", "seller_admin", "seller_employee", "admin", "operator"} {
+		tok, _, err := signer.IssueAgentToken(1, "u", role, 0, time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		toks["agent-"+role] = tok
+	}
+	sys, _, err := signer.IssueSystemToken("rca-watcher", time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	toks["system"] = sys
+
+	idRe := regexp.MustCompile(`[:*][A-Za-z_]\w*`)
+	type probe struct{ method, path, who string }
+	do := func(p probe, tok string) (int, string) {
+		w := requestWith(e, p.method, p.path, tok, nil, "{}")
+		return w.Code, w.Body.String()
+	}
+	var probes []probe
+	for _, r := range e.Routes() {
+		if r.Path == "/ops/ai/kill" { // the switch itself is driven by people, not by the agent
+			continue
+		}
+		path := idRe.ReplaceAllString(r.Path, "1")
+		for who := range toks {
+			probes = append(probes, probe{r.Method, path, who})
+		}
+	}
+	type seen struct{ withTok, noTok int }
+	off := map[probe]seen{}
+	for _, p := range probes {
+		a, _ := do(p, toks[p.who])
+		b, _ := do(p, "")
+		off[p] = seen{a, b}
+	}
+	if w := requestWith(e, "PUT", "/ops/ai/kill", token(t, "operator"), nil, `{"paused":true}`); w.Code != 200 {
+		t.Fatalf("switch on: %d %s", w.Code, w.Body.String())
+	}
+	reachable := 0
+	for _, p := range probes {
+		s := off[p]
+		if s.noTok != http.StatusUnauthorized || s.withTok == http.StatusUnauthorized || s.withTok == http.StatusForbidden {
+			continue // public, or the route does not accept this token
+		}
+		reachable++
+		code, body := do(p, toks[p.who])
+		if code != http.StatusServiceUnavailable || !strings.Contains(body, "ai_paused") {
+			t.Errorf("%s %s with %s: %d %q while paused, want 503 ai_paused (route bypasses the kill switch)", p.method, p.path, p.who, code, body)
+		}
+	}
+	if reachable < 20 { // not vacuous: the scan must really have found the agent-facing routes
+		t.Errorf("only %d agent-reachable route probes found, the scan is not looking at the right thing", reachable)
+	}
+	t.Logf("%d routes x %d tokens scanned, %d agent-reachable probes all answered 503 ai_paused", len(e.Routes()), len(toks), reachable)
 }
