@@ -94,6 +94,8 @@ limits:
   turn_timeout_sec: 60        # gateway cắt cứng ở 120 s (AI_STREAM_TIMEOUT_SEC)
   tool_result_max_chars: 6000 # kết quả tool đưa cho mô hình bị cắt theo ngưỡng này
   tool_result_max_items: 20   # danh sách dài hơn thì chỉ giữ ngần này phần tử
+  # Đề xuất ma (guard/ghost.py): câu trả lời nói đã soạn đề xuất/bấm Xác nhận mà lượt không tạo đề xuất nào. off = tắt; log = ghi log + số liệu mm_ai_ghost_proposals_total; notice = thêm cả một dòng báo cho người dùng.
+  ghost_proposal: notice
   max_message_chars: 2000     # độ dài tối đa một tin người dùng
   max_history_messages: 20    # số tin cũ nạp lại cho mô hình
   token_budget_per_turn: 20000  # tổng token (vào + ra) tối đa một lượt; cần usage_metadata từ mô hình

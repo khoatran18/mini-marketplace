@@ -47,6 +47,11 @@ class AgentRuntime:
         self._specs[ctx.role] = (now + float(self.cfg.gateway.tools_cache_ttl_sec), specs, actions)
         return specs, actions
 
+    def can_propose(self, role: str) -> bool:
+        """Role này có tool đề xuất ghi không (đã lấy ở specs_for); admin chỉ đọc nên không."""
+        hit = self._specs.get(role)
+        return bool(hit and hit[2])
+
     def tool_names(self, role: str) -> list[str]:
         """Tên mọi tool (đọc + đề xuất) của role, đã lấy ở specs_for. Dùng cho bộ lọc lộ tên công cụ."""
         hit = self._specs.get(role)

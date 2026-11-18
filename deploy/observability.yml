@@ -36,7 +36,7 @@ services:
       start_period: 30s
     deploy:
       replicas: 1
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 768M}
 
@@ -65,7 +65,7 @@ services:
       start_period: 30s
     deploy:
       replicas: 1
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 384M}
       labels:
@@ -96,7 +96,7 @@ services:
       retries: 5
     deploy:
       mode: global
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 384M}
 
@@ -117,7 +117,7 @@ services:
       retries: 5
     deploy:
       mode: global
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 128M}
 
@@ -135,7 +135,7 @@ services:
       retries: 5
       start_period: 20s
     deploy:
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 64M}
 
@@ -150,7 +150,7 @@ services:
     # không có sh/wget/curl), nên không thể gọi HTTP từ trong container. Trạng thái được theo dõi qua
     # `up{job="redis"}` trong Prometheus.
     deploy:
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 64M}
 
@@ -167,7 +167,7 @@ services:
       retries: 5
       start_period: 20s
     deploy:
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 64M}
 
@@ -194,7 +194,7 @@ services:
       start_period: 45s
     deploy:
       replicas: 1
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 512M}
 
@@ -221,7 +221,7 @@ services:
       start_period: 20s
     deploy:
       mode: global
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 128M}
 
@@ -245,7 +245,7 @@ services:
       start_period: 45s
     deploy:
       replicas: 1
-      restart_policy: {condition: on-failure, delay: 10s}
+      restart_policy: {condition: any, delay: 10s}
       resources:
         limits: {memory: 512M}
 

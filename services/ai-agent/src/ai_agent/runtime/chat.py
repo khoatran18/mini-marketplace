@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from ai_agent import metrics
 from ai_agent.config.logging import get_logger, request_id_var, run_id_var
 from ai_agent.guard.grounding import ungrounded_numbers
+from ai_agent.guard import ghost
 from ai_agent.guard.leak import LeakFilter
 from ai_agent.llm.resilience import LlmUnavailable, label
 from ai_agent.personas.base import Persona
@@ -128,6 +129,15 @@ async def run_turn(rt: AgentRuntime, store: Store, persona: Persona, ctx: RunCon
             answer = ("Mình chưa tổng hợp xong câu trả lời trong giới hạn cho phép. Dữ liệu tìm được (nếu có) nằm ở thẻ bên dưới; "
                       "bạn thử hỏi cụ thể hơn giúp mình nhé.")
             yield events.make(events.TOKEN, ctx.run_id, text=answer)
+        mode = ghost.mode_of(limits.get("ghost_proposal", "notice"))
+        if mode != "off" and ghost.is_ghost(answer, ctx.proposals, can_propose=persona.allow_actions and rt.can_propose(ctx.role)):
+            # câu trả lời nói đã soạn đề xuất mà ctx.proposals == 0 (tool đề xuất không được gọi hoặc lỗi): UI sẽ không có nút Xác nhận
+            metrics.GHOST_PROPOSALS.labels(persona.name, mode).inc()
+            logger.warning("ghost proposal: answer claims a proposal but none was created",
+                           extra={"persona": persona.name, "mode": mode, "tool_calls": ctx.tool_calls, "conversation_id": turn.conversation_id})
+            if mode == "notice":
+                answer += ghost.NOTICE  # token đã stream đi rồi: chỉ nối thêm, và lưu cùng câu trả lời để lịch sử khớp với màn hình
+                yield events.make(events.TOKEN, ctx.run_id, text=ghost.NOTICE)
         while not ctx.events.empty():  # sự kiện còn lại (card/citation đến sau)
             item = ctx.events.get_nowait()
             if isinstance(item, dict):

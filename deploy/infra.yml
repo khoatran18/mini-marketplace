@@ -37,7 +37,7 @@ x-kafka-broker: &kafka-broker
     - marketplace
   deploy:
     restart_policy:
-      condition: on-failure
+      condition: any
       delay: 2s
     resources:
       limits: {memory: 768M}
@@ -63,7 +63,7 @@ services:
       - marketplace
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 3s
 
   redis:
@@ -82,7 +82,7 @@ services:
       - marketplace
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 1s
 
   # Analytics store (analytics-service creates the database and tables itself on start)
@@ -116,7 +116,7 @@ services:
       - marketplace
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 3s
       resources:
         limits: {memory: 2G}

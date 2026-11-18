@@ -156,3 +156,29 @@ async def test_stub_gateway_serves_the_new_shapes_over_http():
     metric = await gw.get(tok, "/ops/queries/service_up", {"service": "order-service"})
     assert metric["query"] == "service_up" and metric["series"][0]["labels"]["service"] == "order-service"
     assert [c["tool"] for c in calls][-3:] == ["ops_list_incidents", "ops_system_health", "ops_metrics_query"]
+
+
+def test_down_world_matches_a_hung_service_and_leaves_the_rest_alone():
+    """Khoá `down` của ca eval: service đó treo (service_up 0, health không sẵn sàng, ServiceDown mở, playbook nói restart); không có khoá thì dữ liệu vẫn khoẻ."""
+    down = "order-service"
+    health = run_evals.domain_body("ops_system_health", {}, down)
+    assert health["status"] == "degraded" and {s["name"]: s["status"] for s in health["services"]}[down] == "not_ready"
+    assert {s["name"]: s["status"] for s in health["services"]}["payment-service"] == "ready"
+    up = run_evals.domain_body("ops_metrics_query", {"name": "service_up", "service": down}, down)
+    assert up["series"][0]["value"] == "0"
+    other = run_evals.domain_body("ops_metrics_query", {"name": "service_up", "service": "payment-service"}, down)
+    assert other["series"][0]["value"] == "1"  # service khác vẫn sống
+    assert run_evals.domain_body("ops_list_incidents", {}, down)["items"][0]["alert_name"] == "ServiceDown"
+    assert run_evals.domain_body("ops_get_playbook", {}, down)["causes"][0]["fix"] == ["restart_service"]
+    assert run_evals.domain_body("ops_system_health", {})["status"] == "ready"  # mặc định không đổi
+
+
+def test_cancel_cases_get_an_undelivered_order_and_the_others_keep_the_old_world():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 18, tzinfo=timezone.utc)
+    mk = lambda propose: evalkit.Case(persona="buyer", id="buyer-001", g="propose", q="x", tool=["none"], propose=propose)  # noqa: E731
+    cancel = run_evals.world_state(mk("cancel_order"), now)
+    assert cancel["status"] == "PAID" and cancel["delivered_at"] is None  # đơn chưa giao: có lý do để đề xuất huỷ
+    ret = run_evals.world_state(mk("request_return"), now)
+    assert ret["status"] == "DELIVERED" and ret["delivered_at"].startswith("2026-11-17")
+    assert run_evals.world_state(mk(None), now)["delivered_at"].startswith("2026-11-17")  # ca không phải huỷ đơn: như cũ

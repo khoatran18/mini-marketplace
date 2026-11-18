@@ -56,9 +56,46 @@ _PROPOSAL = {"id": 1, "incident_id": 4, "action_id": "requeue_outbox", "params":
              "state": "pending", "created_by": "operator", "created_at": "2026-11-17T08:05:00Z"}
 
 
-def domain_body(tool: str, args: dict[str, Any]) -> dict[str, Any] | None:
+_UP_METRICS = ("service_up", "service_ready", "service_replicas_up")  # 0 khi service đang treo (đúng tên truy vấn trong bảng ops_metrics_query)
+
+
+def _down_body(tool: str, args: dict[str, Any], down: str) -> dict[str, Any] | None:
+    """Dữ liệu giả khi MỘT service đang treo: process còn nhưng không trả lời (`service_up` 0, health không sẵn sàng, sự cố ServiceDown đang mở,
+    playbook service-unavailable nói restart). Chỉ đổi phần liên quan tới service đó; phần còn lại dùng dạng chung. None = không đổi."""
+    incident = {"id": 4, "alert_name": "ServiceDown", "severity": "critical", "component": down, "state": "open", "summary": f"{down} không trả lời",
+                "runbook": "§1", "suggested_action": "restart_service", "opened_at": "2026-11-17T08:00:00Z"}
+    rid = int(args["id"]) if str(args.get("id", "")).isdigit() else 4
+    if tool == "ops_list_incidents":
+        return {"items": [incident], "total": 1}
+    if tool == "ops_get_incident":
+        return {**incident, "id": rid}
+    if tool == "ops_system_health":
+        return {"as_of": "2026-11-17T08:00:00Z", "status": "degraded",
+                "services": [{"name": n, "status": "not_ready" if n == down else "ready", "latency_ms": None if n == down else 4} for n in _SERVICES]}
+    if tool == "ops_metrics_query":
+        name = str(args.get("name", ""))
+        if name == "alerts_firing":
+            return {"query": name, "params": {}, "backend": "prometheus", "expr": name, "total": 1, "truncated": False,
+                    "series": [{"labels": {"alertname": "ServiceDown", "service": down}, "value": "1"}]}
+        if name in _UP_METRICS and args.get("service", down) == down:
+            return {"query": name, "params": {k: str(v) for k, v in args.items()}, "backend": "prometheus", "expr": name, "total": 1, "truncated": False,
+                    "series": [{"labels": {"service": down}, "value": "0"}]}
+    if tool == "ops_list_playbooks":
+        return {"items": [{"id": "service-unavailable", "title": "Service không sẵn sàng", "alerts": ["ServiceDown"]}], "total": 1}
+    if tool == "ops_get_playbook":
+        return {"id": "service-unavailable", "title": "Service không sẵn sàng", "diagnose": [{"id": "ready-checks", "query": "service_up", "read_only": True}],
+                "causes": [{"id": "process-hung", "when": "service_up bằng 0 hoặc service_ready false trong khi replica vẫn 1/1", "fix": ["restart_service"]}],
+                "actions": [a for a in _ACTIONS if a["id"] == "restart_service"]}
+    return None
+
+
+def domain_body(tool: str, args: dict[str, Any], down: str | None = None) -> dict[str, Any] | None:
     """Dữ liệu đúng HÌNH DẠNG thật cho tool ops/admin (gateway giả trước đây trả bản ghi kiểu đơn hàng cho mọi thứ, làm model operator
     nhận ra dữ liệu sai và gọi thêm nhiều lần, méo phép đo). None = dùng dạng chung (đơn/sản phẩm)."""
+    if down:
+        hit = _down_body(tool, args, down)
+        if hit is not None:
+            return hit
     rid = int(args["id"]) if str(args.get("id", "")).isdigit() else 4
     if tool == "ops_list_incidents":
         return {"items": [_INCIDENT], "total": 1}
@@ -124,7 +161,7 @@ def stub_gateway(snapshot: dict[str, Any], calls: list[dict[str, Any]], state: d
                 calls.append({"tool": t["name"], "args": args})
                 status = state.get("status", "PAID")
                 # Có MỘT dòng dữ liệu hợp lệ: gateway trả rỗng thì agent (đúng) dò thêm nhiều lần, làm sai phép đo "gọi bao nhiêu lần".
-                special = domain_body(t["name"], args)
+                special = domain_body(t["name"], args, state.get("down"))
                 if special is not None:
                     return httpx.Response(200, json=special)
                 row = {"id": 1, "status": status, "total": 250000, "name": "Mẫu", "state": "ok", "ok": True, "delivered_at": state.get("delivered_at")}
@@ -154,6 +191,14 @@ def _action_name(snapshot: dict[str, Any], role: str, request: dict[str, Any]) -
     return f"{request.get('method')} {request.get('path')}"
 
 
+def world_state(case: evalkit.Case, now: datetime) -> dict[str, Any]:
+    """Trạng thái đơn mà gateway giả trả cho một ca. Ca huỷ đơn (PAID) KHÔNG có `delivered_at`: trước đây mọi ca đều có ngày giao hôm qua nên model
+    thấy đơn "đã giao" và từ chối huỷ (đúng quy tắc), làm sai phép đo của các ca huỷ đơn. Ca khác giữ nguyên để số đo cũ còn so được."""
+    return {"status": PRECONDITION_STATUS.get(case.propose or "", "PAID"),
+            "delivered_at": None if case.propose == "cancel_order" else (now - timedelta(days=1)).isoformat(),
+            "down": case.down}
+
+
 async def run_case(rt, calls: list[dict[str, Any]], persona, case: evalkit.Case, today, snapshot: dict[str, Any], user_id: int = 9001, state: dict[str, Any] | None = None) -> dict[str, Any]:
     from ai_agent.runtime import events
     from ai_agent.runtime.chat import run_turn
@@ -167,8 +212,7 @@ async def run_case(rt, calls: list[dict[str, Any]], persona, case: evalkit.Case,
     calls.clear()
     if state is not None:
         state.clear()
-        state["status"] = PRECONDITION_STATUS.get(case.propose or "", "PAID")
-        state["delivered_at"] = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        state.update(world_state(case, datetime.now(timezone.utc)))
     ctx = RunContext(token=agent_token(user_id, role, run_id, ttl=900), run_id=run_id, request_id="eval", user_id=user_id, role=role)
     turn = await store.begin_turn(user_id=user_id, conversation_id=None, client_message_id=None, run_id=run_id, role=role, text=case.q, max_history=10)
     started = time.monotonic()

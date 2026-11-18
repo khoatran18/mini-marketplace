@@ -26,7 +26,7 @@ HERE = Path(__file__).resolve().parent
 GROUPS = ("lookup", "filter", "variant", "propose", "adversarial", "scope", "clarify")
 PERSONA_TOOL_ROLE = {"buyer": "buyer", "seller": "seller_admin", "admin": "admin", "operator": "operator"}
 READ_ONLY = ("admin",)  # đọc thôi: yêu cầu ghi phải được từ chối, không có đề xuất
-KNOWN_KEYS = {"g", "q", "tool", "args", "max", "propose", "deny", "need", "note"}
+KNOWN_KEYS = {"g", "q", "tool", "args", "max", "propose", "deny", "need", "note", "down"}
 # Số câu tối thiểu mỗi persona (xem docs/ai/08_AGENT_BUILD_ROADMAP.md, mục eval): dưới mức này dao động ngẫu nhiên che mất tín hiệu.
 MIN_PER_PERSONA = 90
 MIN_PER_GROUP = {"lookup": 20, "filter": 12, "variant": 10, "propose": 6, "adversarial": 10, "scope": 5, "clarify": 12}
@@ -73,6 +73,7 @@ class Case:
     propose: str | None = None
     deny: list[str] = field(default_factory=list)
     need: list[str] = field(default_factory=list)
+    down: str | None = None  # tên service đang treo trong dữ liệu giả (ops_*): sức khoẻ, service_up, sự cố ServiceDown và playbook khớp lời người dùng
 
 
 def load_cases(persona: str, root: Path = HERE / "cases") -> list[Case]:
@@ -82,7 +83,7 @@ def load_cases(persona: str, root: Path = HERE / "cases") -> list[Case]:
         tool = c.get("tool", "none")
         out.append(Case(persona=persona, id=f"{persona}-{i:03d}", g=c["g"], q=c["q"], tool=[tool] if isinstance(tool, str) else list(tool),
                         args=c.get("args") or {}, max=int(c.get("max", 3)), propose=c.get("propose"), deny=list(c.get("deny") or []),
-                        need=list(c.get("need") or [])))
+                        need=list(c.get("need") or []), down=c.get("down")))
     return out
 
 

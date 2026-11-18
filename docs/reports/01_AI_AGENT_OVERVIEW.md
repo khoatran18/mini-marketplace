@@ -635,7 +635,8 @@ flowchart LR
 | **Giới hạn mỗi lượt** | tối đa 6 lần gọi mô hình, 8 lần gọi công cụ, 5 s/công cụ, 60 s/lượt (gateway cắt cứng 120 s), trần token theo persona | `guard/limits.py`, `runtime/` | [test] |
 | | RCA: 12 lần gọi mô hình, 25 truy vấn, 300 s, 3 vòng, tối đa 2 phiên cùng lúc, `daily_auto_runs` | `rca/budget.py` | [test] |
 | **Đầu ra** | buyer/seller không thấy đường dẫn API hay tên công cụ (lọc theo luồng, giữ đuôi để bắt tên bị cắt giữa hai mẩu token) | `guard/leak.py` + `model_view` chỉ đưa nhãn thân thiện | [test] |
-| | chat: đếm con số lớn trong câu trả lời không có trong kết quả công cụ (`mm_ai_answer_numbers_total`), **chỉ đo, không chặn**, vì số suy ra có thể hợp lệ | `guard/grounding.py` | [test] |
+| | chat: đếm con số lớn trong câu trả lời không có trong kết quả công cụ (`mm_ai_answer_numbers_total`), **chỉ đo, không chặn**, vì số suy ra có thể hợp lệ | `guard/grounding.py` |
+| | chat: **đề xuất ma** = câu trả lời nói đã soạn đề xuất / bảo bấm Xác nhận mà `ctx.proposals == 0` (không có thẻ xác nhận nào); ghi log + `mm_ai_ghost_proposals_total{persona,mode}`, và ở chế độ `notice` nối thêm một dòng báo cho người dùng (`limits.ghost_proposal`: off, log, notice; mặc định notice; giá trị lạ lùi về log) | `guard/ghost.py`, `runtime/chat.py` | [test] |
 | | RCA: kết luận bị kiểm xác định với bằng chứng; hành động có tham số chuỗi không có trong bằng chứng thì thành `escalate_to_human` | `rca/grounding.py` | [test] |
 | | lưu hội thoại dạng đã che, giữ 30 ngày; admin mở chat người khác thì ghi log | ai-agent | [test] |
 | **Cấu hình** | ai-agent từ chối khởi động ở môi trường `prod` nếu bật tracing ngoài (`LANGSMITH_*`, `LANGCHAIN_TRACING*`), để nội dung chat không đi ra dịch vụ trace (ở dev chỉ cảnh báo) | `guard/startup.py` | [test] |
