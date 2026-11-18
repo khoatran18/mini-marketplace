@@ -340,3 +340,15 @@ Nguồn: `docs/ai/12_CRITERIA_VS_RESEARCH_NOTES.md`. Toàn bộ test ai-agent: 2
 - **Audit (cùng ngày):** mỗi lần bật/tắt gateway gọi `POST /audit/events` của ops-service (token đầy đủ, `human()` nên token agent bị 403; danh sách đóng chỉ `ai_kill_switch_on/off`, đối tượng `ai/kill_switch`, người thực hiện từ `X-Actor`, lý do ≤ 200 ký tự) và ghi vào `ops_audit_log`. Công tắc đổi TRƯỚC rồi mới ghi audit, vì tắt khẩn không được phụ thuộc ops-service; ghi lỗi thì trả `audited:false`, UI cảnh báo, log gateway là bản dự phòng. Test: `TestAIKillSwitch` (kiểm dòng gửi sang ops-service), `TestAIKillSwitchStillWorksWhenTheAuditWriteFails`, ops-service `TestAIKillSwitchAuditValidationAndScope` (không cần DB) và `TestAIKillSwitchIsAudited` (cần `TEST_POSTGRES_DSN`; chưa chạy được ở máy này vì mật khẩu trong `deploy/.env` không khớp Postgres đang chạy, nên mới bị bỏ qua).
 - **Chưa làm / giới hạn:** không huỷ hàng loạt phiên RCA đang chạy (phiên lỗi ở lần gọi công cụ kế tiếp); chưa thử trên Swarm thật; giao diện chưa xem bằng mắt. Runbook: §19d.
 
+**Công tắc hoạt động thế nào (và vì sao route mới có thể lách qua):** Redis chỉ lưu "đang bật hay tắt" (`ai_kill`); không có một cổng chung chặn mọi thứ. Gateway có hàng chục route và agent chỉ vào qua vài loại, nên mỗi loại tự hỏi Redis qua `agent.Blocked(ctx, kill)` (hàm chung ở `internal/agent/kill.go`; lỗi Redis = coi như tắt) rồi trả 503 `ai_paused` nếu đang tắt, handler thật không được chạy. Có 5 chỗ gắn, tất cả trong service `api-gateway`:
+
+| Chỗ gắn | File (api-gateway) | Agent đi vào đường nào | Việc nó chặn |
+|---|---|---|---|
+| `AgentAuth` | `internal/middleware/agent.go` | `GET /ai/tools`, `POST /ai/proposals` | agent xin danh sách công cụ, xin ký đề xuất |
+| `AgentOrUser` | `internal/middleware/agent.go` | mọi route đọc agent được phép (`/orders`, `/search`, `/ops/incidents`...) | mọi lần agent gọi công cụ đọc |
+| `AIHandler.paused` | `internal/handler/ai_kill.go`, gọi từ `ai.go` (`Chat`) và `ai_rca.go` (`Forward`) | `POST /ai/chat`, `/ops/rca/*` | mở chat mới, xem hoặc bắt đầu điều tra |
+| `SystemTokenHandler` | `internal/handler/ai_rca.go` | `POST /ai/system-token` | cấp token hệ thống cho watcher RCA |
+| `ConfirmProposal` | `internal/middleware/agent.go` | người dùng bấm Xác nhận đề xuất của agent | thực thi đề xuất do agent tạo |
+
+Rủi ro: một đường mới cho agent mà KHÔNG đi qua các chỗ trên thì không hỏi Redis và vẫn chạy khi công tắc bật. Hiện mọi route cho agent trong repo đều đi qua một trong năm chỗ này. **Chưa có test tự động bắt lỗi đó** (đề xuất, chưa làm): test quét bảng route của gateway, route nào nhận token agent (`agentOr(...)`, nhóm `/ai/*`) mà không có kiểm tra công tắc thì báo lỗi, để thêm route sai là CI đỏ.
+

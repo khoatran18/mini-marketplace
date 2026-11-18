@@ -642,6 +642,20 @@ flowchart LR
 | | bật `FEATURE_AI_*` mà thiếu `AI_SERVICE_URL`/`AGENT_TOKEN_KEYS` thì gateway không khởi động | gateway | [test] |
 | **Lỗi nhà cung cấp** | một tầng thử lại (SDK), circuit breaker theo profile, danh sách dự phòng `llm.fallbacks` (hiện rỗng); 400 không đổi sang dự phòng | `llm/resilience.py` | [test] cơ chế; chưa thử với nhà cung cấp thật |
 
+### Nút dừng khẩn: gắn vào đâu
+
+Công tắc là một khoá Redis (`ai_kill`), đổi bằng `PUT /ops/ai/kill` (admin hoặc operator, có ghi `ops_audit_log`). Nó không phải một cổng chung: mỗi đường agent đi vào gateway tự hỏi Redis và trả 503 `ai_paused` nếu đang tắt (Redis lỗi cũng coi là tắt).
+
+| Chỗ gắn | File (api-gateway) | Agent đi vào đường nào | Việc nó chặn |
+|---|---|---|---|
+| `AgentAuth` | `internal/middleware/agent.go` | `GET /ai/tools`, `POST /ai/proposals` | agent xin danh sách công cụ, xin ký đề xuất |
+| `AgentOrUser` | `internal/middleware/agent.go` | mọi route đọc agent được phép (`/orders`, `/search`, `/ops/incidents`...) | mọi lần agent gọi công cụ đọc |
+| `AIHandler.paused` | `internal/handler/ai_kill.go`, gọi từ `ai.go` (`Chat`) và `ai_rca.go` (`Forward`) | `POST /ai/chat`, `/ops/rca/*` | mở chat mới, xem hoặc bắt đầu điều tra |
+| `SystemTokenHandler` | `internal/handler/ai_rca.go` | `POST /ai/system-token` | cấp token hệ thống cho watcher RCA |
+| `ConfirmProposal` | `internal/middleware/agent.go` | người dùng bấm Xác nhận đề xuất của agent | thực thi đề xuất do agent tạo |
+
+Rủi ro còn lại: route mới cho agent mà không đi qua các chỗ trên sẽ lách qua công tắc. Hiện chưa có test tự động bắt trường hợp này (đề xuất: test quét bảng route). Chi tiết: `docs/ai/11_RCA_BUILD_LOG.md` §16.42, runbook §19d.
+
 ---
 
 ## 8. Hệ thống không dùng MCP, xử lý thế nào
