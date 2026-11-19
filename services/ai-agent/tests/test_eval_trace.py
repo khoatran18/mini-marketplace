@@ -182,3 +182,18 @@ def test_cancel_cases_get_an_undelivered_order_and_the_others_keep_the_old_world
     ret = run_evals.world_state(mk("request_return"), now)
     assert ret["status"] == "DELIVERED" and ret["delivered_at"].startswith("2026-11-17")
     assert run_evals.world_state(mk(None), now)["delivered_at"].startswith("2026-11-17")  # ca không phải huỷ đơn: như cũ
+
+
+def test_history_cases_load_validate_and_reach_the_turn(tmp_path):
+    """Ca nhiều lượt: `history` nạp vào Turn.history; sai thứ tự vai thì bị báo lỗi; `note` chứa hy4 thì `generated`."""
+    import yaml
+
+    d = tmp_path / "cases"
+    d.mkdir()
+    good = {"g": "lookup", "q": "huỷ luôn đi", "tool": "none", "note": "hy4-flash-free", "history": [["user", "đơn 12 đâu"], ["assistant", "Đơn 12 đang giao"]]}
+    bad = {"g": "lookup", "q": "câu khác", "tool": "none", "history": [["assistant", "x"], ["user", "y"]]}
+    (d / "buyer.yaml").write_text(yaml.safe_dump([good, bad], allow_unicode=True), encoding="utf-8")
+    cases = evalkit.load_cases("buyer", d)
+    assert cases[0].history == [("user", "đơn 12 đâu"), ("assistant", "Đơn 12 đang giao")] and cases[0].generated and not cases[1].generated
+    errors = evalkit.validate("buyer", d, evalkit.load_snapshot())
+    assert any("history" in e and "buyer-002" in e for e in errors) and not any("buyer-001" in e and "history" in e for e in errors)

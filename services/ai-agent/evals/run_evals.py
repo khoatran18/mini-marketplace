@@ -215,6 +215,8 @@ async def run_case(rt, calls: list[dict[str, Any]], persona, case: evalkit.Case,
         state.update(world_state(case, datetime.now(timezone.utc)))
     ctx = RunContext(token=agent_token(user_id, role, run_id, ttl=900), run_id=run_id, request_id="eval", user_id=user_id, role=role)
     turn = await store.begin_turn(user_id=user_id, conversation_id=None, client_message_id=None, run_id=run_id, role=role, text=case.q, max_history=10)
+    if case.history:  # ca nhiều lượt: nạp các tin cũ như thể đã trò chuyện trước đó (chạy như lượt thứ N của cuộc trò chuyện)
+        turn.history = list(case.history)
     started = time.monotonic()
     m0 = tracekit.metrics_snapshot()
     with tracekit.traced() as tracer:
@@ -258,6 +260,8 @@ async def main_live(args) -> int:
     plan: dict[str, list[evalkit.Case]] = {}
     for name in names:
         cases = [c for c in evalkit.select_split(evalkit.load_cases(name), args.split) if not args.group or c.g == args.group]
+        if args.source != "all":  # hand = viết tay; hy4 = do hy4-flash-free sinh (tránh thiên lệch khi so với model khác)
+            cases = [c for c in cases if c.generated == (args.source == "hy4")]
         if args.ids:
             cases = [c for c in cases if c.id in args.ids]
         if args.only_failed:
@@ -405,6 +409,7 @@ def main() -> int:
     ap.add_argument("--concurrency", type=int, default=1, help="số câu chạy song song (mặc định 1 = tuần tự như cũ). Mỗi luồng có gateway giả riêng. Khi > 1 thì `metrics_delta` trong trace không đáng tin (bộ đếm Prometheus dùng chung); các số đo theo callback (token, số lần gọi) vẫn đúng. Nhà cung cấp có thể trả 429")
     ap.add_argument("--repeat", type=int, default=1, help="chạy mỗi câu k lượt rồi báo trung bình, độ lệch, khoảng tin cậy Wilson và các câu không ổn định (mô hình suy luận lệch 3-4 câu/37 giữa hai lần chạy). Tốn k lần số lệnh gọi")
     ap.add_argument("--require-model", metavar="MODEL_ID", help="từ chối chạy nếu có role dùng mô hình khác MODEL_ID (chốt chặn tránh gọi nhầm mô hình trả tiền)")
+    ap.add_argument("--source", choices=("all", "hand", "hy4"), default="all", help="hand = ca viết tay; hy4 = ca do hy4-flash-free sinh (lọc tay). Báo cáo riêng khi so với model khác để tránh thiên lệch (hy4 vừa sinh ca vừa bị đo)")
     ap.add_argument("--ids", nargs="+", help="chỉ chạy các case có id này")
     ap.add_argument("--only-failed", nargs="+", metavar="REPORT.json", help="chỉ chạy lại các câu có ok=false trong các báo cáo JSON này")
     args = ap.parse_args()
@@ -412,6 +417,8 @@ def main() -> int:
         total = 0
         for name in evalkit.PERSONA_TOOL_ROLE:
             cases = evalkit.select_split(evalkit.load_cases(name), args.split)
+            if args.source != "all":
+                cases = [c for c in cases if c.generated == (args.source == "hy4")]
             total += len(cases)
             groups = Counter(c.g for c in cases)
             print(f"{name:9} {len(cases):3} câu  " + "  ".join(f"{g}={groups[g]}" for g in evalkit.GROUPS))

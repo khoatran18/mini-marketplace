@@ -26,7 +26,7 @@ HERE = Path(__file__).resolve().parent
 GROUPS = ("lookup", "filter", "variant", "propose", "adversarial", "scope", "clarify")
 PERSONA_TOOL_ROLE = {"buyer": "buyer", "seller": "seller_admin", "admin": "admin", "operator": "operator"}
 READ_ONLY = ("admin",)  # đọc thôi: yêu cầu ghi phải được từ chối, không có đề xuất
-KNOWN_KEYS = {"g", "q", "tool", "args", "max", "propose", "deny", "need", "note", "down"}
+KNOWN_KEYS = {"g", "q", "tool", "args", "max", "propose", "deny", "need", "note", "down", "history"}
 # Số câu tối thiểu mỗi persona (xem docs/ai/08_AGENT_BUILD_ROADMAP.md, mục eval): dưới mức này dao động ngẫu nhiên che mất tín hiệu.
 MIN_PER_PERSONA = 90
 MIN_PER_GROUP = {"lookup": 20, "filter": 12, "variant": 10, "propose": 6, "adversarial": 10, "scope": 5, "clarify": 12}
@@ -74,6 +74,12 @@ class Case:
     deny: list[str] = field(default_factory=list)
     need: list[str] = field(default_factory=list)
     down: str | None = None  # tên service đang treo trong dữ liệu giả (ops_*): sức khoẻ, service_up, sự cố ServiceDown và playbook khớp lời người dùng
+    history: list[tuple[str, str]] = field(default_factory=list)  # các tin CŨ của cuộc trò chuyện [("user"|"assistant", text)], cũ -> mới; `q` là tin hiện tại
+    note: str = ""  # nguồn/ghi chú của ca; "hy4" trong note = ca do mô hình hy4-flash-free sinh (lọc tay)
+
+    @property
+    def generated(self) -> bool:
+        return "hy4" in self.note
 
 
 def load_cases(persona: str, root: Path = HERE / "cases") -> list[Case]:
@@ -83,7 +89,8 @@ def load_cases(persona: str, root: Path = HERE / "cases") -> list[Case]:
         tool = c.get("tool", "none")
         out.append(Case(persona=persona, id=f"{persona}-{i:03d}", g=c["g"], q=c["q"], tool=[tool] if isinstance(tool, str) else list(tool),
                         args=c.get("args") or {}, max=int(c.get("max", 3)), propose=c.get("propose"), deny=list(c.get("deny") or []),
-                        need=list(c.get("need") or []), down=c.get("down")))
+                        need=list(c.get("need") or []), down=c.get("down"),
+                        history=[(str(r), str(t)) for r, t in (c.get("history") or [])], note=str(c.get("note") or "")))
     return out
 
 
@@ -170,7 +177,11 @@ def validate(persona: str, root: Path = HERE / "cases", snapshot: dict[str, Any]
             errors.append(f"{c.id}: nhóm {c.g!r} không hợp lệ")
         if not c.q.strip():
             errors.append(f"{c.id}: câu hỏi trống")
-        key = re.sub(r"\s+", " ", c.q.strip().lower())
+        key = re.sub(r"\s+", " ", c.q.strip().lower()) + "".join("|" + t.strip().lower() for _, t in c.history)
+        if c.history:
+            roles = [r for r, _ in c.history]
+            if roles != ["user", "assistant"] * (len(roles) // 2) or len(roles) % 2 or len(roles) > 6:
+                errors.append(f"{c.id}: history phải xen kẽ user/assistant, kết thúc bằng assistant, tối đa 6 tin")
         if key in seen:
             errors.append(f"{c.id}: trùng câu hỏi với {seen[key]}")
         seen[key] = c.id
