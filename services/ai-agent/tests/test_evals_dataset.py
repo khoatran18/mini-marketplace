@@ -201,3 +201,10 @@ def test_ask_or_answer_is_validated(tmp_path):
     (tmp_path / "buyer.yaml").write_text('- {g: lookup, ask_or_answer: true, q: "a", tool: list_my_orders}\n- {g: clarify, ask_or_answer: true, q: "b", tool: none}\n', encoding="utf-8")
     errs = ek.validate("buyer", root=tmp_path)
     assert sum("ask_or_answer chỉ cho nhóm clarify" in e for e in errs) == 2
+
+
+def test_buyer_prompt_keeps_answer_first_rules():
+    """Rule đã đo trên deepseek (build log 16.43): đọc rõ ý thì tra trước; có mã đơn hoặc 'đơn nào' thì không hỏi lại; ghi thì luôn hỏi."""
+    text = (Path(__file__).resolve().parents[1] / "src" / "ai_agent" / "personas" / "buyer" / "prompt.md").read_text(encoding="utf-8")
+    for must in ("Câu chỉ để ĐỌC", "Đã có số hay mã", '"đơn nào', "luôn hỏi lại trước khi soạn đề xuất ghi"):
+        assert must in text
