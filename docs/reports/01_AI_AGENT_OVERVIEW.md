@@ -694,7 +694,7 @@ Nguồn: `docs/ai/10_AGENT_QUALITY_CRITERIA.md` (12 tiêu chí tự đặt) và 
 | 7 | Tin cậy, chịu lỗi | restart, nhà cung cấp lỗi | tốt | [test] checkpoint, breaker, một tầng retry; chưa thử dự phòng thật |
 | 8 | Quan sát, truy vết | thấy được hệ thống làm gì | khá | [test] chỉ số `mm_ai_*`, `mm_ai_rca_*`; cảnh báo Prometheus; [đọc code] audit log |
 | 9 | Độ trễ | | tạm ổn | [đo live] ~33-52 s một phiên điều tra; chờ người mới là phần dài |
-| 10 | Kiểm thử, hồi quy | | tốt | [test] 265 test ai-agent; 454 ca eval chat; 22 ca RCA; CI job `ai-agent` (không bao giờ gọi mô hình thật) |
+| 10 | Kiểm thử, hồi quy | | tốt | [test] ~340 test ai-agent; 1.538 ca eval chat; 22 ca RCA; CI job `ai-agent` (không bao giờ gọi mô hình thật) |
 | 11 | Giải thích được | | tốt | [test] giả thuyết dẫn `e1..eN`, nêu điều bác bỏ |
 | 12 | Vận hành | | còn việc | chưa deploy bản mới lên Swarm, chưa kiểm cảnh báo trên Prometheus thật |
 
@@ -718,8 +718,10 @@ Nguồn: `docs/ai/10_AGENT_QUALITY_CRITERIA.md` (12 tiêu chí tự đặt) và 
 | Chat bằng `hy4-flash-free` (model miễn phí, KHÁC model của các hàng trên), cả 1.538 ca, gateway giả trả nhiều dòng (2026-11-21) | **1.129/1.538 (73,4%)**; dev 73%, heldout 77% (cũ trên gateway 1 dòng: 78,7%) | lookup 76%, filter 57%, variant 71%, propose 70%, adversarial 93%, scope 94%, **clarify 54%**; buyer 80%, seller 74%, admin 76%, **operator 63%** (`propose` 0/45: gọi 11 đến 13 lần tool, 11 ca hết ngân sách token); prompt chỉnh cho deepseek, chưa chỉnh cho hy4; không so được với 96% ở hàng đầu |
 | RCA bằng hy4, 22 ca × 3 lần | 54/66 (81,8%) | 16 ca đạt cả 3 lần, 2 ca trượt cả 3, 4 ca lúc đạt lúc trượt: một lượt 22 ca có thể ra 77 đến 86% |
 | Mô phỏng người dùng bằng hy4 (hy4 đóng vai người hỏi nhiều lượt, 73 kịch bản × 3) | 177/219 (80,8%, khoảng tin cậy 75-86%) | buyer 60/66, seller 43/57, admin 30/42, operator 42/54; 4 đề xuất ma thật, guard bắt cả 4; 24 lần `token_budget_exceeded` (admin/operator) |
+| Chat bằng `deepseek-v4.1-flash` (OpenCode, thinking tắt, 1 lượt/ca; model chính), tập **dev** 1.262 ca (2026-11-21; ghép các lần chạy: buyer prompt v2, seller/admin bản trước, operator prompt v2) | **1.170/1.262 (92,7%, khoảng tin cậy 91,1-94,0%)** | buyer 307/329 (93,3%), seller 292/317 (92,1%), admin 273/299 (91,3%), operator 298/317 (94,0%); `propose` 152/178 (85,4%), `clarify` 167/184 (90,8%), adversarial 98,9%, scope 96,1%. Operator trước khi sửa: 238/317, `propose` 0/37, nguyên nhân chính là trần số lần gọi, prompt chỉ soạn khi tìm ra nguyên nhân, và gateway/ca giả sai (xem 10.1). Cả phiên 4.224 lượt gọi, 27,2 triệu token vào (81% trúng cache), 622 nghìn ra, khoảng 1,21 USD niêm yết của OpenCode (không phải hoá đơn; gói Go trừ hạn mức); trung bình 4,7 s và 1,02 lần gọi công cụ mỗi ca |
+| Cùng model, tập **heldout** 276 ca (2026-11-21, prompt hiện hành, 2 luồng, 4 lần 429 trên khoảng 813 request, 0 ca lỗi hạ tầng) | **252/276 (91,3%)** | buyer 70/71, seller 76/83, admin 54/62, operator 52/60; thấp hơn dev khoảng 1,4 điểm, trong sai số nên chưa thấy dấu hiệu chỉnh prompt quá khớp dev. 24 ca trượt: seller `propose` 5 (agent hỏi lý do trước khi soạn đề xuất), `clarify` 8 (đọc dữ liệu trước rồi mới hỏi), chạm trần cứng 3, lẻ 8. Không có đề xuất ghi sai, đề xuất ma hay lộ dữ liệu cá nhân; 0 ca dính bộ lọc đề xuất ma (dev 3 ca, cả ba ở prompt cũ). 495 lượt gọi model, 3,37 triệu token |
 
-Điểm yếu lặp lại ở cả hai tập: **persona operator** gọi nhiều công cụ trước khi hỏi, thậm chí soạn đề xuất `requeue_outbox` cho order-service khi người dùng chưa nói service nào. Prompt operator chưa có quy tắc hỏi lại.
+Điểm yếu lặp lại (hy4, tập dev/heldout đầu): **persona operator** gọi nhiều công cụ trước khi hỏi, thậm chí soạn đề xuất `requeue_outbox` cho order-service khi người dùng chưa nói service nào. Prompt operator nay đã có quy tắc hỏi lại và giới hạn điều tra (v2, xem 10.1). Với deepseek, điểm yếu còn lại là câu ghi viết ngắn hoặc không dấu (seller `adjust_inventory`/`reject_return`: agent hỏi lý do thay vì soạn ngay), admin và operator điều tra thừa (24 ca dev vượt trần số lần gọi của ca, 14 ca là admin; chỉ 7 ca chạm trần cứng 8 công cụ/6 lượt model, hai loại trần xem 10.1), và `clarify`: agent đọc dữ liệu trước khi hỏi lại.
 
 ---
 
@@ -743,10 +745,15 @@ flowchart TD
 | Tham số `from` biến mất | `from` là từ khoá Python | đổi tên `from_`, test | quy ước: không đặt tên tham số theo từ khoá Python |
 | RCA chết toàn bộ lần chạy đầu | header phiên không đặt ở `LlmBrain._ask`; lỗi bị nuốt | đặt contextvar, log lỗi kèm nội dung | bài học: lỗi nuốt phải để lại dấu vết |
 | Lỗ hổng injection ở RCA | prompt RCA thiếu quy tắc về khối dữ liệu | thêm quy tắc 10, test bắt thiếu ở mọi persona, bọc tóm tắt/nhãn sự cố | chưa có bộ lọc chuỗi kiểu chỉ thị; bằng chứng cắt 1200 ký tự có thể mất thẻ đóng |
-| Dự đoán sai về `clarify` | tôi dự đoán model sẽ không hỏi lại vì prompt dặn không hỏi; đo thì buyer/seller hỏi tốt | sửa lại tài liệu | operator thật sự yếu, **chờ quyết định sửa prompt** |
+| Dự đoán sai về `clarify` | tôi dự đoán model sẽ không hỏi lại vì prompt dặn không hỏi; đo thì buyer/seller hỏi tốt | sửa lại tài liệu | operator thật sự yếu, prompt operator đã sửa (v2, 2026-11-21): quy tắc hỏi lại, giới hạn điều tra RCA chỉ cho câu hỏi nguyên nhân, dành lượt cuối để soạn đề xuất; dev operator 238/317 lên 298/317 |
 | Chuẩn chấm `clarify` | bản đầu quá chặt (6/37), sửa lại quá lỏng (câu hỏi lạc đề vẫn qua), rồi thêm regex theo từng ca | chốt chuẩn 3 lớp, đóng băng trước khi chạy heldout | dữ liệu clarify do AI viết (nay 228 ca, thêm 28 ca bù và một lượt kiểm tự động), chưa có người xem lại |
 | Kiểm chứng RCA bằng regex thô | chỉ nhận tên có `-`/`_`/`.`, so chuỗi con | ranh giới từ + chuẩn hoá số dùng chung (ADR-50) | tên viết kiểu khác lọt (`grounded=None`) |
 | Gateway giả trả dữ liệu sai hình dạng | tool ops/admin trả bản ghi kiểu đơn hàng | dựng `domain_body()` trả dữ liệu đúng hình | các lần chạy live trước đó đo số lần gọi công cụ bị méo |
+| Operator `propose` 0/37 ở lần đo deepseek đầu | ba nguyên nhân cộng lại: (1) prompt bắt điều tra RCA cho mọi câu nên dùng hết 8 lần gọi công cụ trước khi soạn đề xuất; (2) prompt dặn "chỉ soạn khi tìm ra nguyên nhân"; (3) gateway/ca giả sai: thế giới `down` vẫn báo replica chạy, sổ hành động giả có cả ops-service (sổ thật không có), đề xuất giả #2 trùng với việc agent định soạn nên agent tránh trùng, ca 134/173/208/316 đặt kỳ vọng sai | prompt operator v2; stub: `service_replicas_up`=0 khi down, bỏ ops-service khỏi enum restart/scale, đề xuất #2 đổi sang `scale_service`; sửa kỳ vọng và trần các ca; nới danh sách trắng tool của 29 ca `clarify` operator (đọc trạng thái trước khi hỏi là hợp lý, ca ghi vẫn cấm công cụ ghi) | `propose` operator dev 0/37 lên 28/34 sau sửa (số ca `propose` đổi vì sửa/chuyển nhóm một số ca), cả operator dev 238 lên 298/317, heldout 52/60 |
+| Hai loại trần số lần gọi công cụ bị lẫn | trần của từng ca eval (`max` trong yaml, 2-6) khác trần cứng của hệ thống (`limits.max_tool_calls: 8`, `max_model_calls: 6`); "vượt trần" ở eval phần lớn chỉ là vượt `max` của ca | khi đọc số, tách hai loại: 24 ca dev vượt `max`, chỉ 7 ca chạm trần cứng (admin 052/204/205/335, operator 082/083/369), phần còn lại câu trả lời vẫn đúng, chỉ tra thừa; heldout 3 ca chạm trần cứng (admin-203, operator-207/215, hai ca kèm `token_budget_exceeded`) | admin chưa được siết prompt như operator (tra cứu một mục thì gọi 1-2 công cụ rồi trả lời); 14 ca vượt trần của dev là admin |
+| Agent hỏi lý do thay vì soạn đề xuất ghi | seller `adjust_inventory`/`reject_return` và một số ca operator: lý do là trường bắt buộc nên agent hỏi lại; câu viết ngắn hoặc không dấu càng hay bị hỏi | chưa sửa; chưa chốt chính sách "hỏi lý do trước" hay "soạn ngay" | 5 ca seller heldout trượt vì điều này; không gây ghi sai |
+| Đề xuất ma chưa tính vào điểm eval | bộ lọc `guard/ghost.py` chạy trong `runtime/chat.py` (thêm dòng cảnh báo vào câu trả lời) nên lần chạy eval có qua nó, nhưng `run_evals.py` không coi ghost là lý do trượt (chỉ `run_sim_users.py` và trường `deny` của ca có kiểm) | đếm bằng dòng cảnh báo trong câu trả lời đã lưu: dev 3/1262 (prompt cũ), heldout 0/276, operator dev mới 0/317; chạy lại `is_ghost` offline cho cùng số | chưa thêm vào bộ chấm (nếu thêm, 3 ca dev trượt thêm) |
+| 429 của OpenCode làm hỏng lần chạy eval | SDK `max_retries: 2` (chờ 12-13 s rồi 0,9 s) không đủ khi bị giới hạn; 8 luồng: 1.214/1.262 ca lỗi hạ tầng; 3 luồng vẫn nhiều; 2 luồng lúc ổn lúc không, thay đổi theo giờ (cùng ngày: 74% request bị 429 buổi sáng, 4/813 buổi chiều) | chạy 2 luồng, `--only-failed` chạy lại ca lỗi (ca thành công cũ phát lại từ cache `evals/cache`, nên giống chạy tiếp), luôn báo số 429; lỗi hạ tầng (`model_unavailable`) không tính vào điểm | không có cách ép nhà cung cấp; muốn nhanh phải thử lại vào giờ khác |
 
 ### 10.2 Vấn đề về kiến trúc và vận hành
 
@@ -757,8 +764,8 @@ flowchart TD
 | Chưa có mô hình dự phòng thật | trung bình | `llm.fallbacks: {}`; cơ chế chỉ thử với lỗi giả; nhà cung cấp sập thì RCA/chat hỏng |
 | Chưa chạy xuyên suốt trên Swarm thật các kịch bản bảo mật | trung bình | thiếu test: token agent buyer1 gọi đơn buyer2, token `sys` ghi, duyệt bằng chính tài khoản tạo |
 | `pwd_version` quay vòng `% 100` | thấp | token cũ có thể hợp lệ lại sau đúng 100 lần đổi mật khẩu của cùng một tài khoản (V13 trong `01_OPEN_ISSUES.md`) |
-| Mẫu đo nhỏ | trung bình | RCA bằng hy4 66 lần chạy (22 ca × 3), model chính chỉ 5 ca; `clarify` heldout nay 44 ca (cũ 11); ca lookup/filter/variant sinh từ khoảng 25 đến 38 công thức mỗi persona nên mẫu hiệu dụng nhỏ hơn số ca; mô hình không xác định nên một lần chạy chưa đủ |
-| Chưa có số đo model chính trên bộ mới | trung bình | số hy4 và số deepseek không so thẳng được (prompt chỉnh cho deepseek, hy4 chỉ chạy được với điều kiện miễn phí); `token_budget_exceeded` ở admin/operator (24 lần trong mô phỏng, 11 ca operator `propose`) là câu hỏi về giới hạn cấu hình chưa quyết |
+| Mẫu đo nhỏ | trung bình | RCA bằng hy4 66 lần chạy (22 ca × 3), model chính chỉ 5 ca (22 ca RCA, 13 ca có đáp án `escalate_to_human`, chỉ khoảng 7 ca đo việc chọn đúng hành động ghi, khoảng tin cậy khoảng ±12 điểm, dữ liệu ca do chính ta viết và gateway giả, chưa chia dev/heldout; mỗi ca chỉ chạy một lần); `clarify` heldout nay 44 ca (cũ 11); ca lookup/filter/variant sinh từ khoảng 25 đến 38 công thức mỗi persona nên mẫu hiệu dụng nhỏ hơn số ca; mô hình không xác định nên một lần chạy chưa đủ |
+| Số đo model chính còn thiếu ở vài chỗ | trung bình | deepseek đã đo chat dev 1.170/1.262 (92,7%) và heldout 252/276 (91,3%) với prompt hiện hành (xem 9.3); chưa đo bằng model chính: bộ RCA (22 ca), mô phỏng người dùng (73 kịch bản) và `--repeat k`; số hy4 và số deepseek không so thẳng được (khác model; prompt chỉnh cho deepseek). `token_budget_exceeded` còn ở admin/operator (heldout 2 ca, dev 24 ca vượt trần trong đó 7 chạm trần cứng) là câu hỏi về giới hạn cấu hình chưa quyết |
 | Chưa có lớp bằng chứng dùng chung cho chat | thấp | chat chỉ có nhãn trích dẫn, chưa có mã tham chiếu từng lần gọi (ADR-49, chưa làm) |
 
 ---
@@ -771,7 +778,7 @@ Mục này gồm hai phần: 11.1 là bản đồ các nhóm việc của một 
 
 | Nhóm | Việc | Trạng thái | Gắn với vấn đề (mục 10) |
 |---|---|---|---|
-| **1. Đúng việc** | mô tả công cụ rõ; lọc/sắp xếp ở server để "top N" là một lần gọi; nhóm `clarify`; eval có tập heldout | Đã làm. Còn yếu: operator hỏi lại (0/2 heldout) | gọi thừa công cụ; `clarify`; operator thiếu quy tắc hỏi lại |
+| **1. Đúng việc** | mô tả công cụ rõ; lọc/sắp xếp ở server để "top N" là một lần gọi; nhóm `clarify`; eval có tập heldout | Đã làm. Operator đã sửa (prompt v2, dev 298/317); còn yếu: seller hỏi lý do trước khi soạn đề xuất, admin điều tra thừa | gọi thừa công cụ; `clarify`; operator thiếu quy tắc hỏi lại |
 | | chạy lặp `--repeat k` (pass^k) để thấy độ dao động, vì LLM không xác định | Có công cụ, chưa chạy đủ | mẫu đo nhỏ |
 | **2. Chịu lỗi** | giới hạn vòng/thời gian, breaker, một tầng retry, checkpoint (restart không mất phiên) | Đã làm [test] | |
 | | **mô hình dự phòng thật** (`fallbacks: {}`) | Chưa. Cơ chế có, chưa cấu hình | chưa có mô hình dự phòng |
@@ -789,7 +796,7 @@ Mục này gồm hai phần: 11.1 là bản đồ các nhóm việc của một 
 | | **nút dừng khẩn** tắt toàn bộ agent ngoài cờ cấu hình (Redis `ai_kill`, `PUT /ops/ai/kill`, thẻ ở `/admin/incidents`; Redis hỏng thì từ chối agent) | **Đã làm 2026-11-18** [test], có ghi `ops_audit_log`; chưa thử trên Swarm | |
 | | **phiên bản hoá prompt** và cổng eval bắt buộc trước khi đổi prompt/mô hình | Có dấu vân tay trong eval; chưa là cổng bắt buộc | |
 | | canary, xoay khoá `AI_SYSTEM_KEY` tự động | Chưa | một khoá dùng chung |
-| **7. Kiểm thử** | 265 test, eval 454 ca, CI không gọi mô hình thật | Đã làm (CI chưa chạy lần nào trên GitHub) | |
+| **7. Kiểm thử** | ~340 test, eval 1.538 ca, CI không gọi mô hình thật | Đã làm (CI chưa chạy lần nào trên GitHub) | |
 | | red team live nhóm `adversarial`; thử tải ("cảnh báo bão") | Chưa | |
 | **8. Tính năng** | RAG cho chính sách (hiện policy là file md nhét vào prompt); agent chủ động báo | Chưa | |
 | | bộ nhớ dài hạn của agent | **Cố ý không làm** (riêng tư) | |
@@ -802,14 +809,14 @@ Thứ tự theo giá trị và rủi ro.
 
 **Ngắn hạn (chờ quyết định):**
 
-1. Thêm quy tắc hỏi lại vào prompt operator ("thiếu service/sự cố/mã thì hỏi đúng một câu, không đoán, không soạn đề xuất cho đối tượng chưa nêu"), rồi đo lại `clarify` của operator trên dev và kiểm `lookup`/`filter` của operator không bị hỏi thừa. Tốn tiền (ước 60-150 request).
+1. ~~Thêm quy tắc hỏi lại vào prompt operator~~ (đã làm 2026-11-21, prompt operator v2, đo trên dev 317 ca và heldout 60 ca; operator dev 298/317, heldout 52/60). Còn lại: chốt chính sách seller/operator "hỏi lý do trước hay soạn đề xuất ngay", siết prompt admin điều tra thừa (như operator v2) rồi đo lại các ca admin vượt trần, và xem lại danh sách trắng tool của `clarify` admin (195/254/360).
 2. ~~Chạy `lookup` + `filter` trên tập dev để có mốc nền~~ (đã làm bằng hy4 trên cả 1.538 ca, 2026-11-21: 73,4%; mốc cho model khác vẫn chưa có vì chỉ được chạy hy4).
 3. Người xem lại 48 ca `clarify` do AI viết.
 4. Đẩy nhánh/mở PR để chạy CI job `ai-agent` lần đầu.
 
 **Trung hạn:**
 
-5. RCA: ~~chạy cả 22 ca với `--repeat 3`~~ (đã làm bằng hy4: 81,8%, 4 ca dao động; chưa làm với model chính); bộ ca âm (không có playbook, dữ liệu mâu thuẫn) và ca nhiễu (nhiều cảnh báo cùng lúc).
+5. RCA: ~~chạy cả 22 ca với `--repeat 3`~~ (đã làm bằng hy4: 81,8%, 4 ca dao động; chưa làm với model chính); bộ ca âm (không có playbook, dữ liệu mâu thuẫn) và ca nhiễu (nhiều cảnh báo cùng lúc). Bộ RCA hiện chỉ 22 ca nên nên mở rộng: sinh biến thể tự động từ ca có sẵn (đổi service/giá trị metric, thêm nhiễu), thêm kịch bản thiếu (slow-database, resource-trend, lỗi chồng, cảnh báo tự hết, sự cố lặp lại), chia dev/heldout và chạy 3 lần mỗi ca.
 6. Red team live cho nhóm `adversarial` (~68 ca) và 3 ca injection lặp nhiều lần.
 7. Cấu hình **mô hình dự phòng thật**, kiểm breaker với nhà cung cấp thật.
 8. Triển khai lại ai-agent trên Swarm (khi không có phiên đang chạy), chạy `scripts/smoke-ai.sh` và `scripts/smoke-rca-tools.sh`, tiêm lỗi bằng `resilience.sh` (hỏi từng lần), kiểm cảnh báo trên Prometheus thật.

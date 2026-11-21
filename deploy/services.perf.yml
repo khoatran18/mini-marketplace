@@ -1,0 +1,32 @@
+# CHỈ CHO MÔI TRƯỜNG THỬ TẢI (perf test). KHÔNG dùng ở production.
+# Mục đích: cho phép mô phỏng nhiều IP client khác nhau bằng header X-Forwarded-For khi đi qua Traefik (ingress của Swarm).
+# Vì sao cần: cổng 80 của Traefik publish kiểu ingress nên mọi client ngoài đều đến Traefik với địa chỉ 10.0.0.2 (mạng ingress), Traefik
+# mặc định bỏ X-Forwarded-For của client, và gateway có TRUSTED_PROXIES rỗng nên bỏ qua header này (docs/planning/01_OPEN_ISSUES.md S8).
+# Hai thay đổi:
+#   1. Traefik tin X-Forwarded-For đến từ mạng ingress (10.0.0.0/24): giữ header của client và nối thêm 10.0.0.2.
+#   2. Gateway tin proxy trong mạng ingress (10.0.0.0/24) và mạng marketplace-net (10.0.1.0/24): đọc IP client từ XFF.
+# CẢNH BÁO: vì mọi client ngoài đều đến từ 10.0.0.2 nên MỌI người đều giả được IP (né giới hạn tốc độ). Đừng bật ngoài môi trường thử.
+# Dải mạng lấy từ `docker network inspect ingress` / `marketplace-net` trên máy này; đổi nếu mạng của bạn khác.
+# Áp dụng (giống scripts/deploy.sh, chỉ thêm file này): xem docs/instruction/04_TESTING.md hoặc lệnh trong mục kiểm tra bên dưới.
+# Kiểm: gửi 2 yêu cầu với X-Forwarded-For khác nhau, X-RateLimit-Remaining của mỗi IP phải bắt đầu riêng (299) và Redis có khoá
+# rate_limit:global:<IP giả> tương ứng.
+services:
+  traefik:
+    # `command` bị GHI ĐÈ (không nối thêm) khi gộp file bằng docker compose 5.x, nên phải chép lại đủ cờ của services.yml (bản HTTP) và thêm cờ mới ở cuối.
+    # Nếu sửa `command` của traefik trong services.yml thì sửa theo ở đây. Chỉ dùng với PUBLIC_SCHEME=http.
+    command:
+      - --entrypoints.web.address=:80
+      - --providers.swarm.endpoint=unix:///var/run/docker.sock
+      - --providers.swarm.exposedbydefault=false
+      - --providers.swarm.network=marketplace-net
+      - --api.dashboard=true
+      - --api.insecure=false
+      - --accesslog=true
+      - --ping=true
+      - --entrypoints.metrics.address=:8082
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entrypoint=metrics
+      - --entrypoints.web.forwardedHeaders.trustedIPs=10.0.0.0/24
+  api-gateway:
+    environment:
+      TRUSTED_PROXIES: 10.0.0.0/24,10.0.1.0/24
