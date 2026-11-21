@@ -6,6 +6,21 @@ mô phỏng nhiều IP khi kiểm thử tải. Phát hiện ngày 2026-11-22 (xe
 Mức tin cậy từng phần được ghi rõ: **[đã kiểm]** là đo hoặc đọc trực tiếp trên máy này (Swarm một node); **[tài liệu]** là kiến thức chung
 về Docker/Traefik/gin, hành vi khớp với kết quả đo nhưng chưa kiểm riêng trên phiên bản đang chạy.
 
+## Trạng thái hiện tại và cách bật/tắt cấu hình thử tải
+
+**Từ 2026-11-22 stack `marketplace` trên máy này đang chạy với `deploy/services.perf.yml`** (Traefik tin `10.0.0.0/24`, gateway `TRUSTED_PROXIES=10.0.0.0/24,10.0.1.0/24`):
+mọi client ngoài giả được IP bằng `X-Forwarded-For`. **Chưa quay lại cấu hình bình thường.** Cập nhật dòng này khi quay lại.
+
+```bash
+# BẬT (đã dùng ngày 2026-11-22; giống scripts/deploy.sh, chỉ thêm services.perf.yml; chỉ Traefik và gateway khởi động lại)
+docker compose --env-file deploy/.env -f deploy/services.yml -f deploy/services.perf.yml config \
+  | sed -e '/^name:/d' -E -e 's/^( *published: )"([0-9]+)"$/\1\2/' | docker stack deploy --detach=true -c - marketplace
+# TẮT (về cấu hình bình thường: TRUSTED_PROXIES rỗng, Traefik không có forwardedHeaders)
+./scripts/deploy.sh services
+# kiểm đang ở cấu hình nào
+docker service inspect marketplace_api-gateway --format '{{range .Spec.TaskTemplate.ContainerSpec.Env}}{{println .}}{{end}}' | grep ^TRUSTED_PROXIES
+```
+
 ## 1. Các mạng trong Docker Swarm
 
 | Mạng | Loại | Dải trên máy này | Dùng để |
