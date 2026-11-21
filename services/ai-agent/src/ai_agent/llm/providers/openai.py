@@ -5,6 +5,7 @@ from typing import Any
 
 from langchain_core.language_models.chat_models import BaseChatModel
 
+from ai_agent.llm import replay_cache
 from ai_agent.llm.providers._common import model_id, require
 from ai_agent.llm.registry import register_llm
 
@@ -23,8 +24,9 @@ def build(profile: dict[str, Any]) -> BaseChatModel:
         extra["stream_usage"] = bool(profile["stream_usage"])
     if profile.get("default_headers"):
         extra["default_headers"] = dict(profile["default_headers"])
-    if session_header:
-        extra.update(_session_clients(str(session_header)))
+    cache = replay_cache.from_env()  # chỉ eval đặt AI_LLM_CACHE_DIR; production không bao giờ có cache
+    if session_header or cache:
+        extra.update(_session_clients(str(session_header or ""), cache))
     if profile.get("timeout"):
         extra["timeout"] = float(profile["timeout"])
     if profile.get("max_retries") is not None:  # tầng thử lại DUY NHẤT (SDK: backoff có jitter, tôn trọng Retry-After); xem llm/resilience.py
@@ -39,9 +41,10 @@ def build(profile: dict[str, Any]) -> BaseChatModel:
     )
 
 
-def _session_clients(header: str) -> dict[str, Any]:
-    """HTTP client có hook gắn header mã phiên theo lượt chat hiện tại. Mô hình được dựng một lần và dùng chung cho mọi
-    cuộc hội thoại nên mã phiên phải lấy lúc gửi request (contextvar), không cố định lúc dựng."""
+def _session_clients(header: str, cache: replay_cache.ReplayCache | None = None) -> dict[str, Any]:
+    """HTTP client có hook gắn header mã phiên theo lượt chat hiện tại (nếu có header) và, khi cache replay bật, bọc transport để phát lại/ghi
+    phản hồi (llm/replay_cache.py). Mô hình được dựng một lần và dùng chung cho mọi cuộc hội thoại nên mã phiên phải lấy lúc gửi request
+    (contextvar), không cố định lúc dựng."""
     import httpx
 
     from ai_agent.runtime.context import peek_run
@@ -55,7 +58,14 @@ def _session_clients(header: str) -> dict[str, Any]:
     async def astamp(request: httpx.Request) -> None:
         stamp(request)
 
+    hooks = [stamp] if header else []
+    ahooks = [astamp] if header else []
+    kw: dict[str, Any] = {}
+    akw: dict[str, Any] = {}
+    if cache is not None:
+        kw["transport"] = replay_cache.CachingTransport(httpx.HTTPTransport(), cache)
+        akw["transport"] = replay_cache.CachingAsyncTransport(httpx.AsyncHTTPTransport(), cache)
     return {
-        "http_client": httpx.Client(event_hooks={"request": [stamp]}),
-        "http_async_client": httpx.AsyncClient(event_hooks={"request": [astamp]}),
+        "http_client": httpx.Client(event_hooks={"request": hooks}, **kw),
+        "http_async_client": httpx.AsyncClient(event_hooks={"request": ahooks}, **akw),
     }

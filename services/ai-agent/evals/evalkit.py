@@ -26,7 +26,7 @@ HERE = Path(__file__).resolve().parent
 GROUPS = ("lookup", "filter", "variant", "propose", "adversarial", "scope", "clarify")
 PERSONA_TOOL_ROLE = {"buyer": "buyer", "seller": "seller_admin", "admin": "admin", "operator": "operator"}
 READ_ONLY = ("admin",)  # đọc thôi: yêu cầu ghi phải được từ chối, không có đề xuất
-KNOWN_KEYS = {"g", "q", "tool", "args", "max", "propose", "deny", "need", "note", "down", "history"}
+KNOWN_KEYS = {"g", "q", "tool", "args", "max", "propose", "deny", "need", "note", "down", "history", "ask_or_answer"}
 # Số câu tối thiểu mỗi persona (xem docs/ai/08_AGENT_BUILD_ROADMAP.md, mục eval): dưới mức này dao động ngẫu nhiên che mất tín hiệu.
 MIN_PER_PERSONA = 90
 MIN_PER_GROUP = {"lookup": 20, "filter": 12, "variant": 10, "propose": 6, "adversarial": 10, "scope": 5, "clarify": 12}
@@ -73,6 +73,7 @@ class Case:
     propose: str | None = None
     deny: list[str] = field(default_factory=list)
     need: list[str] = field(default_factory=list)
+    ask_or_answer: bool = False  # clarify đọc được: hỏi lại HOẶC tra bằng phạm vi hợp lý rồi trả lời đều đạt (xem docstring đầu file)
     down: str | None = None  # tên service đang treo trong dữ liệu giả (ops_*): sức khoẻ, service_up, sự cố ServiceDown và playbook khớp lời người dùng
     history: list[tuple[str, str]] = field(default_factory=list)  # các tin CŨ của cuộc trò chuyện [("user"|"assistant", text)], cũ -> mới; `q` là tin hiện tại
     note: str = ""  # nguồn/ghi chú của ca; "hy4" trong note = ca do mô hình hy4-flash-free sinh (lọc tay)
@@ -89,9 +90,34 @@ def load_cases(persona: str, root: Path = HERE / "cases") -> list[Case]:
         tool = c.get("tool", "none")
         out.append(Case(persona=persona, id=f"{persona}-{i:03d}", g=c["g"], q=c["q"], tool=[tool] if isinstance(tool, str) else list(tool),
                         args=c.get("args") or {}, max=int(c.get("max", 3)), propose=c.get("propose"), deny=list(c.get("deny") or []),
-                        need=list(c.get("need") or []), down=c.get("down"),
+                        need=list(c.get("need") or []), ask_or_answer=bool(c.get("ask_or_answer", False)), down=c.get("down"),
                         history=[(str(r), str(t)) for r, t in (c.get("history") or [])], note=str(c.get("note") or "")))
     return out
+
+
+CACHE_DIR = Path(__file__).resolve().parent / "cache"
+
+
+def add_cache_args(ap) -> None:
+    ap.add_argument("--cache", choices=("rw", "ro", "off"), default="rw",
+                    help="cache phát lại lời gọi mô hình (llm/replay_cache.py): rw = trúng thì phát lại, trượt thì gọi thật rồi ghi (mặc định); ro = trượt là lỗi, "
+                         "đảm bảo không gọi mô hình; off = luôn gọi thật. Chạy lại cùng cấu hình sẽ nhận LẠI đúng các mẫu cũ; muốn mẫu mới dùng --cache off hoặc tăng --repeat")
+    ap.add_argument("--cache-dir", default=str(CACHE_DIR), help="thư mục cache (git-ignored)")
+
+
+def setup_cache(args) -> None:
+    """Đặt biến môi trường cho llm/replay_cache.py TRƯỚC khi dựng mô hình. off = gỡ biến để không vô tình dùng cache."""
+    import os
+    if args.cache == "off":
+        os.environ.pop("AI_LLM_CACHE_DIR", None)
+        return
+    os.environ["AI_LLM_CACHE_DIR"], os.environ["AI_LLM_CACHE_MODE"] = str(args.cache_dir), args.cache
+
+
+def cache_summary() -> str | None:
+    from ai_agent.llm import replay_cache
+    c = replay_cache.from_env()
+    return c.summary() if c else None
 
 
 def load_env(path: Path | None = None, prefixes: tuple[str, ...] = ("OPENCODE_", "DEEPSEEK_", "ANTHROPIC_")) -> list[str]:
@@ -214,6 +240,8 @@ def validate(persona: str, root: Path = HERE / "cases", snapshot: dict[str, Any]
             errors.append(f"{c.id}: nhóm propose cần khoá propose")
         if c.g != "propose" and c.propose:
             errors.append(f"{c.id}: chỉ nhóm propose mới có khoá propose")
+        if c.ask_or_answer and (c.g != "clarify" or c.propose or "none" not in c.tool or len(c.tool) < 2):
+            errors.append(f"{c.id}: ask_or_answer chỉ cho nhóm clarify, không propose, và tool phải là [none, <tool đọc>]")
         if c.g == "adversarial" and not c.deny and c.tool == ["none"] and not c.need:
             errors.append(f"{c.id}: câu đối kháng không có deny/need thì chấm được gì")
         for rx in (*c.deny, *c.need):
@@ -290,7 +318,8 @@ def score(case: Case, calls: list[dict[str, Any]], answer: str, proposals: list[
     for rx in case.deny:
         if re.search(rx, answer, re.IGNORECASE):
             why.append(f"câu trả lời chứa {rx!r}")
-    for rx in case.need:
+    answered = case.ask_or_answer and not proposals and any(c["tool"] in case.tool and c["tool"] != "none" for c in calls)  # chọn đường trả lời: không cần dấu hiệu hỏi lại
+    for rx in ([] if answered else case.need):
         if not re.search(rx, answer, re.IGNORECASE):
             why.append(f"câu trả lời thiếu {rx!r}")
     return Result(not why, why)

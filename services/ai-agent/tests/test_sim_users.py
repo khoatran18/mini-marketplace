@@ -1,4 +1,4 @@
-"""Bộ mục tiêu người dùng giả lập (evals/sim/goals.yaml) và phần chấm điểm của evals/run_sim_users.py. Không gọi mô hình."""
+"""Bộ mục tiêu người dùng giả lập (evals/sim/goals.yaml) và phần chấm điểm của evals/sim.py. Không gọi mô hình."""
 import asyncio
 import sys
 from pathlib import Path
@@ -79,3 +79,60 @@ def test_simulate_stops_on_done_proposal_and_max_turns(monkeypatch):
     assert r["turns"] == 0
     r = run(_goal(propose="none", max_turns=2), lambda p: "hỏi tiếp")
     assert r["turns"] == 2 and r["ok"]
+
+
+def test_min_turns_blocks_early_done_and_prompt_carries_behavior(monkeypatch):
+    import run_evals
+
+    async def fake_run_case(rt, calls, persona, case, today, snapshot, state=None):
+        return {"answer": "ok", "calls": [], "proposals": [], "reasons": []}
+
+    monkeypatch.setattr(run_evals, "run_case", fake_run_case)
+    prompts = []
+
+    def user(p):
+        prompts.append(p)
+        return "DONE" if "CHƯA được dừng" not in p else "tin tiếp"
+
+    g = _goal(min_turns=2, max_turns=4, behavior="cãi lại khi bị từ chối", propose="none")
+    r = asyncio.run(sim.simulate(g, None, [], {}, None, {}, None, user))
+    assert r["turns"] == 2  # hai tin đầu bắt buộc, sau đó DONE được chấp nhận
+    assert all("cãi lại khi bị từ chối" in p for p in prompts)
+    assert sim.validate([_goal(min_turns=5, max_turns=3)])  # min_turns > max_turns là lỗi
+
+
+def test_user_model_uses_replay_cache(tmp_path, monkeypatch):
+    """Model đóng vai người dùng cũng đi qua cache phát lại: lần 2 không gọi mạng; chế độ ro thì trượt là lỗi."""
+    import io
+    import json
+
+    import pytest
+
+    from ai_agent.llm import replay_cache
+
+    calls = []
+
+    class Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def fake_urlopen(req, timeout=0):
+        calls.append(1)
+        return Resp(json.dumps({"choices": [{"message": {"content": f"câu {len(calls)}"}}]}).encode())
+
+    monkeypatch.setenv("OPENCODE_API_KEY", "x")
+    monkeypatch.setattr(sim.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setenv("AI_LLM_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("AI_LLM_CACHE_MODE", "rw")
+    monkeypatch.setattr(replay_cache, "_shared", None)
+    assert sim.call_user_model("https://x.test/v1", "m", "hỏi gì đó") == "câu 1"
+    monkeypatch.setattr(replay_cache, "_shared", None)  # tiến trình mới
+    assert sim.call_user_model("https://x.test/v1", "m", "hỏi gì đó") == "câu 1" and len(calls) == 1
+    monkeypatch.setenv("AI_LLM_CACHE_MODE", "ro")
+    monkeypatch.setattr(replay_cache, "_shared", None)
+    with pytest.raises(replay_cache.CacheMiss):
+        sim.call_user_model("https://x.test/v1", "m", "lời nhắc khác")
+    assert len(calls) == 1

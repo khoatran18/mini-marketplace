@@ -12,6 +12,7 @@ import sys
 import time
 from pathlib import Path
 
+import evalkit
 import rcakit
 
 MAX_CALLS_PER_CASE = 12  # trần lượt mô hình mỗi case (rca.max_model_calls); khi ước tính chi phí lấy trần này
@@ -19,8 +20,8 @@ MAX_CALLS_PER_CASE = 12  # trần lượt mô hình mỗi case (rca.max_model_ca
 
 async def run_all(args) -> list[dict]:
     if args.live:
-        import evalkit
         evalkit.load_env()  # khoá từ deploy/.env (chỉ nạp biến chưa có), giống run_evals.py
+        evalkit.setup_cache(args)
     cases = [c for c in rcakit.load_cases() if (not args.ids or c["id"] in args.ids)]
     todo = [c for _ in range(max(1, args.repeat)) for c in cases]  # lặp k lần cả bộ (ca nào cũng chạy k lần)
     rows: list[dict] = []
@@ -75,6 +76,7 @@ def main() -> int:
     ap.add_argument("--ids", nargs="+")
     ap.add_argument("--repeat", type=int, default=1, help="chạy mỗi ca k lần để thấy độ dao động (--live: tốn k lần chi phí)")
     ap.add_argument("--concurrency", type=int, default=1, help="số ca chạy song song (mặc định 1 = tuần tự). Nhà cung cấp có thể trả 429")
+    evalkit.add_cache_args(ap)
     ap.add_argument("--require-model", metavar="MODEL_ID", help="từ chối chạy nếu llm.roles.rca dùng mô hình khác MODEL_ID (chốt chặn tránh gọi nhầm mô hình trả tiền)")
     ap.add_argument("--out")
     args = ap.parse_args()
@@ -102,6 +104,8 @@ def main() -> int:
     rows = asyncio.run(run_all(args))
     ok = sum(1 for r in rows if r["ok"])
     print(f"\ntổng: {ok}/{len(rows)} đạt")
+    if args.live and evalkit.cache_summary():
+        print(evalkit.cache_summary())
     for k in ("cause", "playbook", "action", "forbid", "outcome", "budget", "read_only", "grounded"):
         have = [r["checks"][k] for r in rows if r.get("checks")]
         print(f"  {k:10} {sum(have)}/{len(have)}")
@@ -112,7 +116,6 @@ def main() -> int:
     if args.out:
         from datetime import datetime, timezone
 
-        import evalkit
         from ai_agent.config import load_config
         cfg = load_config("dev", rcakit.HERE.parent / "configs")
         meta = {**evalkit.fingerprint(cfg._data["llm"]), "run": {"mode": "live" if args.live else "oracle", "repeat": args.repeat, "ids": args.ids,

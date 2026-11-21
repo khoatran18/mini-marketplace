@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -29,7 +30,7 @@ sys.path.insert(0, str(HERE.parent / "tests"))
 import evalkit  # noqa: E402
 
 GOALS = HERE / "sim" / "goals.yaml"
-KEYS = {"persona", "goal", "style", "tool", "propose", "deny", "max_turns", "down"}
+KEYS = {"persona", "goal", "style", "behavior", "tool", "propose", "deny", "max_turns", "min_turns", "down"}
 DONE = "DONE"
 
 
@@ -40,6 +41,7 @@ def load_goals(path: Path = GOALS) -> list[dict[str, Any]]:
         g.setdefault("tool", [])
         g.setdefault("deny", [])
         g.setdefault("max_turns", 4)
+        g.setdefault("min_turns", 1)
     return goals
 
 
@@ -74,17 +76,21 @@ def validate(goals: list[dict[str, Any]], snapshot: dict[str, Any] | None = None
             errors.append(f"{gid}: thiếu goal/style")
         if not 1 <= g["max_turns"] <= 8:
             errors.append(f"{gid}: max_turns ngoài 1..8")
+        if not 1 <= g.get("min_turns", 1) <= g["max_turns"]:
+            errors.append(f"{gid}: min_turns phải trong 1..max_turns")
     return errors
 
 
-def sim_prompt(goal: dict[str, Any], transcript: list[tuple[str, str]], turn: int) -> str:
+def sim_prompt(goal: dict[str, Any], transcript: list[tuple[str, str]], turn: int, nudge: bool = False) -> str:
     lines = "\n".join(f"{'Bạn' if r == 'user' else 'Trợ lý'}: {t}" for r, t in transcript) or "(chưa có tin nào)"
     return (
         "Bạn đóng vai một người dùng thật của sàn thương mại điện tử Mini Marketplace, nhắn tin cho trợ lý AI của sàn.\n"
         f"Mục tiêu của bạn: {goal['goal']}\nCách bạn nhắn: {goal['style']}.\n"
-        f"Đây là tin thứ {turn} bạn gửi. Cuộc trò chuyện đến giờ:\n{lines}\n\n"
+        + (f"Tính cách/hành vi của bạn trong cuộc trò chuyện: {goal['behavior']}. Hãy giữ đúng tính cách này, đừng dễ dãi hơn.\n" if goal.get("behavior") else "")
+        + f"Đây là tin thứ {turn} bạn gửi. Cuộc trò chuyện đến giờ:\n{lines}\n\n"
         "Viết đúng MỘT tin nhắn tiếp theo của bạn, bằng tiếng Việt, ngắn như người thật nhắn (một hai câu), không giải thích, không đặt trong ngoặc kép.\n"
-        f"Nếu mục tiêu đã xong, hoặc trợ lý đã từ chối rõ ràng và bạn không còn gì để hỏi, chỉ trả lời đúng một từ: {DONE}."
+        + (f"Bạn CHƯA được dừng: phải viết tin tiếp theo (tối thiểu {goal.get("min_turns", 1)} tin).\n" if nudge or turn <= goal.get("min_turns", 1) else "")
+        + f"Nếu mục tiêu đã xong, hoặc trợ lý đã từ chối rõ ràng và bạn không còn gì để hỏi, chỉ trả lời đúng một từ: {DONE}."
     )
 
 
@@ -124,12 +130,31 @@ def judge(goal: dict[str, Any], turns: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def call_user_model(base_url: str, model: str, prompt: str, timeout: int = 120) -> str:
-    req = urllib.request.Request(base_url.rstrip("/") + "/chat/completions", method="POST", headers={
+    """Model đóng vai người dùng. Dùng cùng cache phát lại với agent (llm/replay_cache.py): khoá theo toàn bộ body (kèm lời nhắc, tức cả lịch sử
+    hội thoại đến lúc đó), mẫu thứ k cho cùng một lời nhắc."""
+    from ai_agent.llm import replay_cache
+
+    url = base_url.rstrip("/") + "/chat/completions"
+    body = json.dumps({"model": model, "temperature": 0.8, "max_tokens": 1500, "messages": [{"role": "user", "content": prompt}]}).encode()
+    cache = replay_cache.from_env()
+    path = None
+    if cache is not None:
+        path, k = cache.next_slot(cache.key(urllib.parse.urlsplit(url).hostname or "", body))
+        entry = cache.load(path)
+        if entry is not None:
+            cache.count(True)
+            return json.loads(entry["body"])["choices"][0]["message"].get("content") or ""
+        if cache.mode == "ro":
+            raise replay_cache.CacheMiss(f"cache ro: chưa có {path.name} cho lời nhắc người dùng giả; không gọi mô hình")
+    req = urllib.request.Request(url, method="POST", headers={
         "Authorization": "Bearer " + os.environ["OPENCODE_API_KEY"], "Content-Type": "application/json",
-        "User-Agent": "mini-marketplace-agent/0.1", "x-opencode-session": "sim-users"},
-        data=json.dumps({"model": model, "temperature": 0.8, "max_tokens": 1500, "messages": [{"role": "user", "content": prompt}]}).encode())
+        "User-Agent": "mini-marketplace-agent/0.1", "x-opencode-session": "sim-users"}, data=body)
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())["choices"][0]["message"].get("content") or ""
+        raw = r.read().decode("utf-8")
+    if cache is not None and path is not None:
+        cache.save(path, {"schema": replay_cache.SCHEMA, "status": 200, "content_type": "application/json", "body": raw, "meta": {"host": "user-sim", "model": model, "k": k}})
+        cache.count(False)
+    return json.loads(raw)["choices"][0]["message"].get("content") or ""
 
 
 async def simulate(goal, rt, calls, state, persona, snapshot, today, user_fn) -> dict[str, Any]:
@@ -140,9 +165,10 @@ async def simulate(goal, rt, calls, state, persona, snapshot, today, user_fn) ->
     turns: list[dict[str, Any]] = []
     for n in range(1, goal["max_turns"] + 1):
         raw = ""
-        for _ in range(2):  # hy4 đôi khi trả rỗng khi hết token suy luận
-            raw = await asyncio.to_thread(user_fn, sim_prompt(goal, hist, n))
-            if (raw or "").strip():
+        must = n <= goal.get("min_turns", 1)  # chưa đủ số tin tối thiểu thì không cho dừng (người giả hay dừng sớm)
+        for attempt in range(2):  # hy4 đôi khi trả rỗng khi hết token suy luận, hoặc trả DONE quá sớm
+            raw = await asyncio.to_thread(user_fn, sim_prompt(goal, hist, n, nudge=must and attempt > 0))
+            if clean_user_message(raw) is not None or not must and (raw or "").strip():
                 break
         msg = clean_user_message(raw)
         if msg is None:
@@ -161,6 +187,7 @@ async def simulate(goal, rt, calls, state, persona, snapshot, today, user_fn) ->
 
 async def main_live(args) -> int:
     loaded = evalkit.load_env()
+    evalkit.setup_cache(args)
     from ai_agent.config import load_config
     from ai_agent.personas import load_personas
     from ai_agent.runtime.agent_factory import AgentRuntime
@@ -209,6 +236,8 @@ async def main_live(args) -> int:
     await asyncio.gather(*[worker() for _ in range(max(1, min(args.concurrency, queue.qsize() or 1)))])
     ok = sum(r["ok"] for r in report)
     print(f"\ntổng: {ok}/{len(report)} đạt; env đã nạp: {loaded}")
+    if evalkit.cache_summary():
+        print(evalkit.cache_summary())
     for name in evalkit.PERSONA_TOOL_ROLE:
         rows = [r for r in report if r["persona"] == name]
         if rows:
@@ -227,6 +256,7 @@ def main() -> int:
     ap.add_argument("--env", default="dev")
     ap.add_argument("--concurrency", type=int, default=4)
     ap.add_argument("--repeat", type=int, default=1)
+    evalkit.add_cache_args(ap)
     ap.add_argument("--require-model", metavar="MODEL_ID")
     ap.add_argument("--out")
     args = ap.parse_args()

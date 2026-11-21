@@ -52,10 +52,18 @@ _ACTIONS = [
 ]
 _INCIDENT = {"id": 4, "alert_name": "OutboxDeadRows", "severity": "warning", "component": "order-service", "state": "open", "summary": "order-service có dòng outbox chết",
              "runbook": "§12", "suggested_action": "requeue_outbox", "opened_at": "2026-11-17T08:00:00Z"}
+_MORE_INCIDENTS = [
+    {**_INCIDENT, "id": 5, "alert_name": "HighErrorRate", "severity": "warning", "component": "api-gateway", "summary": "api-gateway tỉ lệ lỗi 5xx cao", "runbook": "§3", "suggested_action": "escalate_to_human", "opened_at": "2026-11-17T09:10:00Z"},
+    {**_INCIDENT, "id": 6, "alert_name": "KafkaConsumerLag", "severity": "critical", "component": "product-service", "summary": "product-service consumer lag cao", "runbook": "§7", "suggested_action": "restart_service", "opened_at": "2026-11-17T10:30:00Z"},
+]
 _PROPOSAL = {"id": 1, "incident_id": 4, "action_id": "requeue_outbox", "params": {"service": "order-service"}, "rationale": "dòng chết sau khi Kafka phục hồi", "risk": "high",
              "state": "pending", "created_by": "operator", "created_at": "2026-11-17T08:05:00Z"}
 
 
+_MORE_PROPOSALS = [
+    {**_PROPOSAL, "id": 2, "incident_id": 6, "action_id": "restart_service", "params": {"service": "product-service"}, "rationale": "consumer lag không giảm", "risk": "low", "created_at": "2026-11-17T10:40:00Z"},
+    {**_PROPOSAL, "id": 3, "incident_id": 5, "action_id": "escalate_to_human", "params": {}, "rationale": "cần người xem lỗi 5xx", "risk": "observe", "state": "executed", "created_at": "2026-11-17T09:20:00Z"},
+]
 _UP_METRICS = ("service_up", "service_ready", "service_replicas_up")  # 0 khi service đang treo (đúng tên truy vấn trong bảng ops_metrics_query)
 
 
@@ -98,19 +106,22 @@ def domain_body(tool: str, args: dict[str, Any], down: str | None = None) -> dic
             return hit
     rid = int(args["id"]) if str(args.get("id", "")).isdigit() else 4
     if tool == "ops_list_incidents":
-        return {"items": [_INCIDENT], "total": 1}
+        return {"items": [_INCIDENT, *_MORE_INCIDENTS], "total": 3}
     if tool == "ops_get_incident":
-        return {**_INCIDENT, "id": rid}
+        return {**next((i for i in [_INCIDENT, *_MORE_INCIDENTS] if i["id"] == rid), _INCIDENT), "id": rid}
     if tool == "ops_list_audit":
-        return {"items": [{"id": 1, "subject_type": "incident", "subject_id": "4", "action": "opened", "actor": "system", "at": "2026-11-17T08:00:00Z"}], "total": 1}
+        return {"items": [{"id": 1, "subject_type": "incident", "subject_id": "4", "action": "opened", "actor": "system", "at": "2026-11-17T08:00:00Z"},
+                          {"id": 2, "subject_type": "incident", "subject_id": "5", "action": "opened", "actor": "system", "at": "2026-11-17T09:10:00Z"},
+                          {"id": 3, "subject_type": "proposal", "subject_id": "2", "action": "created", "actor": "operator", "at": "2026-11-17T10:40:00Z"}], "total": 3}
     if tool == "ops_outbox_dead":
-        return {"service": args.get("service", "order-service"), "items": [{"id": 10, "topic": "order.created", "attempts": 5, "last_error": "kafka timeout"}], "total": 1}
+        return {"service": args.get("service", "order-service"), "items": [{"id": 10, "topic": "order.created", "attempts": 5, "last_error": "kafka timeout"},
+                {"id": 11, "topic": "order.paid", "attempts": 5, "last_error": "kafka timeout"}, {"id": 12, "topic": "order.created", "attempts": 3, "last_error": "broker not available"}], "total": 3}
     if tool == "ops_list_actions":
         return {"actions": _ACTIONS}
     if tool == "ops_list_proposals":
-        return {"items": [_PROPOSAL], "total": 1}
+        return {"items": [_PROPOSAL, *_MORE_PROPOSALS], "total": 3}
     if tool == "ops_get_proposal":
-        return {**_PROPOSAL, "id": rid}
+        return {**next((p for p in [_PROPOSAL, *_MORE_PROPOSALS] if p["id"] == rid), _PROPOSAL), "id": rid}
     if tool == "ops_metrics_query":
         name = str(args.get("name", ""))
         if name.startswith("logs_"):
@@ -167,7 +178,13 @@ def stub_gateway(snapshot: dict[str, Any], calls: list[dict[str, Any]], state: d
                 row = {"id": 1, "status": status, "total": 250000, "name": "Mẫu", "state": "ok", "ok": True, "delivered_at": state.get("delivered_at")}
                 if "product" in t["path"] or t["name"] in ("search_products", "list_low_stock"):  # đúng dạng sản phẩm, không phải bản ghi đơn
                     row = {"id": 1, "name": "Sản phẩm mẫu", "brand": "Mẫu", "category_id": 1, "price": 150000, "status": "ACTIVE", "inventory": 42, "available": 42, "low_stock_threshold": 5}
-                body = {**row, "id": int(args["id"]) if str(args["id"]).isdigit() else args["id"], "items": [row]} if "id" in args else {"items": [row], "total": 1, "page": 1}
+                if "id" in args:
+                    body = {**row, "id": int(args["id"]) if str(args["id"]).isdigit() else args["id"], "items": [row]}
+                elif "product" in t["path"] or t["name"] in ("search_products", "list_low_stock"):
+                    body = {"items": [row], "total": 1, "page": 1}  # seller chỉ có sản phẩm 1 (ca history nói vậy)
+                else:  # danh sách đơn/thanh toán/...: nhiều dòng cùng trạng thái, id khác nhau, để "đơn đó" không tự suy ra được
+                    rows = [row, {**row, "id": 2, "total": 480000}, {**row, "id": 3, "total": 90000}]
+                    body = {"items": rows, "total": 3, "page": 1}
                 return httpx.Response(200, json=body)
         return httpx.Response(404, json={"error": "not found"})
 
@@ -195,7 +212,7 @@ def world_state(case: evalkit.Case, now: datetime) -> dict[str, Any]:
     """Trạng thái đơn mà gateway giả trả cho một ca. Ca huỷ đơn (PAID) KHÔNG có `delivered_at`: trước đây mọi ca đều có ngày giao hôm qua nên model
     thấy đơn "đã giao" và từ chối huỷ (đúng quy tắc), làm sai phép đo của các ca huỷ đơn. Ca khác giữ nguyên để số đo cũ còn so được."""
     return {"status": PRECONDITION_STATUS.get(case.propose or "", "PAID"),
-            "delivered_at": None if case.propose == "cancel_order" else (now - timedelta(days=1)).isoformat(),
+            "delivered_at": None if case.propose == "cancel_order" else (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).isoformat(),
             "down": case.down}
 
 
@@ -239,6 +256,7 @@ async def main_live(args) -> int:
     import platform
 
     loaded = evalkit.load_env()  # khoá từ deploy/.env, chỉ biết TÊN biến đã nạp
+    evalkit.setup_cache(args)
     from ai_agent.config import load_config
     from ai_agent.personas import load_personas
     from ai_agent.runtime.agent_factory import AgentRuntime
@@ -329,6 +347,8 @@ async def main_live(args) -> int:
         print(f"model_calls tổng {summ['model_calls']['sum']:.0f} (TB {summ['model_calls']['mean']}/ca, lớn nhất {summ['model_calls']['max']}); tool_calls tổng {summ['tool_calls']['sum']:.0f}; "
               f"token vào {summ['input_tokens']['sum']:.0f} + ra {summ['output_tokens']['sum']:.0f} = {summ['total_tokens']['sum']:.0f}")
         log.finish(summ)
+        if evalkit.cache_summary():
+            print(evalkit.cache_summary(), flush=True)
         print(f"đã ghi {log.dir}/(meta.json, cases.jsonl, summary.json, run.log)", file=sys.__stdout__)
     if args.out:
         lean = [{k: v for k, v in r.items() if k not in ("trace", "systems")} for r in report]
@@ -410,6 +430,7 @@ def main() -> int:
     ap.add_argument("--repeat", type=int, default=1, help="chạy mỗi câu k lượt rồi báo trung bình, độ lệch, khoảng tin cậy Wilson và các câu không ổn định (mô hình suy luận lệch 3-4 câu/37 giữa hai lần chạy). Tốn k lần số lệnh gọi")
     ap.add_argument("--require-model", metavar="MODEL_ID", help="từ chối chạy nếu có role dùng mô hình khác MODEL_ID (chốt chặn tránh gọi nhầm mô hình trả tiền)")
     ap.add_argument("--source", choices=("all", "hand", "hy4"), default="all", help="hand = ca viết tay; hy4 = ca do hy4-flash-free sinh (lọc tay). Báo cáo riêng khi so với model khác để tránh thiên lệch (hy4 vừa sinh ca vừa bị đo)")
+    evalkit.add_cache_args(ap)
     ap.add_argument("--ids", nargs="+", help="chỉ chạy các case có id này")
     ap.add_argument("--only-failed", nargs="+", metavar="REPORT.json", help="chỉ chạy lại các câu có ok=false trong các báo cáo JSON này")
     args = ap.parse_args()

@@ -176,3 +176,28 @@ def test_report_roundtrip_reads_both_old_and_new_formats(tmp_path):
     evalkit.write_report(tmp_path / "new.json", rows, {"x": 1})
     (tmp_path / "old.json").write_text(json.dumps(rows), encoding="utf-8")
     assert evalkit.read_rows(tmp_path / "new.json") == rows == evalkit.read_rows(tmp_path / "old.json")
+
+
+def test_ask_or_answer_passes_either_way_but_not_a_proposal():
+    """Clarify đọc được: hỏi lại HOẶC tra bằng phạm vi hợp lý rồi trả lời đều đạt; đề xuất ghi hay tool ngoài danh sách thì không; mẫu cấm vẫn áp."""
+    import evalkit as ek
+
+    case = ek.Case(persona="buyer", id="buyer-x", g="clarify", q="Đơn của mình bao giờ tới", tool=["none", "list_my_orders"], max=2,
+                   need=[r"\?"], ask_or_answer=True, deny=[r"/orders"])
+    today = ek.date(2026, 11, 21)
+    asks = ek.score(case, [], "Bạn muốn xem đơn nào ạ?", [], today)
+    answers = ek.score(case, [{"tool": "list_my_orders", "args": {}}], "Bạn có 2 đơn đang giao, đơn 1 dự kiến mai.", [], today)
+    assert asks.ok and answers.ok
+    assert not ek.score(case, [{"tool": "list_my_orders", "args": {}}], "Đơn 1 dự kiến mai. Gọi /orders", [], today).ok
+    assert not ek.score(case, [{"tool": "search_products", "args": {}}], "Đây là sản phẩm.", [], today).ok
+    assert not ek.score(case, [{"tool": "list_my_orders", "args": {}}], "Đã soạn.", ["cancel_order"], today).ok
+    strict = ek.Case(persona="buyer", id="buyer-y", g="clarify", q="Hủy đơn đó", tool=["none", "list_my_orders"], need=[r"\?"])
+    assert not ek.score(strict, [{"tool": "list_my_orders", "args": {}}], "Đã xem danh sách.", [], today).ok  # không có cờ: vẫn bắt buộc hỏi
+
+
+def test_ask_or_answer_is_validated(tmp_path):
+    import evalkit as ek
+
+    (tmp_path / "buyer.yaml").write_text('- {g: lookup, ask_or_answer: true, q: "a", tool: list_my_orders}\n- {g: clarify, ask_or_answer: true, q: "b", tool: none}\n', encoding="utf-8")
+    errs = ek.validate("buyer", root=tmp_path)
+    assert sum("ask_or_answer chỉ cho nhóm clarify" in e for e in errs) == 2
