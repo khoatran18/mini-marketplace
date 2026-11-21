@@ -132,7 +132,7 @@ def test_clarify_cases_ask_back_instead_of_guessing():
         assert len(cl) >= 12, persona
         for c in cl:
             assert "none" in c.tool and not c.propose, c.id                       # không gọi tool thì cũng đạt; không bao giờ đề xuất
-            assert len(c.tool) <= (4 if c.ask_or_answer else 2) and not c.args, c.id   # nới tối đa một tool tra danh sách (ca ask_or_answer: vài tool đọc), không đòi tham số
+            assert len(c.tool) <= (5 if c.ask_or_answer else 4) and not c.args, c.id   # nới vài tool ĐỌC cho agent tra trong lúc hỏi lại (ca ask_or_answer: tra rồi trả lời cũng đạt), không đòi tham số; không bao giờ có tool ghi
             assert len(c.need) == 3 and "?" in c.need[0] and "nào" in c.need[1], c.id   # dấu hiệu hỏi lại, từ ngữ hỏi lại cụ thể, VÀ nhắc đúng thứ còn thiếu
     strict = next(c for c in evalkit.load_cases("buyer") if c.q == "Sản phẩm đó còn hàng không?")
     assert evalkit.score(strict, [], "Bạn muốn hỏi sản phẩm nào vậy?", [], today).ok
