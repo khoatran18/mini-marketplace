@@ -42,12 +42,13 @@ PRECONDITION_STATUS = {"cancel_order": "PAID", "request_return": "DELIVERED", "a
 
 
 _SERVICES = ["analytics-service", "api-gateway", "auth-service", "order-service", "ops-service", "payment-service", "product-service", "user-service"]
+_ACTION_SERVICES = [n for n in _SERVICES if n != "ops-service"]  # đúng ops-service/internal/actions/catalog.go: statelessServices không có ops-service (nó là nơi duyệt/ghi nhận, không tự restart mình)
 _ACTIONS = [
     {"id": "requeue_outbox", "title": "Gửi lại các dòng outbox", "risk": "high", "mode": "http", "params": [
         {"name": "service", "type": "enum", "required": True, "enum": ["order-service", "product-service", "payment-service"]}, {"name": "limit", "type": "int", "min": 1, "max": 100}]},
-    {"id": "restart_service", "title": "Khởi động lại một service", "risk": "low", "mode": "command", "params": [{"name": "service", "type": "enum", "required": True, "enum": _SERVICES}]},
+    {"id": "restart_service", "title": "Khởi động lại một service", "risk": "low", "mode": "command", "params": [{"name": "service", "type": "enum", "required": True, "enum": _ACTION_SERVICES}]},
     {"id": "scale_service", "title": "Đổi số replica", "risk": "low", "mode": "command", "params": [
-        {"name": "service", "type": "enum", "required": True, "enum": _SERVICES}, {"name": "replicas", "type": "int", "required": True, "min": 1, "max": 5}]},
+        {"name": "service", "type": "enum", "required": True, "enum": _ACTION_SERVICES}, {"name": "replicas", "type": "int", "required": True, "min": 1, "max": 5}]},
     {"id": "escalate_to_human", "title": "Chuyển cho người", "risk": "observe", "mode": "manual", "params": []},
 ]
 _INCIDENT = {"id": 4, "alert_name": "OutboxDeadRows", "severity": "warning", "component": "order-service", "state": "open", "summary": "order-service có dòng outbox chết",
@@ -61,7 +62,7 @@ _PROPOSAL = {"id": 1, "incident_id": 4, "action_id": "requeue_outbox", "params":
 
 
 _MORE_PROPOSALS = [
-    {**_PROPOSAL, "id": 2, "incident_id": 6, "action_id": "restart_service", "params": {"service": "product-service"}, "rationale": "consumer lag không giảm", "risk": "low", "created_at": "2026-11-17T10:40:00Z"},
+    {**_PROPOSAL, "id": 2, "incident_id": 5, "action_id": "scale_service", "params": {"service": "api-gateway", "replicas": 3}, "rationale": "tỉ lệ lỗi 5xx cao khi tải tăng", "risk": "low", "created_at": "2026-11-17T10:40:00Z"},
     {**_PROPOSAL, "id": 3, "incident_id": 5, "action_id": "escalate_to_human", "params": {}, "rationale": "cần người xem lỗi 5xx", "risk": "observe", "state": "executed", "created_at": "2026-11-17T09:20:00Z"},
 ]
 _UP_METRICS = ("service_up", "service_ready")  # 0 khi service đang treo (đúng tên truy vấn trong bảng ops_metrics_query); replica vẫn 1/1 (xem _down_body)
