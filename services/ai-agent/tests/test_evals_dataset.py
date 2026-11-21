@@ -132,7 +132,7 @@ def test_clarify_cases_ask_back_instead_of_guessing():
         assert len(cl) >= 12, persona
         for c in cl:
             assert "none" in c.tool and not c.propose, c.id                       # không gọi tool thì cũng đạt; không bao giờ đề xuất
-            assert len(c.tool) <= 2 and not c.args, c.id                          # nới tối đa một tool tra danh sách, không đòi tham số
+            assert len(c.tool) <= (4 if c.ask_or_answer else 2) and not c.args, c.id   # nới tối đa một tool tra danh sách (ca ask_or_answer: vài tool đọc), không đòi tham số
             assert len(c.need) == 3 and "?" in c.need[0] and "nào" in c.need[1], c.id   # dấu hiệu hỏi lại, từ ngữ hỏi lại cụ thể, VÀ nhắc đúng thứ còn thiếu
     strict = next(c for c in evalkit.load_cases("buyer") if c.q == "Sản phẩm đó còn hàng không?")
     assert evalkit.score(strict, [], "Bạn muốn hỏi sản phẩm nào vậy?", [], today).ok
@@ -208,3 +208,17 @@ def test_buyer_prompt_keeps_answer_first_rules():
     text = (Path(__file__).resolve().parents[1] / "src" / "ai_agent" / "personas" / "buyer" / "prompt.md").read_text(encoding="utf-8")
     for must in ("Câu chỉ để ĐỌC", "Đã có số hay mã", '"đơn nào', "luôn hỏi lại trước khi soạn đề xuất ghi"):
         assert must in text
+
+
+def test_operator_stub_down_world_keeps_replica_up_and_dead_service():
+    """Thế giới 'service treo' phải khớp playbook service-unavailable: up/ready = 0 nhưng replica vẫn 1/1 (nếu replica cũng 0 thì agent đúng khi từ chối restart)."""
+    import run_evals
+
+    val = lambda name: run_evals.domain_body("ops_metrics_query", {"name": name, "service": "order-service"}, down="order-service")["series"][0]["value"]
+    assert val("service_up") == "0" and val("service_ready") == "0" and val("service_replicas_up") == "1"
+
+
+def test_operator_prompt_budget_leaves_room_to_propose():
+    """Chat operator: RCA tối đa ~5 lần gọi (trần cứng 8), và yêu cầu soạn đề xuất đã rõ thì chỉ kiểm tra nhanh rồi soạn."""
+    text = (Path(__file__).resolve().parents[1] / "src" / "ai_agent" / "personas" / "operator" / "prompt.md").read_text(encoding="utf-8")
+    assert "tối đa khoảng 5 lần gọi công cụ" in text and "kiểm tra nhanh tối đa 2-3 lần" in text

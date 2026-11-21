@@ -64,7 +64,7 @@ _MORE_PROPOSALS = [
     {**_PROPOSAL, "id": 2, "incident_id": 6, "action_id": "restart_service", "params": {"service": "product-service"}, "rationale": "consumer lag không giảm", "risk": "low", "created_at": "2026-11-17T10:40:00Z"},
     {**_PROPOSAL, "id": 3, "incident_id": 5, "action_id": "escalate_to_human", "params": {}, "rationale": "cần người xem lỗi 5xx", "risk": "observe", "state": "executed", "created_at": "2026-11-17T09:20:00Z"},
 ]
-_UP_METRICS = ("service_up", "service_ready", "service_replicas_up")  # 0 khi service đang treo (đúng tên truy vấn trong bảng ops_metrics_query)
+_UP_METRICS = ("service_up", "service_ready")  # 0 khi service đang treo (đúng tên truy vấn trong bảng ops_metrics_query); replica vẫn 1/1 (xem _down_body)
 
 
 def _down_body(tool: str, args: dict[str, Any], down: str) -> dict[str, Any] | None:
@@ -85,9 +85,10 @@ def _down_body(tool: str, args: dict[str, Any], down: str) -> dict[str, Any] | N
         if name == "alerts_firing":
             return {"query": name, "params": {}, "backend": "prometheus", "expr": name, "total": 1, "truncated": False,
                     "series": [{"labels": {"alertname": "ServiceDown", "service": down}, "value": "1"}]}
-        if name in _UP_METRICS and args.get("service", down) == down:
+        if (name in _UP_METRICS or name == "service_replicas_up") and args.get("service", down) == down:
+            # process còn nhưng không trả lời: up/ready = 0, replica vẫn 1/1 (đúng điều kiện `process-hung` của playbook service-unavailable)
             return {"query": name, "params": {k: str(v) for k, v in args.items()}, "backend": "prometheus", "expr": name, "total": 1, "truncated": False,
-                    "series": [{"labels": {"service": down}, "value": "0"}]}
+                    "series": [{"labels": {"service": down}, "value": "1" if name == "service_replicas_up" else "0"}]}
     if tool == "ops_list_playbooks":
         return {"items": [{"id": "service-unavailable", "title": "Service không sẵn sàng", "alerts": ["ServiceDown"]}], "total": 1}
     if tool == "ops_get_playbook":
