@@ -10,4 +10,5 @@
 | [06_PROTOBUF.md](06_PROTOBUF.md) | Sinh lại `.pb.go` offline |
 | [07_DATA_PIPELINE.md](07_DATA_PIPELINE.md) | Đường ống dữ liệu: datagen (D5), backfill / đối soát (D4), export (D3) |
 | [08_NETWORK_CLIENT_IP.md](08_NETWORK_CLIENT_IP.md) | Mạng Docker Swarm (ingress, marketplace-net), Traefik `forwardedHeaders`, `TRUSTED_PROXIES`, `X-Forwarded-For`, IP của client và giới hạn tốc độ |
+| [09_PERF_RESOURCES.md](09_PERF_RESOURCES.md) | Phân bổ CPU/RAM/replica cho thử tải CCU (`deploy/*.perf.yml`), ai-agent song song thế nào, nguyên nhân ClickHouse/Kafka ăn tài nguyên lúc rảnh |
 | [platform/](platform/README.md) | Thiết kế nền tảng + trạng thái triển khai (01–09) |

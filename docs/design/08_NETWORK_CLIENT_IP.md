@@ -9,7 +9,7 @@ về Docker/Traefik/gin, hành vi khớp với kết quả đo nhưng chưa ki�
 ## Trạng thái hiện tại và cách bật/tắt cấu hình thử tải
 
 **Từ 2026-11-22 stack `marketplace` trên máy này đang chạy với `deploy/services.perf.yml`** (Traefik tin `10.0.0.0/24`, gateway `TRUSTED_PROXIES=10.0.0.0/24,10.0.1.0/24`):
-mọi client ngoài giả được IP bằng `X-Forwarded-For`. **Chưa quay lại cấu hình bình thường.** Cập nhật dòng này khi quay lại.
+mọi client ngoài giả được IP bằng `X-Forwarded-For`. **Chưa quay lại cấu hình bình thường.** Từ 2026-11-23 `services.perf.yml` còn đặt thêm giới hạn tài nguyên, replica và nâng rate limit (xem [09_PERF_RESOURCES.md](09_PERF_RESOURCES.md); áp dụng bằng `scripts/deploy-perf.sh`, lệnh BẬT bên dưới nay đã được script này thay). Cập nhật dòng này khi quay lại.
 
 ```bash
 # BẬT (đã dùng ngày 2026-11-22; giống scripts/deploy.sh, chỉ thêm services.perf.yml; chỉ Traefik và gateway khởi động lại)

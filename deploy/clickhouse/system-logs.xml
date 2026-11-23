@@ -1,0 +1,16 @@
+<!-- Tắt các bảng log nội bộ của ClickHouse không dùng đến: chúng tự ghi liên tục và phình rất nhanh (asynchronous_metric_log 172 triệu dòng, trace_log 9,6 triệu,
+     text_log 5,2 triệu sau vài ngày), làm ClickHouse tốn CPU/RAM/ổ đĩa lúc rảnh. Metric của Prometheus lấy từ endpoint built-in (prometheus.xml), không từ các bảng này.
+     Giữ query_log (7 ngày) để xem truy vấn chậm. Bảng đã tồn tại không tự xoá: DROP TABLE system.<tên> (xem docs/design/09_PERF_RESOURCES.md). -->
+<clickhouse>
+    <asynchronous_metric_log remove="1"/>
+    <metric_log remove="1"/>
+    <trace_log remove="1"/>
+    <text_log remove="1"/>
+    <processors_profile_log remove="1"/>
+    <error_log remove="1"/>
+    <query_log>
+        <database>system</database>
+        <table>query_log</table>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </query_log>
+</clickhouse>

@@ -104,6 +104,8 @@ services:
       # S5: user limited to loopback + private ranges (overlay); password stays required (CLICKHOUSE_PASSWORD)
       - source: clickhouse-users-networks
         target: /etc/clickhouse-server/users.d/zz-networks.xml
+      - source: clickhouse-system-logs
+        target: /etc/clickhouse-server/config.d/system-logs.xml
     ulimits:
       nofile: {soft: 262144, hard: 262144}
     healthcheck:
@@ -158,6 +160,8 @@ configs:
     file: ./clickhouse/prometheus.xml
   clickhouse-users-networks:
     file: ./clickhouse/users-networks.xml
+  clickhouse-system-logs:
+    file: ./clickhouse/system-logs.xml
 
 volumes:
   postgres-data:

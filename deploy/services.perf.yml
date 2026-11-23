@@ -2,7 +2,9 @@
 # Mục đích: cho phép mô phỏng nhiều IP client khác nhau bằng header X-Forwarded-For khi đi qua Traefik (ingress của Swarm).
 # Vì sao cần: cổng 80 của Traefik publish kiểu ingress nên mọi client ngoài đều đến Traefik với địa chỉ 10.0.0.2 (mạng ingress), Traefik
 # mặc định bỏ X-Forwarded-For của client, và gateway có TRUSTED_PROXIES rỗng nên bỏ qua header này (docs/planning/01_OPEN_ISSUES.md S8).
-# Hai thay đổi:
+# Ngoài ra file này đặt giới hạn CPU/RAM và số replica cho đợt đo CCU (xem docs/design/09_PERF_RESOURCES.md), và nâng các giới hạn tốc độ để
+# test đo hệ thống chứ không đo ra 429. Hạ tầng (postgres, redis, kafka, clickhouse) nằm ở deploy/infra.perf.yml.
+# Hai thay đổi về IP:
 #   1. Traefik tin X-Forwarded-For đến từ mạng ingress (10.0.0.0/24): giữ header của client và nối thêm 10.0.0.2.
 #   2. Gateway tin proxy trong mạng ingress (10.0.0.0/24) và mạng marketplace-net (10.0.1.0/24): đọc IP client từ XFF.
 # CẢNH BÁO: vì mọi client ngoài đều đến từ 10.0.0.2 nên MỌI người đều giả được IP (né giới hạn tốc độ). Đừng bật ngoài môi trường thử.
@@ -27,6 +29,59 @@ services:
       - --metrics.prometheus=true
       - --metrics.prometheus.entrypoint=metrics
       - --entrypoints.web.forwardedHeaders.trustedIPs=10.0.0.0/24
+    deploy:
+      resources:
+        limits: {cpus: "2", memory: 512M}
+  frontend:
+    deploy:
+      resources:
+        limits: {cpus: "1", memory: 512M}
   api-gateway:
     environment:
       TRUSTED_PROXIES: 10.0.0.0/24,10.0.1.0/24
+      # Nâng giới hạn tốc độ để không bị 429 trước khi đo được tài nguyên. Mỗi VU dùng IP giả riêng nên giới hạn theo IP vẫn còn tác dụng.
+      RATE_LIMIT_PER_MINUTE: "100000"
+      AUTH_RATE_LIMIT_PER_MINUTE: "100000"
+      AI_RATE_LIMIT_PER_MINUTE: "100000"
+      AI_USER_RATE_LIMIT_PER_MINUTE: "100000"
+      AI_PROPOSAL_RATE_LIMIT_PER_MINUTE: "100000"
+      EVENTS_RATE_LIMIT_PER_MINUTE: "100000"
+    deploy:
+      replicas: 3
+      resources:
+        limits: {cpus: "1.5", memory: 512M}
+  auth-service:
+    deploy:
+      resources:
+        limits: {cpus: "1", memory: 384M}
+  product-service:
+    deploy:
+      resources:
+        limits: {cpus: "1", memory: 384M}
+  order-service:
+    deploy:
+      resources:
+        limits: {cpus: "1", memory: 384M}
+  user-service:
+    deploy:
+      resources:
+        limits: {cpus: "0.5", memory: 256M}
+  payment-service:
+    deploy:
+      resources:
+        limits: {cpus: "0.5", memory: 256M}
+  analytics-service:
+    deploy:
+      resources:
+        limits: {cpus: "0.5", memory: 256M}
+  ops-service:
+    deploy:
+      resources:
+        limits: {cpus: "0.5", memory: 96M}
+  ai-agent:
+    # Một tiến trình uvicorn dùng được tối đa 1 core (GIL), nên tăng song song bằng replica. Chỉ an toàn khi AI_RCA_ENABLED=false
+    # (watcher RCA không có khoá chọn người dẫn đầu, nhiều replica sẽ điều tra trùng). Bước đầu đo với replicas: 1 rồi tính số replica cần.
+    deploy:
+      replicas: 3
+      resources:
+        limits: {cpus: "1", memory: 768M}

@@ -1,0 +1,41 @@
+# CHỈ CHO MÔI TRƯỜNG THỬ TẢI (perf test). KHÔNG dùng ở production. Cặp với deploy/services.perf.yml (docs/design/09_PERF_RESOURCES.md).
+# Đặt giới hạn CPU/RAM cho hạ tầng để đo CCU lặp lại được (hiện postgres/redis không có giới hạn nào).
+# `command` bị GHI ĐÈ khi gộp file (docker compose 5.x), nên postgres và redis chép lại lệnh gốc rồi thêm cờ.
+# Áp dụng: gộp thêm file này vào lệnh render của scripts/deploy.sh (xem lệnh trong docs/design/09_PERF_RESOURCES.md).
+services:
+  postgres:
+    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=1GB"]
+    deploy:
+      resources:
+        limits: {cpus: "3", memory: 4G}
+  redis:
+    # --appendonly yes là cờ gốc của infra.yml. noeviction: khoá rate limit và slot không được bị đá khỏi bộ nhớ.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "400mb", "--maxmemory-policy", "noeviction"]
+    deploy:
+      resources:
+        limits: {cpus: "1", memory: 512M}
+  broker1:
+    # Heap 1 GB (gốc 512m) + phần còn lại cho page cache và bộ đệm ngoài heap.
+    environment:
+      KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
+    deploy:
+      resources:
+        limits: {cpus: "1", memory: 1536M}
+  broker2:
+    # Heap 1 GB (gốc 512m) + phần còn lại cho page cache và bộ đệm ngoài heap.
+    environment:
+      KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
+    deploy:
+      resources:
+        limits: {cpus: "1", memory: 1536M}
+  broker3:
+    # Heap 1 GB (gốc 512m) + phần còn lại cho page cache và bộ đệm ngoài heap.
+    environment:
+      KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
+    deploy:
+      resources:
+        limits: {cpus: "1", memory: 1536M}
+  clickhouse:
+    deploy:
+      resources:
+        limits: {cpus: "2", memory: 2G}
