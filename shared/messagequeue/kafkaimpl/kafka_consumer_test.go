@@ -3,6 +3,7 @@ package kafkaimpl
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -137,5 +138,84 @@ func TestConsumeDLQDownAndShutdownLeavesUncommitted(t *testing.T) {
 	}
 	if len(r.committed) != 0 {
 		t.Fatal("message must not be committed when DLQ publish failed")
+	}
+}
+
+func TestWorkersFromEnv(t *testing.T) {
+	for in, want := range map[string]int{"": 1, "x": 1, "0": 1, "-2": 1, "3": 3, "64": 64, "1000": 64} {
+		t.Setenv("KAFKA_CONSUMER_WORKERS", in)
+		if got := workersFromEnv(); got != want {
+			t.Errorf("KAFKA_CONSUMER_WORKERS=%q: got %d, want %d", in, got, want)
+		}
+	}
+}
+
+// With 3 workers the handlers of 3 readers run at the same time (a sequential loop would never get all 3 inside the
+// barrier) and every message is committed by the reader that fetched it.
+func TestConsumeWorkersRunInParallel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	readers := []*fakeReader{
+		{msgs: []kafka.Message{{Partition: 0, Offset: 1}}, cancel: cancel},
+		{msgs: []kafka.Message{{Partition: 1, Offset: 1}}, cancel: cancel},
+		{msgs: []kafka.Message{{Partition: 2, Offset: 1}}, cancel: cancel},
+	}
+	next := 0
+	newReader := func() messageReader { r := readers[next]; next++; return r }
+	var inside sync.WaitGroup
+	inside.Add(3)
+	allIn := make(chan struct{})
+	go func() { inside.Wait(); close(allIn) }()
+	handler := func(context.Context, *kafka.Message) error {
+		inside.Done()
+		select {
+		case <-allIn:
+			return nil
+		case <-time.After(2 * time.Second):
+			return errors.New("handlers did not overlap")
+		}
+	}
+	c := newTestConsumer()
+	c.publishDLQ = func(context.Context, string, kafka.Message) error { t.Error("unexpected DLQ publish"); return nil }
+	_ = c.consumeWorkers(ctx, 3, newReader, "t", handler)
+	for i, r := range readers {
+		if len(r.committed) != 1 {
+			t.Errorf("reader %d committed %d, want 1", i, len(r.committed))
+		}
+	}
+}
+
+func TestConsumeWorkersOneIsTheSequentialLoop(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	r := &fakeReader{msgs: []kafka.Message{{Offset: 1}, {Offset: 2}}, cancel: cancel}
+	built := 0
+	_ = newTestConsumer().consumeWorkers(ctx, 1, func() messageReader { built++; return r }, "t", func(context.Context, *kafka.Message) error { return nil })
+	if built != 1 || len(r.committed) != 2 {
+		t.Fatalf("built=%d committed=%d, want 1 and 2", built, len(r.committed))
+	}
+}
+
+func TestCommitIntervalFromEnv(t *testing.T) {
+	for in, want := range map[string]time.Duration{"": 0, "x": 0, "-5": 0, "0": 0, "100": 100 * time.Millisecond, "999999": time.Minute} {
+		t.Setenv("KAFKA_COMMIT_INTERVAL_MS", in)
+		if got := commitIntervalFromEnv(); got != want {
+			t.Errorf("KAFKA_COMMIT_INTERVAL_MS=%q: got %v, want %v", in, got, want)
+		}
+	}
+	t.Setenv("KAFKA_COMMIT_INTERVAL_MS", "100")
+	if NewKafkaManager(nil).commitInterval != 100*time.Millisecond {
+		t.Error("manager must pick up the commit interval")
+	}
+}
+
+// Workers must never share a reader: two goroutines on one reader could process consecutive messages of a partition
+// at once. Consume builds one reader per worker (not the cached one).
+func TestConsumeWorkersUseDistinctReaders(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	var made []messageReader
+	newReader := func() messageReader { r := &fakeReader{cancel: cancel}; made = append(made, r); return r }
+	_ = newTestConsumer().consumeWorkers(ctx, 3, newReader, "t", func(context.Context, *kafka.Message) error { return nil })
+	if len(made) != 3 || made[0] == made[1] || made[1] == made[2] {
+		t.Fatalf("want 3 distinct readers, got %d", len(made))
 	}
 }

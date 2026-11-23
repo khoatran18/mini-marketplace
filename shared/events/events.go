@@ -20,6 +20,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"mini-marketplace/shared/reqctx"
 )
 
@@ -278,13 +279,9 @@ func PublishBatchOpts(ctx context.Context, db *gorm.DB, publish PublishFunc, lim
 	return sent, firstErr
 }
 
-// Message is one outbox row handed to a batch publisher.
-type Message struct {
-	Topic     string
-	Key       string
-	Payload   []byte
-	RequestID *string // becomes the Kafka header x-request-id (ADR-36)
-}
+// Message is one outbox row handed to a batch publisher. It lives in kafkaimpl so that kafkaimpl (used by services
+// without Postgres, e.g. the gateway) does not import this package and, through it, gorm.
+type Message = kafkaimpl.Message
 
 // PublishManyFunc sends msgs together (one round trip per topic) and returns one error per message, in order
 // (nil = delivered); len(result) must equal len(msgs).

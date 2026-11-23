@@ -7,7 +7,7 @@ services:
     command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=1GB"]
     deploy:
       resources:
-        limits: {cpus: "3", memory: 4G}
+        limits: {cpus: "5", memory: 4G}
   redis:
     # --appendonly yes là cờ gốc của infra.yml. noeviction: khoá rate limit và slot không được bị đá khỏi bộ nhớ.
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "400mb", "--maxmemory-policy", "noeviction"]

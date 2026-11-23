@@ -1,0 +1,414 @@
+{
+ "window_s": 90,
+ "services": {
+  "marketplace-obs_node-exporter": {
+   "replicas": null,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 128,
+   "cpu_pct_of_core": {
+    "avg_per_container": 0.5,
+    "max_per_container": 2.7,
+    "avg_all_replicas": 0.5,
+    "max_all_replicas": 2.7
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 9.9,
+   "ram_pct_of_limit_max": 7.7,
+   "samples": 17
+  },
+  "marketplace-obs_redis-exporter": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 64,
+   "cpu_pct_of_core": {
+    "avg_per_container": 0.2,
+    "max_per_container": 1.0,
+    "avg_all_replicas": 0.2,
+    "max_all_replicas": 1.0
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 11.0,
+   "ram_pct_of_limit_max": 17.2,
+   "samples": 17
+  },
+  "marketplace-obs_vector": {
+   "replicas": null,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 128,
+   "cpu_pct_of_core": {
+    "avg_per_container": 41.5,
+    "max_per_container": 48.5,
+    "avg_all_replicas": 41.5,
+    "max_all_replicas": 48.5
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 114.6,
+   "ram_pct_of_limit_max": 89.5,
+   "samples": 17
+  },
+  "marketplace-obs_tempo": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 1024,
+   "cpu_pct_of_core": {
+    "avg_per_container": 0.5,
+    "max_per_container": 1.1,
+    "avg_all_replicas": 0.5,
+    "max_all_replicas": 1.1
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 1024.0,
+   "ram_pct_of_limit_max": 100.0,
+   "samples": 17
+  },
+  "marketplace-obs_grafana": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 384,
+   "cpu_pct_of_core": {
+    "avg_per_container": 0.5,
+    "max_per_container": 2.4,
+    "avg_all_replicas": 0.5,
+    "max_all_replicas": 2.4
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 157.0,
+   "ram_pct_of_limit_max": 40.9,
+   "samples": 17
+  },
+  "marketplace-obs_loki": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 512,
+   "cpu_pct_of_core": {
+    "avg_per_container": 1.1,
+    "max_per_container": 2.9,
+    "avg_all_replicas": 1.1,
+    "max_all_replicas": 2.9
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 380.8,
+   "ram_pct_of_limit_max": 74.4,
+   "samples": 17
+  },
+  "marketplace-obs_kafka-exporter": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 64,
+   "cpu_pct_of_core": {
+    "avg_per_container": 0.1,
+    "max_per_container": 2.2,
+    "avg_all_replicas": 0.1,
+    "max_all_replicas": 2.2
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 10.2,
+   "ram_pct_of_limit_max": 15.9,
+   "samples": 17
+  },
+  "marketplace-obs_cadvisor": {
+   "replicas": null,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 384,
+   "cpu_pct_of_core": {
+    "avg_per_container": 1.7,
+    "max_per_container": 8.8,
+    "avg_all_replicas": 1.7,
+    "max_all_replicas": 8.8
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 120.3,
+   "ram_pct_of_limit_max": 31.3,
+   "samples": 17
+  },
+  "marketplace-obs_prometheus": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 768,
+   "cpu_pct_of_core": {
+    "avg_per_container": 2.6,
+    "max_per_container": 6.0,
+    "avg_all_replicas": 2.6,
+    "max_all_replicas": 6.0
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 125.7,
+   "ram_pct_of_limit_max": 16.4,
+   "samples": 17
+  },
+  "marketplace-obs_postgres-exporter": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": null,
+   "ram_limit_mib": 64,
+   "cpu_pct_of_core": {
+    "avg_per_container": 0.0,
+    "max_per_container": 0.0,
+    "avg_all_replicas": 0.0,
+    "max_all_replicas": 0.0
+   },
+   "cpu_pct_of_limit_max": null,
+   "ram_max_mib": 12.6,
+   "ram_pct_of_limit_max": 19.6,
+   "samples": 17
+  },
+  "marketplace_auth-service": {
+   "replicas": 3,
+   "cpu_limit_cores_per_replica": 1.0,
+   "ram_limit_mib": 384,
+   "cpu_pct_of_core": {
+    "avg_per_container": 52.2,
+    "max_per_container": 86.4,
+    "avg_all_replicas": 156.7,
+    "max_all_replicas": 205.8
+   },
+   "cpu_pct_of_limit_max": 86.4,
+   "ram_max_mib": 27.5,
+   "ram_pct_of_limit_max": 7.2,
+   "samples": 17
+  },
+  "marketplace_traefik": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 1.0,
+   "ram_limit_mib": 512,
+   "cpu_pct_of_core": {
+    "avg_per_container": 24.9,
+    "max_per_container": 31.9,
+    "avg_all_replicas": 24.9,
+    "max_all_replicas": 31.9
+   },
+   "cpu_pct_of_limit_max": 31.9,
+   "ram_max_mib": 60.7,
+   "ram_pct_of_limit_max": 11.8,
+   "samples": 17
+  },
+  "marketplace_frontend": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 1.0,
+   "ram_limit_mib": 512,
+   "cpu_pct_of_core": {
+    "avg_per_container": 13.4,
+    "max_per_container": 17.9,
+    "avg_all_replicas": 13.4,
+    "max_all_replicas": 17.9
+   },
+   "cpu_pct_of_limit_max": 17.9,
+   "ram_max_mib": 46.4,
+   "ram_pct_of_limit_max": 9.1,
+   "samples": 17
+  },
+  "marketplace_user-service": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 0.5,
+   "ram_limit_mib": 256,
+   "cpu_pct_of_core": {
+    "avg_per_container": 3.0,
+    "max_per_container": 5.5,
+    "avg_all_replicas": 3.0,
+    "max_all_replicas": 5.5
+   },
+   "cpu_pct_of_limit_max": 10.9,
+   "ram_max_mib": 22.7,
+   "ram_pct_of_limit_max": 8.9,
+   "samples": 17
+  },
+  "marketplace_product-service": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 1.5,
+   "ram_limit_mib": 384,
+   "cpu_pct_of_core": {
+    "avg_per_container": 20.4,
+    "max_per_container": 25.9,
+    "avg_all_replicas": 20.4,
+    "max_all_replicas": 25.9
+   },
+   "cpu_pct_of_limit_max": 17.3,
+   "ram_max_mib": 29.2,
+   "ram_pct_of_limit_max": 7.6,
+   "samples": 17
+  },
+  "marketplace_order-service": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 1.5,
+   "ram_limit_mib": 384,
+   "cpu_pct_of_core": {
+    "avg_per_container": 23.5,
+    "max_per_container": 33.0,
+    "avg_all_replicas": 23.5,
+    "max_all_replicas": 33.0
+   },
+   "cpu_pct_of_limit_max": 22.0,
+   "ram_max_mib": 30.0,
+   "ram_pct_of_limit_max": 7.8,
+   "samples": 17
+  },
+  "marketplace_analytics-service": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 0.5,
+   "ram_limit_mib": 256,
+   "cpu_pct_of_core": {
+    "avg_per_container": 3.8,
+    "max_per_container": 5.7,
+    "avg_all_replicas": 3.8,
+    "max_all_replicas": 5.7
+   },
+   "cpu_pct_of_limit_max": 11.4,
+   "ram_max_mib": 23.8,
+   "ram_pct_of_limit_max": 9.3,
+   "samples": 17
+  },
+  "marketplace_api-gateway": {
+   "replicas": 2,
+   "cpu_limit_cores_per_replica": 1.0,
+   "ram_limit_mib": 512,
+   "cpu_pct_of_core": {
+    "avg_per_container": 19.3,
+    "max_per_container": 23.8,
+    "avg_all_replicas": 38.7,
+    "max_all_replicas": 47.1
+   },
+   "cpu_pct_of_limit_max": 23.8,
+   "ram_max_mib": 61.8,
+   "ram_pct_of_limit_max": 12.1,
+   "samples": 17
+  },
+  "marketplace_payment-service": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 0.5,
+   "ram_limit_mib": 256,
+   "cpu_pct_of_core": {
+    "avg_per_container": 4.6,
+    "max_per_container": 8.4,
+    "avg_all_replicas": 4.6,
+    "max_all_replicas": 8.4
+   },
+   "cpu_pct_of_limit_max": 16.7,
+   "ram_max_mib": 21.6,
+   "ram_pct_of_limit_max": 8.4,
+   "samples": 17
+  },
+  "marketplace_ai-agent": {
+   "replicas": 2,
+   "cpu_limit_cores_per_replica": 1.0,
+   "ram_limit_mib": 768,
+   "cpu_pct_of_core": {
+    "avg_per_container": 25.8,
+    "max_per_container": 49.6,
+    "avg_all_replicas": 51.7,
+    "max_all_replicas": 77.2
+   },
+   "cpu_pct_of_limit_max": 49.6,
+   "ram_max_mib": 95.2,
+   "ram_pct_of_limit_max": 12.4,
+   "samples": 17
+  },
+  "marketplace_ops-service": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 0.5,
+   "ram_limit_mib": 96,
+   "cpu_pct_of_core": {
+    "avg_per_container": 3.0,
+    "max_per_container": 5.5,
+    "avg_all_replicas": 3.0,
+    "max_all_replicas": 5.5
+   },
+   "cpu_pct_of_limit_max": 11.0,
+   "ram_max_mib": 15.4,
+   "ram_pct_of_limit_max": 16.1,
+   "samples": 17
+  },
+  "marketplace-infra_clickhouse": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 2.0,
+   "ram_limit_mib": 2048,
+   "cpu_pct_of_core": {
+    "avg_per_container": 8.2,
+    "max_per_container": 21.9,
+    "avg_all_replicas": 8.2,
+    "max_all_replicas": 21.9
+   },
+   "cpu_pct_of_limit_max": 10.9,
+   "ram_max_mib": 361.2,
+   "ram_pct_of_limit_max": 17.6,
+   "samples": 17
+  },
+  "marketplace-infra_broker3": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 1.0,
+   "ram_limit_mib": 1536,
+   "cpu_pct_of_core": {
+    "avg_per_container": 11.3,
+    "max_per_container": 18.0,
+    "avg_all_replicas": 11.3,
+    "max_all_replicas": 18.0
+   },
+   "cpu_pct_of_limit_max": 18.0,
+   "ram_max_mib": 726.3,
+   "ram_pct_of_limit_max": 47.3,
+   "samples": 17
+  },
+  "marketplace-infra_broker2": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 1.0,
+   "ram_limit_mib": 1536,
+   "cpu_pct_of_core": {
+    "avg_per_container": 8.8,
+    "max_per_container": 12.3,
+    "avg_all_replicas": 8.8,
+    "max_all_replicas": 12.3
+   },
+   "cpu_pct_of_limit_max": 12.3,
+   "ram_max_mib": 694.7,
+   "ram_pct_of_limit_max": 45.2,
+   "samples": 17
+  },
+  "marketplace-infra_broker1": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 1.0,
+   "ram_limit_mib": 1536,
+   "cpu_pct_of_core": {
+    "avg_per_container": 8.9,
+    "max_per_container": 17.0,
+    "avg_all_replicas": 8.9,
+    "max_all_replicas": 17.0
+   },
+   "cpu_pct_of_limit_max": 17.0,
+   "ram_max_mib": 756.5,
+   "ram_pct_of_limit_max": 49.3,
+   "samples": 17
+  },
+  "marketplace-infra_redis": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 1.0,
+   "ram_limit_mib": 512,
+   "cpu_pct_of_core": {
+    "avg_per_container": 6.7,
+    "max_per_container": 9.2,
+    "avg_all_replicas": 6.7,
+    "max_all_replicas": 9.2
+   },
+   "cpu_pct_of_limit_max": 9.2,
+   "ram_max_mib": 10.3,
+   "ram_pct_of_limit_max": 2.0,
+   "samples": 17
+  },
+  "marketplace-infra_postgres": {
+   "replicas": 1,
+   "cpu_limit_cores_per_replica": 5.0,
+   "ram_limit_mib": 4096,
+   "cpu_pct_of_core": {
+    "avg_per_container": 70.0,
+    "max_per_container": 125.1,
+    "avg_all_replicas": 70.0,
+    "max_all_replicas": 125.1
+   },
+   "cpu_pct_of_limit_max": 25.0,
+   "ram_max_mib": 383.5,
+   "ram_pct_of_limit_max": 9.4,
+   "samples": 17
+  }
+ },
+ "containers_total_cpu_cores": {
+  "avg": 5.06,
+  "max": 5.74
+ }
+}

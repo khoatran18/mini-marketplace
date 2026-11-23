@@ -114,6 +114,16 @@ groups:
           runbook: "§5 outbox"
           action: high   # requeue = ghi lại dữ liệu: cần người duyệt sau khi xem last_error
 
+      # Tín hiệu SỚM của nghẽn (Postgres hết CPU, Kafka chậm): event chờ phát quá vài giây thì thanh toán/xác nhận đơn chậm theo (R11)
+      - alert: OutboxPublishLag
+        expr: mm_outbox_oldest_pending_seconds > 5
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.service }}: event cũ nhất trong outbox chờ phát {{ $value | printf \"%.1f\" }}s (bình thường dưới 1s): nghi Postgres/Kafka quá tải"
+          runbook: "§5 outbox, §6 Kafka"
+          action: low
+
       - alert: OutboxBacklogOld
         expr: mm_outbox_oldest_age_seconds > 300
         for: 5m

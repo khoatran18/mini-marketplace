@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mini-marketplace/shared/dbpool"
 	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"os"
 	"strconv"
@@ -86,6 +87,13 @@ func initPostgresDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Giới hạn pool (R15): tổng mọi bản của mọi service phải nhỏ hơn max_connections của Postgres. Ghi đè bằng DB_MAX_OPEN_CONNS / DB_MAX_IDLE_CONNS.
+	poolDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	dbpool.Apply(poolDB, 30, 10)
 
 	return db, nil
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/segmentio/kafka-go"
 
-	"mini-marketplace/shared/events"
 	"mini-marketplace/shared/reqctx"
 )
 
@@ -22,7 +21,7 @@ type messageWriter interface {
 // message costs a full round trip plus the writer's batch timeout each, which capped a service at a few dozen events/s.
 // Messages of the same key in one call keep their order (hash balancer); the outbox sends at most one row per key per batch anyway.
 // Failed messages are retried like Publish (p.retry attempts, p.backoff between them), only the failed ones each time.
-func (p *KafkaProducer) PublishMany(ctx context.Context, balance kafka.Balancer, msgs []events.Message) []error {
+func (p *KafkaProducer) PublishMany(ctx context.Context, balance kafka.Balancer, msgs []Message) []error {
 	errs := make([]error, len(msgs))
 	byTopic := map[string][]int{}
 	for i, m := range msgs {
@@ -41,7 +40,7 @@ func (p *KafkaProducer) PublishMany(ctx context.Context, balance kafka.Balancer,
 }
 
 // writeGroup sends msgs[idx...] (all of one topic) through w and fills errs for those indexes.
-func writeGroup(ctx context.Context, w messageWriter, msgs []events.Message, idx []int, errs []error, retry int, backoff time.Duration) {
+func writeGroup(ctx context.Context, w messageWriter, msgs []Message, idx []int, errs []error, retry int, backoff time.Duration) {
 	attempts := retry
 	if attempts < 1 {
 		attempts = 1
@@ -89,4 +88,12 @@ func writeGroup(ctx context.Context, w messageWriter, msgs []events.Message, idx
 			}
 		}
 	}
+}
+
+// Message is one row handed to PublishMany (an outbox row).
+type Message struct {
+	Topic     string
+	Key       string
+	Payload   []byte
+	RequestID *string // becomes the Kafka header x-request-id (ADR-36)
 }

@@ -1,6 +1,8 @@
 package kafkaimpl
 
 import (
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -12,6 +14,9 @@ type KafkaManager struct {
 	mu      sync.RWMutex
 	writers map[string]*kafka.Writer
 	readers map[string]*kafka.Reader
+	// commitInterval > 0: CommitMessages only queues the offset and kafka-go sends them in one request every interval (and on
+	// Close). 0 = every CommitMessages is a synchronous round trip to the broker. At-least-once either way; handlers are idempotent.
+	commitInterval time.Duration
 }
 
 func NewKafkaManager(brokers []string) *KafkaManager {
@@ -19,7 +24,21 @@ func NewKafkaManager(brokers []string) *KafkaManager {
 		brokers: brokers,
 		writers: make(map[string]*kafka.Writer),
 		readers: make(map[string]*kafka.Reader),
+
+		commitInterval: commitIntervalFromEnv(),
 	}
+}
+
+// commitIntervalFromEnv reads KAFKA_COMMIT_INTERVAL_MS (0..60000, default 0 = commit every message synchronously).
+func commitIntervalFromEnv() time.Duration {
+	n, err := strconv.Atoi(os.Getenv("KAFKA_COMMIT_INTERVAL_MS"))
+	if err != nil || n < 0 {
+		return 0
+	}
+	if n > 60000 {
+		n = 60000
+	}
+	return time.Duration(n) * time.Millisecond
 }
 
 ////////////////////////////////// For Producer ////////////////////////////////////////////////////////////
@@ -64,12 +83,13 @@ func (m *KafkaManager) CloseWriterAll() error {
 
 func (m *KafkaManager) newReaderForTopic(topic string, groupID string) *kafka.Reader {
 	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  m.brokers,
-		Topic:    topic,
-		GroupID:  groupID,
-		MinBytes: 1,
-		MaxBytes: 10e6,
-		MaxWait:  1 * time.Second,
+		Brokers:        m.brokers,
+		Topic:          topic,
+		GroupID:        groupID,
+		MinBytes:       1,
+		MaxBytes:       10e6,
+		MaxWait:        1 * time.Second,
+		CommitInterval: m.commitInterval,
 		// Chỉ phát hiện partition được THÊM sau khi đã join (mốc so sánh lấy lúc bắt đầu watch). Lỗi 0 partition lúc khởi động
 		// được chặn ở KafkaClient.EnsureTopicExist (chờ topic có partition + leader trước khi consumer join).
 		WatchPartitionChanges:  true,

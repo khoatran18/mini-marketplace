@@ -107,10 +107,15 @@ func (c *pwdChecker) verify(ctx context.Context, userID uint64, tokenVersion int
 		return nil
 	}
 	n, perr := strconv.Atoi(s)
-	if perr != nil || int64(n) != tokenVersion {
-		return errPwdChanged
+	if perr == nil && int64(n) == tokenVersion {
+		return nil
 	}
-	return nil
+	// The key can be STALE: after a second change within the key's TTL it still holds the previous version until the
+	// outbox event arrives, so a token issued right now would be refused. A mismatch is rare, so let the database decide.
+	if c.src != nil {
+		return c.fromDB(ctx, userID, tokenVersion)
+	}
+	return errPwdChanged
 }
 
 // PwdVerifier checks a token's password version the same way AuthMiddleware does (Redis fast path, database fallback).

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -25,6 +26,7 @@ func Mount(db *gorm.DB) func(mux *http.ServeMux) {
 			limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 			rows, err := ListDead(db, limit)
 			if err != nil {
+				log.Printf("outbox admin: list dead failed table=%s: %v", Table(), err)
 				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "list failed"})
 				return
 			}

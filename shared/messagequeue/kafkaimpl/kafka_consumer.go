@@ -3,7 +3,9 @@ package kafkaimpl
 import (
 	"context"
 	"log"
+	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,6 +30,10 @@ var dlqTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 type KafkaConsumer struct {
 	km      *KafkaManager
 	backoff time.Duration
+	// workers = readers per Consume call (KAFKA_CONSUMER_WORKERS, default 1). All readers join the SAME consumer group,
+	// so Kafka gives each one a share of the partitions: one partition is still read by one worker in order, but
+	// partitions are processed in parallel. More workers than partitions (across all replicas) just sit idle.
+	workers int
 
 	// Overridable in tests; production values are set by NewKafkaConsumer.
 	publishDLQ func(ctx context.Context, dlqTopic string, m kafka.Message) error
@@ -38,6 +44,7 @@ func NewKafkaConsumer(km *KafkaManager, backoff time.Duration) *KafkaConsumer {
 	c := &KafkaConsumer{
 		km:      km,
 		backoff: backoff,
+		workers: workersFromEnv(),
 	}
 	c.publishDLQ = func(ctx context.Context, dlqTopic string, m kafka.Message) error {
 		return km.newWriter(dlqTopic, &kafka.Hash{}).WriteMessages(ctx, m)
@@ -63,8 +70,65 @@ type messageReader interface {
 // and only then committed. If the DLQ publish fails it is retried until it succeeds (or
 // ctx ends) and the message is NOT committed, so nothing is lost. Handlers must be
 // idempotent (messages are delivered at least once).
+//
+// With KAFKA_CONSUMER_WORKERS=N > 1 it runs N readers of the same group in this process (see KafkaConsumer.workers);
+// it returns when the first worker stops (ctx ended) after waiting for the others.
 func (c *KafkaConsumer) Consume(ctx context.Context, topic, groupID string, handler MessageHandler) error {
-	return c.consumeLoop(ctx, c.km.NewReader(topic, groupID), topic, handler)
+	if c.workers <= 1 {
+		return c.consumeLoop(ctx, c.km.NewReader(topic, groupID), topic, handler)
+	}
+	// NewReader caches one reader per topic+group, so N workers would share it and two of them could take consecutive
+	// messages of one partition at the same time (order lost). Each worker gets its own reader instead, closed on exit
+	// (Close also flushes queued commits).
+	readers := make([]*kafka.Reader, 0, c.workers)
+	newReader := func() messageReader {
+		r := c.km.newReaderForTopic(topic, groupID)
+		readers = append(readers, r)
+		return r
+	}
+	err := c.consumeWorkers(ctx, c.workers, newReader, topic, handler)
+	for _, r := range readers {
+		_ = r.Close()
+	}
+	return err
+}
+
+// workersFromEnv reads KAFKA_CONSUMER_WORKERS (1..64, default 1).
+func workersFromEnv() int {
+	n, err := strconv.Atoi(os.Getenv("KAFKA_CONSUMER_WORKERS"))
+	if err != nil || n < 1 {
+		return 1
+	}
+	if n > 64 {
+		return 64
+	}
+	return n
+}
+
+func (c *KafkaConsumer) consumeWorkers(ctx context.Context, n int, newReader func() messageReader, topic string, handler MessageHandler) error {
+	if n <= 1 {
+		return c.consumeLoop(ctx, newReader(), topic, handler)
+	}
+	var wg sync.WaitGroup
+	errs := make([]error, n)
+	rs := make([]messageReader, n) // built here, not in the goroutines: newReader is not required to be safe for concurrent use
+	for i := range rs {
+		rs[i] = newReader()
+	}
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			errs[i] = c.consumeLoop(ctx, rs[i], topic, handler)
+		}(i)
+	}
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *KafkaConsumer) consumeLoop(ctx context.Context, reader messageReader, topic string, handler MessageHandler) error {

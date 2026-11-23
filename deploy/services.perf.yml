@@ -31,7 +31,7 @@ services:
       - --entrypoints.web.forwardedHeaders.trustedIPs=10.0.0.0/24
     deploy:
       resources:
-        limits: {cpus: "2", memory: 512M}
+        limits: {cpus: "1", memory: 512M}
   frontend:
     deploy:
       resources:
@@ -47,21 +47,25 @@ services:
       AI_PROPOSAL_RATE_LIMIT_PER_MINUTE: "100000"
       EVENTS_RATE_LIMIT_PER_MINUTE: "100000"
     deploy:
-      replicas: 3
+      replicas: 2
       resources:
-        limits: {cpus: "1.5", memory: 512M}
+        limits: {cpus: "1", memory: 512M}
   auth-service:
     deploy:
+      replicas: 3
       resources:
         limits: {cpus: "1", memory: 384M}
   product-service:
+    environment:
+      # 3 reader = 3 partition của order.create_order / order.status_changed: mỗi reader một partition, song song x3, thứ tự theo đơn vẫn giữ (R13)
+      KAFKA_CONSUMER_WORKERS: "3"
     deploy:
       resources:
-        limits: {cpus: "1", memory: 384M}
+        limits: {cpus: "1.5", memory: 384M}
   order-service:
     deploy:
       resources:
-        limits: {cpus: "1", memory: 384M}
+        limits: {cpus: "1.5", memory: 384M}
   user-service:
     deploy:
       resources:
@@ -88,6 +92,6 @@ services:
     # Một tiến trình uvicorn dùng được tối đa 1 core (GIL), nên tăng song song bằng replica. Chỉ an toàn khi AI_RCA_ENABLED=false
     # (watcher RCA không có khoá chọn người dẫn đầu, nhiều replica sẽ điều tra trùng). Bước đầu đo với replicas: 1 rồi tính số replica cần.
     deploy:
-      replicas: 3
+      replicas: 2
       resources:
         limits: {cpus: "1", memory: 768M}

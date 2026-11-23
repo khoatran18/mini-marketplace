@@ -40,3 +40,11 @@ Mỗi VU là một người dùng với tài khoản và IP giả riêng; mỗi 
 node scripts/load/ccu.mjs --vus=25 --duration=90 --ramp=20 --out=/tmp/ccu25.json
 ```
 Tham số xem đầu file (`VUS`, `DURATION`, `RAMP`, `MIX`, `THINK_MS`, `AI_THINK_MS`, `PRODUCTS`, `OUT`, `MAX_ERR_PCT`). Phép đo chỉ "HỢP LỆ" khi lỗi ngoài dự kiến ≤ ngưỡng, không có 429 và mọi VU vào được.
+
+## ccu.mjs: đóng và mở, chạy cả dải
+
+- **Đóng** `--vus=N`: N người cố định (vào 5 VU/giây, `ENTRY_RATE`), hệ thống chậm thì tải tự giảm.
+- **Mở (nửa mở)** `--arrival-rate=R`: R khách mới mỗi giây, mỗi khách chọn loại theo `MIX` rồi làm ~3 hành trình (`SESSION_JOURNEYS`) và rời đi; dùng lại tài khoản cũ (chỉ đăng nhập). CCU là kết quả (`đỉnh người cùng lúc`), không phải tham số.
+- `scripts/load/perf-run.sh NHÃN [tham số]`: một lượt (gắn node vào 2 core `LOADGEN_CPUS=14,15`, ghi `docker stats`, chụp cấu hình Swarm, tổng hợp) ra `docs/perf-results/<ngày>/` (`OUT_DIR` đổi được).
+- `scripts/load/perf-matrix.sh`: đóng `100 200 300 500 800 1000` rồi mở `5 10 20 30 40`, lặp `REPEAT` (3) lần (ghi đè bằng `CLOSED`, `OPEN`, `REPEAT`, `DURATION`). Cần `scripts/deploy-perf.sh` trước (mô hình AI giả).
+- Sonde máy tải trong báo cáo: độ trễ vòng lặp node, CPU toàn máy (cảnh báo > 75%), RAM trống. Kết quả và giải thích: `docs/design/09_PERF_RESOURCES.md` §5e, §6.

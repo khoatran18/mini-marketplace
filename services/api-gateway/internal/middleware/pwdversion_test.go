@@ -93,22 +93,38 @@ func TestFreshOrFlushedRedisIsNotTrusted(t *testing.T) {
 
 func TestAfterWindowRedisIsTrustedAndDatabaseNotCalled(t *testing.T) {
 	_, mr := newRedis(t)
-	src := &fakeSrc{err: errors.New("không được gọi")}
+	src := &fakeSrc{version: 1}
 	e := fbEngine(mr, src)
 	markSafe(mr)
 	if w := get(e, sign(t, claims("access", 0, time.Minute), secret)); w.Code != 200 {
 		t.Fatalf("không có khoá deny: want 200, got %d", w.Code)
 	}
 	_ = mr.Set("42:pwd_version", "1") // vừa đổi mật khẩu (consumer ghi)
-	if w := get(e, sign(t, claims("access", 0, time.Minute), secret)); w.Code != 401 {
-		t.Fatalf("vé cũ sau khi đổi mật khẩu: want 401, got %d", w.Code)
-	}
 	if w := get(e, sign(t, claims("access", 1, time.Minute), secret)); w.Code != 200 {
 		t.Fatalf("vé mới: want 200, got %d", w.Code)
 	}
 	if src.calls != 0 {
-		t.Fatalf("đường nhanh không được gọi DB, calls=%d", src.calls)
+		t.Fatalf("khoá khớp và hết cửa sổ: đường nhanh không được gọi DB, calls=%d", src.calls)
+	}
+	if w := get(e, sign(t, claims("access", 0, time.Minute), secret)); w.Code != 401 {
+		t.Fatalf("vé cũ sau khi đổi mật khẩu: want 401, got %d", w.Code)
 	}
 }
 
-func redisFor(mr *miniredis.Miniredis) *redis.Client { return redis.NewClient(&redis.Options{Addr: mr.Addr()}) }
+func TestStaleRedisKeyDoesNotRejectFreshToken(t *testing.T) {
+	_, mr := newRedis(t)
+	src := &fakeSrc{version: 2} // DB: đã đổi mật khẩu lần 2
+	e := fbEngine(mr, src)
+	markSafe(mr)
+	_ = mr.Set("42:pwd_version", "1") // khoá cũ của lần đổi thứ nhất, sự kiện lần 2 chưa tới
+	if w := get(e, sign(t, claims("access", 2, time.Minute), secret)); w.Code != 200 {
+		t.Fatalf("vé mới sau lần đổi 2 phải qua nhờ DB dù khoá Redis cũ, got %d", w.Code)
+	}
+	if w := get(e, sign(t, claims("access", 0, time.Minute), secret)); w.Code != 401 {
+		t.Fatalf("vé cũ vẫn phải bị chặn, got %d", w.Code)
+	}
+}
+
+func redisFor(mr *miniredis.Miniredis) *redis.Client {
+	return redis.NewClient(&redis.Options{Addr: mr.Addr()})
+}

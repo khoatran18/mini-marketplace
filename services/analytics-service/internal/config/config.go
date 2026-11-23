@@ -70,7 +70,7 @@ func FromEnv() (*Config, error) {
 		ClickHousePassword:    os.Getenv("CLICKHOUSE_PASSWORD"),
 		RedisAddr:             os.Getenv("REDIS_ADDR"),
 		CacheTTL:              time.Duration(envInt("ANALYTICS_CACHE_TTL_SEC", 30)) * time.Second,
-		FlushInterval:         time.Duration(envInt("ANALYTICS_FLUSH_INTERVAL_MS", 2000)) * time.Millisecond,
+		FlushInterval:         time.Duration(envInt("ANALYTICS_FLUSH_INTERVAL_MS", 20000)) * time.Millisecond,
 		FlushRows:             envInt("ANALYTICS_FLUSH_ROWS", 5000),
 		BufferMax:             envInt("ANALYTICS_BUFFER_MAX_ROWS", 100000),
 		SpoolDir:              os.Getenv("ANALYTICS_SPOOL_DIR"),

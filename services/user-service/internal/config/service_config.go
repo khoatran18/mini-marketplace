@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mini-marketplace/shared/dbpool"
 	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"os"
 	"strconv"
@@ -93,6 +94,7 @@ func initPostgresDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	dbpool.Apply(sqlDB, 10, 3) // R15: giới hạn pool, ghi đè bằng DB_MAX_OPEN_CONNS / DB_MAX_IDLE_CONNS
 	if err := migrate.Run(context.Background(), sqlDB); err != nil {
 		return nil, err
 	}

@@ -19,7 +19,12 @@
 //   FRONTEND_URL frontend qua Traefik                      (API_URL bỏ tiền tố "api.")
 //   VUS          số người dùng đồng thời                    (25)
 //   DURATION     giây chạy ổn định (không tính ramp)        (60)
-//   RAMP         giây tăng dần VU                           (20)
+//   ARRIVAL_RATE phiên MỚI mỗi giây (chế độ MỞ/nửa mở: khách đến theo nhịp, không chờ hệ thống; mỗi khách làm SESSION_JOURNEYS hành trình rồi rời đi). Đặt thì bỏ qua VUS (0)
+//                (mở) khách quay lại dùng lại tài khoản cũ: chỉ đăng nhập, không đăng ký mới mỗi phiên
+//   SESSION_JOURNEYS  số hành trình mỗi phiên ở chế độ mở, ngẫu nhiên từ n-1 đến n+1  (3)
+//   MAX_ACTIVE   chặn số phiên cùng chạy ở chế độ mở để máy tải không cạn (4000); vượt thì bỏ khách mới và đếm vào 'bỏ'
+//   ENTRY_RATE   VU vào mỗi giây (cố định cho mọi mức CCU, để 100 và 500 CCU cùng một cách vào) (5)
+//   RAMP         giây tăng dần VU                           (mặc định VUS / ENTRY_RATE)
 //   MIX          tỉ lệ VU theo loại                         (buyer:50,seller:12,admin:8,operator:8,ai_buyer:12,ai_seller:4,ai_admin:4,ai_operator:4)
 //   THINK_MS / AI_THINK_MS  thời gian nghĩ giữa hai bước / hai câu hỏi AI (1500 / 8000)
 //   PRODUCTS     số sản phẩm của shop test                  (30)
@@ -27,13 +32,14 @@
 //   OUT          ghi kết quả JSON ra file                   (không ghi)
 //   MAX_ERR_PCT  ngưỡng lỗi ngoài dự kiến                   (1)
 // Mã thoát: 0 đạt, 1 vượt ngưỡng lỗi / setup hỏng / thiếu độ phủ.
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
+import { monitorEventLoopDelay } from 'node:perf_hooks';
 
 const argv = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, v = '1'] = a.slice(2).split('='); return [k.toUpperCase().replace(/-/g, '_'), v]; }));
 const P = (k, d) => argv[k] ?? process.env[k] ?? d;
 const API = String(P('API_URL', 'http://api.marketplace.swarm.localhost')).replace(/\/$/, '');
 const WEB = String(P('FRONTEND_URL', API.replace('//api.', '//'))).replace(/\/$/, '');
-const VUS = Number(P('VUS', 25)), DURATION = Number(P('DURATION', 60)), RAMP = Number(P('RAMP', 20));
+const VUS = Number(P('VUS', 25)), DURATION = Number(P('DURATION', 60)), ARRIVAL = Number(P('ARRIVAL_RATE', 0)), SESSION_N = Number(P('SESSION_JOURNEYS', 3)), MAX_ACTIVE = Number(P('MAX_ACTIVE', 4000)), ENTRY_RATE = Number(P('ENTRY_RATE', 5)), RAMP = Number(P('RAMP', Math.ceil(VUS / ENTRY_RATE)));
 const THINK = Number(P('THINK_MS', 1500)), AI_THINK = Number(P('AI_THINK_MS', 8000)), PRODUCTS = Number(P('PRODUCTS', 30));
 const MAX_ERR_PCT = Number(P('MAX_ERR_PCT', 1)), OUT = P('OUT', '');
 const ADMIN_USER = P('ADMIN_USERNAME', process.env.ADMIN_BOOTSTRAP_USERNAME ?? ''), ADMIN_PASS = P('ADMIN_PASSWORD', process.env.ADMIN_BOOTSTRAP_PASSWORD ?? '');
@@ -50,6 +56,35 @@ const weighted = (list) => { const t = list.reduce((a, [w]) => a + w, 0); let r 
 // ------------------------------------------------------------------ số liệu
 const stats = {}, areas = {};
 const stat = (n) => (stats[n] ??= { n: 0, ok: 0, expected: 0, limited: 0, err: 0, lat: [], codes: {} });
+// Sonde của CHÍNH máy tải trong pha đo: nếu vòng lặp sự kiện của node bị trễ hoặc cả máy gần hết CPU thì số đo bị méo (máy tải và hệ thống dùng chung một máy)
+const probe = { eld: null, timer: null, cpu: [], prev: null, memMin: Infinity, active: false };
+function cpuTimes() { const l = readFileSync('/proc/stat', 'utf8').split('\n')[0].trim().split(/\s+/).slice(1).map(Number); return { idle: l[3] + (l[4] ?? 0), total: l.reduce((a, b) => a + b, 0) }; }
+function startProbe() {
+  try { probe.eld = monitorEventLoopDelay({ resolution: 10 }); probe.eld.enable(); } catch { /* không có */ }
+  try { probe.prev = cpuTimes(); } catch { probe.prev = null; }
+  probe.active = true;
+  probe.timer = setInterval(() => {
+    try {
+      const c = cpuTimes(); if (probe.prev) { const dt = c.total - probe.prev.total; if (dt > 0) probe.cpu.push((100 * (dt - (c.idle - probe.prev.idle))) / dt); } probe.prev = c;
+      const m = /MemAvailable:\s+(\d+)/.exec(readFileSync('/proc/meminfo', 'utf8')); if (m) probe.memMin = Math.min(probe.memMin, Number(m[1]) / 1048576);
+    } catch { /* không phải Linux */ }
+  }, 2000);
+}
+function stopProbe() {
+  if (!probe.active) return null; phaseEnd = Date.now(); probe.active = false; clearInterval(probe.timer); probe.eld?.disable();
+  const cpu = probe.cpu, ms = (x) => (x ? +(x / 1e6).toFixed(1) : null);
+  const out = {
+    eventLoopMs: probe.eld ? { mean: ms(probe.eld.mean), p99: ms(probe.eld.percentile(99)), max: ms(probe.eld.max) } : null,
+    hostCpuPct: cpu.length ? { avg: +(cpu.reduce((a, b) => a + b, 0) / cpu.length).toFixed(1), max: +Math.max(...cpu).toFixed(1), samples: cpu.length } : null,
+    hostMemAvailableMinGiB: Number.isFinite(probe.memMin) ? +probe.memMin.toFixed(1) : null,
+  };
+  return out;
+}
+// (kho riêng cho ai_buyer: tài khoản của họ KHÔNG có địa chỉ mặc định, buyer dùng nhầm thì POST /orders trả 404 'address not found')
+// Chế độ MỞ: khách quay lại dùng TÀI KHOẢN CŨ (chỉ đăng nhập) thay vì mỗi phiên đăng ký mới; nếu không, bcrypt của auth-service sẽ là thứ bị đo chứ không phải hệ thống
+const POOL = ARRIVAL > 0, pool = { buyer: [], aibuyer: [], sellerai: [], adminstaff: [], opstaff: [] };
+const poolKey = { buyer: 'buyer', ai_buyer: 'aibuyer', ai_seller: 'sellerai', ai_admin: 'adminstaff', ai_operator: 'opstaff' };
+let active = 0, peakActive = 0, started = 0, dropped = 0;
 const counters = { journeys: 0, orders: 0, shipped: 0, returns: 0, refunds: 0, ai_done: 0, ai_err: 0, vu_fail: 0 };
 const aiTtfb = [], aiTotal = [], payLag = []; let payTimeouts = 0; // payLag: ms từ lúc đặt đơn tới lúc payment xuất hiện (tạo bất đồng bộ qua Kafka)
 let phaseStart = 0, steady = false;
@@ -95,14 +130,20 @@ async function web(vu, path) { // trang HTML của frontend (SSR) qua Traefik
 }
 
 // ------------------------------------------------------------------ tài khoản
+// Vào (đăng ký/đăng nhập) thử lại khi 5xx/timeout: một lượt vào hỏng không nên bỏ cả VU (người thật sẽ bấm lại)
+async function entry(label, path, opts) {
+  let r;
+  for (let i = 0; i < 3; i++) { r = await call(label, 'POST', path, opts); if (r.status !== 0 && r.status < 500) break; await sleep(1000 * (i + 1)); }
+  return r;
+}
 async function login(username, password, role, vu) {
-  const l = await call('POST /auth/login', 'POST', '/auth/login', { vu, body: { username, password, role } });
+  const l = await entry('POST /auth/login', '/auth/login', { vu, body: { username, password, role } });
   if (l.status !== 200) throw new Error(`login ${role} ${l.status}`);
   return { username, password, role, access: l.json.access_token, refresh: l.json.refresh_token, at: Date.now() };
 }
 async function account(prefix, role, vu) {
   const username = `${prefix}${run}${Math.random().toString(36).slice(2, 6)}`.slice(0, 16);
-  const r = await call('POST /auth/register', 'POST', '/auth/register', { vu, body: { username, password: PASSWORD, role } });
+  const r = await entry('POST /auth/register', '/auth/register', { vu, body: { username, password: PASSWORD, role } });
   if (r.status !== 200) throw new Error(`register ${r.status}`);
   return login(username, PASSWORD, role, vu);
 }
@@ -125,7 +166,7 @@ async function sellerAccount(vu) { // seller riêng có store (khoá chat AI: m�
   const u = await account('ls', 'seller_admin', vu);
   const st = await call('POST /users/sellers', 'POST', '/users/sellers', { vu, token: u.access, body: { seller: { name: `LOAD ai ${vu.id}`, bank_account: '1', tax_code: '1', description: 'ccu', phone: '0909000111', address: 'x' } } });
   if (st.status !== 200) throw new Error(`tạo store ${st.status}`);
-  for (let i = 0; i < 40; i++) { if ((await call('GET /seller/products', 'GET', '/seller/products?page_size=1', { vu, token: u.access })).status === 200) break; await sleep(500); }
+  for (let i = 0; i < 40; i++) { if ((await call('GET /seller/products', 'GET', '/seller/products?page_size=1', { vu, token: u.access, soft: [403] })).status === 200) break; await sleep(500); }
   return login(u.username, PASSWORD, 'seller_admin', vu);
 }
 const uidOf = (u) => { try { const c = JSON.parse(Buffer.from(u.access.split('.')[1], 'base64url').toString()); return c.UserID ?? c.sub ?? c.user_id ?? c.id; } catch { return null; } };
@@ -137,7 +178,7 @@ async function setup() {
   const owner = await account('lo', 'seller_admin', vu);
   const st = await call('POST /users/sellers', 'POST', '/users/sellers', { vu, token: owner.access, body: { seller: { name: `LOAD shop ${run}`, bank_account: '1', tax_code: '1', description: 'ccu test', phone: '0909000111', address: 'x' } } });
   if (st.status !== 200) throw new Error(`tạo store ${st.status} ${JSON.stringify(st.json)}`);
-  for (let i = 0; i < 40; i++) { if ((await call('GET /seller/products', 'GET', '/seller/products?page_size=1', { vu, token: owner.access })).status === 200) break; await sleep(500); }
+  for (let i = 0; i < 40; i++) { if ((await call('GET /seller/products', 'GET', '/seller/products?page_size=1', { vu, token: owner.access, soft: [403] })).status === 200) break; await sleep(500); }
   const o2 = await login(owner.username, PASSWORD, 'seller_admin', vu); // đăng nhập lại để token mang store_id
   const cats = await call('GET /categories', 'GET', '/categories', { vu });
   const cid = cats.json?.categories?.[0]?.id;
@@ -391,17 +432,17 @@ async function aiChat(vu, persona) {
 
 // ------------------------------------------------------------------ vòng lặp VU
 const KINDS = {
-  buyer: { login: async (vu) => { vu.user = await account('lb', 'buyer', vu); const a = await call('POST /users/me/addresses', 'POST', '/users/me/addresses', { vu, token: vu.user.access, ok: [201], body: { label: 'Nhà', receiver_name: 'Load Test', phone: '0901234567', line1: '1 Test', city: 'HCM', is_default: true } }); if (a.status !== 201) throw new Error(`địa chỉ ${a.status}`); },
+  buyer: { login: async (vu) => { const p = POOL && pool.buyer.pop(); if (p) { vu.user = await login(p.username, p.password, 'buyer', vu); vu.hasProfile = p.hasProfile; return; } vu.user = await account('lb', 'buyer', vu); const a = await call('POST /users/me/addresses', 'POST', '/users/me/addresses', { vu, token: vu.user.access, ok: [201], body: { label: 'Nhà', receiver_name: 'Load Test', phone: '0901234567', line1: '1 Test', city: 'HCM', is_default: true } }); if (a.status !== 201) throw new Error(`địa chỉ ${a.status}`); },
     step: (vu, W) => weighted([[22, () => buyerBrowse(vu, W)], [32, () => buyerPurchase(vu, W)], [10, () => buyerCart(vu, W)], [12, () => buyerProfile(vu)], [24, () => buyerFollowup(vu)]])() },
   seller: { login: async (vu, W) => { vu.user = await login(W.owner.username, PASSWORD, 'seller_admin', vu); },
     step: (vu, W) => weighted([[35, () => sellerOrders(vu)], [15, () => sellerReturns(vu)], [20, () => sellerCatalog(vu, W)], [20, () => sellerAnalytics(vu)], [10, () => sellerStaff(vu)]])() },
   admin: { need: 'admin', login: async (vu) => { vu.user = await login(ADMIN_USER, ADMIN_PASS, 'admin', vu); },
     step: (vu, W) => weighted([[30, () => adminOrdersPayments(vu)], [30, () => adminAnalytics(vu)], [15, () => adminManage(vu, W)], [25, () => opsReads(vu)]])() },
   operator: { need: 'operator', login: async (vu, W) => { vu.user = await login(W.operator.username, PASSWORD, 'operator', vu); }, step: (vu) => opsReads(vu) },
-  ai_buyer: { ai: 'buyer', login: async (vu) => { vu.user = await account('lb', 'buyer', vu); } },
-  ai_seller: { ai: 'seller', login: async (vu) => { vu.user = await sellerAccount(vu); } },
-  ai_admin: { ai: 'admin', need: 'admin', login: async (vu, W) => { vu.user = await staffAccount('admin', vu, W); } },
-  ai_operator: { ai: 'operator', need: 'operator', login: async (vu, W) => { vu.user = await staffAccount('operator', vu, W); } },
+  ai_buyer: { ai: 'buyer', login: async (vu) => { const p = POOL && pool.aibuyer.pop(); if (p) { vu.user = await login(p.username, p.password, 'buyer', vu); vu.hasProfile = p.hasProfile; return; } vu.user = await account('lb', 'buyer', vu); } },
+  ai_seller: { ai: 'seller', login: async (vu) => { const p = POOL && pool.sellerai.pop(); vu.user = p ? await login(p.username, p.password, 'seller_admin', vu) : await sellerAccount(vu); } },
+  ai_admin: { ai: 'admin', need: 'admin', login: async (vu, W) => { const p = POOL && pool.adminstaff.pop(); vu.user = p ? await login(p.username, p.password, 'admin', vu) : await staffAccount('admin', vu, W); } },
+  ai_operator: { ai: 'operator', need: 'operator', login: async (vu, W) => { const p = POOL && pool.opstaff.pop(); vu.user = p ? await login(p.username, p.password, 'operator', vu) : await staffAccount('operator', vu, W); } },
 };
 async function vuLoop(id, kind, W, endAt, startDelay) {
   await sleep(startDelay);
@@ -412,6 +453,40 @@ async function vuLoop(id, kind, W, endAt, startDelay) {
     try { if (K.ai) { await aiChat(vu, K.ai); await think(AI_THINK); } else { await K.step(vu, W); await think(THINK * 2); } counters.journeys++; }
     catch (e) { counters.vu_fail++; console.log(`  VU ${id} (${kind}) lỗi: ${e.message}`); await sleep(1000); }
   }
+}
+// Chế độ MỞ (nửa mở): một khách = một phiên vài hành trình rồi rời đi; khách đến theo nhịp bất kể hệ thống đang chậm
+async function session(id, kind, W) {
+  active++; peakActive = Math.max(peakActive, active);
+  const vu = { id, kind, ip: `198.51.${(id >> 8) & 255}.${(id & 255) || 1}`, seq: 0 };
+  const K = KINDS[kind];
+  try {
+    await K.login(vu, W);
+    const n = Math.max(1, SESSION_N + Math.floor(Math.random() * 3) - 1);
+    for (let i = 0; i < n; i++) {
+      try { if (K.ai) { await aiChat(vu, K.ai); await think(AI_THINK); } else { await K.step(vu, W); await think(THINK * 2); } counters.journeys++; }
+      catch (e) { counters.vu_fail++; console.log(`  phiên ${id} (${kind}) lỗi: ${e.message}`); }
+    }
+  } catch (e) { counters.vu_fail++; console.log(`  phiên ${id} (${kind}) vào thất bại: ${e.message}`); }
+  finally { active--; const k = poolKey[kind]; if (k && vu.user?.username) pool[k].push({ username: vu.user.username, password: vu.user.password, hasProfile: vu.hasProfile }); }
+}
+async function runOpen(W) {
+  const mix = MIX.filter(([n]) => !(KINDS[n]?.need === 'admin' && !W.admin) && !(KINDS[n]?.need === 'operator' && !W.operator));
+  const sum = mix.reduce((a, [, w]) => a + w, 0);
+  const pickKind = () => { let r = Math.random() * sum; for (const [n, w] of mix) { if ((r -= w) < 0) return n; } return mix[0][0]; };
+  const t0 = Date.now(), steadyAt = t0 + 30000, endAt = steadyAt + DURATION * 1000; // 30 s khởi động: đủ để số phiên cùng lúc và kho tài khoản tới mức ổn định
+  setTimeout(() => { steady = true; phaseStart = Date.now(); startProbe(); console.log('[ổn định] bắt đầu đo'); }, steadyAt - t0);
+  const ticker = setInterval(() => { const t = Object.values(stats); console.log(`  t=${((Date.now() - t0) / 1000).toFixed(0)}s lời gọi=${t.reduce((a, s) => a + s.n, 0)} lỗi=${t.reduce((a, s) => a + s.err, 0)} phiên đang chạy=${active} đơn=${counters.orders}`); }, 10000);
+  const running = [];
+  for (let k = 0; ; k++) { // phiên thứ k đến đúng lúc t0 + k/ARRIVAL (không dồn lại khi hệ thống chậm)
+    const at = t0 + (k * 1000) / ARRIVAL; if (at >= endAt) break;
+    const wait = at - Date.now(); if (wait > 0) await sleep(wait);
+    if (active >= MAX_ACTIVE) { dropped++; continue; }
+    started++; running.push(session(k + 1, pickKind(), W));
+  }
+  const measured = (Date.now() - phaseStart) / 1000; steady = false; PROBE = stopProbe(); // lời gọi của phiên còn dở sau khi hết giờ không tính vào số đo
+  await Promise.race([Promise.all(running), sleep(90000)]);
+  clearInterval(ticker);
+  return measured;
 }
 function assign(W) { // chia VU theo MIX (bỏ loại thiếu điều kiện), phần dư dồn cho nhóm có phần thập phân lớn nhất
   const mix = MIX.filter(([n]) => !(KINDS[n]?.need === 'admin' && !W.admin) && !(KINDS[n]?.need === 'operator' && !W.operator));
@@ -424,7 +499,9 @@ function assign(W) { // chia VU theo MIX (bỏ loại thiếu điều kiện), p
 
 // ------------------------------------------------------------------ báo cáo
 const WANT = ['api-gateway', 'auth-service', 'user-service', 'product-service', 'order-service', 'payment-service', 'analytics-service', 'ops-service', 'ai-agent', 'frontend'];
+let PROBE = null, phaseEnd = 0;
 function report(elapsed) {
+  PROBE ??= stopProbe();
   console.log('\n=============== KẾT QUẢ ===============');
   console.log('nhãn'.padEnd(46), 'n'.padStart(6), 'ok'.padStart(6), 'dự kiến'.padStart(8), '429'.padStart(5), 'lỗi'.padStart(5), 'p50'.padStart(7), 'p95'.padStart(7), 'p99'.padStart(7), 'max'.padStart(7), ' mã');
   let n = 0, err = 0, limited = 0;
@@ -438,17 +515,44 @@ function report(elapsed) {
   console.log(`hành trình xong ${counters.journeys}, đơn tạo ${counters.orders}, giao đi ${counters.shipped}, trả hàng ${counters.returns}, hoàn tiền ${counters.refunds}, VU hỏng ${counters.vu_fail}`);
   if (aiTotal.length || counters.ai_err) console.log(`AI: xong ${counters.ai_done}, lỗi ${counters.ai_err}; byte đầu p50/p95 ${pct(aiTtfb, 50).toFixed(0)}/${pct(aiTtfb, 95).toFixed(0)} ms; cả lượt p50/p95 ${pct(aiTotal, 50).toFixed(0)}/${pct(aiTotal, 95).toFixed(0)} ms`);
   if (payLag.length || payTimeouts) console.log(`Thanh toán tạo bất đồng bộ (đặt đơn -> payment xuất hiện): ${payLag.length} đơn, p50/p95/max ${pct(payLag, 50).toFixed(0)}/${pct(payLag, 95).toFixed(0)}/${Math.max(0, ...payLag).toFixed(0)} ms; quá 8 s chưa có: ${payTimeouts}`);
+  if (PROBE) {
+    const e = PROBE.eventLoopMs, h = PROBE.hostCpuPct;
+    if (e) console.log(`MÁY TẢI: độ trễ vòng lặp sự kiện node mean/p99/max ${e.mean}/${e.p99}/${e.max} ms${e.p99 > 100 ? '  <-- CẢNH BÁO: máy tải bị nghẽn, độ trễ đo bị cộng thêm' : ''}`);
+    if (h) console.log(`TOÀN MÁY: CPU trung bình ${h.avg}%, đỉnh ${h.max}% (${h.samples} mẫu)${h.max > 75 ? '  <-- CẢNH BÁO: trên 75%, máy tải và hệ thống tranh nhau CPU, số đo kém tin cậy' : ''}; RAM trống thấp nhất ${PROBE.hostMemAvailableMinGiB} GiB`);
+  }
   console.log('\nĐỘ PHỦ (lời gọi tới từng container nghiệp vụ, gồm cả giai đoạn vào):');
   const missing = WANT.filter((a) => !areas[a]);
   for (const a of WANT) console.log(`  ${a.padEnd(20)} ${String(areas[a] ?? 0).padStart(6)}${areas[a] ? '' : '   <-- KHÔNG ĐƯỢC GỌI'}`);
   const valid = errPct <= MAX_ERR_PCT && limited === 0 && counters.vu_fail === 0;
   console.log(valid ? `\nPHÉP ĐO HỢP LỆ: lỗi ${errPct.toFixed(2)}% <= ${MAX_ERR_PCT}%, không có 429, mọi VU chạy được.` : `\nPHÉP ĐO CHƯA HỢP LỆ: lỗi ${errPct.toFixed(2)}% (ngưỡng ${MAX_ERR_PCT}%), 429=${limited}, VU hỏng=${counters.vu_fail}. Xem cột "mã".`);
   if (missing.length) console.log(`THIẾU ĐỘ PHỦ: ${missing.join(', ')}`);
-  if (OUT) writeFileSync(OUT, JSON.stringify({ vus: VUS, duration: DURATION, elapsed, stats, areas, counters, ai: { ttfb: aiTtfb, total: aiTotal }, payLag, payTimeouts, valid, missing }, null, 1));
+  if (OUT) {
+    // Chỉ ghi số tổng hợp (không ghi từng mẫu độ trễ): đủ để tính lại % và so sánh giữa các lần đo
+    const lab = {}, codes = {}; let calls = 0, errs = 0;
+    for (const [name, st] of Object.entries(stats)) {
+      lab[name] = { n: st.n, ok: st.ok, expected: st.expected, limited: st.limited, err: st.err, p50: +pct(st.lat, 50).toFixed(1), p95: +pct(st.lat, 95).toFixed(1), p99: +pct(st.lat, 99).toFixed(1), max: +Math.max(0, ...st.lat).toFixed(1), codes: st.codes };
+      if (!name.startsWith('(vào)')) { calls += st.n; errs += st.err; for (const [c, k] of Object.entries(st.codes)) codes[c] = (codes[c] ?? 0) + k; }
+    }
+    const q = (a) => ({ n: a.length, p50: +pct(a, 50).toFixed(1), p95: +pct(a, 95).toFixed(1), max: +Math.max(0, ...a).toFixed(1) });
+    writeFileSync(OUT, JSON.stringify({
+      steadyStartMs: phaseStart, steadyEndMs: phaseEnd || Date.now(), mode: ARRIVAL > 0 ? 'open' : 'closed', vus: VUS, arrivalRate: ARRIVAL || null, duration: DURATION, elapsed,
+      steady: { calls, callsPerSec: +(calls / elapsed).toFixed(1), unexpectedErrors: errs, unexpectedErrorPct: calls ? +((100 * errs) / calls).toFixed(3) : 0, codes },
+      open: ARRIVAL > 0 ? { started, dropped, peakActive } : null,
+      labels: lab, areas, counters, ai: { ttfb: q(aiTtfb), total: q(aiTotal) }, payment: { lag: q(payLag), timeoutsOver8s: payTimeouts }, loadgen: PROBE, valid, missing,
+    }, null, 1));
+  }
   return valid && !missing.length;
 }
 
 (async () => {
+  if (ARRIVAL > 0) {
+    console.log(`MỞ: ${ARRIVAL} phiên/s trong ${DURATION}s ổn định (+30 s khởi động), mỗi phiên ~${SESSION_N} hành trình, API ${API}`);
+    let W; try { W = await setup(); } catch (e) { console.log('setup hỏng:', e.message); process.exit(1); }
+    const measured = await runOpen(W);
+    await teardown(W);
+    console.log(`\nCHẾ ĐỘ MỞ: nhịp ${ARRIVAL} phiên/s, đã bắt đầu ${started} phiên, bỏ ${dropped} (vượt MAX_ACTIVE=${MAX_ACTIVE}), đỉnh ${peakActive} phiên cùng lúc`);
+    process.exit(report(measured) ? 0 : 1);
+  }
   console.log(`CCU ${VUS} VU, ${DURATION}s ổn định + ramp ${RAMP}s, API ${API}, frontend ${WEB}`);
   let W;
   try { W = await setup(); } catch (e) { console.log('setup hỏng:', e.message); process.exit(1); }
@@ -456,10 +560,10 @@ function report(elapsed) {
   const counts = {}; for (const k of kinds) counts[k] = (counts[k] ?? 0) + 1;
   console.log('[chạy]', JSON.stringify(counts));
   const t0 = Date.now(), steadyAt = t0 + RAMP * 1000 + 15000, endAt = steadyAt + DURATION * 1000;
-  setTimeout(() => { steady = true; phaseStart = Date.now(); console.log('[ổn định] bắt đầu đo'); }, steadyAt - t0);
+  setTimeout(() => { steady = true; phaseStart = Date.now(); startProbe(); console.log('[ổn định] bắt đầu đo'); }, steadyAt - t0);
   const ticker = setInterval(() => { const t = Object.values(stats); console.log(`  t=${((Date.now() - t0) / 1000).toFixed(0)}s lời gọi=${t.reduce((a, s) => a + s.n, 0)} lỗi=${t.reduce((a, s) => a + s.err, 0)} 429=${t.reduce((a, s) => a + s.limited, 0)} đơn=${counters.orders}`); }, 10000);
   await Promise.all(kinds.map((k, i) => vuLoop(i + 1, k, W, endAt, (RAMP * 1000 * i) / VUS)));
-  clearInterval(ticker);
+  clearInterval(ticker); PROBE = stopProbe();
   await teardown(W);
   process.exit(report((Date.now() - phaseStart) / 1000) ? 0 : 1);
 })();

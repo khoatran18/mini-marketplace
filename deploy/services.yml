@@ -117,6 +117,13 @@ services:
       OUTBOX_BACKOFF_MAX: ${OUTBOX_BACKOFF_MAX:-15m}
       OUTBOX_POLL_INTERVAL: ${OUTBOX_POLL_INTERVAL:-200ms}
       OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-500}
+      # số reader Kafka cùng nhóm trong MỘT tiến trình: mỗi reader nhận một phần partition (1 = tuần tự như cũ); xem R13
+      KAFKA_CONSUMER_WORKERS: ${KAFKA_CONSUMER_WORKERS:-1}
+      # commit offset theo lô: gửi gộp mỗi N ms thay vì một vòng gọi broker cho từng tin (0 = từng tin); handler idempotent nên giao lại tối đa N ms là chấp nhận được
+      KAFKA_COMMIT_INTERVAL_MS: ${KAFKA_COMMIT_INTERVAL_MS:-100}
+      # trần pool Postgres của MỌI service (rỗng = mặc định riêng từng service trong mã: order/product 30, payment 15, auth 10, user 10, gateway/ops 5); xem R15
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-300}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
@@ -207,6 +214,8 @@ services:
       start_period: 20s
     stop_grace_period: 30s
     deploy:
+      # gRPC giữ kết nối lâu: qua VIP của Swarm mỗi kết nối dính vào MỘT bản (bản kia ngồi không). dnsrr trả mọi IP, gateway round_robin giữa các bản
+      endpoint_mode: dnsrr
       update_config: *update_start_first
       rollback_config: *rollback
       replicas: 1
@@ -410,7 +419,7 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD}
       ANALYTICS_CACHE_TTL_SEC: ${ANALYTICS_CACHE_TTL_SEC:-30}
-      ANALYTICS_FLUSH_INTERVAL_MS: ${ANALYTICS_FLUSH_INTERVAL_MS:-2000}
+      ANALYTICS_FLUSH_INTERVAL_MS: ${ANALYTICS_FLUSH_INTERVAL_MS:-20000}
       ANALYTICS_FLUSH_ROWS: ${ANALYTICS_FLUSH_ROWS:-5000}
       ANALYTICS_BUFFER_MAX_ROWS: ${ANALYTICS_BUFFER_MAX_ROWS:-100000}
       ANALYTICS_SPOOL_DIR: ${ANALYTICS_SPOOL_DIR-/var/spool/analytics}

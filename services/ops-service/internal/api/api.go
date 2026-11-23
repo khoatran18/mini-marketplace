@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -276,6 +277,8 @@ func (a *API) outboxDead(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		// Ghi nguyên nhân thật (R14): 502 dưới tải nặng từng không để lại dấu vết nào để tìm.
+		log.Printf("ops: outbox dead read failed service=%s request_id=%s: %v", svc, r.Header.Get("X-Request-ID"), err)
 		writeErr(w, http.StatusBadGateway, "không đọc được outbox: "+err.Error())
 		return
 	}

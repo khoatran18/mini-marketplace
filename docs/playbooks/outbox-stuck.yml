@@ -1,7 +1,7 @@
 id: outbox-stuck
 title: Outbox có hàng DEAD hoặc event chờ gửi quá lâu
 triggers:
-  alerts: [OutboxDeadRows, OutboxBacklogOld]
+  alerts: [OutboxDeadRows, OutboxBacklogOld, OutboxPublishLag]
 runbook: "§5 outbox, §6 Kafka"
 diagnose:
   - id: outbox-metrics

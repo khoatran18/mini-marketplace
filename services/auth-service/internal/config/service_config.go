@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mini-marketplace/shared/dbpool"
 	"mini-marketplace/shared/messagequeue/kafkaimpl"
 	"os"
 	"strconv"
@@ -106,9 +107,8 @@ func initPostgresDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	sqlDB.SetMaxIdleConns(5)
-	sqlDB.SetMaxOpenConns(25)
-	sqlDB.SetConnMaxLifetime(time.Hour)
+	// 3 bản x 10 = 30 kết nối (trước đây 25 mỗi bản = 75); bcrypt là thứ nghẽn ở auth chứ không phải DB (R15)
+	dbpool.Apply(sqlDB, 10, 5)
 	if err := migrate.Run(context.Background(), sqlDB); err != nil {
 		return nil, fmt.Errorf("migrate database: %w", err)
 	}

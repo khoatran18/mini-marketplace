@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
-
-	"mini-marketplace/shared/events"
 )
 
 // fakeWriter answers each call from a script; calls records the keys of every call.
@@ -32,10 +30,10 @@ func (f *fakeWriter) WriteMessages(_ context.Context, msgs ...kafka.Message) err
 	return err
 }
 
-func msgsOf(keys ...string) []events.Message {
-	out := make([]events.Message, len(keys))
+func msgsOf(keys ...string) []Message {
+	out := make([]Message, len(keys))
 	for i, k := range keys {
-		out[i] = events.Message{Topic: "t", Key: k, Payload: []byte(`{}`)}
+		out[i] = Message{Topic: "t", Key: k, Payload: []byte(`{}`)}
 	}
 	return out
 }
