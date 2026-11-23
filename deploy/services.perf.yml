@@ -79,6 +79,12 @@ services:
       resources:
         limits: {cpus: "0.5", memory: 96M}
   ai-agent:
+    environment:
+      # Mô hình GIẢ có độ trễ (ttft 800 ms, 60 token/s; profile trong services/ai-agent/configs/config.prod.yaml): không gọi LLM thật, tool vẫn gọi gateway thật.
+      AI_LLM_ROLE_BUYER: fake_perf_buyer
+      AI_LLM_ROLE_SELLER: fake_perf_seller
+      AI_LLM_ROLE_ADMIN: fake_perf_admin
+      AI_LLM_ROLE_OPERATOR: fake_perf_operator
     # Một tiến trình uvicorn dùng được tối đa 1 core (GIL), nên tăng song song bằng replica. Chỉ an toàn khi AI_RCA_ENABLED=false
     # (watcher RCA không có khoá chọn người dẫn đầu, nhiều replica sẽ điều tra trùng). Bước đầu đo với replicas: 1 rồi tính số replica cần.
     deploy:

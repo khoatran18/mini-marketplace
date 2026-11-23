@@ -13,12 +13,22 @@ logger = get_logger(__name__)
 class GatewayError(Exception):
     """Lỗi khi gọi gateway. `message` an toàn để đưa cho mô hình/người dùng; `fatal` = dừng cả lượt (token hết hạn)."""
 
-    def __init__(self, status: int, message: str, fatal: bool = False) -> None:
+    def __init__(self, status: int, message: str, fatal: bool = False, detail: str = "") -> None:
         super().__init__(message)
-        self.status, self.message, self.fatal = status, message, fatal
+        # detail = nội dung lỗi gateway trả cho 400/422 (vd danh sách giá trị hợp lệ); CHỈ persona không ẩn nội bộ (admin, operator, rca) mới đưa cho mô hình
+        self.status, self.message, self.fatal, self.detail = status, message, fatal, detail
 
 
-def _safe(status: int) -> GatewayError:
+def _detail(resp: httpx.Response | None) -> str:
+    """Trường `error` trong thân lỗi JSON của gateway, một dòng, tối đa 300 ký tự; không có thì rỗng."""
+    try:
+        err = resp.json().get("error") if resp is not None else None
+    except (ValueError, AttributeError):
+        return ""
+    return " ".join(str(err).split())[:300] if isinstance(err, str) else ""
+
+
+def _safe(status: int, resp: httpx.Response | None = None) -> GatewayError:
     if status == 401:
         return GatewayError(401, "phiên làm việc của lượt này đã hết hạn, hãy gửi lại câu hỏi", fatal=True)
     if status == 403:
@@ -28,7 +38,7 @@ def _safe(status: int) -> GatewayError:
     if status == 429:
         return GatewayError(429, "hệ thống đang bận, thử lại sau ít phút")
     if status in (400, 422):
-        return GatewayError(status, f"tham số không hợp lệ (HTTP {status})")  # mã trạng thái để người vận hành tra nguyên nhân; nội dung lỗi của gateway vẫn không lộ
+        return GatewayError(status, f"tham số không hợp lệ (HTTP {status})", detail=_detail(resp))  # mã trạng thái để người vận hành tra nguyên nhân; nội dung lỗi của gateway vẫn không lộ
     return GatewayError(status, "dịch vụ tạm thời không phản hồi")
 
 
@@ -68,7 +78,7 @@ class GatewayClient:
             logger.warning("gateway unreachable", extra={"error": type(exc).__name__})
             raise GatewayError(503, "dịch vụ tạm thời không phản hồi") from None
         if resp.status_code >= 400:
-            raise _safe(resp.status_code)
+            raise _safe(resp.status_code, resp)
         try:
             return resp.json()
         except ValueError:

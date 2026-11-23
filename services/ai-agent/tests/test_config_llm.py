@@ -118,3 +118,21 @@ def test_openai_session_header_follows_conversation():
     finally:
         reset_run(tok)
     assert seen == {"h": "conv-9", "a": "conv-9"}
+
+
+import pytest as _pytest
+
+
+@_pytest.mark.parametrize("env", ["dev", "prod"])
+def test_roles_can_switch_to_perf_fakes_by_env(monkeypatch, env):
+    """deploy/services.perf.yml đổi mô hình của persona sang bản giả có độ trễ bằng AI_LLM_ROLE_*; mặc định vẫn là mô hình thật.
+    Phải đúng ở CẢ HAI file cấu hình: Swarm chạy APP_ENV=dev (AI_AGENT_ENV), nếu dev thiếu thì thử tải gọi model THẬT."""
+    for role in ("BUYER", "SELLER", "ADMIN", "OPERATOR"):
+        monkeypatch.delenv(f"AI_LLM_ROLE_{role}", raising=False)
+    assert load_config(env, CONFIG_DIR).llm.roles["buyer"] == "opencode_deepseek_flash"
+    for role, profile in (("BUYER", "fake_perf_buyer"), ("SELLER", "fake_perf_seller"), ("ADMIN", "fake_perf_admin"), ("OPERATOR", "fake_perf_operator")):
+        monkeypatch.setenv(f"AI_LLM_ROLE_{role}", profile)
+    c = load_config(env, CONFIG_DIR)
+    for role, profile in (("buyer", "fake_perf_buyer"), ("seller", "fake_perf_seller"), ("admin", "fake_perf_admin"), ("operator", "fake_perf_operator")):
+        assert c.llm.roles[role] == profile
+        assert c.llm.profiles[profile]["provider"] == "fake" and c.llm.profiles[profile]["ttft_ms"] > 0 and c.llm.profiles[profile]["tokens_per_sec"] > 0

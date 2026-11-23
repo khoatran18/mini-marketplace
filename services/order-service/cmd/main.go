@@ -105,9 +105,10 @@ func main() {
 	consume(repository.TopicPaymentRefunded, "order-service-payment-refunded", orderService.HandlePaymentRefunded)
 
 	// Transactional outbox (create_order, cancel_order, status_changed, refund_requested, payment.requested)
-	events.Run(ctx, serviceConfig.PostgresDB, func(ctx context.Context, topic, key string, payload []byte) error {
-		return serviceConfig.KafkaInstance.KafkaProducer.Publish(ctx, &kafka.Hash{}, topic, []byte(key), payload)
-	}, 2*time.Second, 100, func(err error) { serviceConfig.ZapLogger.Warn("domain event publish failed", zap.Error(err)) })
+	outboxInterval, outboxBatch := events.PollFromEnv()
+	events.RunMany(ctx, serviceConfig.PostgresDB, func(ctx context.Context, msgs []events.Message) []error {
+		return serviceConfig.KafkaInstance.KafkaProducer.PublishMany(ctx, &kafka.Hash{}, msgs)
+	}, outboxInterval, outboxBatch, func(err error) { serviceConfig.ZapLogger.Warn("domain event publish failed", zap.Error(err)) })
 
 	// Rows written by older versions in the previous outbox tables are still drained
 	orderService.ProducerCreOrdKafkaEventWorker(ctx, 3*time.Second, 100, topicCreateOrder)

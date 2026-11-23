@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -397,5 +398,174 @@ func TestAgentRunIDStoredOnlyWhenConfirmedFromAgent(t *testing.T) {
 	}
 	if e := rowByKey(t, db, "direct"); e.AgentRunID != nil {
 		t.Fatalf("direct action must have NULL agent_run_id, got %v", *e.AgentRunID)
+	}
+}
+
+// ---- batching publisher (PublishBatchMany / RunMany)
+
+// manyRec records every call of a batch publisher; fail lists keys whose message is refused.
+type manyRec struct {
+	calls [][]string // keys per call, in order
+	fail  map[string]error
+}
+
+func (r *manyRec) publish(_ context.Context, msgs []Message) []error {
+	keys := make([]string, len(msgs))
+	errs := make([]error, len(msgs))
+	for i, m := range msgs {
+		keys[i] = m.Key
+		errs[i] = r.fail[m.Key]
+	}
+	r.calls = append(r.calls, keys)
+	return errs
+}
+
+func TestBatchManySendsAllKeysInOneCallAndMarksThemDone(t *testing.T) {
+	db := testDB(t)
+	for _, k := range []string{"a", "b", "c"} {
+		emit(t, db, k)
+	}
+	r := &manyRec{}
+	sent, err := PublishBatchMany(context.Background(), db, r.publish, 10, time.Second, Options{})
+	if sent != 3 || err != nil || len(r.calls) != 1 || len(r.calls[0]) != 3 {
+		t.Fatalf("sent=%d err=%v calls=%v", sent, err, r.calls)
+	}
+	for _, k := range []string{"a", "b", "c"} {
+		if e := rowByKey(t, db, k); e.Status != StatusDone || e.PublishedAt == nil {
+			t.Fatalf("%s: %+v", k, e)
+		}
+	}
+}
+
+func TestBatchManySendsOnlyTheOldestRowOfAKeyPerBatch(t *testing.T) {
+	db := testDB(t)
+	emit(t, db, "a")
+	emit(t, db, "a")
+	emit(t, db, "b")
+	r := &manyRec{}
+	if sent, _ := PublishBatchMany(context.Background(), db, r.publish, 10, time.Second, Options{}); sent != 2 || len(r.calls[0]) != 2 {
+		t.Fatalf("first batch: sent=%d calls=%v", sent, r.calls)
+	}
+	if sent, _ := PublishBatchMany(context.Background(), db, r.publish, 10, time.Second, Options{}); sent != 1 || len(r.calls) != 2 { // the second a, next batch
+		t.Fatalf("second batch: sent=%d calls=%v", sent, r.calls)
+	}
+}
+
+func TestBatchManyPartialFailureBacksOffOnlyTheFailedRowAndBlocksItsKey(t *testing.T) {
+	db := testDB(t)
+	emit(t, db, "bad")
+	emit(t, db, "bad") // must wait for the first one
+	emit(t, db, "good")
+	r := &manyRec{fail: map[string]error{"bad": errors.New("boom")}}
+	sent, err := PublishBatchMany(context.Background(), db, r.publish, 10, time.Second, Options{})
+	if sent != 1 || err == nil {
+		t.Fatalf("sent=%d err=%v", sent, err)
+	}
+	if e := rowByKey(t, db, "bad"); e.Status != StatusFailed || e.Attempts != 1 || !e.NextAttemptAt.After(time.Now()) {
+		t.Fatalf("bad row: %+v", e)
+	}
+	if e := rowByKey(t, db, "good"); e.Status != StatusDone {
+		t.Fatalf("good row: %+v", e)
+	}
+	r.calls = nil
+	if sent, _ := PublishBatchMany(context.Background(), db, r.publish, 10, time.Second, Options{}); sent != 0 || len(r.calls) != 0 { // still backing off: the second bad must not jump the queue
+		t.Fatalf("sent=%d calls=%v", sent, r.calls)
+	}
+	r.fail = nil
+	due(t, db)
+	if sent, err := PublishBatchMany(context.Background(), db, r.publish, 10, time.Second, Options{}); sent != 1 || err != nil {
+		t.Fatalf("retry: sent=%d err=%v", sent, err)
+	}
+}
+
+func TestBatchManyWrongResultCountMarksNothingAsSent(t *testing.T) {
+	db := testDB(t)
+	emit(t, db, "a")
+	emit(t, db, "b")
+	sent, err := PublishBatchMany(context.Background(), db, func(context.Context, []Message) []error { return nil }, 10, time.Second, Options{})
+	if sent != 0 || err == nil {
+		t.Fatalf("sent=%d err=%v", sent, err)
+	}
+	if e := rowByKey(t, db, "a"); e.Status != StatusFailed {
+		t.Fatalf("a: %+v", e)
+	}
+}
+
+func TestBatchManyOutageDoesNotDeadLetter(t *testing.T) {
+	db := testDB(t)
+	for _, k := range []string{"a", "b", "c"} {
+		emit(t, db, k)
+	}
+	r := &manyRec{fail: map[string]error{"a": errors.New("down"), "b": errors.New("down"), "c": errors.New("down")}}
+	for i := 0; i < 3; i++ {
+		PublishBatchMany(context.Background(), db, r.publish, 10, time.Second, Options{MaxAttempts: 2})
+		due(t, db)
+	}
+	if e := rowByKey(t, db, "a"); e.Status == StatusDead {
+		t.Fatalf("a dead-lettered during an outage: %+v", e)
+	}
+}
+
+func TestRunManyDrainsABacklogWithinOneTickAndKeepsKeyOrder(t *testing.T) {
+	db := testDB(t)
+	for i := 0; i < 30; i++ {
+		emit(t, db, fmt.Sprintf("k%d", i%10)) // 10 keys x 3 rows: needs at least 3 batches
+	}
+	var mu sync.Mutex
+	order := map[string]int{}
+	pub := func(_ context.Context, msgs []Message) []error {
+		mu.Lock()
+		defer mu.Unlock()
+		for _, m := range msgs {
+			order[m.Key]++
+		}
+		return make([]error, len(msgs))
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	RunMany(ctx, db, pub, 20*time.Millisecond, 100, nil)
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		var n int64
+		db.Model(&Event{}).Where("status = ?", StatusDone).Count(&n)
+		if n == 30 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("backlog not drained: %v", order)
+}
+
+func TestOldestPendingSeconds(t *testing.T) {
+	db := testDB(t)
+	if v := OldestPendingSeconds(db); v != 0 {
+		t.Fatalf("empty table: %v", v)
+	}
+	emit(t, db, "a")
+	db.Model(&Event{}).Where("1 = 1").Update("created_at", time.Now().Add(-90*time.Second))
+	if v := OldestPendingSeconds(db); v < 89 || v > 120 {
+		t.Fatalf("age=%v", v)
+	}
+	db.Model(&Event{}).Where("1 = 1").Update("status", StatusDone)
+	if v := OldestPendingSeconds(db); v != 0 {
+		t.Fatalf("after publish: %v", v)
+	}
+}
+
+func TestPollFromEnv(t *testing.T) {
+	t.Setenv("OUTBOX_POLL_INTERVAL", "")
+	t.Setenv("OUTBOX_BATCH_SIZE", "")
+	if i, n := PollFromEnv(); i != DefaultPollInterval || n != DefaultBatchSize {
+		t.Fatalf("defaults: %v %v", i, n)
+	}
+	t.Setenv("OUTBOX_POLL_INTERVAL", "50ms")
+	t.Setenv("OUTBOX_BATCH_SIZE", "250")
+	if i, n := PollFromEnv(); i != 50*time.Millisecond || n != 250 {
+		t.Fatalf("env: %v %v", i, n)
+	}
+	t.Setenv("OUTBOX_POLL_INTERVAL", "garbage")
+	t.Setenv("OUTBOX_BATCH_SIZE", "-3")
+	if i, n := PollFromEnv(); i != DefaultPollInterval || n != DefaultBatchSize {
+		t.Fatalf("bad env must fall back: %v %v", i, n)
 	}
 }

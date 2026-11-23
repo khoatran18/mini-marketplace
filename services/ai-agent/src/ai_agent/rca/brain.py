@@ -132,10 +132,9 @@ class LlmBrain:
         tok = set_run(self.ctx)
         try:
             agent = await self.rt.agent_for(self.persona, self.ctx)
-            before_calls = self.ctx.tool_calls
             pending: dict[str, dict[str, Any]] = {}
             evidence: list[dict[str, Any]] = []
-            model_calls, playbook, err_run, stopped = 0, None, 0, False
+            model_calls, playbook, err_run, stopped, ok_calls = 0, None, 0, False, 0
             async for mode, data in agent.astream({"messages": [HumanMessage(task)]}, stream_mode=["updates"], config={"recursion_limit": 40}):
                 if mode != "updates":
                     continue
@@ -160,6 +159,7 @@ class LlmBrain:
                                 await self.events.emit("note", "Dừng thu bằng chứng", {"text": f"Công cụ lỗi liên tiếp {err_run} lần, dừng để không đốt thêm lượt gọi."})
                                 break
                             if tc and not text.startswith(TOOL_ERROR):
+                                ok_calls += 1
                                 evidence.append({"source": tc["name"], "args": tc["args"], "summary": text})
                                 if tc["name"] == "ops_get_playbook":
                                     playbook = str(tc["args"].get("id") or "") or playbook
@@ -167,7 +167,9 @@ class LlmBrain:
                         break
                 if stopped:
                     break
-            return {"evidence": evidence, "queries": self.ctx.tool_calls - before_calls, "model_calls": model_calls, "playbook": playbook}
+            # ngân sách truy vấn chỉ tính lần gọi THÀNH CÔNG: lần lỗi 400 do sai tham số không được ăn ngân sách (chúng vẫn bị chặn bởi trần
+            # lỗi liên tiếp max_tool_errors và trần cứng limits.max_tool_calls của ctx)
+            return {"evidence": evidence, "queries": ok_calls, "model_calls": model_calls, "playbook": playbook}
         finally:
             reset_run(tok)
 

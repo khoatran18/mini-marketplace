@@ -15,7 +15,6 @@ import (
 	"product-service/internal/service"
 	"product-service/pkg/ops"
 	productpb "product-service/pkg/pb"
-	"time"
 
 	"github.com/lpernett/godotenv"
 	"github.com/segmentio/kafka-go"
@@ -99,12 +98,13 @@ func main() {
 	}()
 
 	// Publish product.changed / inventory.changed from the transactional outbox
-	events.Run(ctx, serviceConfig.PostgresDB, func(ctx context.Context, topic, key string, payload []byte) error {
-		return serviceConfig.KafkaInstance.KafkaProducer.Publish(ctx, &kafka.Hash{}, topic, []byte(key), payload)
-	}, 2*time.Second, 100, func(err error) { serviceConfig.ZapLogger.Warn("domain event publish failed", zap.Error(err)) })
+	outboxInterval, outboxBatch := events.PollFromEnv()
+	events.RunMany(ctx, serviceConfig.PostgresDB, func(ctx context.Context, msgs []events.Message) []error {
+		return serviceConfig.KafkaInstance.KafkaProducer.PublishMany(ctx, &kafka.Hash{}, msgs)
+	}, outboxInterval, outboxBatch, func(err error) { serviceConfig.ZapLogger.Warn("domain event publish failed", zap.Error(err)) })
 
 	// Publish validation results back to order-service
-	productService.ProducerValOrdKafkaEventWorker(ctx, 3*time.Second, 100, topicValidateOrder)
+	productService.ProducerValOrdKafkaEventWorker(ctx, outboxInterval, outboxBatch, topicValidateOrder)
 
 	lis, err := net.Listen("tcp", ":50053")
 	if err != nil {

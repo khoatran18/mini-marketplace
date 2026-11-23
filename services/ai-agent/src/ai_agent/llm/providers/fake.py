@@ -6,17 +6,20 @@ Profile:
       script:                       # bước k = lần gọi mô hình thứ k TRONG MỘT LƯỢT (tính từ tin người dùng cuối cùng)
         - tool_calls: [{name: list_my_orders, args: {page_size: 3}}]
         - content: "Đây là các đơn của bạn."
+Độ trễ tuỳ chọn (cho thử tải, không cần ở dev/CI): `ttft_ms` = chờ trước token đầu (và trước khi trả tool_calls), `tokens_per_sec` = tốc độ phát
+token (từ trong content, đếm theo từ); đều chờ KHÔNG chặn event loop (asyncio.sleep) như một lời gọi mạng thật. 0/thiếu = không chờ.
 Hết kịch bản thì lặp lại bước cuối. Một bước có thể vừa có content vừa có tool_calls.
 Kịch bản không phụ thuộc trạng thái của đối tượng nên dùng chung được cho nhiều lượt chạy song song.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
-from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
@@ -26,6 +29,8 @@ from ai_agent.llm.registry import register_llm
 
 class ScriptedChatModel(BaseChatModel):
     script: list[dict[str, Any]] = [{"content": "ok"}]
+    ttft_ms: float = 0.0
+    tokens_per_sec: float = 0.0
 
     @property
     def _llm_type(self) -> str:
@@ -78,10 +83,27 @@ class ScriptedChatModel(BaseChatModel):
             content="", tool_call_chunks=tcc, usage_metadata=self._usage(messages, content), chunk_position="last",
         ))
 
+    async def _astream(self, messages: list[BaseMessage], stop: list[str] | None = None,
+                       run_manager: AsyncCallbackManagerForLLMRun | None = None, **kwargs: Any) -> AsyncIterator[ChatGenerationChunk]:
+        """Bọc `_stream` (lớp con ghi đè _stream vẫn đúng) và thêm độ trễ bằng asyncio.sleep; không đặt độ trễ thì cùng kết quả."""
+        if self.ttft_ms > 0:
+            await asyncio.sleep(self.ttft_ms / 1000)
+        gap = 1.0 / self.tokens_per_sec if self.tokens_per_sec > 0 else 0.0
+        first_text = True
+        for chunk in self._stream(messages, stop, None, **kwargs):
+            piece = str(chunk.message.content or "")
+            if piece:
+                if gap and not first_text:
+                    await asyncio.sleep(gap)
+                first_text = False
+                if run_manager:
+                    await run_manager.on_llm_new_token(piece, chunk=chunk)
+            yield chunk
+
 
 @register_llm("fake")
 def build(profile: dict[str, Any]) -> BaseChatModel:
     script = profile.get("script") or [{"content": "ok"}]
     if not isinstance(script, list):
         raise ValueError("'script' phải là một danh sách các bước")
-    return ScriptedChatModel(script=script)
+    return ScriptedChatModel(script=script, ttft_ms=float(profile.get("ttft_ms") or 0), tokens_per_sec=float(profile.get("tokens_per_sec") or 0))

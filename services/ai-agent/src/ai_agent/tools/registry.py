@@ -49,6 +49,8 @@ def make_tool(spec: ToolSpec, gateway: GatewayClient, *, tool_timeout: float, ma
             return views.model_view(spec, raw, max_chars, max_items, reveal_route)
 
         msg = err.message if isinstance(err, GatewayError) else str(err)
+        if reveal_route and isinstance(err, GatewayError) and err.detail:
+            msg += f": {err.detail}"  # admin/operator/rca thấy lý do 400 (vd giá trị hợp lệ) để tự sửa tham số; buyer/seller không bao giờ
         metrics.TOOL_CALLS.labels(spec.name, "error").inc()
         logger.warning("tool failed", extra={"tool": spec.name, "status": getattr(err, "status", None)})
         await ctx.events.put(events.make(events.TOOL_RESULT, ctx.run_id, tool=spec.name, ok=False))

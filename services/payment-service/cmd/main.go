@@ -78,9 +78,10 @@ func main() {
 	consume(service.TopicPaymentRequested, "payment-service-create", svc.HandlePaymentRequested)
 	consume(service.TopicRefundRequested, "payment-service-refund", svc.HandleRefundRequested)
 
-	events.Run(ctx, serviceConfig.PostgresDB, func(ctx context.Context, topic, key string, payload []byte) error {
-		return serviceConfig.KafkaInstance.KafkaProducer.Publish(ctx, &kafka.Hash{}, topic, []byte(key), payload)
-	}, 2*time.Second, 100, func(err error) { serviceConfig.ZapLogger.Warn("domain event publish failed", zap.Error(err)) })
+	outboxInterval, outboxBatch := events.PollFromEnv()
+	events.RunMany(ctx, serviceConfig.PostgresDB, func(ctx context.Context, msgs []events.Message) []error {
+		return serviceConfig.KafkaInstance.KafkaProducer.PublishMany(ctx, &kafka.Hash{}, msgs)
+	}, outboxInterval, outboxBatch, func(err error) { serviceConfig.ZapLogger.Warn("domain event publish failed", zap.Error(err)) })
 
 	var lastTick atomic.Int64
 	lastTick.Store(time.Now().Unix())

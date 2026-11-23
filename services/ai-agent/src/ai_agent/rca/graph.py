@@ -20,6 +20,7 @@ from langgraph.types import interrupt
 
 from ai_agent.config.logging import get_logger
 from ai_agent.rca.budget import Budget
+from ai_agent.rca.conclusion import interim_conclusion
 from ai_agent.rca.events import NullEvents
 from ai_agent.rca.grounding import hypothesis_supported, ungrounded_params
 from ai_agent.rca.ports import Brain, OpsPort
@@ -150,6 +151,8 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
         else:
             d, why = "more", f"độ tin cậy {top:.0%} chưa đủ: thu thêm bằng chứng"
         out: dict[str, Any] = {"decision": d, "timeline": _note("decide", why)}
+        if top < budget.confident_at and d != "more":
+            out["stop_reason"] = limit or "rounds"  # để kết luận tạm nói rõ vì sao dừng
         if d == "stop":
             out["outcome"] = "budget" if limit else "no_evidence"
         return out
@@ -191,7 +194,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
             if ESCALATE not in by_id:
                 return {"draft": None, "outcome": "blocked", "model_calls": state.get("model_calls", 0), **_tok(state, {}), "timeline": _note("propose", f"{reason}; sổ không có escalate_to_human")}
             ev = [e["id"] for e in state.get("evidence", [])][:20]
-            draft = {"action_id": ESCALATE, "params": {}, "rationale": f"Chuyển cho người: {reason}.", "evidence_ids": ev,
+            draft = {"action_id": ESCALATE, "params": {}, "rationale": f"Chuyển cho người: {reason}.\n{interim_conclusion(state, reason)}", "evidence_ids": ev,
                      "risk": by_id[ESCALATE].get("risk"), "mode": by_id[ESCALATE].get("mode"), "escalated": True}
         return {"draft": draft, "model_calls": state.get("model_calls", 0), **_tok(state, {}),
                 "timeline": _note("propose", f"nháp: {draft['action_id']}" + (f" ({reason})" if draft["escalated"] and reason else ""))}
@@ -241,7 +244,7 @@ def build_graph(brain: Brain, ops: OpsPort, budget: Budget, *, checkpointer: Any
         try:
             r = await brain.report(s)
         except Exception:  # noqa: BLE001 - báo cáo không có LLM vẫn phải có
-            r = {"summary": f"Phiên kết thúc: {outcome}.", "ready_to_close": False, "reason": "không lập được báo cáo tự động", "model_calls": 0}
+            r = {"summary": f"Phiên kết thúc: {outcome}.\n{interim_conclusion(s)}", "ready_to_close": False, "reason": "không lập được báo cáo tự động", "model_calls": 0}
         ready = bool(r.get("ready_to_close")) and outcome == "recovered"  # chỉ khi verify xác nhận hồi phục
         rep = {"summary": str(r.get("summary", "")), "ready_to_close": ready,
                "reason": str(r.get("reason", "")) if ready or not r.get("ready_to_close") else "chưa có xác nhận hồi phục từ bước kiểm tra lại: người quyết định"}

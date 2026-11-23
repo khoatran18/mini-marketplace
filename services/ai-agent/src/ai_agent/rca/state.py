@@ -19,6 +19,7 @@ class RcaState(TypedDict, total=False):
     evidence: list[dict[str, Any]]      # {id, source, args, summary}
     hypotheses: list[dict[str, Any]]    # {id, cause, confidence, evidence_ids, refuted_by}
     decision: str                 # more | propose | stop
+    stop_reason: str              # vì sao thôi điều tra: model_calls | queries | seconds | rounds (rỗng = đủ tin cậy)
     draft: dict[str, Any] | None  # {action_id, params, rationale, evidence_ids, risk, mode, escalated}
     failed: list[dict[str, Any]]  # hành động đã thất bại/bị từ chối: {action_id, params, evidence_count}
     proposal_id: int | None

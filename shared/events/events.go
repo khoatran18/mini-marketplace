@@ -132,6 +132,24 @@ func OptionsFromEnv() Options {
 	return o
 }
 
+// Defaults of PollFromEnv: how often RunMany looks for due rows and how many rows one batch takes.
+const (
+	DefaultPollInterval = 200 * time.Millisecond
+	DefaultBatchSize    = 500
+)
+
+// PollFromEnv reads OUTBOX_POLL_INTERVAL (a Go duration, default 200ms) and OUTBOX_BATCH_SIZE (default 500) for RunMany.
+func PollFromEnv() (time.Duration, int) {
+	interval, batch := DefaultPollInterval, DefaultBatchSize
+	if d, err := time.ParseDuration(os.Getenv("OUTBOX_POLL_INTERVAL")); err == nil && d > 0 {
+		interval = d
+	}
+	if n, err := strconv.Atoi(os.Getenv("OUTBOX_BATCH_SIZE")); err == nil && n > 0 {
+		batch = n
+	}
+	return interval, batch
+}
+
 func (o Options) withDefaults() Options {
 	d := DefaultOptions()
 	if o.MaxAttempts <= 0 {
@@ -260,6 +278,144 @@ func PublishBatchOpts(ctx context.Context, db *gorm.DB, publish PublishFunc, lim
 	return sent, firstErr
 }
 
+// Message is one outbox row handed to a batch publisher.
+type Message struct {
+	Topic     string
+	Key       string
+	Payload   []byte
+	RequestID *string // becomes the Kafka header x-request-id (ADR-36)
+}
+
+// PublishManyFunc sends msgs together (one round trip per topic) and returns one error per message, in order
+// (nil = delivered); len(result) must equal len(msgs).
+type PublishManyFunc func(ctx context.Context, msgs []Message) []error
+
+// PublishBatchMany is PublishBatchOpts with a batching publisher. Publishing one message at a time costs a full Kafka
+// round trip (acks from all replicas plus the writer's batch timeout) per row, which capped one service at a few dozen
+// events per second; here a whole batch costs one round trip per topic and one UPDATE.
+//
+// Per-key ordering is kept by sending only the OLDEST due row of each key in a batch: later rows of the same key wait for
+// the next batch (RunMany runs the next one straight away) and, if that row fails, stay blocked by the backoff rule in the
+// query until it is retried. Failure handling (backoff, DEAD after MaxAttempts, broker outage) is the same as PublishBatchOpts.
+func PublishBatchMany(ctx context.Context, db *gorm.DB, publish PublishManyFunc, limit int, timeout time.Duration, opt Options) (int, error) {
+	opt = opt.withDefaults()
+	sent := 0
+	var firstErr error
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		now := time.Now()
+		tbl := Table()
+		unpublished := []string{StatusPending, StatusFailed}
+		var rows []Event
+		if err := tx.Table(tbl).Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
+			Where("status IN ? AND next_attempt_at <= ?", unpublished, now).
+			Where("NOT EXISTS (SELECT 1 FROM "+tbl+" p WHERE p.key = "+tbl+".key AND p.id < "+tbl+".id AND p.status IN ? AND p.next_attempt_at > ?)", unpublished, now).
+			Order("id ASC").Limit(limit).Find(&rows).Error; err != nil {
+			return err
+		}
+		batch := make([]*Event, 0, len(rows))
+		seen := map[string]bool{}
+		for i := range rows {
+			if seen[rows[i].Key] {
+				continue // a newer row of a key already in this batch waits for the next batch
+			}
+			seen[rows[i].Key] = true
+			batch = append(batch, &rows[i])
+		}
+		if len(batch) == 0 {
+			return nil
+		}
+		msgs := make([]Message, len(batch))
+		for i, e := range batch {
+			msgs[i] = Message{Topic: e.Topic, Key: e.Key, Payload: e.Payload, RequestID: e.RequestID}
+		}
+		mctx, cancel := context.WithTimeout(ctx, timeout)
+		errs := publish(mctx, msgs)
+		cancel()
+		if len(errs) != len(msgs) { // a misbehaving publisher must not mark anything as sent
+			e := fmt.Errorf("events: publisher returned %d results for %d messages", len(errs), len(msgs))
+			errs = make([]error, len(msgs))
+			for i := range errs {
+				errs[i] = e
+			}
+		}
+		var doneIDs []uint64
+		type failure struct {
+			e   *Event
+			err error
+		}
+		var failed []failure
+		for i, e := range batch {
+			if errs[i] != nil {
+				if firstErr == nil {
+					firstErr = errs[i]
+				}
+				failed = append(failed, failure{e, errs[i]})
+				continue
+			}
+			doneIDs = append(doneIDs, e.ID)
+		}
+		if len(doneIDs) > 0 {
+			if err := tx.Table(tbl).Where("id IN ?", doneIDs).Updates(map[string]any{"status": StatusDone, "published_at": time.Now(), "last_error": nil}).Error; err != nil {
+				return err
+			}
+			sent = len(doneIDs)
+		}
+		outage := sent == 0 && len(failed) >= outageAfter
+		for _, f := range failed {
+			attempts := f.e.Attempts + 1
+			msg := f.err.Error()
+			if len(msg) > 1000 {
+				msg = msg[:1000]
+			}
+			upd := map[string]any{"attempts": attempts, "last_error": msg, "status": StatusFailed,
+				"next_attempt_at": now.Add(opt.backoff(attempts))}
+			if attempts >= opt.MaxAttempts && !outage {
+				upd["status"] = StatusDead
+				upd["dead_at"] = now
+				deadMarked.Add(1)
+			}
+			if err := tx.Table(tbl).Model(f.e).Updates(upd).Error; err != nil {
+				return err
+			}
+		}
+		publishFailures.Add(int64(len(failed)))
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	published.Add(int64(sent))
+	return sent, firstErr
+}
+
+// RunMany is Run with a batching publisher: every interval it publishes batches until one makes no progress (so a backlog
+// drains at the speed of Kafka instead of one tick per batch), at most maxDrain batches per tick so a poisoned table cannot
+// spin forever. Prefer a short interval (a few hundred ms): an idle tick is one cheap indexed SELECT.
+func RunMany(ctx context.Context, db *gorm.DB, publish PublishManyFunc, interval time.Duration, limit int, onError func(error)) {
+	const maxDrain = 50
+	opt := OptionsFromEnv()
+	go func() {
+		t := time.NewTicker(interval)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				for i := 0; i < maxDrain && ctx.Err() == nil; i++ {
+					n, err := PublishBatchMany(ctx, db, publish, limit, 10*time.Second, opt)
+					if err != nil && onError != nil {
+						onError(err)
+					}
+					if n == 0 || err != nil {
+						break
+					}
+				}
+			}
+		}
+	}()
+}
+
 // Run calls PublishBatchOpts every interval until ctx is done, with OptionsFromEnv. onError may be nil.
 func Run(ctx context.Context, db *gorm.DB, publish PublishFunc, interval time.Duration, limit int, onError func(error)) {
 	opt := OptionsFromEnv()
@@ -288,11 +444,23 @@ func Register(reg prometheus.Registerer, service string, db *gorm.DB) {
 		prometheus.NewCounterFunc(prometheus.CounterOpts{Name: "mm_outbox_published_total", Help: "Outbox rows published to Kafka by this process.", ConstLabels: l}, func() float64 { return float64(published.Load()) }),
 		prometheus.NewCounterFunc(prometheus.CounterOpts{Name: "mm_outbox_publish_failures_total", Help: "Failed outbox publish attempts by this process.", ConstLabels: l}, func() float64 { return float64(publishFailures.Load()) }),
 		prometheus.NewCounterFunc(prometheus.CounterOpts{Name: "mm_outbox_dead_total", Help: "Outbox rows dead-lettered by this process.", ConstLabels: l}, func() float64 { return float64(deadMarked.Load()) }),
+		prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: "mm_outbox_oldest_pending_seconds", Help: "Age of the oldest outbox row still waiting to be published (0 = none): the publish lag.", ConstLabels: l}, func() float64 {
+			return OldestPendingSeconds(db)
+		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: "mm_outbox_dead", Help: "Outbox rows in the DEAD (dead-letter) state.", ConstLabels: l}, func() float64 {
 			n, _ := DeadCount(db)
 			return float64(n)
 		}),
 	)
+}
+
+// OldestPendingSeconds is the age in seconds of the oldest row that is still PENDING or FAILED (0 when none or on error).
+func OldestPendingSeconds(db *gorm.DB) float64 {
+	var age *float64
+	if err := db.Raw("SELECT EXTRACT(EPOCH FROM (now() - min(created_at)))::float8 FROM "+Table()+" WHERE status IN ?", []string{StatusPending, StatusFailed}).Scan(&age).Error; err != nil || age == nil || *age < 0 {
+		return 0
+	}
+	return *age
 }
 
 // DeadCount returns the number of dead-lettered rows.

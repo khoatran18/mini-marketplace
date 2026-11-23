@@ -9,6 +9,7 @@ import (
 	"product-service/pkg/dto"
 	"product-service/pkg/outbox"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -103,6 +104,15 @@ func (s *ProductService) MarkShippedFromOrderEvent(ctx context.Context, msg *kaf
 
 // For Producer
 
+// valOrdPublishers is how many validation replies are sent to Kafka at once (each waits for all replicas to acknowledge).
+const valOrdPublishers = 16
+
+// valOrdMaxDrain bounds the batches run back to back in one tick.
+const valOrdMaxDrain = 50
+
+// ProducerValOrdKafkaEventWorker publishes the validation results (reserve ok / failed) back to order-service every interval.
+// Each tick drains the backlog (batch after batch while rows were published) and each batch sends up to valOrdPublishers replies
+// concurrently: one reply per order id, so no ordering is lost. Sending them one by one every few seconds made the order flow wait.
 func (s *ProductService) ProducerValOrdKafkaEventWorker(ctx context.Context, interval time.Duration, limit int, topic string) {
 	go func() {
 		ticker := time.NewTicker(interval)
@@ -116,27 +126,54 @@ func (s *ProductService) ProducerValOrdKafkaEventWorker(ctx context.Context, int
 				return
 			// Interval time
 			case <-ticker.C:
-				if err := s.producerValOrdKafkaEventBatch(ctx, limit, topic); err != nil {
-					s.ZapLogger.Warn("ProductService: error in procedure ValOrdKafkaEvent batch", zap.Error(err))
+				for i := 0; i < valOrdMaxDrain && ctx.Err() == nil; i++ {
+					n, err := s.producerValOrdKafkaEventBatch(ctx, limit, topic)
+					if err != nil {
+						s.ZapLogger.Warn("ProductService: error in procedure ValOrdKafkaEvent batch", zap.Error(err))
+					}
+					if n == 0 || err != nil {
+						break
+					}
 				}
 			}
 		}
 	}()
 }
 
-func (s *ProductService) producerValOrdKafkaEventBatch(ctx context.Context, limit int, topic string) error {
+// producerValOrdKafkaEventBatch publishes up to limit pending replies (valOrdPublishers at a time) and returns how many succeeded.
+func (s *ProductService) producerValOrdKafkaEventBatch(ctx context.Context, limit int, topic string) (int, error) {
 	eventsModel, err := s.ProductRepo.GetValOrdEventNotPublish(ctx, limit)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	var firstErr error
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		firstErr error
+		sent     int
+		sem      = make(chan struct{}, valOrdPublishers)
+	)
 	for _, eventModel := range eventsModel {
-		if err := s.producerValOrdKafkaEvent(ctx, eventModel, topic); err != nil && firstErr == nil {
-			firstErr = err
-		}
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(ev *outbox.ValidateOrderKafkaEvent) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			err := s.producerValOrdKafkaEvent(ctx, ev, topic)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				if firstErr == nil {
+					firstErr = err
+				}
+				return
+			}
+			sent++
+		}(eventModel)
 	}
-	return firstErr
+	wg.Wait()
+	return sent, firstErr
 }
 
 func (s *ProductService) producerValOrdKafkaEvent(ctx context.Context, eventModel *outbox.ValidateOrderKafkaEvent, topic string) error {

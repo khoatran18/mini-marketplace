@@ -33,3 +33,10 @@ Lưu ý:
 - Đơn COD sinh ra nhiều dữ liệu (mỗi lần = 1 đơn + giữ hàng + event outbox). Dọn bằng cách tạo lại DB test sau khi chạy.
 - Quan sát song song Grafana (`deploy/observability.yml`) để biết service nào nghẽn; đơn vẫn xử lý bất đồng bộ qua Kafka
   nên sau tải nên kiểm tra không còn đơn `PENDING`.
+
+## `ccu.mjs`: thử tải theo số người dùng đồng thời (vòng kín)
+Mỗi VU là một người dùng với tài khoản và IP giả riêng; mỗi lần lặp chọn ngẫu nhiên một hành trình con (buyer, seller, admin, operator, hỏi AI theo từng persona) nên chạm mọi container nghiệp vụ; cuối bài in bảng độ phủ. Cần `ADMIN_USERNAME`/`ADMIN_PASSWORD` (mặc định `ADMIN_BOOTSTRAP_*`) cho admin và operator. Cần cấu hình `.perf` đã áp dụng (`scripts/deploy-perf.sh all`: nâng rate limit, tin `X-Forwarded-For`, ai-agent dùng mô hình giả). Chi tiết: `docs/design/09_PERF_RESOURCES.md` §4-5.
+```bash
+node scripts/load/ccu.mjs --vus=25 --duration=90 --ramp=20 --out=/tmp/ccu25.json
+```
+Tham số xem đầu file (`VUS`, `DURATION`, `RAMP`, `MIX`, `THINK_MS`, `AI_THINK_MS`, `PRODUCTS`, `OUT`, `MAX_ERR_PCT`). Phép đo chỉ "HỢP LỆ" khi lỗi ngoài dự kiến ≤ ngưỡng, không có 429 và mọi VU vào được.

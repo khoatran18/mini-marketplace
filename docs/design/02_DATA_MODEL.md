@@ -286,7 +286,7 @@ flowchart LR
     E["INSERT outbox PENDING"]
   end
   B --> E
-  E --> W["Worker events.Run, 2 s/lần, lô 100"]
+  E --> W["Worker events.RunMany: tick 200 ms, lô 500, một lần gửi Kafka cho cả lô"]
   W -->|"acks=all, theo thứ tự id"| K["Kafka"]
   W -->|"thành công"| S["status SUCCESS"]
   W -->|"lỗi từng dòng"| F["FAILED, attempts+1, backoff next_attempt_at"]

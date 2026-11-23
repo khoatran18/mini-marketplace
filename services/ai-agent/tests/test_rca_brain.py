@@ -33,10 +33,17 @@ async def test_collect_records_real_tool_results_not_model_claims_and_detects_pl
     assert "up=0" in r["evidence"][1]["summary"] and r["queries"] == 2 and r["playbook"] == "service-unavailable" and r["model_calls"] == 2
 
 
-async def test_collect_skips_failed_tool_calls_but_still_counts_them_as_queries():
+async def test_collect_skips_failed_tool_calls_and_does_not_charge_them_to_the_query_budget():
     rt, persona, ctx, _ = brain_env([{"tool_calls": [{"name": "ops_metrics_query", "args": {"q": "up"}}]}, {"content": "XONG"}], gateway=ops_gateway(metric_status=500))
     r = await LlmBrain(rt, persona, ctx, Budget()).collect(state())
-    assert r["evidence"] == [] and r["queries"] == 1  # lỗi công cụ không thành "bằng chứng", nhưng vẫn tốn một truy vấn
+    assert r["evidence"] == [] and r["queries"] == 0  # lỗi công cụ không thành "bằng chứng" và không ăn ngân sách truy vấn (max_queries)
+
+
+async def test_collect_charges_only_the_successful_calls_when_some_fail():
+    script = [{"tool_calls": [{"name": "ops_metrics_query", "args": {"q": "up"}}, {"name": "ops_get_playbook", "args": {"id": "service-unavailable"}}]}, {"content": "XONG"}]
+    rt, persona, ctx, _ = brain_env(script, gateway=ops_gateway(metric_status=400))
+    r = await LlmBrain(rt, persona, ctx, Budget()).collect(state())
+    assert [e["source"] for e in r["evidence"]] == ["ops_get_playbook"] and r["queries"] == 1
 
 
 async def test_rca_agent_gets_no_proposal_tool_even_though_the_operator_token_has_one():
@@ -173,7 +180,7 @@ async def test_collect_stops_after_consecutive_tool_errors_instead_of_burning_mo
     call = {"tool_calls": [{"name": "ops_metrics_query", "args": {"q": "up"}}]}
     rt, persona, ctx, _ = brain_env([call] * 6 + [{"content": "XONG"}], gateway=ops_gateway(metric_status=500))
     r = await LlmBrain(rt, persona, ctx, Budget(max_tool_errors=3)).collect(state())
-    assert r["evidence"] == [] and r["queries"] == 3 and r["model_calls"] <= 4  # dừng ở lỗi thứ 3, không chạy tiếp tới hết trần
+    assert r["evidence"] == [] and r["queries"] == 0 and r["model_calls"] <= 4  # dừng ở lỗi thứ 3 (không chạy tiếp tới hết trần); lỗi không ăn ngân sách truy vấn
 
 
 def test_rca_persona_has_its_own_model_and_tool_call_limits_unlike_chat():
