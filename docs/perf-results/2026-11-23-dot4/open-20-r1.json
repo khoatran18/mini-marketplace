@@ -1,0 +1,3232 @@
+{
+ "steadyStartMs": 1795438428552,
+ "steadyEndMs": 1795438518502,
+ "mode": "open",
+ "vus": 25,
+ "arrivalRate": 20,
+ "duration": 90,
+ "elapsed": 89.95,
+ "steady": {
+  "calls": 35590,
+  "callsPerSec": 395.7,
+  "unexpectedErrors": 0,
+  "unexpectedErrorPct": 0,
+  "codes": {
+   "200": 31952,
+   "201": 1448,
+   "202": 2115,
+   "403": 44,
+   "422": 31
+  }
+ },
+ "open": {
+  "started": 2400,
+  "dropped": 0,
+  "peakActive": 346
+ },
+ "labels": {
+  "(vào) POST /auth/register": {
+   "n": 281,
+   "ok": 281,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 68.2,
+   "p95": 105.5,
+   "p99": 150,
+   "max": 154.4,
+   "codes": {
+    "200": 281
+   }
+  },
+  "(vào) POST /auth/login": {
+   "n": 683,
+   "ok": 683,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 66.9,
+   "p95": 105.5,
+   "p99": 127.7,
+   "max": 156.7,
+   "codes": {
+    "200": 683
+   }
+  },
+  "(vào) POST /users/sellers": {
+   "n": 22,
+   "ok": 22,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.8,
+   "p95": 10.3,
+   "p99": 40.5,
+   "max": 40.5,
+   "codes": {
+    "200": 22
+   }
+  },
+  "(vào) GET /seller/products": {
+   "n": 135,
+   "ok": 56,
+   "expected": 79,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 5.2,
+   "p99": 76,
+   "max": 99.5,
+   "codes": {
+    "200": 56,
+    "403": 79
+   }
+  },
+  "(vào) GET /categories": {
+   "n": 240,
+   "ok": 240,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.2,
+   "p95": 19.6,
+   "p99": 24.4,
+   "max": 27.8,
+   "codes": {
+    "200": 240
+   }
+  },
+  "(vào) POST /products": {
+   "n": 65,
+   "ok": 65,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.3,
+   "p95": 8.2,
+   "p99": 16.3,
+   "max": 16.3,
+   "codes": {
+    "200": 65
+   }
+  },
+  "(vào) POST /admin/accounts": {
+   "n": 17,
+   "ok": 17,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 70.4,
+   "p95": 95.2,
+   "p99": 95.2,
+   "max": 95.2,
+   "codes": {
+    "200": 17
+   }
+  },
+  "(vào) POST /users/me/addresses": {
+   "n": 316,
+   "ok": 316,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4,
+   "p95": 9.3,
+   "p99": 50,
+   "max": 68.7,
+   "codes": {
+    "201": 316
+   }
+  },
+  "(vào) GET /orders/summary": {
+   "n": 234,
+   "ok": 234,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.2,
+   "p95": 3.4,
+   "p99": 5.7,
+   "max": 15.9,
+   "codes": {
+    "200": 234
+   }
+  },
+  "(vào) GET /orders": {
+   "n": 234,
+   "ok": 234,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.7,
+   "p95": 4,
+   "p99": 5.2,
+   "max": 6.9,
+   "codes": {
+    "200": 234
+   }
+  },
+  "(vào) GET /orders (SHIPPED)": {
+   "n": 234,
+   "ok": 234,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.2,
+   "p95": 4.2,
+   "p99": 10.5,
+   "max": 18.9,
+   "codes": {
+    "200": 234
+   }
+  },
+  "(vào) GET /orders (DELIVERED)": {
+   "n": 234,
+   "ok": 234,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.3,
+   "p95": 3.7,
+   "p99": 11.4,
+   "max": 68.1,
+   "codes": {
+    "200": 234
+   }
+  },
+  "(vào) POST /users/buyers": {
+   "n": 87,
+   "ok": 87,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.8,
+   "p95": 16.3,
+   "p99": 30.3,
+   "max": 30.3,
+   "codes": {
+    "200": 87
+   }
+  },
+  "(vào) GET /users/buyers/:id": {
+   "n": 133,
+   "ok": 133,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.2,
+   "p95": 4,
+   "p99": 10.5,
+   "max": 21.8,
+   "codes": {
+    "200": 133
+   }
+  },
+  "(vào) PUT /users/buyers/:id": {
+   "n": 133,
+   "ok": 133,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.6,
+   "p95": 18,
+   "p99": 23.5,
+   "max": 44.9,
+   "codes": {
+    "200": 133
+   }
+  },
+  "(vào) GET /users/me/addresses": {
+   "n": 133,
+   "ok": 133,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.1,
+   "p95": 3.1,
+   "p99": 4.3,
+   "max": 70.4,
+   "codes": {
+    "200": 133
+   }
+  },
+  "(vào) PUT /users/me/addresses/:id": {
+   "n": 133,
+   "ok": 133,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.7,
+   "p95": 7,
+   "p99": 7.6,
+   "max": 9.9,
+   "codes": {
+    "200": 133
+   }
+  },
+  "(vào) DELETE /users/me/addresses/:id": {
+   "n": 133,
+   "ok": 133,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.5,
+   "p95": 6.4,
+   "p99": 8.2,
+   "max": 18.4,
+   "codes": {
+    "200": 133
+   }
+  },
+  "(vào) PUT /cart/items/:id": {
+   "n": 1161,
+   "ok": 1161,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.5,
+   "p95": 11.3,
+   "p99": 19.8,
+   "max": 71.7,
+   "codes": {
+    "200": 1161
+   }
+  },
+  "(vào) GET /cart": {
+   "n": 514,
+   "ok": 514,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 4.4,
+   "p99": 12.7,
+   "max": 41.2,
+   "codes": {
+    "200": 514
+   }
+  },
+  "(vào) POST /cart/merge": {
+   "n": 110,
+   "ok": 110,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.3,
+   "p95": 8.5,
+   "p99": 10.9,
+   "max": 16.4,
+   "codes": {
+    "200": 110
+   }
+  },
+  "(vào) POST /auth/change-password": {
+   "n": 37,
+   "ok": 37,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 147.7,
+   "p95": 210.1,
+   "p99": 239.4,
+   "max": 239.4,
+   "codes": {
+    "200": 37
+   }
+  },
+  "(vào) WEB /login": {
+   "n": 50,
+   "ok": 50,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.1,
+   "p95": 18.9,
+   "p99": 30.4,
+   "max": 30.4,
+   "codes": {
+    "200": 50
+   }
+  },
+  "(vào) WEB /products": {
+   "n": 63,
+   "ok": 63,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.4,
+   "p95": 24.6,
+   "p99": 56.7,
+   "max": 56.7,
+   "codes": {
+    "200": 63
+   }
+  },
+  "(vào) GET /ops/playbooks": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.7,
+   "p95": 2.8,
+   "p99": 2.8,
+   "max": 2.8,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) GET /ops/incidents": {
+   "n": 28,
+   "ok": 28,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.3,
+   "p95": 12.7,
+   "p99": 60.3,
+   "max": 60.3,
+   "codes": {
+    "200": 28
+   }
+  },
+  "(vào) GET /ops/incidents/:id": {
+   "n": 28,
+   "ok": 28,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.2,
+   "p95": 3.4,
+   "p99": 4.1,
+   "max": 4.1,
+   "codes": {
+    "200": 28
+   }
+  },
+  "(vào) GET /ops/proposals": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.1,
+   "p95": 4.9,
+   "p99": 4.9,
+   "max": 4.9,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) PUT /products/:id": {
+   "n": 35,
+   "ok": 35,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.8,
+   "p95": 9.8,
+   "p99": 10.3,
+   "max": 10.3,
+   "codes": {
+    "200": 35
+   }
+  },
+  "(vào) PATCH /products/:id/status": {
+   "n": 70,
+   "ok": 70,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.9,
+   "p95": 9.4,
+   "p99": 15.7,
+   "max": 15.7,
+   "codes": {
+    "200": 70
+   }
+  },
+  "(vào) POST /seller/products/:id/inventory/adjust": {
+   "n": 35,
+   "ok": 35,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5,
+   "p95": 12.3,
+   "p99": 21.5,
+   "max": 21.5,
+   "codes": {
+    "200": 35
+   }
+  },
+  "(vào) GET /seller/products/:id/inventory/ledger": {
+   "n": 35,
+   "ok": 35,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.3,
+   "p95": 4.5,
+   "p99": 21.6,
+   "max": 21.6,
+   "codes": {
+    "200": 35
+   }
+  },
+  "(vào) GET /seller/inventory/low-stock": {
+   "n": 35,
+   "ok": 35,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3,
+   "p95": 6.2,
+   "p99": 8.5,
+   "max": 8.5,
+   "codes": {
+    "200": 35
+   }
+  },
+  "(vào) GET /products": {
+   "n": 240,
+   "ok": 240,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.7,
+   "p95": 4.6,
+   "p99": 19.6,
+   "max": 44.1,
+   "codes": {
+    "200": 240
+   }
+  },
+  "(vào) WEB /": {
+   "n": 63,
+   "ok": 63,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.2,
+   "p95": 20.8,
+   "p99": 45.8,
+   "max": 45.8,
+   "codes": {
+    "200": 63
+   }
+  },
+  "(vào) WEB /products/:id": {
+   "n": 239,
+   "ok": 239,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.3,
+   "p95": 27,
+   "p99": 48.2,
+   "max": 79.6,
+   "codes": {
+    "200": 239
+   }
+  },
+  "(vào) POST /events": {
+   "n": 239,
+   "ok": 239,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2,
+   "p95": 3.5,
+   "p99": 6.1,
+   "max": 28.3,
+   "codes": {
+    "202": 239
+   }
+  },
+  "(vào) GET /search": {
+   "n": 481,
+   "ok": 481,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6,
+   "p95": 9.9,
+   "p99": 20.5,
+   "max": 47,
+   "codes": {
+    "200": 481
+   }
+  },
+  "(vào) POST /events (search)": {
+   "n": 481,
+   "ok": 481,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2,
+   "p95": 3.2,
+   "p99": 6.5,
+   "max": 30.7,
+   "codes": {
+    "202": 481
+   }
+  },
+  "(vào) PUT /cart/items/:id (qty)": {
+   "n": 110,
+   "ok": 110,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.3,
+   "p95": 22.3,
+   "p99": 29.3,
+   "max": 34,
+   "codes": {
+    "200": 110
+   }
+  },
+  "(vào) DELETE /cart/items/:id": {
+   "n": 110,
+   "ok": 110,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.8,
+   "p95": 5.9,
+   "p99": 12.3,
+   "max": 38.2,
+   "codes": {
+    "200": 110
+   }
+  },
+  "(vào) POST /checkout/preview (items)": {
+   "n": 110,
+   "ok": 110,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 3.8,
+   "p99": 7.1,
+   "max": 7.2,
+   "codes": {
+    "200": 110
+   }
+  },
+  "(vào) DELETE /cart": {
+   "n": 110,
+   "ok": 110,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.5,
+   "p95": 7.9,
+   "p99": 11,
+   "max": 27.7,
+   "codes": {
+    "200": 110
+   }
+  },
+  "(vào) GET /seller/orders": {
+   "n": 92,
+   "ok": 92,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.1,
+   "p95": 7.1,
+   "p99": 27.9,
+   "max": 27.9,
+   "codes": {
+    "200": 92
+   }
+  },
+  "(vào) GET /seller/orders (ready)": {
+   "n": 92,
+   "ok": 92,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.4,
+   "p95": 6.4,
+   "p99": 25.6,
+   "max": 25.6,
+   "codes": {
+    "200": 92
+   }
+  },
+  "(vào) GET /seller/orders/summary": {
+   "n": 92,
+   "ok": 92,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3,
+   "p95": 5.4,
+   "p99": 15.6,
+   "max": 15.6,
+   "codes": {
+    "200": 92
+   }
+  },
+  "(vào) POST /checkout/preview": {
+   "n": 404,
+   "ok": 404,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.2,
+   "p95": 4.8,
+   "p99": 20.9,
+   "max": 57.1,
+   "codes": {
+    "200": 404
+   }
+  },
+  "(vào) POST /orders (MOCK_CARD)": {
+   "n": 171,
+   "ok": 171,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 7.9,
+   "p95": 15.4,
+   "p99": 24.8,
+   "max": 28.8,
+   "codes": {
+    "201": 171
+   }
+  },
+  "(vào) GET /seller/orders (REFUND_REQUESTED)": {
+   "n": 37,
+   "ok": 37,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.6,
+   "p95": 8.4,
+   "p99": 10.9,
+   "max": 10.9,
+   "codes": {
+    "200": 37
+   }
+  },
+  "(vào) GET /seller/orders/:id": {
+   "n": 91,
+   "ok": 91,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.4,
+   "p95": 5.6,
+   "p99": 89.4,
+   "max": 89.4,
+   "codes": {
+    "200": 91
+   }
+  },
+  "(vào) POST /orders (COD)": {
+   "n": 168,
+   "ok": 168,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 7.8,
+   "p95": 14.7,
+   "p99": 23.5,
+   "max": 24.2,
+   "codes": {
+    "201": 168
+   }
+  },
+  "(vào) POST /orders (replay)": {
+   "n": 40,
+   "ok": 40,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.4,
+   "p95": 7.6,
+   "p99": 8.3,
+   "max": 8.3,
+   "codes": {
+    "200": 40
+   }
+  },
+  "(vào) GET /checkouts/:id": {
+   "n": 264,
+   "ok": 264,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.5,
+   "p95": 6,
+   "p99": 32.4,
+   "max": 53.2,
+   "codes": {
+    "200": 264
+   }
+  },
+  "(vào) POST /ai/chat (admin)": {
+   "n": 35,
+   "ok": 35,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2389.1,
+   "p95": 2547.7,
+   "p99": 2572.6,
+   "max": 2572.6,
+   "codes": {
+    "200": 35
+   }
+  },
+  "(vào) GET /ops/queries": {
+   "n": 32,
+   "ok": 32,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.7,
+   "p95": 2.1,
+   "p99": 2.8,
+   "max": 2.8,
+   "codes": {
+    "200": 32
+   }
+  },
+  "(vào) GET /ops/queries/:name": {
+   "n": 32,
+   "ok": 32,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.9,
+   "p95": 9.2,
+   "p99": 10.2,
+   "max": 10.2,
+   "codes": {
+    "200": 32
+   }
+  },
+  "(vào) GET /ops/system/health": {
+   "n": 38,
+   "ok": 38,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.5,
+   "p95": 4.6,
+   "p99": 8,
+   "max": 8,
+   "codes": {
+    "200": 38
+   }
+  },
+  "(vào) POST /payments/:id/confirm": {
+   "n": 77,
+   "ok": 77,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.4,
+   "p95": 12.3,
+   "p99": 66.1,
+   "max": 66.1,
+   "codes": {
+    "200": 77
+   }
+  },
+  "(vào) GET /payments/:id": {
+   "n": 239,
+   "ok": 239,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.1,
+   "p95": 3.4,
+   "p99": 4.4,
+   "max": 10.9,
+   "codes": {
+    "200": 239
+   }
+  },
+  "(vào) POST /orders (MOCK_BANK_TRANSFER)": {
+   "n": 24,
+   "ok": 24,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 9.5,
+   "p95": 16.7,
+   "p99": 18,
+   "max": 18,
+   "codes": {
+    "201": 24
+   }
+  },
+  "(vào) GET /admin/accounts": {
+   "n": 35,
+   "ok": 35,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 7.3,
+   "p95": 9.3,
+   "p99": 9.7,
+   "max": 9.7,
+   "codes": {
+    "200": 35
+   }
+  },
+  "(vào) GET /admin/categories": {
+   "n": 7,
+   "ok": 7,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.1,
+   "p95": 16.8,
+   "p99": 16.8,
+   "max": 16.8,
+   "codes": {
+    "200": 7
+   }
+  },
+  "(vào) PATCH /admin/products/:id/status": {
+   "n": 7,
+   "ok": 7,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.5,
+   "p95": 20.2,
+   "p99": 20.2,
+   "max": 20.2,
+   "codes": {
+    "200": 7
+   }
+  },
+  "(vào) GET /products/:id": {
+   "n": 482,
+   "ok": 482,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.1,
+   "p95": 3.3,
+   "p99": 5.9,
+   "max": 17.6,
+   "codes": {
+    "200": 482
+   }
+  },
+  "(vào) GET /products/:id/stock": {
+   "n": 481,
+   "ok": 481,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.9,
+   "p95": 3.5,
+   "p99": 6.5,
+   "max": 17.8,
+   "codes": {
+    "200": 481
+   }
+  },
+  "(vào) GET /shop/rules": {
+   "n": 240,
+   "ok": 240,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.5,
+   "p95": 2.6,
+   "p99": 4.9,
+   "max": 13.3,
+   "codes": {
+    "200": 240
+   }
+  },
+  "(vào) GET /payments/methods": {
+   "n": 240,
+   "ok": 240,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.1,
+   "p95": 2.1,
+   "p99": 4,
+   "max": 5.9,
+   "codes": {
+    "200": 240
+   }
+  },
+  "(vào) WEB /cart": {
+   "n": 63,
+   "ok": 63,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 12.9,
+   "p95": 20.4,
+   "p99": 51.5,
+   "max": 51.5,
+   "codes": {
+    "200": 63
+   }
+  },
+  "(vào) POST /ai/chat (buyer)": {
+   "n": 261,
+   "ok": 261,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2600.5,
+   "p95": 2761.3,
+   "p99": 2923.5,
+   "max": 3067.9,
+   "codes": {
+    "200": 261
+   }
+  },
+  "(vào) POST /payments/:id/confirm (wallet/bank)": {
+   "n": 66,
+   "ok": 66,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.6,
+   "p95": 12.4,
+   "p99": 20.3,
+   "max": 20.3,
+   "codes": {
+    "200": 66
+   }
+  },
+  "(vào) POST /seller/orders/:id/ship": {
+   "n": 81,
+   "ok": 81,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.9,
+   "p95": 12,
+   "p99": 45.2,
+   "max": 45.2,
+   "codes": {
+    "200": 81
+   }
+  },
+  "(vào) GET /seller/analytics/top-products": {
+   "n": 20,
+   "ok": 20,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.7,
+   "p95": 50.3,
+   "p99": 50.3,
+   "max": 50.3,
+   "codes": {
+    "200": 20
+   }
+  },
+  "(vào) POST /orders (MOCK_WALLET)": {
+   "n": 41,
+   "ok": 41,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 8.4,
+   "p95": 17,
+   "p99": 57.7,
+   "max": 57.7,
+   "codes": {
+    "201": 41
+   }
+  },
+  "(vào) GET /ops/outbox/:svc/dead": {
+   "n": 20,
+   "ok": 20,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.1,
+   "p95": 19.3,
+   "p99": 19.3,
+   "max": 19.3,
+   "codes": {
+    "200": 20
+   }
+  },
+  "(vào) GET /seller/analytics/timeseries": {
+   "n": 24,
+   "ok": 24,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3,
+   "p95": 13.9,
+   "p99": 26.9,
+   "max": 26.9,
+   "codes": {
+    "200": 24
+   }
+  },
+  "(vào) POST /payments/:id/confirm (3DS)": {
+   "n": 41,
+   "ok": 41,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.5,
+   "p95": 8.8,
+   "p99": 26.6,
+   "max": 26.6,
+   "codes": {
+    "200": 41
+   }
+  },
+  "(vào) POST /payments/:id/confirm (otp)": {
+   "n": 41,
+   "ok": 41,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.3,
+   "p95": 6,
+   "p99": 6.9,
+   "max": 6.9,
+   "codes": {
+    "200": 41
+   }
+  },
+  "(vào) POST /auth/register-seller-roles": {
+   "n": 21,
+   "ok": 21,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 71,
+   "p95": 108.2,
+   "p99": 152,
+   "max": 152,
+   "codes": {
+    "200": 21
+   }
+  },
+  "(vào) GET /seller/orders (staff)": {
+   "n": 21,
+   "ok": 21,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.3,
+   "p95": 6.1,
+   "p99": 6.2,
+   "max": 6.2,
+   "codes": {
+    "200": 21
+   }
+  },
+  "(vào) GET /orders/:id": {
+   "n": 109,
+   "ok": 109,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.6,
+   "p95": 3.6,
+   "p99": 7.5,
+   "max": 11.3,
+   "codes": {
+    "200": 109
+   }
+  },
+  "(vào) POST /orders/:id/confirm-received": {
+   "n": 15,
+   "ok": 15,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.4,
+   "p95": 33.6,
+   "p99": 33.6,
+   "max": 33.6,
+   "codes": {
+    "200": 15
+   }
+  },
+  "(vào) POST /orders/:id/return": {
+   "n": 22,
+   "ok": 20,
+   "expected": 2,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.3,
+   "p95": 13.8,
+   "p99": 23,
+   "max": 23,
+   "codes": {
+    "200": 20,
+    "422": 2
+   }
+  },
+  "(vào) POST /payments/:id/cancel": {
+   "n": 15,
+   "ok": 15,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.9,
+   "p95": 14,
+   "p99": 14,
+   "max": 14,
+   "codes": {
+    "200": 15
+   }
+  },
+  "(vào) POST /seller/orders/:id/cancel": {
+   "n": 9,
+   "ok": 9,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.5,
+   "p95": 10.7,
+   "p99": 10.7,
+   "max": 10.7,
+   "codes": {
+    "200": 9
+   }
+  },
+  "(vào) GET /admin/orders": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 11.9,
+   "p95": 14.7,
+   "p99": 14.7,
+   "max": 14.7,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) GET /admin/orders/:id": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 4.3,
+   "p99": 4.3,
+   "max": 4.3,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) GET /admin/payments": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 9,
+   "p95": 16.8,
+   "p99": 16.8,
+   "max": 16.8,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) GET /admin/payments/:id": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.5,
+   "p95": 4.6,
+   "p99": 4.6,
+   "max": 4.6,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) GET /admin/payments (SUCCEEDED)": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.4,
+   "p95": 10.4,
+   "p99": 10.4,
+   "max": 10.4,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) POST /seller/orders/:id/deliver": {
+   "n": 54,
+   "ok": 53,
+   "expected": 1,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.2,
+   "p95": 15.6,
+   "p99": 30.5,
+   "max": 30.5,
+   "codes": {
+    "200": 53,
+    "422": 1
+   }
+  },
+  "(vào) POST /payments/:id/confirm (declined)": {
+   "n": 39,
+   "ok": 39,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.6,
+   "p95": 16.1,
+   "p99": 21.5,
+   "max": 21.5,
+   "codes": {
+    "200": 39
+   }
+  },
+  "(vào) GET /seller/analytics/summary": {
+   "n": 20,
+   "ok": 20,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 55.1,
+   "p99": 55.1,
+   "max": 55.1,
+   "codes": {
+    "200": 20
+   }
+  },
+  "(vào) GET /ops/audit": {
+   "n": 18,
+   "ok": 18,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.9,
+   "p95": 2.9,
+   "p99": 2.9,
+   "max": 2.9,
+   "codes": {
+    "200": 18
+   }
+  },
+  "(vào) GET /ops/actions": {
+   "n": 18,
+   "ok": 18,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.7,
+   "p95": 3,
+   "p99": 3,
+   "max": 3,
+   "codes": {
+    "200": 18
+   }
+  },
+  "(vào) GET /admin/analytics/top-products": {
+   "n": 3,
+   "ok": 3,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.4,
+   "p95": 74.8,
+   "p99": 74.8,
+   "max": 74.8,
+   "codes": {
+    "200": 3
+   }
+  },
+  "(vào) POST /ai/chat (seller)": {
+   "n": 55,
+   "ok": 55,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2385.1,
+   "p95": 2579.7,
+   "p99": 2841.5,
+   "max": 2841.5,
+   "codes": {
+    "200": 55
+   }
+  },
+  "(vào) GET /ops/ai/kill": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.6,
+   "p95": 2.7,
+   "p99": 2.7,
+   "max": 2.7,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) GET /ops/rca/runs": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 49,
+   "p99": 49,
+   "max": 49,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) GET /admin/analytics/summary": {
+   "n": 3,
+   "ok": 3,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.7,
+   "p95": 82.6,
+   "p99": 82.6,
+   "max": 82.6,
+   "codes": {
+    "200": 3
+   }
+  },
+  "(vào) GET /admin/analytics/timeseries": {
+   "n": 1,
+   "ok": 1,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 34.6,
+   "p95": 34.6,
+   "p99": 34.6,
+   "max": 34.6,
+   "codes": {
+    "200": 1
+   }
+  },
+  "(vào) GET /seller/analytics/funnel": {
+   "n": 9,
+   "ok": 9,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.9,
+   "p95": 53.2,
+   "p99": 53.2,
+   "max": 53.2,
+   "codes": {
+    "200": 9
+   }
+  },
+  "(vào) POST /ai/chat (operator)": {
+   "n": 23,
+   "ok": 23,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2314.9,
+   "p95": 2393.6,
+   "p99": 2771.2,
+   "max": 2771.2,
+   "codes": {
+    "200": 23
+   }
+  },
+  "(vào) GET /admin/analytics/funnel": {
+   "n": 3,
+   "ok": 3,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.4,
+   "p95": 89.2,
+   "p99": 89.2,
+   "max": 89.2,
+   "codes": {
+    "200": 3
+   }
+  },
+  "(vào) GET /admin/analytics/search-terms": {
+   "n": 2,
+   "ok": 2,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 34,
+   "p95": 34,
+   "p99": 34,
+   "max": 34,
+   "codes": {
+    "200": 2
+   }
+  },
+  "(vào) POST /seller/orders/:id/return/reject": {
+   "n": 4,
+   "ok": 4,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 24.3,
+   "p95": 51.4,
+   "p99": 51.4,
+   "max": 51.4,
+   "codes": {
+    "200": 4
+   }
+  },
+  "(vào) POST /admin/payments/:id/refund": {
+   "n": 3,
+   "ok": 3,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.9,
+   "p95": 8,
+   "p99": 8,
+   "max": 8,
+   "codes": {
+    "200": 3
+   }
+  },
+  "(vào) POST /orders/:id/cancel": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.7,
+   "p95": 22.8,
+   "p99": 22.8,
+   "max": 22.8,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) POST /seller/orders/:id/return/approve": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 7.5,
+   "p95": 23.4,
+   "p99": 23.4,
+   "max": 23.4,
+   "codes": {
+    "200": 10
+   }
+  },
+  "(vào) GET /seller/analytics/low-stock": {
+   "n": 4,
+   "ok": 4,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.6,
+   "p95": 33.5,
+   "p99": 33.5,
+   "max": 33.5,
+   "codes": {
+    "200": 4
+   }
+  },
+  "GET /products/:id/stock": {
+   "n": 1409,
+   "ok": 1409,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2,
+   "p95": 3.6,
+   "p99": 5.8,
+   "max": 20.6,
+   "codes": {
+    "200": 1409
+   }
+  },
+  "GET /shop/rules": {
+   "n": 705,
+   "ok": 705,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.6,
+   "p95": 3.1,
+   "p99": 6.8,
+   "max": 83.1,
+   "codes": {
+    "200": 705
+   }
+  },
+  "GET /payments/methods": {
+   "n": 705,
+   "ok": 705,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.2,
+   "p95": 2.4,
+   "p99": 5.8,
+   "max": 63.6,
+   "codes": {
+    "200": 705
+   }
+  },
+  "WEB /products/:id": {
+   "n": 706,
+   "ok": 706,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.6,
+   "p95": 27.4,
+   "p99": 47.8,
+   "max": 104,
+   "codes": {
+    "200": 706
+   }
+  },
+  "POST /events": {
+   "n": 706,
+   "ok": 706,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2,
+   "p95": 3.3,
+   "p99": 7.6,
+   "max": 80.9,
+   "codes": {
+    "202": 706
+   }
+  },
+  "PUT /cart/items/:id": {
+   "n": 3099,
+   "ok": 3099,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.8,
+   "p95": 11.4,
+   "p99": 24.2,
+   "max": 89.4,
+   "codes": {
+    "200": 3099
+   }
+  },
+  "POST /checkout/preview": {
+   "n": 1027,
+   "ok": 1027,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.3,
+   "p95": 5.8,
+   "p99": 21.7,
+   "max": 63.1,
+   "codes": {
+    "200": 1027
+   }
+  },
+  "GET /search": {
+   "n": 1409,
+   "ok": 1409,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.6,
+   "p95": 11.9,
+   "p99": 21,
+   "max": 79.6,
+   "codes": {
+    "200": 1409
+   }
+  },
+  "POST /events (search)": {
+   "n": 1409,
+   "ok": 1409,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2,
+   "p95": 3.6,
+   "p99": 15.2,
+   "max": 72.8,
+   "codes": {
+    "202": 1409
+   }
+  },
+  "POST /orders (COD)": {
+   "n": 406,
+   "ok": 406,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 8.4,
+   "p95": 23,
+   "p99": 42.7,
+   "max": 69.6,
+   "codes": {
+    "201": 406
+   }
+  },
+  "GET /cart": {
+   "n": 1372,
+   "ok": 1372,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.9,
+   "p95": 4.8,
+   "p99": 7.6,
+   "max": 67.6,
+   "codes": {
+    "200": 1372
+   }
+  },
+  "POST /auth/login": {
+   "n": 2003,
+   "ok": 2003,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 77.5,
+   "p95": 126.3,
+   "p99": 163.6,
+   "max": 260.6,
+   "codes": {
+    "200": 2003
+   }
+  },
+  "GET /payments/:id": {
+   "n": 618,
+   "ok": 618,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.3,
+   "p95": 3.7,
+   "p99": 9.6,
+   "max": 72.6,
+   "codes": {
+    "200": 618
+   }
+  },
+  "POST /ai/chat (buyer)": {
+   "n": 671,
+   "ok": 671,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2634.9,
+   "p95": 3062.1,
+   "p99": 3275.9,
+   "max": 3416.4,
+   "codes": {
+    "200": 671
+   }
+  },
+  "GET /orders/summary": {
+   "n": 806,
+   "ok": 806,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.2,
+   "p95": 3.7,
+   "p99": 7.3,
+   "max": 70.7,
+   "codes": {
+    "200": 806
+   }
+  },
+  "GET /orders": {
+   "n": 806,
+   "ok": 806,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.9,
+   "p95": 5,
+   "p99": 8.2,
+   "max": 16.8,
+   "codes": {
+    "200": 806
+   }
+  },
+  "GET /orders (SHIPPED)": {
+   "n": 806,
+   "ok": 806,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.3,
+   "p95": 3.9,
+   "p99": 7.9,
+   "max": 16.1,
+   "codes": {
+    "200": 806
+   }
+  },
+  "GET /products/:id": {
+   "n": 1408,
+   "ok": 1408,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.1,
+   "p95": 4,
+   "p99": 10.3,
+   "max": 64.4,
+   "codes": {
+    "200": 1408
+   }
+  },
+  "GET /orders (DELIVERED)": {
+   "n": 806,
+   "ok": 806,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.5,
+   "p95": 4.2,
+   "p99": 7.2,
+   "max": 35.5,
+   "codes": {
+    "200": 806
+   }
+  },
+  "GET /products": {
+   "n": 705,
+   "ok": 705,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 5,
+   "p99": 50.8,
+   "max": 72.5,
+   "codes": {
+    "200": 705
+   }
+  },
+  "GET /seller/orders": {
+   "n": 295,
+   "ok": 295,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.8,
+   "p95": 12.1,
+   "p99": 50.9,
+   "max": 69.8,
+   "codes": {
+    "200": 295
+   }
+  },
+  "GET /seller/orders (ready)": {
+   "n": 295,
+   "ok": 295,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.1,
+   "p95": 9.1,
+   "p99": 55.9,
+   "max": 96.1,
+   "codes": {
+    "200": 295
+   }
+  },
+  "GET /seller/orders/summary": {
+   "n": 295,
+   "ok": 295,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.4,
+   "p95": 6.1,
+   "p99": 52.4,
+   "max": 74,
+   "codes": {
+    "200": 295
+   }
+  },
+  "GET /seller/orders/:id": {
+   "n": 295,
+   "ok": 295,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.3,
+   "p95": 6.1,
+   "p99": 22.9,
+   "max": 83.3,
+   "codes": {
+    "200": 295
+   }
+  },
+  "POST /seller/orders/:id/ship": {
+   "n": 271,
+   "ok": 271,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.3,
+   "p95": 18,
+   "p99": 52.8,
+   "max": 60.1,
+   "codes": {
+    "200": 271
+   }
+  },
+  "GET /orders/:id": {
+   "n": 694,
+   "ok": 694,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.7,
+   "p95": 4.7,
+   "p99": 8.7,
+   "max": 89.8,
+   "codes": {
+    "200": 694
+   }
+  },
+  "POST /orders (replay)": {
+   "n": 101,
+   "ok": 101,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.6,
+   "p95": 9,
+   "p99": 66,
+   "max": 87.9,
+   "codes": {
+    "200": 101
+   }
+  },
+  "GET /checkouts/:id": {
+   "n": 654,
+   "ok": 654,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.7,
+   "p95": 6.1,
+   "p99": 36.1,
+   "max": 55.5,
+   "codes": {
+    "200": 654
+   }
+  },
+  "POST /payments/:id/cancel": {
+   "n": 52,
+   "ok": 52,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.2,
+   "p95": 12.7,
+   "p99": 21.9,
+   "max": 21.9,
+   "codes": {
+    "200": 52
+   }
+  },
+  "POST /cart/merge": {
+   "n": 345,
+   "ok": 345,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.5,
+   "p95": 9.2,
+   "p99": 12.5,
+   "max": 14.5,
+   "codes": {
+    "200": 345
+   }
+  },
+  "WEB /login": {
+   "n": 167,
+   "ok": 167,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.9,
+   "p95": 23.7,
+   "p99": 39.6,
+   "max": 70.8,
+   "codes": {
+    "200": 167
+   }
+  },
+  "GET /categories": {
+   "n": 706,
+   "ok": 706,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 15,
+   "p95": 23.8,
+   "p99": 57.5,
+   "max": 90.6,
+   "codes": {
+    "200": 706
+   }
+  },
+  "GET /users/buyers/:id": {
+   "n": 406,
+   "ok": 406,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.3,
+   "p95": 4.3,
+   "p99": 40,
+   "max": 58.5,
+   "codes": {
+    "200": 406
+   }
+  },
+  "PUT /users/buyers/:id": {
+   "n": 406,
+   "ok": 406,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.7,
+   "p95": 10.1,
+   "p99": 19.8,
+   "max": 23.6,
+   "codes": {
+    "200": 406
+   }
+  },
+  "GET /users/me/addresses": {
+   "n": 406,
+   "ok": 406,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.2,
+   "p95": 3.6,
+   "p99": 8.4,
+   "max": 75.7,
+   "codes": {
+    "200": 406
+   }
+  },
+  "POST /users/me/addresses": {
+   "n": 413,
+   "ok": 413,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.8,
+   "p95": 6.9,
+   "p99": 11.5,
+   "max": 89.2,
+   "codes": {
+    "201": 413
+   }
+  },
+  "PUT /users/me/addresses/:id": {
+   "n": 406,
+   "ok": 406,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.9,
+   "p95": 6.9,
+   "p99": 9.8,
+   "max": 26.4,
+   "codes": {
+    "200": 406
+   }
+  },
+  "GET /seller/products": {
+   "n": 203,
+   "ok": 159,
+   "expected": 44,
+   "limited": 0,
+   "err": 0,
+   "p50": 4,
+   "p95": 9.3,
+   "p99": 40,
+   "max": 61.5,
+   "codes": {
+    "200": 159,
+    "403": 44
+   }
+  },
+  "DELETE /users/me/addresses/:id": {
+   "n": 406,
+   "ok": 406,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.7,
+   "p95": 6.4,
+   "p99": 10.3,
+   "max": 89.6,
+   "codes": {
+    "200": 406
+   }
+  },
+  "POST /orders/:id/cancel": {
+   "n": 92,
+   "ok": 92,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6,
+   "p95": 14.4,
+   "p99": 23.5,
+   "max": 23.5,
+   "codes": {
+    "200": 92
+   }
+  },
+  "POST /ai/chat (seller)": {
+   "n": 201,
+   "ok": 201,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2414.2,
+   "p95": 2830.4,
+   "p99": 2911.8,
+   "max": 3163.9,
+   "codes": {
+    "200": 201
+   }
+  },
+  "POST /seller/orders/:id/deliver": {
+   "n": 183,
+   "ok": 174,
+   "expected": 9,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.4,
+   "p95": 22.2,
+   "p99": 143.3,
+   "max": 146.4,
+   "codes": {
+    "200": 174,
+    "422": 9
+   }
+  },
+  "WEB /products": {
+   "n": 182,
+   "ok": 182,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.5,
+   "p95": 21.6,
+   "p99": 51.3,
+   "max": 66.3,
+   "codes": {
+    "200": 182
+   }
+  },
+  "POST /payments/:id/confirm": {
+   "n": 209,
+   "ok": 209,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.8,
+   "p95": 11.7,
+   "p99": 21.3,
+   "max": 22.9,
+   "codes": {
+    "200": 209
+   }
+  },
+  "POST /orders (MOCK_CARD)": {
+   "n": 462,
+   "ok": 462,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 8.4,
+   "p95": 20.1,
+   "p99": 27.6,
+   "max": 47,
+   "codes": {
+    "201": 462
+   }
+  },
+  "WEB /": {
+   "n": 186,
+   "ok": 186,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.6,
+   "p95": 27,
+   "p99": 38.7,
+   "max": 64.6,
+   "codes": {
+    "200": 186
+   }
+  },
+  "POST /auth/register": {
+   "n": 42,
+   "ok": 42,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 75.1,
+   "p95": 98.1,
+   "p99": 143.1,
+   "max": 143.1,
+   "codes": {
+    "200": 42
+   }
+  },
+  "POST /auth/change-password": {
+   "n": 117,
+   "ok": 117,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 174.6,
+   "p95": 308.3,
+   "p99": 321.9,
+   "max": 379.5,
+   "codes": {
+    "200": 117
+   }
+  },
+  "POST /auth/register-seller-roles": {
+   "n": 77,
+   "ok": 77,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 82.1,
+   "p95": 152.6,
+   "p99": 177.3,
+   "max": 177.3,
+   "codes": {
+    "200": 77
+   }
+  },
+  "PUT /cart/items/:id (qty)": {
+   "n": 345,
+   "ok": 345,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.2,
+   "p95": 16.6,
+   "p99": 24.7,
+   "max": 34,
+   "codes": {
+    "200": 345
+   }
+  },
+  "POST /admin/accounts": {
+   "n": 11,
+   "ok": 11,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 72,
+   "p95": 123,
+   "p99": 123,
+   "max": 123,
+   "codes": {
+    "200": 11
+   }
+  },
+  "DELETE /cart/items/:id": {
+   "n": 345,
+   "ok": 345,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.7,
+   "p95": 6.8,
+   "p99": 10.1,
+   "max": 11.1,
+   "codes": {
+    "200": 345
+   }
+  },
+  "POST /checkout/preview (items)": {
+   "n": 345,
+   "ok": 345,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 4.9,
+   "p99": 9.5,
+   "max": 64.4,
+   "codes": {
+    "200": 345
+   }
+  },
+  "DELETE /cart": {
+   "n": 345,
+   "ok": 345,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.6,
+   "p95": 6.5,
+   "p99": 10.7,
+   "max": 50.5,
+   "codes": {
+    "200": 345
+   }
+  },
+  "POST /users/sellers": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.7,
+   "p95": 22.5,
+   "p99": 22.5,
+   "max": 22.5,
+   "codes": {
+    "200": 10
+   }
+  },
+  "GET /ops/outbox/:svc/dead": {
+   "n": 41,
+   "ok": 41,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.1,
+   "p95": 20.8,
+   "p99": 23.9,
+   "max": 23.9,
+   "codes": {
+    "200": 41
+   }
+  },
+  "GET /ops/incidents": {
+   "n": 100,
+   "ok": 100,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.2,
+   "p95": 5,
+   "p99": 48.6,
+   "max": 48.6,
+   "codes": {
+    "200": 100
+   }
+  },
+  "GET /ops/incidents/:id": {
+   "n": 100,
+   "ok": 100,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.3,
+   "p95": 4.9,
+   "p99": 6.6,
+   "max": 6.6,
+   "codes": {
+    "200": 100
+   }
+  },
+  "GET /seller/orders (staff)": {
+   "n": 77,
+   "ok": 77,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.2,
+   "p95": 15,
+   "p99": 67.4,
+   "max": 67.4,
+   "codes": {
+    "200": 77
+   }
+  },
+  "GET /ops/system/health": {
+   "n": 105,
+   "ok": 105,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.9,
+   "p95": 27.7,
+   "p99": 76.4,
+   "max": 145.7,
+   "codes": {
+    "200": 105
+   }
+  },
+  "POST /products": {
+   "n": 148,
+   "ok": 148,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.9,
+   "p95": 16.3,
+   "p99": 72.1,
+   "max": 81.8,
+   "codes": {
+    "200": 148
+   }
+  },
+  "PUT /products/:id": {
+   "n": 148,
+   "ok": 148,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.2,
+   "p95": 14.1,
+   "p99": 50.8,
+   "max": 56.5,
+   "codes": {
+    "200": 148
+   }
+  },
+  "PATCH /products/:id/status": {
+   "n": 296,
+   "ok": 296,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.1,
+   "p95": 22.7,
+   "p99": 90.1,
+   "max": 102.4,
+   "codes": {
+    "200": 296
+   }
+  },
+  "POST /seller/products/:id/inventory/adjust": {
+   "n": 148,
+   "ok": 148,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.2,
+   "p95": 22.4,
+   "p99": 79.1,
+   "max": 81.7,
+   "codes": {
+    "200": 148
+   }
+  },
+  "GET /seller/products/:id/inventory/ledger": {
+   "n": 148,
+   "ok": 148,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.5,
+   "p95": 6.5,
+   "p99": 56,
+   "max": 87.8,
+   "codes": {
+    "200": 148
+   }
+  },
+  "GET /seller/inventory/low-stock": {
+   "n": 148,
+   "ok": 148,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.2,
+   "p95": 7.3,
+   "p99": 28.5,
+   "max": 63.7,
+   "codes": {
+    "200": 148
+   }
+  },
+  "POST /orders/:id/return": {
+   "n": 190,
+   "ok": 169,
+   "expected": 21,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.4,
+   "p95": 14.4,
+   "p99": 24.6,
+   "max": 28.4,
+   "codes": {
+    "200": 169,
+    "422": 21
+   }
+  },
+  "POST /users/buyers": {
+   "n": 91,
+   "ok": 91,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.8,
+   "p95": 12.4,
+   "p99": 47.2,
+   "max": 47.2,
+   "codes": {
+    "200": 91
+   }
+  },
+  "GET /seller/orders (REFUND_REQUESTED)": {
+   "n": 106,
+   "ok": 106,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.1,
+   "p95": 7.8,
+   "p99": 33.1,
+   "max": 47.7,
+   "codes": {
+    "200": 106
+   }
+  },
+  "POST /seller/orders/:id/return/approve": {
+   "n": 82,
+   "ok": 82,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.3,
+   "p95": 11,
+   "p99": 22.2,
+   "max": 22.2,
+   "codes": {
+    "200": 82
+   }
+  },
+  "GET /admin/orders": {
+   "n": 42,
+   "ok": 42,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 12.4,
+   "p95": 20.3,
+   "p99": 66.8,
+   "max": 66.8,
+   "codes": {
+    "200": 42
+   }
+  },
+  "GET /admin/orders/:id": {
+   "n": 42,
+   "ok": 42,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 5,
+   "p99": 87.4,
+   "max": 87.4,
+   "codes": {
+    "200": 42
+   }
+  },
+  "GET /admin/payments": {
+   "n": 42,
+   "ok": 42,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 8.8,
+   "p95": 18.8,
+   "p99": 19.9,
+   "max": 19.9,
+   "codes": {
+    "200": 42
+   }
+  },
+  "GET /admin/payments/:id": {
+   "n": 42,
+   "ok": 42,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.7,
+   "p95": 4.2,
+   "p99": 4.8,
+   "max": 4.8,
+   "codes": {
+    "200": 42
+   }
+  },
+  "GET /admin/payments (SUCCEEDED)": {
+   "n": 42,
+   "ok": 42,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.7,
+   "p95": 8.6,
+   "p99": 11.9,
+   "max": 11.9,
+   "codes": {
+    "200": 42
+   }
+  },
+  "WEB /cart": {
+   "n": 171,
+   "ok": 171,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 13.3,
+   "p95": 27.2,
+   "p99": 63.5,
+   "max": 94.8,
+   "codes": {
+    "200": 171
+   }
+  },
+  "POST /payments/:id/confirm (declined)": {
+   "n": 90,
+   "ok": 90,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.8,
+   "p95": 14.5,
+   "p99": 24.9,
+   "max": 24.9,
+   "codes": {
+    "200": 90
+   }
+  },
+  "POST /orders (MOCK_BANK_TRANSFER)": {
+   "n": 57,
+   "ok": 57,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 8.5,
+   "p95": 15,
+   "p99": 24.3,
+   "max": 24.3,
+   "codes": {
+    "201": 57
+   }
+  },
+  "POST /orders (MOCK_WALLET)": {
+   "n": 102,
+   "ok": 102,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 8.4,
+   "p95": 17.3,
+   "p99": 29.3,
+   "max": 89.1,
+   "codes": {
+    "201": 102
+   }
+  },
+  "POST /ai/chat (operator)": {
+   "n": 55,
+   "ok": 55,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2328.9,
+   "p95": 2754.9,
+   "p99": 2872.6,
+   "max": 2872.6,
+   "codes": {
+    "200": 55
+   }
+  },
+  "GET /ops/queries": {
+   "n": 76,
+   "ok": 76,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.7,
+   "p95": 3.3,
+   "p99": 25,
+   "max": 25,
+   "codes": {
+    "200": 76
+   }
+  },
+  "GET /ops/queries/:name": {
+   "n": 76,
+   "ok": 76,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.2,
+   "p95": 15.5,
+   "p99": 27.8,
+   "max": 27.8,
+   "codes": {
+    "200": 76
+   }
+  },
+  "POST /orders/:id/confirm-received": {
+   "n": 90,
+   "ok": 90,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.3,
+   "p95": 9.2,
+   "p99": 11.2,
+   "max": 11.2,
+   "codes": {
+    "200": 90
+   }
+  },
+  "GET /seller/analytics/timeseries": {
+   "n": 83,
+   "ok": 83,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 38,
+   "p99": 77.4,
+   "max": 77.4,
+   "codes": {
+    "200": 83
+   }
+  },
+  "GET /seller/analytics/summary": {
+   "n": 96,
+   "ok": 96,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 36.2,
+   "p99": 89.3,
+   "max": 89.3,
+   "codes": {
+    "200": 96
+   }
+  },
+  "POST /payments/:id/confirm (3DS)": {
+   "n": 110,
+   "ok": 110,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.3,
+   "p95": 15.5,
+   "p99": 24.4,
+   "max": 27.1,
+   "codes": {
+    "200": 110
+   }
+  },
+  "POST /payments/:id/confirm (otp)": {
+   "n": 110,
+   "ok": 110,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.3,
+   "p95": 6.6,
+   "p99": 10.3,
+   "max": 22.1,
+   "codes": {
+    "200": 110
+   }
+  },
+  "GET /seller/analytics/top-products": {
+   "n": 60,
+   "ok": 60,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 63.1,
+   "p99": 75.2,
+   "max": 75.2,
+   "codes": {
+    "200": 60
+   }
+  },
+  "POST /payments/:id/confirm (wallet/bank)": {
+   "n": 158,
+   "ok": 158,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 4.4,
+   "p95": 11.1,
+   "p99": 24.1,
+   "max": 33,
+   "codes": {
+    "200": 158
+   }
+  },
+  "POST /ai/chat (admin)": {
+   "n": 79,
+   "ok": 79,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2430.8,
+   "p95": 2844.1,
+   "p99": 3173,
+   "max": 3173,
+   "codes": {
+    "200": 79
+   }
+  },
+  "GET /ops/ai/kill": {
+   "n": 31,
+   "ok": 31,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.7,
+   "p95": 3.2,
+   "p99": 3.6,
+   "max": 3.6,
+   "codes": {
+    "200": 31
+   }
+  },
+  "GET /ops/rca/runs": {
+   "n": 31,
+   "ok": 31,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.3,
+   "p95": 24.8,
+   "p99": 34.7,
+   "max": 34.7,
+   "codes": {
+    "200": 31
+   }
+  },
+  "GET /ops/playbooks": {
+   "n": 27,
+   "ok": 27,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.6,
+   "p95": 2.5,
+   "p99": 5.3,
+   "max": 5.3,
+   "codes": {
+    "200": 27
+   }
+  },
+  "GET /ops/audit": {
+   "n": 50,
+   "ok": 50,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2,
+   "p95": 4,
+   "p99": 7.8,
+   "max": 7.8,
+   "codes": {
+    "200": 50
+   }
+  },
+  "GET /ops/actions": {
+   "n": 50,
+   "ok": 50,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.7,
+   "p95": 2.9,
+   "p99": 5.4,
+   "max": 5.4,
+   "codes": {
+    "200": 50
+   }
+  },
+  "POST /seller/orders/:id/cancel": {
+   "n": 24,
+   "ok": 23,
+   "expected": 1,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.8,
+   "p95": 13.2,
+   "p99": 16.6,
+   "max": 16.6,
+   "codes": {
+    "200": 23,
+    "422": 1
+   }
+  },
+  "GET /admin/analytics/summary": {
+   "n": 16,
+   "ok": 16,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.3,
+   "p95": 97.8,
+   "p99": 97.8,
+   "max": 97.8,
+   "codes": {
+    "200": 16
+   }
+  },
+  "GET /seller/analytics/funnel": {
+   "n": 29,
+   "ok": 29,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3,
+   "p95": 55.4,
+   "p99": 57.1,
+   "max": 57.1,
+   "codes": {
+    "200": 29
+   }
+  },
+  "GET /ops/proposals": {
+   "n": 49,
+   "ok": 49,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 1.9,
+   "p95": 2.9,
+   "p99": 4.2,
+   "max": 4.2,
+   "codes": {
+    "200": 49
+   }
+  },
+  "GET /admin/analytics/payments": {
+   "n": 9,
+   "ok": 9,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.1,
+   "p95": 75.9,
+   "p99": 75.9,
+   "max": 75.9,
+   "codes": {
+    "200": 9
+   }
+  },
+  "GET /admin/analytics/top-products": {
+   "n": 6,
+   "ok": 6,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 78.6,
+   "p95": 85.4,
+   "p99": 85.4,
+   "max": 85.4,
+   "codes": {
+    "200": 6
+   }
+  },
+  "POST /admin/payments/:id/refund": {
+   "n": 13,
+   "ok": 13,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.8,
+   "p95": 13,
+   "p99": 13,
+   "max": 13,
+   "codes": {
+    "200": 13
+   }
+  },
+  "GET /admin/analytics/timeseries": {
+   "n": 14,
+   "ok": 14,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3,
+   "p95": 90.7,
+   "p99": 90.7,
+   "max": 90.7,
+   "codes": {
+    "200": 14
+   }
+  },
+  "GET /seller/analytics/low-stock": {
+   "n": 17,
+   "ok": 17,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.8,
+   "p95": 38.1,
+   "p99": 38.1,
+   "max": 38.1,
+   "codes": {
+    "200": 17
+   }
+  },
+  "GET /admin/accounts": {
+   "n": 26,
+   "ok": 26,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.5,
+   "p95": 3.6,
+   "p99": 18.3,
+   "max": 18.3,
+   "codes": {
+    "200": 26
+   }
+  },
+  "GET /admin/categories": {
+   "n": 26,
+   "ok": 26,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 14.5,
+   "p95": 25.3,
+   "p99": 28.8,
+   "max": 28.8,
+   "codes": {
+    "200": 26
+   }
+  },
+  "PATCH /admin/products/:id/status": {
+   "n": 26,
+   "ok": 26,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 3.9,
+   "p95": 8.5,
+   "p99": 21.3,
+   "max": 21.3,
+   "codes": {
+    "200": 26
+   }
+  },
+  "GET /admin/analytics/funnel": {
+   "n": 10,
+   "ok": 10,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 2.9,
+   "p95": 137.9,
+   "p99": 137.9,
+   "max": 137.9,
+   "codes": {
+    "200": 10
+   }
+  },
+  "GET /admin/analytics/search-terms": {
+   "n": 2,
+   "ok": 2,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 39.7,
+   "p95": 39.7,
+   "p99": 39.7,
+   "max": 39.7,
+   "codes": {
+    "200": 2
+   }
+  },
+  "POST /admin/categories": {
+   "n": 8,
+   "ok": 8,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 9,
+   "p95": 20.5,
+   "p99": 20.5,
+   "max": 20.5,
+   "codes": {
+    "201": 8
+   }
+  },
+  "POST /seller/orders/:id/return/reject": {
+   "n": 20,
+   "ok": 20,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 6.2,
+   "p95": 14,
+   "p99": 14,
+   "max": 14,
+   "codes": {
+    "200": 20
+   }
+  },
+  "GET /admin/analytics/low-stock": {
+   "n": 3,
+   "ok": 3,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 58,
+   "p95": 60.5,
+   "p99": 60.5,
+   "max": 60.5,
+   "codes": {
+    "200": 3
+   }
+  },
+  "GET /admin/analytics/data-health": {
+   "n": 1,
+   "ok": 1,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 70.7,
+   "p95": 70.7,
+   "p99": 70.7,
+   "max": 70.7,
+   "codes": {
+    "200": 1
+   }
+  },
+  "GET /admin/analytics/traffic": {
+   "n": 1,
+   "ok": 1,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 336.2,
+   "p95": 336.2,
+   "p99": 336.2,
+   "max": 336.2,
+   "codes": {
+    "200": 1
+   }
+  },
+  "(vào) DELETE /admin/accounts/:id": {
+   "n": 28,
+   "ok": 28,
+   "expected": 0,
+   "limited": 0,
+   "err": 0,
+   "p50": 5.9,
+   "p95": 6.9,
+   "p99": 14.7,
+   "max": 14.7,
+   "codes": {
+    "200": 28
+   }
+  }
+ },
+ "areas": {
+  "auth-service": 3378,
+  "api-gateway": 44838,
+  "user-service": 3634,
+  "product-service": 9284,
+  "order-service": 22601,
+  "frontend": 1890,
+  "ops-service": 1068,
+  "analytics-service": 3271,
+  "ai-agent": 1380,
+  "payment-service": 2982
+ },
+ "counters": {
+  "journeys": 7170,
+  "orders": 1431,
+  "shipped": 352,
+  "returns": 189,
+  "refunds": 108,
+  "ai_done": 1380,
+  "ai_err": 0,
+  "vu_fail": 0
+ },
+ "ai": {
+  "ttfb": {
+   "n": 1006,
+   "p50": 7.3,
+   "p95": 29.2,
+   "max": 183
+  },
+  "total": {
+   "n": 1006,
+   "p50": 2617.9,
+   "p95": 3023.6,
+   "max": 3416.4
+  }
+ },
+ "payment": {
+  "lag": {
+   "n": 619,
+   "p50": 503.9,
+   "p95": 1006.3,
+   "max": 1039.6
+  },
+  "timeoutsOver8s": 0
+ },
+ "loadgen": {
+  "eventLoopMs": {
+   "mean": 10.2,
+   "p99": 12.4,
+   "max": 26.8
+  },
+  "hostCpuPct": {
+   "avg": 48.5,
+   "max": 61.9,
+   "samples": 44
+  },
+  "hostMemAvailableMinGiB": 10.6
+ },
+ "valid": true,
+ "missing": []
+}

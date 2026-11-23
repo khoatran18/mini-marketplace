@@ -473,3 +473,69 @@ Người dùng đồng ý (thăm dò tối đa 3 lần, sinh câu tối đa 20 l
 - Test: `tests/test_rca_conclusion.py` (5), sửa 2 test cũ về đếm truy vấn lỗi, thêm 1 test hỗn hợp; toàn bộ 351 test đạt.
 - Chưa làm: RCA dùng model thật (role `rca` không có bản giả) nên kết luận tạm chỉ kiểm bằng test, chưa chạy lại phiên #125.
 
+### 16.45 Agent có thể điều tra nguyên nhân tầng hạ tầng chưa: phân tích sau vụ Postgres hết kết nối (2026-11-23, không gọi LLM)
+
+**Bối cảnh.** Khi điều tra R14/R15 (`docs/planning/01_OPEN_ISSUES.md`), người điều tra phải dùng dữ liệu Prometheus/Loki cũ: log Postgres `FATAL: sorry, too many clients already` (0 lần ở đóng 100-500, ~2500+ lần ở đóng 800/1000 và mở 30), số phiên `active`/`idle in transaction`, `pg_locks`, nhóm câu SQL theo thời gian chạy. Câu hỏi: agent RCA hay operator/admin hỏi qua chat có làm được như vậy không?
+
+**Phân biệt hai đường dùng.**
+- **RCA** chỉ chạy khi có sự cố: alert critical tự vào điều tra (`auto_critical`, tối đa `daily_auto_runs` 10 phiên/ngày) hoặc operator bấm "Điều tra" trên `/admin/incidents`. Đọc bằng token hệ thống chỉ-đọc (`sys`, ADR-47), chỉ gọi GET `/ops/*`.
+- **Chat admin/operator** dùng được bất cứ lúc nào, không cần sự cố: hai role dùng chung `opsTools` (`ops_metrics_query`, `ops_list_incidents`, `ops_outbox_dead`, `ops_system_health`, playbook...); admin chỉ đọc, operator thêm một đề xuất `ops_action`. Hỏi kiểu "sao hệ thống chậm?" chạy cùng công cụ đọc như RCA nhưng với trần nhỏ hơn.
+
+**Danh mục đọc hiện có** (`services/ops-service/internal/queries/queries.go`, truy vấn tức thời, tham số `window` tính lùi từ bây giờ): Prometheus (alert đang bắn, up/ready/replica, tỉ lệ và độ trễ gateway/gRPC, lỗi gRPC, circuit breaker, outbox pending/oldest/dead, DLQ, lag consumer Kafka, `db_pool_wait`, bộ nhớ và tốc độ tăng, đĩa, hạ tầng up, frontend qua Traefik, các chỉ số AI) và Loki (`logs_errors` của 8 service ứng dụng, `logs_by_request`).
+
+**Thiếu so với vụ R15 (thiếu công cụ là rào cản chính, chạm trần là rào cản thứ hai).**
+1. Log hạ tầng: `logs_errors` có enum `Services` (8 service), không có `postgres`, `kafka`, `redis`, `traefik`; không có bộ lọc theo mẫu chữ. Dòng FATAL gốc nằm ở log Postgres.
+2. Kết nối Postgres: `pg_stat_activity_count` (theo `state`: active, idle, idle in transaction) và `pg_settings_max_connections` có trong Prometheus nhưng không có truy vấn trong danh mục; `db_pool_wait` chỉ cho thấy phía ứng dụng chờ kết nối.
+3. CPU container theo service (chỉ có `memory_ratio`): không thấy "Postgres 103% CPU của giới hạn".
+4. Câu SQL chậm: không có truy vấn đếm theo câu và thời gian (nguồn là dòng `SLOW SQL >= 200ms` + dòng câu lệnh của gorm trong log ứng dụng).
+5. Mốc thời gian: Prometheus chỉ có `/api/v1/query` (tức thời); điều tra sự cố đã qua cần `query_range` với `start/end`.
+6. Mẫu quét 15 s bỏ sót đỉnh ngắn (vụ này: Prometheus thấy đỉnh 159/200 trong khi Postgres đã từ chối kết nối); log là nguồn đáng tin cho lỗi tức thời, nên truy vấn log hạ tầng quan trọng hơn gauge.
+
+**Trần hiện tại** (`services/ai-agent/configs/config.*.yaml`). RCA: `max_rounds` 3, `max_queries` 25, `collect_tool_calls` 12 mỗi vòng, `collect_model_calls` 12, `max_seconds` 300, `max_tool_errors` 3. Chat: `max_model_calls` 6, `max_tool_calls` 8, `turn_timeout_sec` 60, `token_budget_by_persona` admin/operator 45000 mỗi lượt, `daily_tokens` admin/operator 400000 (tối đa khoảng 9 lượt đầy mỗi ngày), kết quả tool cắt ở 6000 ký tự/20 phần tử. Giới hạn tốc độ gateway cho AI: `AI_RATE_LIMIT_PER_MINUTE` 20, `AI_USER_RATE_LIMIT_PER_MINUTE` 10 (đã nâng trong overlay perf, không phải ở production). Một lần điều tra như vụ R15 cần khoảng 20-25 truy vấn: vừa chạm `max_queries` 25 của RCA và vượt xa 8 lượt tool của một lượt chat (người dùng phải hỏi nối tiếp nhiều lượt).
+
+**Đề xuất (CHƯA LÀM, thứ tự ưu tiên).**
+1. Thêm truy vấn Prometheus: `pg_connections` (`sum by (state)(pg_stat_activity_count)` cùng `pg_settings_max_connections`), `container_cpu_ratio` theo service (CPU/giới hạn, dùng cAdvisor), `pg_locks_by_mode`.
+2. Mở Loki cho `postgres`, `kafka`, `redis`, `traefik`, `vector`; thêm tham số `contains` (đối chiếu mẫu cố định, không nhận LogQL tự do để giữ allowlist) vd `too many clients`, `deadlock`, `SLOW SQL`.
+3. Truy vấn "câu SQL chậm theo nhóm" (tổng/trung bình/lớn nhất theo mẫu câu, từ log ứng dụng).
+4. Tham số `at`/`from`-`to` cho truy vấn Prometheus và Loki (giới hạn dải tối đa, vd 24 giờ) để điều tra sự cố đã qua.
+5. Playbook mới "postgres-connections" (ground truth: triệu chứng 500/503 hàng loạt, FATAL ở Postgres, `db_pool_wait` tăng; kiểm `pg_connections`; xử lý: trần pool `shared/dbpool`, tính lại ngân sách, không nâng `max_connections` bừa) và ca eval cho nó (22 ca RCA hiện từ `scripts/e2e/resilience.sh`).
+6. Chỉ sau khi có công cụ mới tính trần: chat operator `max_tool_calls` 8 -> 12, `token_budget_by_persona.operator` 45000 -> 60000, `daily_tokens.operator` 400000 -> 800000. Không nâng trước vì tăng trần mà thiếu công cụ chỉ đốt token; nâng toàn cục cũng không cần cho buyer/seller.
+7. Số request tới nhà cung cấp mô hình không phải nút thắt ở đây (một lượt chat tối đa 6 lần gọi mô hình); nếu chạy nhiều phiên RCA đồng thời (`max_concurrent` 2) thì xem hạn mức của chính nhà cung cấp và `daily_tokens` của RCA (đang 0 = không giới hạn).
+
+**Chưa kiểm chứng.** Chưa chạy RCA trên sự cố này (cần mô hình thật, tốn tiền, phải được duyệt riêng); các nhận định về việc đủ/thiếu trần dựa trên đọc cấu hình và số truy vấn mình phải làm, không phải đo.
+
+**Danh sách việc cần làm (từ §16.45, CHƯA LÀM; mỗi mục kèm chỗ sửa và cách kiểm, không gọi LLM trừ khi nói khác).**
+
+| # | Việc | Chỗ sửa | Kiểm / tiêu chí xong |
+|---|---|---|---|
+| 1 | Truy vấn Prometheus mới: `pg_connections` (đang dùng theo `state` + `pg_settings_max_connections`), `container_cpu_ratio` (CPU/giới hạn theo service, cAdvisor), `pg_locks_by_mode` | `services/ops-service/internal/queries/queries.go` (danh mục), mô tả trong `opsQueryHelp` ở `services/api-gateway/internal/agent/scopes.go` | test bảng truy vấn của ops-service; chạy `go run ./cmd/dump-agent-tools > ../ai-agent/evals/tools.snapshot.json` (nếu không `TestEvalToolSnapshotIsCurrent` đỏ); nhãn thân thiện trong `ai-agent/.../runtime/events.py` nếu đổi tên tool |
+| 2 | Log hạ tầng: enum nguồn log riêng (`postgres`, `kafka`, `redis`, `traefik`, `vector` ngoài 8 service) và tham số `contains` (chuỗi cố định, bộ ký tự an toàn, thoát ký tự khi ghép LogQL; KHÔNG nhận LogQL tự do) | `queries.go` (`logs_errors` hoặc truy vấn mới `logs_infra`), `scopes.go` | test chống tiêm LogQL (dấu nháy, `\`, `|~`, xuống dòng); `TestEveryQueryParamOfAToolIsReadByAHandler` |
+| 3 | Nhóm SQL chậm: trả về theo mẫu câu (số lần, trung bình, lớn nhất) từ dòng `SLOW SQL` + dòng câu lệnh của gorm; làm phía ops-service (chuẩn hoá số/chuỗi thành `?`) vì LogQL khó gộp | `queries.go` hoặc gói mới trong ops-service | test với log mẫu thật lấy từ vụ R15 (có mã màu ANSI `\x1b[..m`, câu tra cứu `IN (...)`) |
+| 4 | Mốc thời gian cho truy vấn: `from`/`to` (RFC3339, dải tối đa 24 giờ) dùng `query_range` của Prometheus và Loki; mặc định vẫn "tính lùi từ bây giờ" | `queries.go` (Runner), `scopes.go` | test giới hạn dải, từ chối `to` < `from`, dải quá dài |
+| 5 | Alert mới `PostgresConnectionsHigh` (`sum(pg_stat_activity_count) / pg_settings_max_connections > 0.8` trong 1 phút, mức warning) và playbook `docs/playbooks/postgres-connections.yml` (triệu chứng: 500/503 hàng loạt, `FATAL ... too many clients`, `db_pool_wait` tăng; chẩn đoán qua truy vấn mục 1-2; xử lý: trần `shared/dbpool`, tính lại ngân sách trong `docs/design/09_PERF_RESOURCES.md`, không nâng `max_connections` bừa) | `deploy/prometheus/alerts.yml`, `docs/playbooks/` | `scripts/check-playbooks.sh` (mọi alert phải có playbook); nạp lại Prometheus |
+| 6 | Ca eval cho RCA/operator: sự cố "Postgres hết kết nối" với thế giới dữ liệu giả có `pg_connections` gần trần + log FATAL; thêm ca `down` tương ứng | `services/ai-agent/evals/cases/`, dữ liệu giả của gateway giả (§16.41), `scripts/e2e/resilience.sh` cho ground truth | `run_evals.py` không `--live` (tĩnh); chạy `--live` cần được duyệt riêng, nêu số lần gọi |
+| 7 | Trần chat operator: `max_tool_calls` 8 -> 12, `token_budget_by_persona.operator` 45000 -> 60000, `daily_tokens.operator` 400000 -> 800000; chỉ SAU mục 1-4, và cả HAI file config; theo §16.43 mục B thì trần chat đã là lý do "chưa tổng hợp xong trong giới hạn" ở eval hy4, nên đo lại bằng eval (live, cần duyệt) trước khi chốt | `services/ai-agent/configs/config.dev.yaml` + `config.prod.yaml` | eval `propose` của operator (4 ca `operator-134..137`) trước/sau; không sửa prompt |
+| 8 | Cập nhật tài liệu: `docs/design/04_API_REFERENCE.md` (tham số mới), `docs/instruction/03_RUNBOOK.md` (mục Postgres hết kết nối, §5/§6), `CLAUDE.md` (tên tool mới nếu cần) | | `check-playbooks.sh` OK |
+
+Thứ tự đề nghị: 1 -> 2 -> 5 (alert + playbook, hữu ích cả khi chưa có RCA) -> 4 -> 3 -> 6 -> 7 -> 8. Mục 1, 2, 5 gỡ phần lớn khoảng trống của vụ R15; mục 4 cần để điều tra sự cố đã qua; mục 7 chỉ khi đo cho thấy trần là rào cản thật.
+
+### 16.46 Thông báo sự cố: Alertmanager, Grafana hay ops-service (2026-11-23, phân tích, không gọi LLM, chưa làm)
+
+**Hiện trạng.** Luồng duy nhất: luật Prometheus (`deploy/prometheus/alerts.yml`, 25 luật: 5 `critical`, 20 `warning`) -> poller của ops-service hỏi `/api/v1/alerts` mỗi 30 s (`OPS_POLL_INTERVAL_SEC`), `Store.Observe` mở/đóng sự cố và khử trùng theo `DedupeKey` -> playbook ghép theo `alertname` (`triggers.alerts` trong `docs/playbooks/*.yml`, `check-playbooks.sh` ép đủ) -> RCA `auto_critical` cho cảnh báo `critical`. Người biết sự cố bằng cách mở `/admin/incidents` (kéo, không đẩy). Chưa có Alertmanager (ADR-12, ADR-ops "poller đủ cho một máy"). Grafana chưa có luật cảnh báo nào (`deploy/grafana` chỉ dashboard + datasource); ngưỡng chỉ tô màu panel.
+
+**Alertmanager là gì và vì sao chưa có.** Prometheus chỉ tính luật; Alertmanager gộp, khử trùng, định tuyến (Slack/email/điện thoại), silence, ức chế, nhắc lại. Dự án để ops-service đóng vai "người nhận cảnh báo" nên chưa cần. Hệ quả: có sự cố nhưng không ai bị gọi.
+
+**Đã có sẵn:** `services/ops-service/internal/notify/notify.go` gửi webhook (Slack/Discord) cho `incident_opened` và `proposal_created`, đọc từ bảng audit theo id, tắt khi `OPS_NOTIFY_WEBHOOK_URL` rỗng, nội dung chỉ gồm tên cảnh báo, id, người tạo (cố ý, tránh lộ dữ liệu log). RCA đã vào điều tra sự cố `critical`, kết luận được đối chiếu bằng chứng, soạn đề xuất nháp, người xác nhận bằng JWT (cần `AI_RCA_ENABLED`, `AI_SYSTEM_KEY`, mô hình thật).
+
+**Tránh thông báo trùng.** Nếu cả Alertmanager và ops-service cùng gửi người thì mỗi sự cố có hai tin. Chỉ một nơi được gửi người:
+- A (đề xuất): chỉ ops-service gửi; không Alertmanager. Một chuỗi tin cho mỗi sự cố (khóa = id sự cố): mở sự cố; khi RCA xong thêm kết luận ngắn + đề xuất nháp cần duyệt; khi đóng một dòng "đã hết". Chuỗi tin cần bot token thay vì webhook đơn giản (chưa thử).
+- B: chỉ Alertmanager gửi: mất tóm tắt/đề xuất, ops-service không được gửi.
+- C: Alertmanager đứng trước nhưng chỉ gửi webhook vào ops-service (ops-service chuyển từ poll sang nhận webhook); có gộp/silence lẫn tin giàu ngữ cảnh nhưng thêm một thành phần.
+Chỉ tiến lên C khi cần định tuyến phức tạp/nhiều đội/nhiều kênh.
+
+**Việc cần làm cho A (chưa làm).** (1) Thêm sự kiện `rca_concluded`, `incident_resolved` vào `notify`, nội dung có tóm tắt qua bước lọc dữ liệu nhạy cảm. (2) Chống ồn: gộp cùng gốc, giới hạn tần suất, giờ im lặng, `critical` gửi ngay còn `warning` gom theo giờ. (3) Xác nhận và leo thang (đã nhận chưa; chưa ai nhận sau N phút thì báo kênh khác). (4) Lưu mốc đã gửi và thử lại khi lỗi (hiện khởi động lại thì mất sự kiện lúc ngừng). (5) Kênh ngoài Slack: email (SMTP), Telegram. (6) Duyệt ngay trong tin nhắn chỉ khi có chữ ký chống giả mạo và quyền (hành động vận hành, cân nhắc kỹ). (7) Container ops-service phải ra được internet; URL webhook là bí mật, ngoài git.
+
+**Grafana có nên dùng làm nguồn cảnh báo?** Hiện không. Luật Prometheus trong git, có test và ép khớp playbook; gắn trực tiếp playbook/RCA/đề xuất/kiểm toán. Grafana 11 có bộ định tuyến sẵn (contact point, notification policy, silence) nhưng phải viết lại 25 luật và giữ đồng bộ với `alerts.yml` (rủi ro lệch và báo trùng). Grafana không có playbook và không chạy agent: nếu dùng chỉ là nguồn báo "cảnh báo X đang bắn" và nơi gửi tin; ops-service ghép `alertname` với playbook, `ai-agent` chạy RCA. Ước lượng tích hợp khoảng 1 ngày: route webhook nhận cảnh báo trong ops-service (vd `POST /alerts/grafana`, token riêng) đổi `firing/resolved` sang `store.Alert{Name, Labels, Annotations}` rồi gọi cùng `Observe`; đặt `alertname`/`severity` khớp playbook; contact point webhook bằng provisioning; xử lý "resolved" (poller hiện tự đóng khi cảnh báo biến mất, webhook phải đóng theo `resolved`). Chi phí thật là duy trì hai nơi định nghĩa luật. Chưa thử cách Grafana 11.3 nhận cảnh báo từ luật Prometheus qua Alertmanager nội bộ.
+
+**Trong thực tế.** Phổ biến nhất là đẩy thông báo: nguồn (Prometheus, Datadog, CloudWatch...) -> lớp định tuyến/trực (Alertmanager, PagerDuty, Opsgenie) gọi người theo lịch trực có xác nhận và leo thang; dashboard chỉ để xem bối cảnh. Công cụ "SRE có AI" đời mới đưa tóm tắt và gợi ý playbook ngay trong thông báo và duyệt trong chat. Nói theo hiểu biết chung, không kiểm chứng từng hãng. Alertmanager (định tuyến) và lớp sự cố của dự án (ngữ cảnh, playbook, RCA, kiểm toán) không loại trừ nhau.
+

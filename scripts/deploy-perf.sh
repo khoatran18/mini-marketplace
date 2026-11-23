@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CHỈ CHO THỬ TẢI: giống scripts/deploy.sh nhưng gộp thêm deploy/<stack>.perf.yml (giới hạn tài nguyên, replica, giới hạn tốc độ nâng cao, IP giả).
-# Usage: scripts/deploy-perf.sh [infra|services|all]    Trở lại bình thường: scripts/deploy.sh services (và infra).
+# Usage: scripts/deploy-perf.sh [infra|obs|services|all]   (all = infra + obs + services)    Trở lại bình thường: scripts/deploy.sh services (và infra).
 # `docker compose config` in `cpus: 1.5` dạng số còn `docker stack deploy` đòi chuỗi, nên bọc lại bằng sed.
 # Chỉ hỗ trợ PUBLIC_SCHEME=http (services.perf.yml chép lệnh Traefik bản HTTP).
 set -euo pipefail
@@ -35,7 +35,15 @@ print('FAKE_OK' if not bad else 'REAL:' + ','.join(bad))" 2>&1 | tail -1) || tru
 case "${1:-all}" in
   infra)    render infra | docker stack deploy --detach=true -c - marketplace-infra ;;
   services) render services | docker stack deploy --detach=true -c - marketplace; verify_fake_models ;;
+  obs)      render observability | docker stack deploy --detach=true -c - marketplace-obs ;;
   all)      render infra | docker stack deploy --detach=true -c - marketplace-infra
+            render observability | docker stack deploy --detach=true -c - marketplace-obs
             render services | docker stack deploy --detach=true -c - marketplace; verify_fake_models ;;
-  *) echo "usage: $0 [infra|services|all]"; exit 1 ;;
+  *) echo "usage: $0 [infra|obs|services|all]"; exit 1 ;;
 esac
+
+# Thử tải cần stack quan sát (Prometheus/Loki): không có thì /ops/queries trả 502/503, không có metric lag/log để điều tra và máy nhẹ hơn
+# nên không so sánh được với các lượt có nó. Chỉ cảnh báo (không dừng).
+if ! docker stack ls --format '{{.Name}}' | grep -qx marketplace-obs; then
+  echo "CẢNH BÁO: chưa có stack marketplace-obs (Prometheus/Loki/Grafana). Chạy ./scripts/deploy-perf.sh obs (hoặc ./scripts/deploy.sh observability) TRƯỚC khi đo, nếu không kết quả không hợp lệ." >&2
+fi

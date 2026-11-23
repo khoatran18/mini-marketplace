@@ -39,6 +39,23 @@ trap 'kill $sampler 2>/dev/null || true' EXIT
 pin=(); [ -n "$cpus" ] && pin=(taskset -c "$cpus")
 rc=0; "${pin[@]}" node scripts/load/ccu.mjs "$@" --out="$out/$label.json" > "$out/$label.txt" 2>&1 || rc=$?
 kill $sampler 2>/dev/null || true; wait $sampler 2>/dev/null || true
+# Số lần container bị throttle (chạm trần CPU) trong lượt đo: chính xác hơn docker stats vì docker stats lấy mẫu cách quãng nên che các đợt chạm trần ngắn.
+prom=$(docker ps -q -f name=marketplace-obs_prometheus | head -1)
+if [ -n "$prom" ]; then
+  win=$(( $(date +%s) - $(head -1 "$out/$label.stats.txt") + 5 ))
+  q="sum by (container_label_com_docker_swarm_service_name)(increase(container_cpu_cfs_throttled_periods_total{container_label_com_docker_swarm_service_name!=\"\"}[${win}s])) / sum by (container_label_com_docker_swarm_service_name)(increase(container_cpu_cfs_periods_total{container_label_com_docker_swarm_service_name!=\"\"}[${win}s]))"
+  docker exec "$prom" wget -qO- "http://localhost:9090/api/v1/query?query=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$q")" > "$out/$label.throttle.json" 2>/dev/null || true
+  python3 - "$out/$label.throttle.json" <<'PY' | tee -a "$out/$label.txt" || true
+import json, sys
+try:
+    r = json.load(open(sys.argv[1]))["data"]["result"]
+except Exception:
+    sys.exit(0)
+rows = sorted(((float(x["value"][1]), x["metric"].get("container_label_com_docker_swarm_service_name", "?")) for x in r), reverse=True)
+hit = [f"{n.split('_',1)[-1]} {v*100:.1f}%" for v, n in rows if v >= 0.01]
+print("THROTTLE (% chu kỳ CPU bị chặn vì chạm trần, >=1%): " + (", ".join(hit) if hit else "không service nào"))
+PY
+fi
 if [ -f "$out/$label.json" ]; then python3 scripts/load/perf_summary.py "$out/$label.stats.txt" "$out/$label.json" "$out/$label.config.json" "$out/$label.resources.json"; fi
 grep -E "^CHẾ ĐỘ MỞ|^MÁY TẢI|^TOÀN MÁY|ổn định [0-9]+ s|^AI:|^Thanh toán|PHÉP ĐO|THIẾU ĐỘ PHỦ" "$out/$label.txt" || true
 exit $rc

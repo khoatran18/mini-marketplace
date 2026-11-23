@@ -31,11 +31,11 @@ services:
       - --entrypoints.web.forwardedHeaders.trustedIPs=10.0.0.0/24
     deploy:
       resources:
-        limits: {cpus: "1", memory: 512M}
+        limits: {cpus: "0.7", memory: 512M}
   frontend:
     deploy:
       resources:
-        limits: {cpus: "1", memory: 512M}
+        limits: {cpus: "0.7", memory: 512M}
   api-gateway:
     environment:
       TRUSTED_PROXIES: 10.0.0.0/24,10.0.1.0/24
@@ -49,10 +49,10 @@ services:
     deploy:
       replicas: 2
       resources:
-        limits: {cpus: "1", memory: 512M}
+        limits: {cpus: "0.6", memory: 512M}
   auth-service:
     deploy:
-      replicas: 3
+      replicas: 5
       resources:
         limits: {cpus: "1", memory: 384M}
   product-service:
@@ -61,27 +61,27 @@ services:
       KAFKA_CONSUMER_WORKERS: "3"
     deploy:
       resources:
-        limits: {cpus: "1.5", memory: 384M}
+        limits: {cpus: "0.7", memory: 384M}
   order-service:
     deploy:
       resources:
-        limits: {cpus: "1.5", memory: 384M}
+        limits: {cpus: "0.8", memory: 384M}
   user-service:
     deploy:
       resources:
-        limits: {cpus: "0.5", memory: 256M}
+        limits: {cpus: "0.2", memory: 256M}
   payment-service:
     deploy:
       resources:
-        limits: {cpus: "0.5", memory: 256M}
+        limits: {cpus: "0.4", memory: 256M}
   analytics-service:
     deploy:
       resources:
-        limits: {cpus: "0.5", memory: 256M}
+        limits: {cpus: "0.3", memory: 256M}
   ops-service:
     deploy:
       resources:
-        limits: {cpus: "0.5", memory: 96M}
+        limits: {cpus: "0.2", memory: 96M}
   ai-agent:
     environment:
       # Mô hình GIẢ có độ trễ (ttft 800 ms, 60 token/s; profile trong services/ai-agent/configs/config.prod.yaml): không gọi LLM thật, tool vẫn gọi gateway thật.
@@ -94,4 +94,4 @@ services:
     deploy:
       replicas: 2
       resources:
-        limits: {cpus: "1", memory: 768M}
+        limits: {cpus: "0.5", memory: 768M}

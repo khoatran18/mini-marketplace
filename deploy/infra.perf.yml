@@ -7,35 +7,35 @@ services:
     command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=1GB"]
     deploy:
       resources:
-        limits: {cpus: "5", memory: 4G}
+        limits: {cpus: "3", memory: 4G}
   redis:
     # --appendonly yes là cờ gốc của infra.yml. noeviction: khoá rate limit và slot không được bị đá khỏi bộ nhớ.
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "400mb", "--maxmemory-policy", "noeviction"]
     deploy:
       resources:
-        limits: {cpus: "1", memory: 512M}
+        limits: {cpus: "0.2", memory: 512M}
   broker1:
     # Heap 1 GB (gốc 512m) + phần còn lại cho page cache và bộ đệm ngoài heap.
     environment:
       KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
     deploy:
       resources:
-        limits: {cpus: "1", memory: 1536M}
+        limits: {cpus: "0.8", memory: 1536M}
   broker2:
     # Heap 1 GB (gốc 512m) + phần còn lại cho page cache và bộ đệm ngoài heap.
     environment:
       KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
     deploy:
       resources:
-        limits: {cpus: "1", memory: 1536M}
+        limits: {cpus: "0.8", memory: 1536M}
   broker3:
     # Heap 1 GB (gốc 512m) + phần còn lại cho page cache và bộ đệm ngoài heap.
     environment:
       KAFKA_HEAP_OPTS: "-Xmx1g -Xms1g"
     deploy:
       resources:
-        limits: {cpus: "1", memory: 1536M}
+        limits: {cpus: "0.8", memory: 1536M}
   clickhouse:
     deploy:
       resources:
-        limits: {cpus: "2", memory: 2G}
+        limits: {cpus: "1.5", memory: 2G}

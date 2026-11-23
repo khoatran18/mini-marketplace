@@ -1,0 +1,43 @@
+# CHỈ CHO THỬ TẢI: đặt trần CPU cho stack quan sát để nó không ăn CPU của máy khi đo (vector từng dùng ~1,1 core không trần; đợt 2).
+# Bộ nhớ giữ nguyên ở observability.yml. Áp dụng bằng `scripts/deploy-perf.sh obs` (hoặc `all`). Lý do và bảng tổng: docs/design/09_PERF_RESOURCES.md §6.
+services:
+  vector:
+    deploy:
+      resources:
+        limits: {cpus: "1"}
+  prometheus:
+    deploy:
+      resources:
+        limits: {cpus: "0.5"}
+  loki:
+    deploy:
+      resources:
+        limits: {cpus: "0.5"}
+  cadvisor:
+    deploy:
+      resources:
+        limits: {cpus: "0.3"}
+  tempo:
+    deploy:
+      resources:
+        limits: {cpus: "0.3"}
+  grafana:
+    deploy:
+      resources:
+        limits: {cpus: "0.2"}
+  node-exporter:
+    deploy:
+      resources:
+        limits: {cpus: "0.2"}
+  postgres-exporter:
+    deploy:
+      resources:
+        limits: {cpus: "0.2"}
+  redis-exporter:
+    deploy:
+      resources:
+        limits: {cpus: "0.2"}
+  kafka-exporter:
+    deploy:
+      resources:
+        limits: {cpus: "0.2"}

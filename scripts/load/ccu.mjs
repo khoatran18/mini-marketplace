@@ -25,7 +25,7 @@
 //   MAX_ACTIVE   chặn số phiên cùng chạy ở chế độ mở để máy tải không cạn (4000); vượt thì bỏ khách mới và đếm vào 'bỏ'
 //   ENTRY_RATE   VU vào mỗi giây (cố định cho mọi mức CCU, để 100 và 500 CCU cùng một cách vào) (5)
 //   RAMP         giây tăng dần VU                           (mặc định VUS / ENTRY_RATE)
-//   MIX          tỉ lệ VU theo loại                         (buyer:50,seller:12,admin:8,operator:8,ai_buyer:12,ai_seller:4,ai_admin:4,ai_operator:4)
+//   MIX          tỉ lệ VU theo loại                         (buyer:62,seller:14,admin:3,operator:2,ai_buyer:12,ai_seller:4,ai_admin:2,ai_operator:1)
 //   THINK_MS / AI_THINK_MS  thời gian nghĩ giữa hai bước / hai câu hỏi AI (1500 / 8000)
 //   PRODUCTS     số sản phẩm của shop test                  (30)
 //   ADMIN_USERNAME, ADMIN_PASSWORD  tài khoản admin (mặc định ADMIN_BOOTSTRAP_*); thiếu => bỏ admin/operator và báo thiếu độ phủ
@@ -43,7 +43,7 @@ const VUS = Number(P('VUS', 25)), DURATION = Number(P('DURATION', 60)), ARRIVAL 
 const THINK = Number(P('THINK_MS', 1500)), AI_THINK = Number(P('AI_THINK_MS', 8000)), PRODUCTS = Number(P('PRODUCTS', 30));
 const MAX_ERR_PCT = Number(P('MAX_ERR_PCT', 1)), OUT = P('OUT', '');
 const ADMIN_USER = P('ADMIN_USERNAME', process.env.ADMIN_BOOTSTRAP_USERNAME ?? ''), ADMIN_PASS = P('ADMIN_PASSWORD', process.env.ADMIN_BOOTSTRAP_PASSWORD ?? '');
-const MIX = String(P('MIX', 'buyer:50,seller:12,admin:8,operator:8,ai_buyer:12,ai_seller:4,ai_admin:4,ai_operator:4')).split(',').map((x) => { const [n, w] = x.split(':'); return [n, Number(w)]; });
+const MIX = String(P('MIX', 'buyer:62,seller:14,admin:3,operator:2,ai_buyer:12,ai_seller:4,ai_admin:2,ai_operator:1')).split(',').map((x) => { const [n, w] = x.split(':'); return [n, Number(w)]; });
 const PASSWORD = 'LoadPass_1';
 const run = Date.now().toString(36);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -52,6 +52,9 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const words = ['ao', 'quan', 'giay', 'tui', 'mu', 'dep'];
 const chance = (p) => Math.random() < p;
 const weighted = (list) => { const t = list.reduce((a, [w]) => a + w, 0); let r = Math.random() * t; for (const [w, f] of list) { if ((r -= w) < 0) return f; } return list[0][1]; };
+// Chọn n phần tử KHÁC NHAU từ list [[trọng số, giá trị]] (theo trọng số): mỗi lần ghé một trang chỉ xem vài mục, không xem hết.
+const weightedN = (list, n) => { const left = [...list], out = []; while (out.length < n && left.length) { const t = left.reduce((a, [w]) => a + w, 0); let r = Math.random() * t, k = 0; for (; k < left.length - 1; k++) { if ((r -= left[k][0]) < 0) break; } out.push(left.splice(k, 1)[0][1]); } return out; };
+const howMany = () => weighted([[50, () => 1], [35, () => 2], [15, () => 3]])();
 
 // ------------------------------------------------------------------ số liệu
 const stats = {}, areas = {};
@@ -355,8 +358,9 @@ async function sellerCatalog(vu, W) {
   await call('GET /seller/products/:id/inventory/ledger', 'GET', `/seller/products/${pid}/inventory/ledger?page_size=10`, { vu, token: await ST(vu) });
   await call('GET /seller/inventory/low-stock', 'GET', '/seller/inventory/low-stock', { vu, token: await ST(vu) });
 }
-async function sellerAnalytics(vu) {
-  for (const p of ['summary', 'timeseries?granularity=day', 'top-products?sort=revenue', 'funnel', 'low-stock']) await call(`GET /seller/analytics/${p.split('?')[0]}`, 'GET', `/seller/analytics/${p}`, { vu, token: await ST(vu) });
+async function sellerAnalytics(vu) { // người bán xem 1-3 báo cáo mỗi lần (summary/timeseries hay xem nhất)
+  const pages = [[35, 'summary'], [25, 'timeseries?granularity=day'], [20, 'top-products?sort=revenue'], [12, 'funnel'], [8, 'low-stock']];
+  for (const p of weightedN(pages, howMany())) await call(`GET /seller/analytics/${p.split('?')[0]}`, 'GET', `/seller/analytics/${p}`, { vu, token: await ST(vu) });
 }
 async function sellerStaff(vu) { // một lần: tạo nhân viên rồi đăng nhập bằng nhân viên
   if (vu.staffDone) return sellerOrders(vu);
@@ -378,8 +382,9 @@ async function adminOrdersPayments(vu) {
   const ok = (await call('GET /admin/payments (SUCCEEDED)', 'GET', '/admin/payments?status=SUCCEEDED&page_size=5', { vu, token: await AT(vu) })).json?.payments ?? [];
   if (ok.length && chance(0.3)) { const r = await call('POST /admin/payments/:id/refund', 'POST', `/admin/payments/${pick(ok).id}/refund`, { vu, token: await AT(vu), soft: [422, 409], body: { amount_minor: 100, reason: 'ccu hoàn tiền thử' } }); if (r.status === 200) counters.refunds++; }
 }
-async function adminAnalytics(vu) {
-  for (const p of ['summary', 'timeseries?granularity=day', 'top-products?sort=revenue', 'funnel', 'low-stock', 'traffic', 'payments', 'search-terms', 'data-health']) await call(`GET /admin/analytics/${p.split('?')[0]}`, 'GET', `/admin/analytics/${p}`, { vu, token: await AT(vu) });
+async function adminAnalytics(vu) { // quản trị xem 1-3 báo cáo mỗi lần; báo cáo nặng (traffic, data-health, search-terms) hiếm hơn
+  const pages = [[30, 'summary'], [24, 'timeseries?granularity=day'], [18, 'top-products?sort=revenue'], [12, 'funnel'], [8, 'low-stock'], [8, 'payments'], [5, 'search-terms'], [4, 'traffic'], [2, 'data-health']];
+  for (const p of weightedN(pages, howMany())) await call(`GET /admin/analytics/${p.split('?')[0]}`, 'GET', `/admin/analytics/${p}`, { vu, token: await AT(vu) });
 }
 async function adminManage(vu, W) {
   await call('GET /admin/accounts', 'GET', '/admin/accounts?limit=20', { vu, token: await AT(vu) });
@@ -387,25 +392,36 @@ async function adminManage(vu, W) {
   if (chance(0.3)) { const slug = `ccu-${run}-${vu.id}-${vu.seq++}`; await call('POST /admin/categories', 'POST', '/admin/categories', { vu, token: await AT(vu), ok: [200, 201], soft: [400], body: { name: `CCU ${slug}`, slug, sort: 99, active: false } }); }
   await call('PATCH /admin/products/:id/status', 'PATCH', `/admin/products/${pick(W.productIds)}/status`, { vu, token: await AT(vu), soft: [404], body: { status: 'active' } });
 }
-async function opsReads(vu) {
+async function opsReads(vu) { // vận hành chỉ ghé 2-4 nhóm màn hình mỗi lần (sức khoẻ và sự cố xem nhiều nhất), không đọc hết mọi thứ
   const t = await AT(vu);
-  await call('GET /ops/system/health', 'GET', '/ops/system/health', { vu, token: t });
-  const inc = await call('GET /ops/incidents', 'GET', '/ops/incidents?limit=20', { vu, token: t, soft: [503] });
-  const i = (inc.json?.incidents ?? [])[0];
-  if (i) await call('GET /ops/incidents/:id', 'GET', `/ops/incidents/${i.id}`, { vu, token: t, soft: [404, 503] });
-  await call('GET /ops/audit', 'GET', '/ops/audit?limit=20', { vu, token: t, soft: [503] });
-  await call('GET /ops/actions', 'GET', '/ops/actions', { vu, token: t, soft: [503] });
-  const cat = await call('GET /ops/queries', 'GET', '/ops/queries', { vu, token: t, soft: [503] });
-  const q = pick((cat.json?.queries ?? []).filter((x) => (x.params ?? []).every((y) => ['service', 'window'].includes(y.name)))); // bỏ truy vấn cần tham số khác (vd request_id của Loki)
-  if (q) { // tham số lấy từ danh mục thật (enum hoặc mặc định), chỉ service/window được chuyển tiếp
-    const qs = (q.params ?? []).filter((x) => ['service', 'window'].includes(x.name)).map((x) => `${x.name}=${encodeURIComponent(pick(x.enum ?? [x.default ?? '']))}`).join('&');
-    await call('GET /ops/queries/:name', 'GET', `/ops/queries/${q.name}${qs ? '?' + qs : ''}`, { vu, token: t, soft: [502, 503, 504] });
-  }
-  await call('GET /ops/playbooks', 'GET', '/ops/playbooks', { vu, token: t, soft: [503] });
-  await call('GET /ops/outbox/:svc/dead', 'GET', `/ops/outbox/${pick(['order-service', 'product-service', 'payment-service'])}/dead?limit=10`, { vu, token: t, soft: [503] });
-  await call('GET /ops/proposals', 'GET', '/ops/proposals?limit=20', { vu, token: t, soft: [503] });
-  await call('GET /ops/ai/kill', 'GET', '/ops/ai/kill', { vu, token: t });
-  await call('GET /ops/rca/runs', 'GET', '/ops/rca/runs?limit=10', { vu, token: t, soft: [503, 404] });
+  const groups = [
+    [25, async () => { await call('GET /ops/system/health', 'GET', '/ops/system/health', { vu, token: t }); }],
+    [22, async () => {
+      const inc = await call('GET /ops/incidents', 'GET', '/ops/incidents?limit=20', { vu, token: t, soft: [503] });
+      const i = (inc.json?.incidents ?? [])[0];
+      if (i) await call('GET /ops/incidents/:id', 'GET', `/ops/incidents/${i.id}`, { vu, token: t, soft: [404, 503] });
+    }],
+    [18, async () => {
+      const cat = await call('GET /ops/queries', 'GET', '/ops/queries', { vu, token: t, soft: [503] });
+      const q = pick((cat.json?.queries ?? []).filter((x) => (x.params ?? []).every((y) => ['service', 'window'].includes(y.name)))); // bỏ truy vấn cần tham số khác (vd request_id của Loki)
+      if (q) { // tham số lấy từ danh mục thật (enum hoặc mặc định), chỉ service/window được chuyển tiếp
+        const qs = (q.params ?? []).filter((x) => ['service', 'window'].includes(x.name)).map((x) => `${x.name}=${encodeURIComponent(pick(x.enum ?? [x.default ?? '']))}`).join('&');
+        await call('GET /ops/queries/:name', 'GET', `/ops/queries/${q.name}${qs ? '?' + qs : ''}`, { vu, token: t, soft: [502, 503, 504] });
+      }
+    }],
+    [10, async () => {
+      await call('GET /ops/audit', 'GET', '/ops/audit?limit=20', { vu, token: t, soft: [503] });
+      await call('GET /ops/actions', 'GET', '/ops/actions', { vu, token: t, soft: [503] });
+    }],
+    [8, async () => { await call('GET /ops/outbox/:svc/dead', 'GET', `/ops/outbox/${pick(['order-service', 'product-service', 'payment-service'])}/dead?limit=10`, { vu, token: t, soft: [503] }); }],
+    [7, async () => { await call('GET /ops/proposals', 'GET', '/ops/proposals?limit=20', { vu, token: t, soft: [503] }); }],
+    [6, async () => { await call('GET /ops/playbooks', 'GET', '/ops/playbooks', { vu, token: t, soft: [503] }); }],
+    [4, async () => {
+      await call('GET /ops/ai/kill', 'GET', '/ops/ai/kill', { vu, token: t });
+      await call('GET /ops/rca/runs', 'GET', '/ops/rca/runs?limit=10', { vu, token: t, soft: [503, 404] });
+    }],
+  ];
+  for (const g of weightedN(groups, 2 + Math.floor(Math.random() * 3))) await g();
 }
 
 // ------------------------------------------------------------------ AI

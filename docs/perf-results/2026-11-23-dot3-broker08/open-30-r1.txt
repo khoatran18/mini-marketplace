@@ -1,0 +1,275 @@
+MỞ: 30 phiên/s trong 90s ổn định (+30 s khởi động), mỗi phiên ~3 hành trình, API http://api.marketplace.swarm.localhost
+[setup] tạo chủ shop + 30 sản phẩm ...
+  t=10s lời gọi=3316 lỗi=0 phiên đang chạy=286 đơn=61
+  t=20s lời gọi=8659 lỗi=0 phiên đang chạy=449 đơn=184
+[ổn định] bắt đầu đo
+  t=30s lời gọi=15116 lỗi=0 phiên đang chạy=531 đơn=323
+  t=40s lời gọi=21866 lỗi=0 phiên đang chạy=518 đơn=491
+  t=50s lời gọi=28478 lỗi=0 phiên đang chạy=515 đơn=629
+  t=60s lời gọi=34474 lỗi=0 phiên đang chạy=514 đơn=775
+  t=70s lời gọi=40776 lỗi=0 phiên đang chạy=520 đơn=922
+  t=80s lời gọi=47099 lỗi=0 phiên đang chạy=524 đơn=1072
+  t=90s lời gọi=53346 lỗi=0 phiên đang chạy=484 đơn=1214
+  t=100s lời gọi=59103 lỗi=0 phiên đang chạy=486 đơn=1333
+  t=110s lời gọi=65228 lỗi=0 phiên đang chạy=523 đơn=1469
+  t=120s lời gọi=71611 lỗi=0 phiên đang chạy=517 đơn=1611
+  t=130s lời gọi=74593 lỗi=0 phiên đang chạy=238 đơn=1704
+  t=140s lời gọi=75000 lỗi=0 phiên đang chạy=94 đơn=1715
+  t=150s lời gọi=75038 lỗi=0 phiên đang chạy=35 đơn=1715
+  t=160s lời gọi=75049 lỗi=0 phiên đang chạy=8 đơn=1715
+
+CHẾ ĐỘ MỞ: nhịp 30 phiên/s, đã bắt đầu 3600 phiên, bỏ 0 (vượt MAX_ACTIVE=4000), đỉnh 545 phiên cùng lúc
+
+=============== KẾT QUẢ ===============
+nhãn                                                n     ok  dự kiến   429   lỗi     p50     p95     p99     max  mã
+(vào) DELETE /admin/accounts/:id                  100    100        0     0     0       5       7      75      75  {"200":100}
+(vào) DELETE /cart                                121    121        0     0     0       3       6      10      12  {"200":121}
+(vào) DELETE /cart/items/:id                      121    121        0     0     0       3       5       6      10  {"200":121}
+(vào) DELETE /users/me/addresses/:id              167    167        0     0     0       3       6       9      13  {"200":167}
+(vào) GET /admin/accounts                         137    137        0     0     0       7     493     682     770  {"200":137}
+(vào) GET /admin/analytics/data-health             53     53        0     0     0      53     168     179     179  {"200":53}
+(vào) GET /admin/analytics/funnel                  53     53        0     0     0       2       5     167     167  {"200":53}
+(vào) GET /admin/analytics/low-stock               53     53        0     0     0       2       4      89      89  {"200":53}
+(vào) GET /admin/analytics/payments                53     53        0     0     0       2      13      75      75  {"200":53}
+(vào) GET /admin/analytics/search-terms            53     53        0     0     0       2      27      75      75  {"200":53}
+(vào) GET /admin/analytics/summary                 53     53        0     0     0       2       4      52      52  {"200":53}
+(vào) GET /admin/analytics/timeseries              53     53        0     0     0       2       4      31      31  {"200":53}
+(vào) GET /admin/analytics/top-products            53     53        0     0     0       2       6      74      74  {"200":53}
+(vào) GET /admin/analytics/traffic                 53     53        0     0     0       2      16     289     289  {"200":53}
+(vào) GET /admin/categories                        37     37        0     0     0      12      15      51      51  {"200":37}
+(vào) GET /admin/orders                            59     59        0     0     0       7      14      16      16  {"200":59}
+(vào) GET /admin/orders/:id                        59     59        0     0     0       3       4       5       5  {"200":59}
+(vào) GET /admin/payments                          59     59        0     0     0       6       9      22      22  {"200":59}
+(vào) GET /admin/payments (SUCCEEDED)              59     59        0     0     0       5       7      12      12  {"200":59}
+(vào) GET /admin/payments/:id                      59     59        0     0     0       3       5      45      45  {"200":59}
+(vào) GET /cart                                   554    554        0     0     0       3       4      10      35  {"200":554}
+(vào) GET /categories                             298    298        0     0     0      11      15      22      53  {"200":298}
+(vào) GET /checkouts/:id                          278    278        0     0     0       3       6      27      55  {"200":278}
+(vào) GET /ops/actions                            217    217        0     0     0       2       3       6      13  {"200":217}
+(vào) GET /ops/ai/kill                            217    217        0     0     0       2       3       4       6  {"200":217}
+(vào) GET /ops/audit                              217    217        0     0     0       2       4       8      12  {"200":217}
+(vào) GET /ops/incidents                          217    217        0     0     0       2       7      11      18  {"200":217}
+(vào) GET /ops/incidents/:id                      217    217        0     0     0       2       5       6      65  {"200":217}
+(vào) GET /ops/outbox/:svc/dead                   217    217        0     0     0       4       6       9      12  {"200":217}
+(vào) GET /ops/playbooks                          217    217        0     0     0       2       3       4      13  {"200":217}
+(vào) GET /ops/proposals                          217    217        0     0     0       2       3       5      19  {"200":217}
+(vào) GET /ops/queries                            217    217        0     0     0       2       3       4       4  {"200":217}
+(vào) GET /ops/queries/:name                      217    217        0     0     0       5      22      48     116  {"200":217}
+(vào) GET /ops/rca/runs                           217    217        0     0     0       3       8      43      65  {"200":217}
+(vào) GET /ops/system/health                      217    217        0     0     0      58     396     542     737  {"200":217}
+(vào) GET /orders                                 309    309        0     0     0       2       4       9      19  {"200":309}
+(vào) GET /orders (DELIVERED)                     309    309        0     0     0       2       4       5      20  {"200":309}
+(vào) GET /orders (SHIPPED)                       309    309        0     0     0       2       4       7      19  {"200":309}
+(vào) GET /orders/:id                             140    140        0     0     0       2       5       8      12  {"200":140}
+(vào) GET /orders/summary                         309    309        0     0     0       2       4       9      43  {"200":309}
+(vào) GET /payments/:id                           254    254        0     0     0       2       3       6      34  {"200":254}
+(vào) GET /payments/methods                       293    293        0     0     0       1       2       4       5  {"200":293}
+(vào) GET /products                               299    299        0     0     0       3       5      20      23  {"200":299}
+(vào) GET /products/:id                           588    588        0     0     0       2       3       5      14  {"200":588}
+(vào) GET /products/:id/stock                     588    588        0     0     0       2       3      10      20  {"200":588}
+(vào) GET /search                                 591    591        0     0     0       5       8      17      48  {"200":591}
+(vào) GET /seller/analytics/funnel                 47     47        0     0     0     205     635     883     883  {"200":47}
+(vào) GET /seller/analytics/low-stock              46     46        0     0     0     199     678    1270    1270  {"200":46}
+(vào) GET /seller/analytics/summary                49     49        0     0     0     147     597     864     864  {"200":49}
+(vào) GET /seller/analytics/timeseries             49     49        0     0     0     226     620     705     705  {"200":49}
+(vào) GET /seller/analytics/top-products           47     47        0     0     0     204     720     792     792  {"200":47}
+(vào) GET /seller/inventory/low-stock              63     63        0     0     0     120     542    1413    1413  {"200":63}
+(vào) GET /seller/orders                           87     87        0     0     0     166     597    1312    1312  {"200":87}
+(vào) GET /seller/orders (ready)                   86     86        0     0     0     176     593     831     831  {"200":86}
+(vào) GET /seller/orders (REFUND_REQUESTED)        46     46        0     0     0     224     692    1361    1361  {"200":46}
+(vào) GET /seller/orders (staff)                   25     25        0     0     0     133     735     747     747  {"200":25}
+(vào) GET /seller/orders/:id                       85     85        0     0     0     166     573     970     970  {"200":85}
+(vào) GET /seller/orders/summary                   86     86        0     0     0     138     751    1327    1327  {"200":86}
+(vào) GET /seller/products                        192     91      101     0     0     161     647     940    1231  {"200":91,"403":101}
+(vào) GET /seller/products/:id/inventory/ledger     64     64        0     0     0     110     581     817     817  {"200":64}
+(vào) GET /shop/rules                             294    294        0     0     0       1       3       6       7  {"200":294}
+(vào) GET /users/buyers/:id                       167    167        0     0     0       2       5      18      26  {"200":167}
+(vào) GET /users/me/addresses                     167    167        0     0     0       2       3       8      65  {"200":167}
+(vào) PATCH /admin/products/:id/status             37     37        0     0     0       3      23      48      48  {"200":37}
+(vào) PATCH /products/:id/status                  130    130        0     0     0     143     726    1029    1487  {"200":130}
+(vào) POST /admin/accounts                         80     80        0     0     0     783    1650    1976    1976  {"200":80}
+(vào) POST /admin/categories                       14     14        0     0     0       6      20      20      20  {"201":14}
+(vào) POST /admin/payments/:id/refund              19     19        0     0     0       5      20      20      20  {"200":19}
+(vào) POST /ai/chat (admin)                       109    109        0     0     0    2406    2537    2696    2711  {"200":109}
+(vào) POST /ai/chat (buyer)                       335    335        0     0     0    2613    2801    2955    3007  {"200":335}
+(vào) POST /ai/chat (operator)                    104    104        0     0     0    2354    2790    2945    3051  {"200":104}
+(vào) POST /ai/chat (seller)                      104    104        0     0     0    2415    2953    3102    3274  {"200":104}
+(vào) POST /auth/change-password                   56     56        0     0     0    1582    3229    3485    3485  {"200":56}
+(vào) POST /auth/login                            998    998        0     0     0     442    1105    1317    1692  {"200":998}
+(vào) POST /auth/register                         373    373        0     0     0     515    1638    1987    2499  {"200":373}
+(vào) POST /auth/register-seller-roles             25     25        0     0     0     375    1683    1837    1837  {"200":25}
+(vào) POST /cart/merge                            121    121        0     0     0       6       9      11      13  {"200":121}
+(vào) POST /checkout/preview                      428    428        0     0     0       3       6      21      59  {"200":428}
+(vào) POST /checkout/preview (items)              121    121        0     0     0       3       3       7       9  {"200":121}
+(vào) POST /events                                299    299        0     0     0       2       3      24      53  {"202":299}
+(vào) POST /events (search)                       591    591        0     0     0       2       3       7      61  {"202":591}
+(vào) POST /orders (COD)                          174    174        0     0     0       8      20      39      88  {"201":174}
+(vào) POST /orders (MOCK_BANK_TRANSFER)            21     21        0     0     0       8      18      27      27  {"201":21}
+(vào) POST /orders (MOCK_CARD)                    190    190        0     0     0       8      16      25      32  {"201":190}
+(vào) POST /orders (MOCK_WALLET)                   43     43        0     0     0       9      21      22      22  {"201":43}
+(vào) POST /orders (replay)                        38     38        0     0     0       4       5       5       5  {"200":38}
+(vào) POST /orders/:id/cancel                      18     18        0     0     0       5       8       8       8  {"200":18}
+(vào) POST /orders/:id/confirm-received            15     15        0     0     0       5       7       7       7  {"200":15}
+(vào) POST /orders/:id/return                      28     23        5     0     0       5      10      16      16  {"200":23,"422":5}
+(vào) POST /payments/:id/cancel                    17     17        0     0     0       3      21      21      21  {"200":17}
+(vào) POST /payments/:id/confirm                   90     90        0     0     0       4      14      26      26  {"200":90}
+(vào) POST /payments/:id/confirm (3DS)             32     32        0     0     0       4      18      22      22  {"200":32}
+(vào) POST /payments/:id/confirm (declined)        48     48        0     0     0       4      11      27      27  {"200":48}
+(vào) POST /payments/:id/confirm (otp)             32     32        0     0     0       4       6       7       7  {"200":32}
+(vào) POST /payments/:id/confirm (wallet/bank)     66     66        0     0     0       4      14      37      37  {"200":66}
+(vào) POST /products                               96     96        0     0     0      10     661     923     923  {"200":96}
+(vào) POST /seller/orders/:id/cancel               11     11        0     0     0     196     735     735     735  {"200":11}
+(vào) POST /seller/orders/:id/deliver              46     44        2     0     0     164     552     981     981  {"200":44,"422":2}
+(vào) POST /seller/orders/:id/return/approve       13     13        0     0     0       6     454     454     454  {"200":13}
+(vào) POST /seller/orders/:id/return/reject         3      2        1     0     0     264     595     595     595  {"200":2,"422":1}
+(vào) POST /seller/orders/:id/ship                 73     67        6     0     0     166     601    1259    1259  {"200":67,"422":6}
+(vào) POST /seller/products/:id/inventory/adjust     65     65        0     0     0     149     467    1030    1030  {"200":65}
+(vào) POST /users/buyers                           96     96        0     0     0       4       8      46      46  {"200":96}
+(vào) POST /users/me/addresses                    417    417        0     0     0       4      19      29      92  {"201":417}
+(vào) POST /users/sellers                          31     31        0     0     0     165     518    1129    1129  {"200":31}
+(vào) PUT /cart/items/:id                        1268   1268        0     0     0       5      10      21      87  {"200":1268}
+(vào) PUT /cart/items/:id (qty)                   121    121        0     0     0       6      14      47      53  {"200":121}
+(vào) PUT /products/:id                            66     66        0     0     0     112     490     795     795  {"200":66}
+(vào) PUT /users/buyers/:id                       167    167        0     0     0       4       8      36      78  {"200":167}
+(vào) PUT /users/me/addresses/:id                 167    167        0     0     0       4       6       9      90  {"200":167}
+(vào) WEB /                                        70     70        0     0     0      13      24      63      63  {"200":70}
+(vào) WEB /cart                                    75     75        0     0     0      13      28      37      37  {"200":75}
+(vào) WEB /login                                   80     80        0     0     0      13      27      55      55  {"200":80}
+(vào) WEB /products                                72     72        0     0     0      14      28      40      40  {"200":72}
+(vào) WEB /products/:id                           299    299        0     0     0      13      25      40      70  {"200":299}
+DELETE /cart                                      408    408        0     0     0       3       6      11      21  {"200":408}
+DELETE /cart/items/:id                            408    408        0     0     0       3       5       9      23  {"200":408}
+DELETE /users/me/addresses/:id                    505    505        0     0     0       3       6      18      88  {"200":505}
+GET /admin/accounts                                94     94        0     0     0       3      58     212     212  {"200":94}
+GET /admin/analytics/data-health                  203    203        0     0     0      54      94     213     294  {"200":203}
+GET /admin/analytics/funnel                       203    203        0     0     0       2       4      73     167  {"200":203}
+GET /admin/analytics/low-stock                    203    203        0     0     0       2       3      94      98  {"200":203}
+GET /admin/analytics/payments                     203    203        0     0     0       2       4      99     156  {"200":203}
+GET /admin/analytics/search-terms                 203    203        0     0     0       2       4     102     172  {"200":203}
+GET /admin/analytics/summary                      203    203        0     0     0       2       7      70      73  {"200":203}
+GET /admin/analytics/timeseries                   203    203        0     0     0       2       5      30      40  {"200":203}
+GET /admin/analytics/top-products                 203    203        0     0     0       2       4      59     111  {"200":203}
+GET /admin/analytics/traffic                      203    203        0     0     0       2       7     502     512  {"200":203}
+GET /admin/categories                              94     94        0     0     0      11      17      25      25  {"200":94}
+GET /admin/orders                                 193    193        0     0     0       8      12      26      62  {"200":193}
+GET /admin/orders/:id                             193    193        0     0     0       3       6      21      39  {"200":193}
+GET /admin/payments                               193    193        0     0     0       6      10      21      27  {"200":193}
+GET /admin/payments (SUCCEEDED)                   193    193        0     0     0       5       8      47      68  {"200":193}
+GET /admin/payments/:id                           193    193        0     0     0       2       5      10      12  {"200":193}
+GET /cart                                        1690   1690        0     0     0       3       5      11      51  {"200":1690}
+GET /categories                                   877    877        0     0     0      11      17      36      79  {"200":877}
+GET /checkouts/:id                                796    796        0     0     0       3       6      22      50  {"200":796}
+GET /ops/actions                                  766    766        0     0     0       1       3       7      20  {"200":766}
+GET /ops/ai/kill                                  766    766        0     0     0       1       3       6      41  {"200":766}
+GET /ops/audit                                    766    766        0     0     0       2       3      10      71  {"200":766}
+GET /ops/incidents                                766    766        0     0     0       2       4       9      33  {"200":766}
+GET /ops/incidents/:id                            766    766        0     0     0       2       4      11      61  {"200":766}
+GET /ops/outbox/:svc/dead                         766    766        0     0     0       4       7      13      64  {"200":766}
+GET /ops/playbooks                                766    766        0     0     0       2       3       5      20  {"200":766}
+GET /ops/proposals                                766    766        0     0     0       2       3       9      45  {"200":766}
+GET /ops/queries                                  766    766        0     0     0       1       3       7      63  {"200":766}
+GET /ops/queries/:name                            766    766        0     0     0       4      16      38     103  {"200":766}
+GET /ops/rca/runs                                 766    766        0     0     0       3       9      56      84  {"200":766}
+GET /ops/system/health                            766    766        0     0     0       3      59      87     351  {"200":766}
+GET /orders                                       961    961        0     0     0       3       5       9      68  {"200":961}
+GET /orders (DELIVERED)                           961    961        0     0     0       2       4      10      60  {"200":961}
+GET /orders (SHIPPED)                             961    961        0     0     0       2       4       8      30  {"200":961}
+GET /orders/:id                                   824    824        0     0     0       2       4       8      22  {"200":824}
+GET /orders/summary                               961    961        0     0     0       2       4      31      62  {"200":961}
+GET /payments/:id                                 758    758        0     0     0       2       4      16      58  {"200":758}
+GET /payments/methods                             881    881        0     0     0       1       2       4      60  {"200":881}
+GET /products                                     875    875        0     0     0       3       5      15      58  {"200":875}
+GET /products/:id                                1760   1760        0     0     0       2       4      14      63  {"200":1760}
+GET /products/:id/stock                          1760   1760        0     0     0       2       4       7      26  {"200":1760}
+GET /search                                      1757   1757        0     0     0       5       9      20      61  {"200":1757}
+GET /seller/analytics/funnel                      211    211        0     0     0       3      91     179     387  {"200":211}
+GET /seller/analytics/low-stock                   212    212        0     0     0       3      78     189     294  {"200":212}
+GET /seller/analytics/summary                     209    209        0     0     0       3      60     104     190  {"200":209}
+GET /seller/analytics/timeseries                  209    209        0     0     0       3      68     133     180  {"200":209}
+GET /seller/analytics/top-products                211    211        0     0     0       3      89     148     229  {"200":211}
+GET /seller/inventory/low-stock                   179    179        0     0     0       3      86     186     220  {"200":179}
+GET /seller/orders                                345    345        0     0     0       6      80     167     559  {"200":345}
+GET /seller/orders (ready)                        346    346        0     0     0       5      89     210     788  {"200":346}
+GET /seller/orders (REFUND_REQUESTED)             154    154        0     0     0       5      74     103     117  {"200":154}
+GET /seller/orders (staff)                         93     93        0     0     0       4     113     278     278  {"200":93}
+GET /seller/orders/:id                            346    346        0     0     0       3      73     160     225  {"200":346}
+GET /seller/orders/summary                        346    346        0     0     0       4      80     192     291  {"200":346}
+GET /seller/products                              278    204       74     0     0       4      83     179     615  {"200":204,"403":74}
+GET /seller/products/:id/inventory/ledger         178    178        0     0     0       3      78     162     211  {"200":178}
+GET /shop/rules                                   880    880        0     0     0       1       3       6      63  {"200":880}
+GET /users/buyers/:id                             505    505        0     0     0       2       4       7      44  {"200":505}
+GET /users/me/addresses                           505    505        0     0     0       2       4       6      64  {"200":505}
+PATCH /admin/products/:id/status                   94     94        0     0     0       3      11      25      25  {"200":94}
+PATCH /products/:id/status                        354    354        0     0     0       5      78     211     404  {"200":354}
+POST /admin/accounts                               20     20        0     0     0      62     416     416     416  {"200":20}
+POST /admin/categories                             25     25        0     0     0       6      13      25      25  {"201":25}
+POST /admin/payments/:id/refund                    63     63        0     0     0       5       8      24      24  {"200":63}
+POST /ai/chat (admin)                             323    323        0     0     0    2438    2835    3154    3235  {"200":323}
+POST /ai/chat (buyer)                             871    871        0     0     0    2667    3246    3407    3560  {"200":871}
+POST /ai/chat (operator)                          356    356        0     0     0    2363    2768    3077    3131  {"200":356}
+POST /ai/chat (seller)                            330    330        0     0     0    2448    2801    3052    3256  {"200":330}
+POST /auth/change-password                        143    143        0     0     0     179     718    1302    1690  {"200":143}
+POST /auth/login                                 2974   2974        0     0     0      62     212     392     782  {"200":2974}
+POST /auth/register                                48     48        0     0     0     100     396     758     758  {"200":48}
+POST /auth/register-seller-roles                   93     93        0     0     0      78     478     681     681  {"200":93}
+POST /cart/merge                                  408    408        0     0     0       6       9      18      25  {"200":408}
+POST /checkout/preview                           1287   1287        0     0     0       3       6      19      61  {"200":1287}
+POST /checkout/preview (items)                    408    408        0     0     0       2       4       7      32  {"200":408}
+POST /events                                      875    875        0     0     0       2       3       6      69  {"202":875}
+POST /events (search)                            1757   1757        0     0     0       2       3       7      67  {"202":1757}
+POST /orders (COD)                                529    529        0     0     0       7      15      24      34  {"201":529}
+POST /orders (MOCK_BANK_TRANSFER)                  62     62        0     0     0       8      14      32      32  {"201":62}
+POST /orders (MOCK_CARD)                          556    556        0     0     0       7      15      24      74  {"201":556}
+POST /orders (MOCK_WALLET)                        140    140        0     0     0       7      13      25      28  {"201":140}
+POST /orders (replay)                             127    127        0     0     0       4       6      10      11  {"200":127}
+POST /orders/:id/cancel                           114    114        0     0     0       6      13      23      89  {"200":114}
+POST /orders/:id/confirm-received                  90     90        0     0     0       5       9      26      26  {"200":90}
+POST /orders/:id/return                           187    164       23     0     0       5       9      14      21  {"200":164,"422":23}
+POST /payments/:id/cancel                          58     58        0     0     0       4       7       8       8  {"200":58}
+POST /payments/:id/confirm                        236    236        0     0     0       4      10      23      25  {"200":236}
+POST /payments/:id/confirm (3DS)                  124    124        0     0     0       4       8      13      13  {"200":124}
+POST /payments/:id/confirm (declined)             141    141        0     0     0       4       9      15      16  {"200":141}
+POST /payments/:id/confirm (otp)                  124    124        0     0     0       4       7      11      16  {"200":124}
+POST /payments/:id/confirm (wallet/bank)          200    200        0     0     0       4      10      20      22  {"200":200}
+POST /products                                    176    176        0     0     0       5      91     186     195  {"200":176}
+POST /seller/orders/:id/cancel                     43     43        0     0     0       8     197     800     800  {"200":43}
+POST /seller/orders/:id/deliver                   210    198       12     0     0       6      72     152     174  {"200":198,"422":12}
+POST /seller/orders/:id/return/approve            121    120        1     0     0       6      59     101     139  {"200":120,"422":1}
+POST /seller/orders/:id/return/reject              22     22        0     0     0       6      82     164     164  {"200":22}
+POST /seller/orders/:id/ship                      304    298        6     0     0       6      68     149     239  {"200":298,"422":6}
+POST /seller/products/:id/inventory/adjust        177    177        0     0     0       5      80     174     187  {"200":177}
+POST /users/buyers                                132    132        0     0     0       4      12      29      33  {"200":132}
+POST /users/me/addresses                          506    506        0     0     0       4       6      12      81  {"201":506}
+POST /users/sellers                                22     22        0     0     0       6     129     160     160  {"200":22}
+PUT /cart/items/:id                              3781   3781        0     0     0       5      10      23      74  {"200":3781}
+PUT /cart/items/:id (qty)                         408    408        0     0     0       6      15      29      63  {"200":408}
+PUT /products/:id                                 176    176        0     0     0       6      75     144     171  {"200":176}
+PUT /users/buyers/:id                             505    505        0     0     0       3       8      22      86  {"200":505}
+PUT /users/me/addresses/:id                       505    505        0     0     0       4       6       9      68  {"200":505}
+WEB /                                             209    209        0     0     0      13      24      31      65  {"200":209}
+WEB /cart                                         238    238        0     0     0      13      28      55      62  {"200":238}
+WEB /login                                        207    207        0     0     0      13      29      42      66  {"200":207}
+WEB /products                                     223    223        0     0     0      13      21      36      90  {"200":223}
+WEB /products/:id                                 875    875        0     0     0      13      23      36      74  {"200":875}
+
+ổn định 90 s: 56479 lời gọi (627.8/s), lỗi ngoài dự kiến 0 (0.00%), 429: 0
+hành trình xong 10764, đơn tạo 1715, giao đi 365, trả hàng 187, hoàn tiền 215, VU hỏng 0
+AI: xong 2532, lỗi 0; byte đầu p50/p95 7/34 ms; cả lượt p50/p95 2611/3053 ms
+Thanh toán tạo bất đồng bộ (đặt đơn -> payment xuất hiện): 759 đơn, p50/p95/max 503/550/1012 ms; quá 8 s chưa có: 0
+MÁY TẢI: độ trễ vòng lặp sự kiện node mean/p99/max 10.2/13.7/34.4 ms
+TOÀN MÁY: CPU trung bình 52.1%, đỉnh 60.1% (44 mẫu); RAM trống thấp nhất 12.5 GiB
+
+ĐỘ PHỦ (lời gọi tới từng container nghiệp vụ, gồm cả giai đoạn vào):
+  api-gateway           70369
+  auth-service           5141
+  user-service           4564
+  product-service       11888
+  order-service         27744
+  payment-service        4192
+  analytics-service      7116
+  ops-service           12256
+  ai-agent               2532
+  frontend               2348
+
+PHÉP ĐO HỢP LỆ: lỗi 0.00% <= 1%, không có 429, mọi VU chạy được.
+THROTTLE (% chu kỳ CPU bị chặn vì chạm trần, >=1%): auth-service 46.4%, kafka-exporter 29.0%, node-exporter 20.9%, postgres-exporter 15.3%, ai-agent 9.8%, grafana 7.9%, cadvisor 7.3%, prometheus 2.8%, broker3 2.7%, redis 2.4%, clickhouse 2.2%, ops-service 1.5%, user-service 1.3%, frontend 1.1%

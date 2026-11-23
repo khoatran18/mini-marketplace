@@ -1,0 +1,66 @@
+CCU 400 VU, 90s ổn định + ramp 80s, API http://api.marketplace.swarm.localhost, frontend http://marketplace.swarm.localhost
+[setup] tạo chủ shop + 30 sản phẩm ...
+[chạy] {"ai_buyer":220,"ai_seller":60,"ai_admin":60,"ai_operator":60}
+  t=10s lời gọi=183 lỗi=0 429=0 đơn=0
+  t=20s lời gọi=365 lỗi=0 429=0 đơn=0
+  t=30s lời gọi=588 lỗi=0 429=0 đơn=0
+  t=40s lời gọi=869 lỗi=0 429=0 đơn=0
+  t=50s lời gọi=1350 lỗi=0 429=0 đơn=0
+  t=60s lời gọi=1989 lỗi=0 429=0 đơn=0
+  t=70s lời gọi=2396 lỗi=0 429=0 đơn=0
+  t=80s lời gọi=2856 lỗi=0 429=0 đơn=0
+  t=90s lời gọi=3241 lỗi=0 429=0 đơn=0
+[ổn định] bắt đầu đo
+  t=100s lời gọi=3610 lỗi=0 429=0 đơn=0
+  t=110s lời gọi=3985 lỗi=0 429=0 đơn=0
+  t=120s lời gọi=4335 lỗi=0 429=0 đơn=0
+  t=130s lời gọi=4719 lỗi=0 429=0 đơn=0
+  t=140s lời gọi=5087 lỗi=0 429=0 đơn=0
+  t=150s lời gọi=5424 lỗi=0 429=0 đơn=0
+  t=160s lời gọi=5792 lỗi=0 429=0 đơn=0
+  t=170s lời gọi=6181 lỗi=0 429=0 đơn=0
+  t=180s lời gọi=6518 lỗi=0 429=0 đơn=0
+  t=190s lời gọi=6824 lỗi=0 429=0 đơn=0
+
+=============== KẾT QUẢ ===============
+nhãn                                                n     ok  dự kiến   429   lỗi     p50     p95     p99     max  mã
+(vào) GET /categories                               1      1        0     0     0      14      14      14      14  {"200":1}
+(vào) GET /seller/products                        330     61      269     0     0       2       3       6       8  {"200":61,"403":269}
+(vào) POST /admin/accounts                        121    121        0     0     0      61      70      81      88  {"200":121}
+(vào) POST /ai/chat (admin)                       199    199        0     0     0    2580    3019    3425    3427  {"200":199}
+(vào) POST /ai/chat (buyer)                      1532   1532        0     0     0    2695    3268    3702    3901  {"200":1532}
+(vào) POST /ai/chat (operator)                    138    138        0     0     0    2495    3097    3250    3381  {"200":138}
+(vào) POST /ai/chat (seller)                      262    262        0     0     0    2520    2951    3382    3450  {"200":262}
+(vào) POST /auth/login                            463    463        0     0     0      59      61      77     140  {"200":463}
+(vào) POST /auth/register                         281    281        0     0     0      63      70      89     127  {"200":281}
+(vào) POST /products                               30     30        0     0     0       5       7       7       7  {"200":30}
+(vào) POST /users/sellers                          61     61        0     0     0       4      12      18      18  {"200":61}
+DELETE /admin/accounts/:id                        121    121        0     0     0       6       7       9      12  {"200":121}
+GET /admin/accounts                               121    121        0     0     0       9      10      10      11  {"200":121}
+POST /ai/chat (admin)                             515    515        0     0     0    2700    3665    3957    4257  {"200":515}
+POST /ai/chat (buyer)                            1850   1850        0     0     0    2991    3989    4339    4912  {"200":1850}
+POST /ai/chat (operator)                          520    520        0     0     0    2578    3478    3775    3893  {"200":520}
+POST /ai/chat (seller)                            517    517        0     0     0    2679    3535    3920    4236  {"200":517}
+POST /auth/refresh-token                            4      4        0     0     0       2       3       3       3  {"200":4}
+
+ổn định 105 s: 3648 lời gọi (34.8/s), lỗi ngoài dự kiến 0 (0.00%), 429: 0
+hành trình xong 5533, đơn tạo 0, giao đi 0, trả hàng 0, hoàn tiền 0, VU hỏng 0
+AI: xong 5533, lỗi 0; byte đầu p50/p95 10/83 ms; cả lượt p50/p95 2853/3828 ms
+MÁY TẢI: độ trễ vòng lặp sự kiện node mean/p99/max 10.1/11.2/15.8 ms
+TOÀN MÁY: CPU trung bình 27.7%, đỉnh 48.5% (51 mẫu); RAM trống thấp nhất 10.6 GiB
+
+ĐỘ PHỦ (lời gọi tới từng container nghiệp vụ, gồm cả giai đoạn vào):
+  api-gateway            1533
+  auth-service           1111
+  user-service             61
+  product-service         361
+  order-service          4875
+  payment-service           0   <-- KHÔNG ĐƯỢC GỌI
+  analytics-service         0   <-- KHÔNG ĐƯỢC GỌI
+  ops-service             658
+  ai-agent               5533
+  frontend                  0   <-- KHÔNG ĐƯỢC GỌI
+
+PHÉP ĐO HỢP LỆ: lỗi 0.00% <= 1%, không có 429, mọi VU chạy được.
+THIẾU ĐỘ PHỦ: payment-service, analytics-service, frontend
+THROTTLE (% chu kỳ CPU bị chặn vì chạm trần, >=1%): ai-agent 37.3%, kafka-exporter 26.8%, node-exporter 17.9%, postgres-exporter 13.4%, cadvisor 7.2%, grafana 5.6%, ops-service 5.3%, user-service 3.0%, redis 2.0%
