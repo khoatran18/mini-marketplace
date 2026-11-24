@@ -2,6 +2,7 @@ package authclient
 
 import (
 	"api-gateway/internal/client"
+	"api-gateway/internal/middleware"
 	"api-gateway/pkg/clientname"
 	"api-gateway/pkg/dto"
 	"api-gateway/pkg/pb/authservice"
@@ -277,6 +278,27 @@ func (s *AuthClient) GetStoreID(ctx context.Context, userID uint64) (storeID uin
 		return 0, "", err
 	}
 	return res.GetStoreId(), res.GetRole(), nil
+}
+
+// ListRecentPwdChanges asks auth-service (database) for the accounts whose password changed within the last `within`.
+// One call rebuilds the gateway's Redis deny entries after Redis lost its data (see middleware/pwdversion.go).
+func (s *AuthClient) ListRecentPwdChanges(ctx context.Context, within time.Duration) ([]middleware.PwdChange, error) {
+	if s.Client == nil {
+		if err := s.validateClient(); err != nil {
+			return nil, err
+		}
+	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	res, err := s.Client.ListRecentPwdChanges(ctx, &authpb.ListRecentPwdChangesRequest{WithinSeconds: int64(within / time.Second)})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]middleware.PwdChange, 0, len(res.GetChanges()))
+	for _, c := range res.GetChanges() {
+		out = append(out, middleware.PwdChange{UserID: c.GetUserId(), PwdVersion: c.GetPwdVersion()})
+	}
+	return out, nil
 }
 
 // GetPwdVersion returns the account's current password version from auth-service (database). The auth middleware uses it

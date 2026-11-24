@@ -92,6 +92,19 @@ message GetPwdVersionResponse {
   int64 pwd_version = 1;
 }
 
+// Accounts whose password changed within the last `within_seconds` (current version each). The gateway calls it once when
+// Redis lost its data, to rebuild the deny entries of the last access-token lifetime.
+message ListRecentPwdChangesRequest {
+  int64 within_seconds = 1;
+}
+message PwdChange {
+  uint64 user_id = 1;
+  int64 pwd_version = 2;
+}
+message ListRecentPwdChangesResponse {
+  repeated PwdChange changes = 1;
+}
+
 // Account management (platform admin only; the gateway enforces the caller's role).
 message AccountInfo {
   uint64 id = 1;
@@ -139,6 +152,7 @@ service AuthService {
   rpc RegisterSellerRoles(RegisterSellerRolesRequest) returns (RegisterSellerRolesResponse);
   rpc GetStoreIDRoleById(GetStoreIDRoleByIDRequest) returns (GetStoreIDRoleByIDResponse);
   rpc GetPwdVersion(GetPwdVersionRequest) returns (GetPwdVersionResponse);
+  rpc ListRecentPwdChanges(ListRecentPwdChangesRequest) returns (ListRecentPwdChangesResponse);
 }
 
 

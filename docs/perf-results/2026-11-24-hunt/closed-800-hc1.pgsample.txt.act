@@ -1,0 +1,1160 @@
+## 1795492153
+## 1795492155
+## 1795492156
+## 1795492157
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492158
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | active | - | - | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492159
+## 1795492160
+## 1795492162
+## 1795492163
+## 1795492164
+client backend | active | - | - | SELECT * FROM "products" WHERE status = $1 AND to_tsvector('simple', mm_unaccent(coalesce( | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492165
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492166
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492168
+## 1795492169
+## 1795492170
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492171
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492172
+## 1795492174
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492175
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492176
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492177
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492178
+## 1795492179
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492181
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | commit | 1
+## 1795492182
+## 1795492183
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492184
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492186
+## 1795492187
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492188
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492189
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492190
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492191
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492193
+client backend | active | IO | WALSync | commit | 2
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492194
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492195
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492196
+client backend | active | LWLock | WALWrite | commit | 3
+client backend | active | IO | WALSync | commit | 1
+## 1795492198
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492199
+client backend | active | - | - | UPDATE "accounts" SET "password"=$1,"pwd_version"=$2 WHERE "accounts"."deleted_at" IS NULL | 1
+client backend | active | Client | ClientRead | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "webhook_deliveries" WHERE status = $1 AND deliver_at <= $2 ORDER BY deliver | 1
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492200
+client backend | active | LWLock | WALWrite | commit | 2
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492201
+client backend | active | Client | ClientRead | UPDATE "orders" SET "paid_at"=$1,"payment_status"=$2,"status"=$3,"updated_at"=$4 WHERE id  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492202
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492204
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492205
+## 1795492206
+client backend | active | Client | ClientRead | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | idle in transaction | Client | ClientRead | SELECT count(*) FROM "cart_items" WHERE user_id = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492207
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | Client | ClientRead | SELECT * FROM "products" WHERE status = $1 AND "products"."deleted_at" IS NULL ORDER BY id | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492208
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492210
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | - | - | SELECT * FROM "addresses" WHERE user_id = $1 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492211
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+## 1795492212
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492213
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492214
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492216
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492217
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492218
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492219
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492220
+client backend | idle in transaction | - | - | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492222
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492223
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492224
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492225
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492227
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492228
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492229
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492230
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492231
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE status = $1 AND "products"."deleted_at" IS NULL ORDER BY pr | 1
+## 1795492232
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492234
+client backend | active | Client | ClientRead | SELECT * FROM "checkouts" WHERE id = $1 AND buyer_id = $2 ORDER BY "checkouts"."id" LIMIT  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "addresses" WHERE user_id = $1 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492235
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492236
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "payments" ("checkout_id","buyer_id","method","status","amount_minor","currenc | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492237
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492239
+client backend | idle in transaction | IO | WALSync | INSERT INTO "addresses" ("user_id","label","receiver_name","phone","line1","ward","distric | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492240
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492241
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492242
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492244
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | - | - | SELECT count(*) FROM "orders" WHERE buyer_id = $1 AND payment_method = $2 | 1
+## 1795492245
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492246
+client backend | active | Client | ClientRead | SELECT * FROM "products" WHERE id IN ($1,$2) AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492247
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492248
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | Client | ClientRead | SELECT category_id, count(*) AS n FROM "products" WHERE (status = $1 AND category_id <> 0) | 1
+client backend | active | - | - | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492250
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492251
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492252
+client backend | active | - | - | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492253
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492254
+client backend | active | LWLock | WALWrite | commit | 2
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492256
+client backend | active | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | active | - | - | SELECT "validate_order_events"."order_id","validate_order_events"."success","validate_orde | 1
+client backend | active | - | - | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492257
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | Client | ClientRead | SELECT count(*) FROM "products" WHERE status = $1 AND price >= $2 AND price <= $3 AND "pro | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492258
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | SELECT category_id, count(*) AS n FROM "products" WHERE (status = $1 AND category_id <> 0) | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492259
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492261
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492262
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492263
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492264
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492265
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | Client | ClientRead | SELECT id, seller_id FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORD | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492267
+client backend | active | Client | ClientRead | SELECT * FROM "inventory_ledgers" WHERE product_id = $1 ORDER BY id DESC LIMIT $2 | 1
+client backend | idle in transaction | - | - | INSERT INTO "attempts" ("payment_id","scenario","status","failure_code","at") VALUES ($1,$ | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492268
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492269
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | idle in transaction | IO | WALWrite | SELECT count(*) FROM "cart_items" WHERE user_id = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492270
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | Client | ClientRead | SELECT * FROM "categories" WHERE active = $1 ORDER BY parent_id ASC, sort ASC, id ASC | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492272
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492273
+client backend | idle in transaction | Client | ClientRead | SELECT count(*) FROM "cart_items" WHERE user_id = $1 | 1
+client backend | idle in transaction | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | idle in transaction | - | - | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | idle in transaction | - | - | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | active | - | - | SELECT count(*) FROM "orders" WHERE store_id = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+## 1795492274
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492275
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492276
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492278
+client backend | active | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492279
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492280
+client backend | active | Client | ClientRead | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_items" ("order_id","product_id","quantity","price","status","created_at | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492281
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492283
+client backend | active | Client | ClientRead | SELECT * FROM "webhook_deliveries" WHERE status = $1 AND deliver_at <= $2 ORDER BY deliver | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | - | - | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492284
+client backend | active | Client | ClientRead | SELECT * FROM "orders" WHERE store_id = $1 AND status = $2 ORDER BY id DESC LIMIT $3 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492285
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492286
+client backend | active | Client | ClientRead | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492288
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492289
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492290
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492291
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492293
+client backend | active | - | - | UPDATE ai_runs SET status = $2, tool_calls = $3, input_tokens = $4, output_tokens = $5, re | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492294
+client backend | active | - | - | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | Client | ClientRead | commit | 1
+client backend | idle in transaction | IO | WALSync | DELETE FROM "cart_items" WHERE user_id = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "validate_order_events" SET "status"=$1 WHERE order_id = $2 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492295
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492296
+client backend | active | Client | ClientRead | commit | 2
+client backend | active | - | - | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | Client | ClientRead | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492298
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492299
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | commit | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE status = $1 AND to_tsvector('simple', mm_unaccent(coalesce( | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492300
+client backend | active | - | - | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC FOR UPDATE | 1
+client backend | active | - | - | SELECT id, topic, key, attempts, last_error, dead_at, request_id, created_at FROM "order_d | 1
+client backend | active | Client | ClientRead | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE status = $1 AND to_tsvector('simple', mm_unaccent(coalesce( | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | Client | ClientRead | SELECT * FROM "categories" WHERE active = $1 ORDER BY parent_id ASC, sort ASC, id ASC | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492301
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492303
+client backend | active | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 ORDER BY added_at ASC, product_id ASC | 1
+client backend | active | Client | ClientRead | SELECT * FROM "order_status_histories" WHERE order_id = $1 ORDER BY id ASC | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492304
+client backend | active | - | - | SELECT count(*) FROM "payments" | 1
+autovacuum worker | active | - | - | autovacuum: VACUUM ANALYZE public.order_domain_events | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492305
+client backend | active | LWLock | WALWrite | commit | 5
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492306
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492307
+client backend | active | - | - | SELECT * FROM "products" WHERE (seller_id = $1 AND status IN ($2,$3) AND inventory <= COAL | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492309
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 3
+client backend | active | - | - | SELECT * FROM "buyers" WHERE user_id = $1 AND "buyers"."deleted_at" IS NULL ORDER BY "buye | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | IO | WALSync | COMMIT; | 1
+client backend | idle in transaction | Client | ClientRead | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492310
+client backend | idle in transaction | - | - | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | active | Client | ClientRead | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 ORDER BY added_at ASC, product_id ASC | 1
+client backend | active | Client | ClientRead | SELECT id, dedupe_key, alert_name, severity, component, labels, summary, runbook, action,  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492311
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492313
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 3
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | SELECT count(*) FROM "orders" WHERE store_id = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | idle in transaction | - | - | SELECT count(*) FROM "cart_items" WHERE user_id = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | idle in transaction | - | - | INSERT INTO ai_runs (run_id, conversation_id, user_id, role, client_message_id) VALUES ($1 | 1
+client backend | active | LWLock | WALWrite | commit | 1
+client backend | idle in transaction | - | - | begin | 1
+## 1795492314
+client backend | idle in transaction | - | - | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | begin | 1
+client backend | idle in transaction | - | - | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492315
+client backend | active | - | - | SELECT * FROM "products" WHERE id IN ($1,$2,$3) AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492316
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | active | LWLock | WALWrite | COMMIT; | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | - | - | INSERT INTO "checkouts" ("id","buyer_id","idempotency_key","payment_method","total","creat | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+client backend | active | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" IN ($1,$2) | 1
+## 1795492318
+client backend | idle in transaction | - | - | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC FOR UPDATE | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "checkouts" ("id","buyer_id","idempotency_key","payment_method","total","creat | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+## 1795492319
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payments" WHERE id = $1 ORDER BY "payments"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "webhook_deliveries" SET "attempts"=$1,"delivered_at"=$2,"last_code"=$3,"status"=$4 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492320
+client backend | active | LWLock | WALWrite | commit | 2
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | - | - | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | active | - | - | UPDATE "order_domain_events" SET "last_error"=$1,"published_at"=$2,"status"=$3 WHERE id IN | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | idle in transaction | - | - | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | idle in transaction | Client | ClientRead | DELETE FROM "cart_items" WHERE user_id = $1 AND product_id IN ($2,$3,$4) | 1
+## 1795492321
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | - | - | SELECT * FROM "addresses" WHERE user_id = $1 FOR UPDATE | 1
+## 1795492322
+client backend | active | LWLock | WALWrite | commit | 2
+client backend | active | LWLock | WALWrite | COMMIT; | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | - | - | UPDATE "orders" SET "expires_at"=$1,"status"=$2,"updated_at"=$3 WHERE id = $4 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492324
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492325
+client backend | active | LWLock | WALWrite | commit | 6
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | active | - | - | SELECT "validate_order_events"."order_id","validate_order_events"."success","validate_orde | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492326
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492327
+client backend | active | Client | ClientRead | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492329
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | IO | WALSync | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492330
+client backend | active | - | - | UPDATE "orders" SET "carrier"=$1,"shipped_at"=$2,"status"=$3,"tracking_code"=$4,"updated_a | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492331
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | LWLock | WALWrite | DELETE FROM "cart_items" WHERE user_id = $1 AND product_id IN ($2) | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+## 1795492332
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "expires_at"=$1,"status"=$2,"updated_at"=$3 WHERE id = $4 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | idle in transaction | LWLock | WALWrite | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+## 1795492334
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492335
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | SELECT status, count(*) AS n FROM "orders" WHERE buyer_id = $1 GROUP BY "status" | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492336
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+## 1795492337
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492339
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492340
+client backend | active | Client | ClientRead | INSERT INTO "checkouts" ("id","buyer_id","idempotency_key","payment_method","total","creat | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492341
+client backend | active | Client | ClientRead | commit | 1
+client backend | idle in transaction | - | - | INSERT INTO ai_messages (conversation_id, run_id, role, content) VALUES ($1, $2, 'user', $ | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492343
+client backend | idle in transaction | Client | ClientRead | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 2
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "accounts" SET "password"=$1,"pwd_version"=$2 WHERE "accounts"."deleted_at" IS NULL | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "inventory_ledgers" ("product_id","delta","reason","ref_type","ref_id","balanc | 1
+## 1795492344
+client backend | active | Client | ClientRead | SELECT count(*) FROM "products" WHERE status = $1 AND inventory > 0 AND "products"."delete | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | begin | 1
+client backend | active | LWLock | WALWrite | commit | 1
+## 1795492345
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492346
+client backend | idle in transaction | - | - | UPDATE "payments" SET "failed_count"=$1,"failure_code"=$2,"status"=$3,"updated_at"=$4 WHER | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | IO | WALSync | COMMIT; | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492348
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492349
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC FOR UPDATE | 1
+client backend | active | - | - | SELECT * FROM "validate_order_events" WHERE order_id = $1 ORDER BY "validate_order_events" | 1
+client backend | active | Client | ClientRead | UPDATE "order_domain_events" SET "last_error"=$1,"published_at"=$2,"status"=$3 WHERE id IN | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | INSERT INTO "inventory_ledgers" ("product_id","delta","reason","ref_type","ref_id","balanc | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492350
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492351
+client backend | active | Client | ClientRead | commit | 4
+client backend | active | - | - | SELECT * FROM "orders" WHERE buyer_id = $1 ORDER BY total_price DESC, id DESC LIMIT $2 | 1
+client backend | active | Client | ClientRead | SELECT * FROM "addresses" WHERE user_id = $1 ORDER BY is_default DESC, id ASC,"addresses". | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+## 1795492352
+client backend | idle in transaction | Client | ClientRead | begin | 3
+client backend | idle in transaction | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | idle in transaction | Client | ClientRead | DELETE FROM "cart_items" WHERE user_id = $1 AND product_id IN ($2,$3,$4) | 1
+## 1795492354
+client backend | idle in transaction | LWLock | WALWrite | UPDATE "addresses" SET "user_id"=$1,"label"=$2,"receiver_name"=$3,"phone"=$4,"line1"=$5,"w | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492355
+client backend | active | Client | ClientRead | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492356
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "inventory_ledgers" ("product_id","delta","reason","ref_type","ref_id","balanc | 2
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | idle in transaction | Client | ClientRead | DELETE FROM "addresses" WHERE "addresses"."id" = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "order_domain_events" SET "last_error"=$1,"published_at"=$2,"status"=$3 WHERE id IN | 1
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+## 1795492358
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492359
+client backend | active | - | - | UPDATE "payments" SET "status"=$1,"updated_at"=$2 WHERE "id" = $3 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492360
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | IO | WALSync | COMMIT; | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492361
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE status = $1 AND "products"."deleted_at" IS NULL ORDER BY pr | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492363
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | UPDATE "order_items" SET "status"=$1,"updated_at"=$2 WHERE order_id = $3 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | idle in transaction | - | - | INSERT INTO ai_runs (run_id, conversation_id, user_id, role, client_message_id) VALUES ($1 | 1
+## 1795492364
+client backend | active | LWLock | WALWrite | commit | 3
+client backend | active | - | - | commit | 2
+client backend | idle in transaction | Client | ClientRead | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 2
+client backend | active | - | - | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | - | - | UPDATE "payment_domain_events" SET "last_error"=$1,"published_at"=$2,"status"=$3 WHERE id  | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE id = $1 AND buyer_id = $2 ORDER BY "orders"."id" LIMIT $3 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 1
+autovacuum worker | active | - | - | autovacuum: VACUUM ANALYZE public.orders | 1
+## 1795492366
+client backend | active | LWLock | WALWrite | commit | 21
+client backend | active | - | - | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 2
+client backend | active | LWLock | WALWrite | INSERT INTO ops_audit_log (actor, event, subject_type, subject_id, details, request_id) VA | 2
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 2
+client backend | idle in transaction | Client | ClientRead | UPDATE "validate_order_events" SET "shipped"=$1 WHERE order_id = $2 | 1
+client backend | active | - | - | UPDATE "product_domain_events" SET "last_error"=$1,"published_at"=$2,"status"=$3 WHERE id  | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | idle in transaction | - | - | UPDATE "payments" SET "refunded_minor"=$1,"status"=$2,"updated_at"=$3 WHERE "id" = $4 | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "webhook_deliveries" SET "attempts"=$1,"delivered_at"=$2,"last_code"=$3,"status"=$4 | 1
+autovacuum worker | active | Timeout | VacuumTruncate | autovacuum: VACUUM ANALYZE public.cart_items | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO ai_runs (run_id, conversation_id, user_id, role, client_message_id) VALUES ($1 | 1
+## 1795492367
+client backend | active | Client | ClientRead | commit | 3
+client backend | idle in transaction | Client | ClientRead | begin | 3
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 2
+client backend | active | - | - | SELECT * FROM "products" WHERE id IN ($1,$2,$3,$4,$5) AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | Client | ClientRead | DELETE FROM "cart_items" WHERE user_id = $1 AND product_id = $2 | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | idle in transaction | LWLock | WALWrite | INSERT INTO "validate_order_events" ("success","status","processed","restored","shipped"," | 1
+client backend | active | Client | ClientRead | SELECT * FROM "products" WHERE id IN ($1,$2) AND "products"."deleted_at" IS NULL | 1
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | idle in transaction | IO | WALSync | INSERT INTO "addresses" ("user_id","label","receiver_name","phone","line1","ward","distric | 1
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | active | Client | ClientRead | UPDATE "products" SET "status"=$1,"version"=version + 1,"updated_at"=$2 WHERE "products"." | 1
+## 1795492369
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 2
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | UPDATE ai_runs SET status = $2, tool_calls = $3, input_tokens = $4, output_tokens = $5, re | 1
+client backend | active | LWLock | BufferContent | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | INSERT INTO "order_items" ("order_id","product_id","quantity","price","status","created_at | 1
+client backend | active | - | - | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO ai_conversations (id, user_id, role) VALUES ($1, $2, $3) | 1
+## 1795492370
+client backend | active | - | - | SELECT * FROM "products" WHERE (seller_id = $1 AND status IN ($2,$3) AND inventory <= COAL | 1
+client backend | active | - | - | INSERT INTO "validate_order_events" ("success","status","processed","restored","shipped"," | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | SELECT count(*) FROM "products" WHERE status = $1 AND inventory > 0 AND "products"."delete | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE id IN ($1) AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | active | - | - | SELECT * FROM "validate_order_events" WHERE order_id = $1 ORDER BY "validate_order_events" | 1
+client backend | idle in transaction | - | - | SELECT * FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORDER BY "produ | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "expires_at"=$1,"status"=$2,"updated_at"=$3 WHERE id = $4 | 1
+client backend | active | - | - | SELECT count(*) FROM "products" WHERE status = $1 AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "validate_order_events" SET "shipped"=$1 WHERE order_id = $2 | 1
+## 1795492372
+client backend | active | Client | ClientRead | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | idle in transaction | - | - | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | SELECT * FROM "payments" WHERE id = $1 ORDER BY "payments"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492373
+client backend | active | LWLock | WALWrite | commit | 4
+client backend | active | - | - | SELECT * FROM "checkouts" WHERE id = $1 AND buyer_id = $2 ORDER BY "checkouts"."id" LIMIT  | 3
+client backend | active | - | - | SELECT COALESCE(SUM(input_tokens + output_tokens), 0) FROM ai_runs WHERE user_id = $1 AND  | 2
+client backend | active | - | - | INSERT INTO "webhook_deliveries" ("payment_id","provider_event_id","type","payload","deliv | 1
+client backend | idle in transaction | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE status = $1 AND "products"."deleted_at" IS NULL ORDER BY pr | 1
+client backend | active | LWLock | LockManager | commit | 1
+client backend | active | LWLock | LockManager | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | active | - | - | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE ai_conversations SET active_run_id = $2, active_since = now(), updated_at = now() W | 1
+client backend | active | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9, | 1
+client backend | active | - | - | INSERT INTO "order_items" ("order_id","product_id","quantity","price","status","created_at | 1
+## 1795492376
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 5
+client backend | active | - | - | INSERT INTO "attempts" ("payment_id","scenario","status","failure_code","at") VALUES ($1,$ | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "inventory_ledgers" ("product_id","delta","reason","ref_type","ref_id","balanc | 2
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "carrier"=$1,"shipped_at"=$2,"status"=$3,"tracking_code"=$4,"updated_a | 1
+client backend | idle in transaction | - | - | UPDATE "webhook_deliveries" SET "attempts"=$1,"delivered_at"=$2,"last_code"=$3,"status"=$4 | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "paid_at"=$1,"payment_status"=$2,"status"=$3,"updated_at"=$4 WHERE id  | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "order_items" SET "status"=$1,"updated_at"=$2 WHERE order_id = $3 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | SELECT * FROM "payments" WHERE id = $1 ORDER BY "payments"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492378
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 4
+client backend | active | Client | ClientRead | commit | 2
+client backend | active | Client | ClientRead | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 2
+client backend | active | - | - | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 2
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "carrier"=$1,"shipped_at"=$2,"status"=$3,"tracking_code"=$4,"updated_a | 2
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 2
+client backend | active | - | - | UPDATE "orders" SET "carrier"=$1,"shipped_at"=$2,"status"=$3,"tracking_code"=$4,"updated_a | 1
+client backend | idle in transaction | - | - | SELECT * FROM "validate_order_events" WHERE order_id = $1 ORDER BY "validate_order_events" | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "webhook_deliveries" WHERE status = $1 AND deliver_at <= $2 ORDER BY deliver | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 1
+## 1795492381
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 2
+client backend | idle in transaction | Client | ClientRead | begin | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 2
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "cancel_reason"=$1,"canceled_at"=$2,"canceled_by"=$3,"status"=$4,"upda | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE seller_id = $1 AND "products"."deleted_at" IS NULL ORDER BY | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC FOR UPDATE | 1
+client backend | active | Client | ClientRead | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 1
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | active | - | - | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_items" ("order_id","product_id","quantity","price","status","created_at | 1
+## 1795492383
+client backend | active | LWLock | WALWrite | commit | 6
+client backend | idle in transaction | Client | ClientRead | UPDATE "validate_order_events" SET "status"=$1 WHERE order_id = $2 | 2
+client backend | active | - | - | UPDATE "products" SET "status"=$1,"version"=version + 1,"updated_at"=$2 WHERE "products"." | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 2
+client backend | active | - | - | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE store_id = $1 ORDER BY id DESC LIMIT $2 | 1
+client backend | active | - | - | SELECT role, content FROM (SELECT id, role, content FROM ai_messages WHERE conversation_id | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | active | - | - | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | active | LWLock | LockManager | INSERT INTO "checkouts" ("id","buyer_id","idempotency_key","payment_method","total","creat | 1
+client backend | active | - | - | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 1
+client backend | active | Client | ClientRead | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 1
+## 1795492385
+client backend | active | LWLock | WALWrite | commit | 5
+client backend | idle in transaction | Client | ClientRead | SELECT count(*) FROM "cart_items" WHERE user_id = $1 | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 2
+client backend | active | Client | ClientRead | commit | 2
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 2
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE id IN ($1) AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "pwd_version_events" WHERE user_id = $1 ORDER BY "pwd_version_events"."user_ | 1
+client backend | active | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 ORDER BY added_at ASC, product_id ASC | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+## 1795492388
+client backend | active | LWLock | WALWrite | commit | 8
+client backend | idle in transaction | Client | ClientRead | begin | 3
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | - | - | UPDATE "validate_order_events" SET "shipped"=$1 WHERE order_id = $2 | 1
+client backend | active | - | - | SELECT count(*) FROM "products" WHERE status = $1 AND inventory > 0 AND "products"."delete | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | active | - | - | SELECT * FROM "categories" WHERE active = $1 ORDER BY parent_id ASC, sort ASC, id ASC | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE id IN ($1,$2,$3) AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "addresses" ("user_id","label","receiver_name","phone","line1","ward","distric | 1
+## 1795492391
+client backend | active | LWLock | WALWrite | commit | 16
+client backend | active | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 2
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 2
+client backend | active | LWLock | WALWrite | COMMIT; | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_items" ("order_id","product_id","quantity","price","status","created_at | 2
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 2
+client backend | active | - | - | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | active | Lock | tuple | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "payment_status"=$1,"updated_at"=$2 WHERE id = $3 AND payment_status = | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE store_id = $1 AND status = $2 ORDER BY id DESC LIMIT $3 | 1
+## 1795492392
+client backend | active | LWLock | WALWrite | commit | 3
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 2
+client backend | active | - | - | SELECT count(*) FROM "orders" WHERE store_id = $1 AND status = $2 | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 2
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 2
+client backend | active | - | - | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | LockManager | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | active | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "inventory_ledgers" ("product_id","delta","reason","ref_type","ref_id","balanc | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "delivered_at"=$1,"paid_at"=$2,"payment_status"=$3,"status"=$4,"update | 1
+client backend | active | - | - | SELECT count(*) FROM "orders" WHERE store_id = $1 | 1
+## 1795492395
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 2
+client backend | idle in transaction | Client | ClientRead | begin | 2
+client backend | idle in transaction | Client | ClientRead | UPDATE "validate_order_events" SET "status"=$1 WHERE order_id = $2 | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "inventory_ledgers" ("product_id","delta","reason","ref_type","ref_id","balanc | 2
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORDER BY "produ | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE id IN ($1,$2,$3) AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT role, content FROM (SELECT id, role, content FROM ai_messages WHERE conversation_id | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO ai_messages (conversation_id, run_id, role, content) VALUES ($1, $2, 'assistan | 1
+## 1795492397
+client backend | active | LWLock | WALWrite | commit | 12
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 3
+client backend | idle in transaction | Client | ClientRead | begin | 2
+client backend | active | LWLock | WALWrite | COMMIT; | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "delivered_at"=$1,"paid_at"=$2,"payment_status"=$3,"status"=$4,"update | 1
+client backend | idle in transaction | - | - | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | active | - | - | SELECT count(*) FROM "orders" WHERE store_id = $1 | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORDER BY "produ | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE id IN ($1,$2,$3) AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | - | - | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+## 1795492399
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 4
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | - | - | INSERT INTO "inventory_ledgers" ("product_id","delta","reason","ref_type","ref_id","balanc | 1
+client backend | active | LWLock | WALWrite | COMMIT; | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | LWLock | WALWrite | commit | 1
+client backend | active | Client | ClientRead | COMMIT; | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | idle in transaction | - | - | begin | 1
+## 1795492402
+client backend | active | LWLock | WALWrite | commit | 4
+client backend | active | LWLock | WALWrite | COMMIT; | 4
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 2
+client backend | active | LWLock | ProcArray | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "products" ("name","price","seller_id","inventory","attributes","sku","descrip | 2
+client backend | active | - | - | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 2
+client backend | active | LWLock | ProcArray | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 2
+client backend | active | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | active | Client | ClientRead | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 1
+client backend | active | LWLock | ProcArray | SELECT count(*) FROM "categories" WHERE id = $1 AND active = $2 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+## 1795492404
+client backend | active | LWLock | WALWrite | commit | 3
+client backend | active | - | - | UPDATE "validate_order_events" SET "status"=$1 WHERE order_id = $2 | 3
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | active | LWLock | WALWrite | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | active | LWLock | WALWrite | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | active | Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 1
+client backend | active | LWLock | BufferContent | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_items" ("order_id","product_id","quantity","price","status","created_at | 1
+client backend | active | - | - | SELECT * FROM "order_status_histories" WHERE order_id = $1 ORDER BY id ASC | 1
+client backend | idle in transaction | Client | ClientRead | begin | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "validate_order_events" WHERE order_id = $1 ORDER BY "validate_order_events" | 1
+## 1795492406
+client backend | active | Client | ClientRead | commit | 3
+client backend | idle in transaction | Client | ClientRead | DELETE FROM "cart_items" WHERE user_id = $1 AND product_id IN ($2) | 2
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 2
+client backend | active | LWLock | ProcArray | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | active | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | active | Client | ClientRead | SELECT * FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORDER BY "produ | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_items" ("order_id","product_id","quantity","price","status","created_at | 1
+client backend | active | - | - | SELECT count(*) FROM "orders" WHERE store_id = $1 | 1
+client backend | active | Client | ClientRead | SELECT count(*) FROM "orders" WHERE store_id = $1 | 1
+client backend | active | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | Client | ClientRead | SELECT * FROM "products" WHERE id IN ($1) AND "products"."deleted_at" IS NULL | 1
+## 1795492408
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 8
+client backend | active | - | - | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 3
+client backend | active | - | - | SELECT count(*) FROM "orders" WHERE store_id = $1 | 2
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "checkouts" ("id","buyer_id","idempotency_key","payment_method","total","creat | 2
+client backend | active | - | - | SELECT count(*) FROM "orders" | 2
+client backend | active | LWLock | WALWrite | commit | 2
+client backend | active | - | - | SELECT * FROM "checkouts" WHERE id = $1 AND buyer_id = $2 ORDER BY "checkouts"."id" LIMIT  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_items" ("order_id","product_id","quantity","price","status","created_at | 1
+client backend | active | Client | ClientRead | INSERT INTO "addresses" ("user_id","label","receiver_name","phone","line1","ward","distric | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | active | IO | WALSync | INSERT INTO ops_audit_log (actor, event, subject_type, subject_id, details, request_id) VA | 1
+## 1795492411
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 5
+client backend | active | - | - | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | - | - | SELECT count(*) FROM "orders" WHERE buyer_id = $1 | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE id IN ($1) AND "products"."deleted_at" IS NULL | 1
+client backend | idle in transaction | - | - | SELECT * FROM "validate_order_events" WHERE order_id = $1 ORDER BY "validate_order_events" | 1
+client backend | active | - | - | UPDATE "product_domain_events" SET "last_error"=$1,"published_at"=$2,"status"=$3 WHERE id  | 1
+client backend | active | - | - | SELECT * FROM "validate_order_events" WHERE order_id = $1 ORDER BY "validate_order_events" | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE buyer_id = $1 ORDER BY total_price DESC, id DESC LIMIT $2 | 1
+client backend | active | - | - | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORDER BY "produ | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 1
+## 1795492415
+client backend | active | LWLock | LockManager | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 3
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 3
+client backend | idle in transaction | Client | ClientRead | begin | 3
+client backend | active | LWLock | WALWrite | commit | 2
+client backend | active | Client | ClientRead | SELECT * FROM "addresses" WHERE user_id = $1 ORDER BY is_default DESC, id ASC,"addresses". | 1
+client backend | active | Lock | transactionid | SELECT * FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORDER BY "produ | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "delivered_at"=$1,"status"=$2,"updated_at"=$3 WHERE id = $4 | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | idle in transaction | - | - | INSERT INTO "orders" ("buyer_id","status","total_price","created_at","updated_at","checkou | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "carrier"=$1,"shipped_at"=$2,"status"=$3,"tracking_code"=$4,"updated_a | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+## 1795492417
+client backend | active | LWLock | WALWrite | commit | 8
+client backend | idle in transaction | Client | ClientRead | begin | 4
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 2
+client backend | active | LWLock | WALWrite | COMMIT; | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | - | - | SELECT * FROM "cart_items" WHERE user_id = $1 AND product_id = $2 ORDER BY "cart_items"."u | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE buyer_id = $1 ORDER BY id DESC LIMIT $2 | 1
+client backend | active | Client | ClientRead | SELECT count(*) FROM "cart_items" WHERE user_id = $1 | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "payment_status"=$1,"status"=$2,"updated_at"=$3 WHERE id = $4 | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+## 1795492418
+client backend | active | LWLock | WALWrite | commit | 6
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 2
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 2
+client backend | active | - | - | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | active | LWLock | BufferContent | SELECT * FROM "orders" WHERE store_id = $1 ORDER BY id DESC LIMIT $2 | 1
+client backend | active | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE status = $1 AND to_tsvector('simple', mm_unaccent(coalesce( | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_status_histories" ("order_id","from_status","to_status","actor_type","a | 1
+client backend | idle in transaction | - | - | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | - | - | SELECT * FROM "products" WHERE status = $1 AND "products"."deleted_at" IS NULL ORDER BY pr | 1
+client backend | active | - | - | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+## 1795492421
+client backend | active | LWLock | WALWrite | commit | 5
+client backend | idle in transaction | Client | ClientRead | begin | 4
+client backend | active | - | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL OR | 3
+client backend | active | - | - | SELECT * FROM "payments" WHERE checkout_id = $1 AND (buyer_id = $2 AND $3 <> 0) ORDER BY " | 2
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 2
+client backend | active | Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 2
+client backend | idle in transaction | - | - | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 ORDER BY "orders"."id" LIMIT $2 FOR UPDATE | 1
+client backend | idle in transaction | - | - | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+client backend | active | - | - | UPDATE "products" SET "attributes"=$1,"brand"=$2,"category_id"=$3,"description"=$4,"image_ | 1
+client backend | active | LWLock | WALInsert | commit | 1
+## 1795492422
+client backend | active | LWLock | WALWrite | commit | 4
+client backend | idle in transaction | Client | ClientRead | SELECT count(*) FROM "cart_items" WHERE user_id = $1 | 1
+client backend | active | Lock | transactionid | SELECT * FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORDER BY "produ | 1
+client backend | active | Client | ClientRead | SELECT "validate_order_events"."order_id","validate_order_events"."success","validate_orde | 1
+client backend | idle in transaction | Client | ClientRead | DELETE FROM "cart_items" WHERE user_id = $1 AND product_id = $2 | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "order_domain_events" ("topic","key","payload","status","attempts","created_at | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_ | 1
+client backend | active | - | - | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC | 1
+client backend | active | IO | WALSync | commit | 1
+client backend | idle in transaction | - | - | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sol | 1
+client backend | idle in transaction | Client | ClientRead | UPDATE "orders" SET "cancel_reason"=$1,"canceled_at"=$2,"canceled_by"=$3,"status"=$4,"upda | 1
+client backend | idle in transaction | Client | ClientRead | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUE | 1
+## 1795492424
+client backend | active | IO | WALSync | commit | 1
+autovacuum worker | active | - | - | autovacuum: ANALYZE public.payments | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492425
+client backend | idle in transaction | - | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+## 1795492426
+client backend | active | Client | ClientRead | commit | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3)  | 1
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1
+client backend | active | - | - | UPDATE "orders" SET "expires_at"=$1,"status"=$2,"updated_at"=$3 WHERE id = $4 | 1
+## 1795492427
+## 1795492429
+## 1795492430
+## 1795492431
+## 1795492432
+## 1795492434
+## 1795492435
+## 1795492436
+client backend | idle in transaction | Client | ClientRead | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AN | 1

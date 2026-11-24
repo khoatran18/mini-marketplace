@@ -5,6 +5,7 @@ import (
 	"auth-service/internal/service/adapter"
 	"auth-service/pkg/dto"
 	"auth-service/pkg/model"
+	"auth-service/pkg/outbox"
 	"context"
 	"errors"
 	"fmt"
@@ -269,4 +270,16 @@ func (s *AuthService) GetPwdVersion(ctx context.Context, userID uint64) (int64, 
 		return 0, status.Error(codes.Internal, "internal error")
 	}
 	return acc.PwdVersion, nil
+}
+
+// ListRecentPwdChanges returns the accounts whose password changed within the last `within`, with their current version
+// (database). The gateway calls it ONCE when Redis lost its data, to write the deny entries back instead of asking the
+// database on every request.
+func (s *AuthService) ListRecentPwdChanges(ctx context.Context, within time.Duration) ([]*outbox.PwdVersionKafkaEvent, error) {
+	list, err := s.AccountRepo.ListPwdChangesSince(ctx, time.Now().Add(-within))
+	if err != nil {
+		s.ZapLogger.Warn("AuthService: ListRecentPwdChanges error", zap.Error(err))
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+	return list, nil
 }

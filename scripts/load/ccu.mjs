@@ -31,15 +31,27 @@
 //   ADMIN_USERNAME, ADMIN_PASSWORD  tài khoản admin (mặc định ADMIN_BOOTSTRAP_*); thiếu => bỏ admin/operator và báo thiếu độ phủ
 //   OUT          ghi kết quả JSON ra file                   (không ghi)
 //   MAX_ERR_PCT  ngưỡng lỗi ngoài dự kiến                   (1)
+//   VU_STAGES    SPIKE ĐÓNG: các bậc "mục tiêu VU:giây", vd 200:60,800:120,200:90 = nền 200 VU 60 s, NHẢY lên 800 VU và giữ 120 s, rồi về 200 VU 90 s.
+//                Bậc 1 vào theo ENTRY_RATE (+15 s ổn định), mỗi bậc sau thêm VU trong SPIKE_JUMP giây (10); bậc thấp hơn thì VU thừa dừng sau hành trình đang dở.
+//                VU được xen kẽ theo MIX nên nền 200 VU cũng đủ loại. Bỏ qua VUS/DURATION/RAMP.
+//   RATE_STAGES  SPIKE MỞ: các bậc "phiên/s:giây", vd 10:60,20:60,30:60 = 10 phiên/s rồi đột ngột 20 rồi 30. 30 s khởi động ở nhịp bậc 1. Bỏ qua ARRIVAL_RATE/DURATION.
+//   SPIKE_JUMP   giây để VU của một bậc tăng vào (10; 0 = cùng lúc)
+//   Có VU_STAGES/RATE_STAGES thì ccu.mjs in thêm BẢNG THEO CỬA SỔ 10 s (lời gọi/s, lỗi + mã, p50/p95, VU hỏng, độ trễ thanh toán, VU/phiên đang chạy)
+//   và ghi `timeline`/`stages` vào JSON; mọi lời gọi từ bậc 1 (cả đăng nhập của VU mới vào lúc nhảy) được tính vào số đo.
 // Mã thoát: 0 đạt, 1 vượt ngưỡng lỗi / setup hỏng / thiếu độ phủ.
 import { writeFileSync, readFileSync } from 'node:fs';
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 
+// Math.max(...mảng) tràn ngăn xếp khi mảng > ~100 nghìn phần tử (lượt dài như soak 30 phút làm mất cả báo cáo)
+const maxOf = (a) => a.reduce((m, x) => (x > m ? x : m), 0);
 const argv = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, v = '1'] = a.slice(2).split('='); return [k.toUpperCase().replace(/-/g, '_'), v]; }));
 const P = (k, d) => argv[k] ?? process.env[k] ?? d;
 const API = String(P('API_URL', 'http://api.marketplace.swarm.localhost')).replace(/\/$/, '');
 const WEB = String(P('FRONTEND_URL', API.replace('//api.', '//'))).replace(/\/$/, '');
-const VUS = Number(P('VUS', 25)), DURATION = Number(P('DURATION', 60)), ARRIVAL = Number(P('ARRIVAL_RATE', 0)), SESSION_N = Number(P('SESSION_JOURNEYS', 3)), MAX_ACTIVE = Number(P('MAX_ACTIVE', 4000)), ENTRY_RATE = Number(P('ENTRY_RATE', 5)), RAMP = Number(P('RAMP', Math.ceil(VUS / ENTRY_RATE)));
+const parseStages = (v) => String(v ?? '').split(',').filter(Boolean).map((x) => { const [a, b] = x.split(':').map(Number); if (!(a > 0) || !(b > 0)) throw new Error(`bậc sai "${x}" (mục tiêu:giây)`); return { target: a, secs: b }; });
+const VU_STAGES = parseStages(P('VU_STAGES', '')), RATE_STAGES = parseStages(P('RATE_STAGES', '')), JUMP = Number(P('SPIKE_JUMP', 10));
+const STAGED = VU_STAGES.length > 0 || RATE_STAGES.length > 0;
+const VUS = VU_STAGES.length ? Math.max(...VU_STAGES.map((x) => x.target)) : Number(P('VUS', 25)), DURATION = Number(P('DURATION', 60)), ARRIVAL = RATE_STAGES.length ? RATE_STAGES[0].target : Number(P('ARRIVAL_RATE', 0)), SESSION_N = Number(P('SESSION_JOURNEYS', 3)), MAX_ACTIVE = Number(P('MAX_ACTIVE', 4000)), ENTRY_RATE = Number(P('ENTRY_RATE', 5)), RAMP = Number(P('RAMP', Math.ceil((VU_STAGES.length ? VU_STAGES[0].target : VUS) / ENTRY_RATE)));
 const THINK = Number(P('THINK_MS', 1500)), AI_THINK = Number(P('AI_THINK_MS', 8000)), PRODUCTS = Number(P('PRODUCTS', 30));
 const MAX_ERR_PCT = Number(P('MAX_ERR_PCT', 1)), OUT = P('OUT', '');
 const ADMIN_USER = P('ADMIN_USERNAME', process.env.ADMIN_BOOTSTRAP_USERNAME ?? ''), ADMIN_PASS = P('ADMIN_PASSWORD', process.env.ADMIN_BOOTSTRAP_PASSWORD ?? '');
@@ -78,7 +90,7 @@ function stopProbe() {
   const cpu = probe.cpu, ms = (x) => (x ? +(x / 1e6).toFixed(1) : null);
   const out = {
     eventLoopMs: probe.eld ? { mean: ms(probe.eld.mean), p99: ms(probe.eld.percentile(99)), max: ms(probe.eld.max) } : null,
-    hostCpuPct: cpu.length ? { avg: +(cpu.reduce((a, b) => a + b, 0) / cpu.length).toFixed(1), max: +Math.max(...cpu).toFixed(1), samples: cpu.length } : null,
+    hostCpuPct: cpu.length ? { avg: +(cpu.reduce((a, b) => a + b, 0) / cpu.length).toFixed(1), max: +maxOf(cpu).toFixed(1), samples: cpu.length } : null,
     hostMemAvailableMinGiB: Number.isFinite(probe.memMin) ? +probe.memMin.toFixed(1) : null,
   };
   return out;
@@ -87,10 +99,13 @@ function stopProbe() {
 // Chế độ MỞ: khách quay lại dùng TÀI KHOẢN CŨ (chỉ đăng nhập) thay vì mỗi phiên đăng ký mới; nếu không, bcrypt của auth-service sẽ là thứ bị đo chứ không phải hệ thống
 const POOL = ARRIVAL > 0, pool = { buyer: [], aibuyer: [], sellerai: [], adminstaff: [], opstaff: [] };
 const poolKey = { buyer: 'buyer', ai_buyer: 'aibuyer', ai_seller: 'sellerai', ai_admin: 'adminstaff', ai_operator: 'opstaff' };
-let active = 0, peakActive = 0, started = 0, dropped = 0;
+let active = 0, peakActive = 0, started = 0, dropped = 0, liveVus = 0;
 const counters = { journeys: 0, orders: 0, shipped: 0, returns: 0, refunds: 0, ai_done: 0, ai_err: 0, vu_fail: 0 };
 const aiTtfb = [], aiTotal = [], payLag = []; let payTimeouts = 0; // payLag: ms từ lúc đặt đơn tới lúc payment xuất hiện (tạo bất đồng bộ qua Kafka)
 let phaseStart = 0, steady = false;
+// Số liệu theo cửa sổ 10 s (chỉ khi chạy theo bậc): để thấy chuyện gì xảy ra NGAY khi tải nhảy và bao lâu thì hồi phục
+const WIN_MS = 10000, TL = { t0: 0, w: {}, live: () => 0 };
+const win = () => { if (!TL.t0) return null; const b = Math.floor((Date.now() - TL.t0) / WIN_MS); return (TL.w[b] ??= { n: 0, err: 0, lat: [], codes: {}, fail: 0, pay: [], live: 0, started: 0 }); };
 const pct = (arr, p) => { if (!arr.length) return 0; const a = [...arr].sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor((p / 100) * a.length))]; };
 // container nghiệp vụ mà đường dẫn gateway sẽ chạm tới (ước lượng theo router; để in độ phủ)
 const AREAS = [[/^\/auth|^\/admin\/accounts/, 'auth-service'], [/^\/users/, 'user-service'], [/^\/ops|^\/playbooks/, 'ops-service'], [/^\/ai\//, 'ai-agent'],
@@ -102,7 +117,9 @@ const hit = (area) => { areas[area] = (areas[area] ?? 0) + 1; };
 function tally(name, status, ms, { ok, soft = [] }) {
   const s = stat(steady ? name : `(vào) ${name}`);
   s.n++; s.lat.push(ms); s.codes[status] = (s.codes[status] ?? 0) + 1;
+  const isErr = !(status === 429 || ok.includes(status) || soft.includes(status));
   if (status === 429) s.limited++; else if (ok.includes(status)) s.ok++; else if (soft.includes(status)) s.expected++; else s.err++;
+  const w = steady && win(); if (w) { w.n++; w.lat.push(ms); w.live = Math.max(w.live, TL.live()); if (isErr) { w.err++; w.codes[status] = (w.codes[status] ?? 0) + 1; } }
   return s;
 }
 // ok = mã mong đợi; soft = mã chấp nhận được do tranh chấp bình thường (hai người cùng xử lý một đơn...) nhưng vẫn đếm riêng
@@ -238,7 +255,7 @@ async function pollPayment(vu, o) {
   const t0 = performance.now();
   let pay = o.json?.payment;
   for (let i = 0; i < 16 && !pay?.id; i++) { await sleep(500); pay = (await call('GET /checkouts/:id', 'GET', `/checkouts/${o.json.checkout_id}`, { vu, token: await T(vu) })).json?.payment; }
-  if (steady) { if (pay?.id) payLag.push(performance.now() - t0); else payTimeouts++; } // quá ~8 s như frontend thì coi là hết thời gian chờ
+  if (steady) { if (pay?.id) { const lag = performance.now() - t0; payLag.push(lag); const w = win(); if (w) w.pay.push(lag); } else payTimeouts++; } // quá ~8 s như frontend thì coi là hết thời gian chờ
   return pay;
 }
 const CARD = { card_exp: '12/34', card_cvc: '123' };
@@ -464,11 +481,13 @@ async function vuLoop(id, kind, W, endAt, startDelay) {
   await sleep(startDelay);
   const vu = { id, kind, ip: `198.51.${(id >> 8) & 255}.${(id & 255) || 1}`, seq: 0 };
   const K = KINDS[kind];
-  try { await K.login(vu, W); } catch (e) { counters.vu_fail++; console.log(`  VU ${id} (${kind}) vào thất bại: ${e.message}`); return; }
+  try { await K.login(vu, W); } catch (e) { counters.vu_fail++; { const w = win(); if (w) w.fail++; } console.log(`  VU ${id} (${kind}) vào thất bại: ${e.message}`); return; }
+  liveVus++;
   while (Date.now() < endAt) {
     try { if (K.ai) { await aiChat(vu, K.ai); await think(AI_THINK); } else { await K.step(vu, W); await think(THINK * 2); } counters.journeys++; }
-    catch (e) { counters.vu_fail++; console.log(`  VU ${id} (${kind}) lỗi: ${e.message}`); await sleep(1000); }
+    catch (e) { counters.vu_fail++; { const w = win(); if (w) w.fail++; } console.log(`  VU ${id} (${kind}) lỗi: ${e.message}`); await sleep(1000); }
   }
+  liveVus--;
 }
 // Chế độ MỞ (nửa mở): một khách = một phiên vài hành trình rồi rời đi; khách đến theo nhịp bất kể hệ thống đang chậm
 async function session(id, kind, W) {
@@ -480,21 +499,24 @@ async function session(id, kind, W) {
     const n = Math.max(1, SESSION_N + Math.floor(Math.random() * 3) - 1);
     for (let i = 0; i < n; i++) {
       try { if (K.ai) { await aiChat(vu, K.ai); await think(AI_THINK); } else { await K.step(vu, W); await think(THINK * 2); } counters.journeys++; }
-      catch (e) { counters.vu_fail++; console.log(`  phiên ${id} (${kind}) lỗi: ${e.message}`); }
+      catch (e) { counters.vu_fail++; { const w = win(); if (w) w.fail++; } console.log(`  phiên ${id} (${kind}) lỗi: ${e.message}`); }
     }
-  } catch (e) { counters.vu_fail++; console.log(`  phiên ${id} (${kind}) vào thất bại: ${e.message}`); }
+  } catch (e) { counters.vu_fail++; { const w = win(); if (w) w.fail++; } console.log(`  phiên ${id} (${kind}) vào thất bại: ${e.message}`); }
   finally { active--; const k = poolKey[kind]; if (k && vu.user?.username) pool[k].push({ username: vu.user.username, password: vu.user.password, hasProfile: vu.hasProfile }); }
 }
 async function runOpen(W) {
   const mix = MIX.filter(([n]) => !(KINDS[n]?.need === 'admin' && !W.admin) && !(KINDS[n]?.need === 'operator' && !W.operator));
   const sum = mix.reduce((a, [, w]) => a + w, 0);
   const pickKind = () => { let r = Math.random() * sum; for (const [n, w] of mix) { if ((r -= w) < 0) return n; } return mix[0][0]; };
-  const t0 = Date.now(), steadyAt = t0 + 30000, endAt = steadyAt + DURATION * 1000; // 30 s khởi động: đủ để số phiên cùng lúc và kho tài khoản tới mức ổn định
-  setTimeout(() => { steady = true; phaseStart = Date.now(); startProbe(); console.log('[ổn định] bắt đầu đo'); }, steadyAt - t0);
+  const t0 = Date.now(), steadyAt = t0 + 30000, endAt = steadyAt + (RATE_STAGES.length ? RATE_STAGES.reduce((a, x) => a + x.secs, 0) : DURATION) * 1000; // 30 s khởi động: đủ để số phiên cùng lúc và kho tài khoản tới mức ổn định
+  TL.live = () => active; // cột "đang chạy" của bảng cửa sổ = số phiên đang chạy
+  const rateAt = (t) => { if (!RATE_STAGES.length || t < steadyAt) return ARRIVAL; let acc = steadyAt; for (const g of RATE_STAGES) { acc += g.secs * 1000; if (t < acc) return g.target; } return RATE_STAGES.at(-1).target; };
+  setTimeout(() => { steady = true; phaseStart = Date.now(); if (STAGED) startTimeline(Date.now(), RATE_STAGES, 'phiên/s'); startProbe(); console.log('[ổn định] bắt đầu đo'); }, steadyAt - t0);
   const ticker = setInterval(() => { const t = Object.values(stats); console.log(`  t=${((Date.now() - t0) / 1000).toFixed(0)}s lời gọi=${t.reduce((a, s) => a + s.n, 0)} lỗi=${t.reduce((a, s) => a + s.err, 0)} phiên đang chạy=${active} đơn=${counters.orders}`); }, 10000);
   const running = [];
-  for (let k = 0; ; k++) { // phiên thứ k đến đúng lúc t0 + k/ARRIVAL (không dồn lại khi hệ thống chậm)
-    const at = t0 + (k * 1000) / ARRIVAL; if (at >= endAt) break;
+  let at = t0;
+  for (let k = 0; ; k++) { // phiên thứ k đến đúng lúc t0 + k/ARRIVAL (không dồn lại khi hệ thống chậm); theo bậc: khoảng cách = 1/nhịp của bậc đang chạy
+    if (k > 0) at += 1000 / rateAt(at); if (at >= endAt) break;
     const wait = at - Date.now(); if (wait > 0) await sleep(wait);
     if (active >= MAX_ACTIVE) { dropped++; continue; }
     started++; running.push(session(k + 1, pickKind(), W));
@@ -513,6 +535,27 @@ function assign(W) { // chia VU theo MIX (bỏ loại thiếu điều kiện), p
   return parts.flatMap((p) => Array(p.c).fill(p.n));
 }
 
+// ------------------------------------------------------------------ bảng theo cửa sổ (chạy theo bậc)
+let STAGE_MARKS = [];
+function startTimeline(t0, stages, unit) {
+  TL.t0 = t0; let acc = 0;
+  STAGE_MARKS = stages.map((g) => { const m = { at: acc, secs: g.secs, target: g.target, unit }; acc += g.secs; return m; });
+  console.log('[bậc] ' + STAGE_MARKS.map((m) => `${m.target} ${unit} x ${m.secs}s (từ giây ${m.at})`).join(' -> '));
+}
+function timelineRows() {
+  const ks = Object.keys(TL.w).map(Number).sort((a, b) => a - b);
+  return ks.map((b) => { const w = TL.w[b], t = b * WIN_MS / 1000, st = STAGE_MARKS.filter((m) => m.at <= t).at(-1);
+    return { t, stage: st ? st.target : null, calls: w.n, callsPerSec: +(w.n / (WIN_MS / 1000)).toFixed(1), err: w.err, errPct: w.n ? +((100 * w.err) / w.n).toFixed(2) : 0, codes: w.codes, fail: w.fail,
+      p50: +pct(w.lat, 50).toFixed(0), p95: +pct(w.lat, 95).toFixed(0), p99: +pct(w.lat, 99).toFixed(0), max: +maxOf(w.lat).toFixed(0), payP95: w.pay.length ? +pct(w.pay, 95).toFixed(0) : null, payN: w.pay.length, live: w.live }; });
+}
+function printTimeline() {
+  const rows = timelineRows(); if (!rows.length) return;
+  console.log('\n=== THEO CỬA SỔ 10 s (giây tính từ đầu bậc 1; "bậc" = mục tiêu của bậc đang chạy) ===');
+  console.log('giây'.padStart(5), 'bậc'.padStart(5), 'đang chạy'.padStart(9), 'calls/s'.padStart(8), 'lỗi'.padStart(5), 'lỗi%'.padStart(6), 'VU hỏng'.padStart(8), 'p50'.padStart(6), 'p95'.padStart(6), 'p99'.padStart(6), 'max'.padStart(6), 'pay p95'.padStart(8), ' mã lỗi');
+  for (const r of rows) console.log(String(r.t).padStart(5), String(r.stage ?? '').padStart(5), String(r.live).padStart(9), String(r.callsPerSec).padStart(8), String(r.err).padStart(5), String(r.errPct).padStart(6), String(r.fail).padStart(8),
+    String(r.p50).padStart(6), String(r.p95).padStart(6), String(r.p99).padStart(6), String(r.max).padStart(6), String(r.payP95 ?? '-').padStart(8), ' ' + JSON.stringify(r.codes));
+}
+
 // ------------------------------------------------------------------ báo cáo
 const WANT = ['api-gateway', 'auth-service', 'user-service', 'product-service', 'order-service', 'payment-service', 'analytics-service', 'ops-service', 'ai-agent', 'frontend'];
 let PROBE = null, phaseEnd = 0;
@@ -524,18 +567,19 @@ function report(elapsed) {
   for (const [name, s] of Object.entries(stats).sort(([a], [b]) => a.localeCompare(b))) {
     if (!name.startsWith('(vào)')) { n += s.n; err += s.err; limited += s.limited; }
     console.log(name.padEnd(46), String(s.n).padStart(6), String(s.ok).padStart(6), String(s.expected).padStart(8), String(s.limited).padStart(5), String(s.err).padStart(5),
-      `${pct(s.lat, 50).toFixed(0)}`.padStart(7), `${pct(s.lat, 95).toFixed(0)}`.padStart(7), `${pct(s.lat, 99).toFixed(0)}`.padStart(7), `${Math.max(0, ...s.lat).toFixed(0)}`.padStart(7), ' ' + JSON.stringify(s.codes));
+      `${pct(s.lat, 50).toFixed(0)}`.padStart(7), `${pct(s.lat, 95).toFixed(0)}`.padStart(7), `${pct(s.lat, 99).toFixed(0)}`.padStart(7), `${maxOf(s.lat).toFixed(0)}`.padStart(7), ' ' + JSON.stringify(s.codes));
   }
   const errPct = n ? (100 * err) / n : 0;
   console.log(`\nổn định ${elapsed.toFixed(0)} s: ${n} lời gọi (${(n / elapsed).toFixed(1)}/s), lỗi ngoài dự kiến ${err} (${errPct.toFixed(2)}%), 429: ${limited}`);
   console.log(`hành trình xong ${counters.journeys}, đơn tạo ${counters.orders}, giao đi ${counters.shipped}, trả hàng ${counters.returns}, hoàn tiền ${counters.refunds}, VU hỏng ${counters.vu_fail}`);
   if (aiTotal.length || counters.ai_err) console.log(`AI: xong ${counters.ai_done}, lỗi ${counters.ai_err}; byte đầu p50/p95 ${pct(aiTtfb, 50).toFixed(0)}/${pct(aiTtfb, 95).toFixed(0)} ms; cả lượt p50/p95 ${pct(aiTotal, 50).toFixed(0)}/${pct(aiTotal, 95).toFixed(0)} ms`);
-  if (payLag.length || payTimeouts) console.log(`Thanh toán tạo bất đồng bộ (đặt đơn -> payment xuất hiện): ${payLag.length} đơn, p50/p95/max ${pct(payLag, 50).toFixed(0)}/${pct(payLag, 95).toFixed(0)}/${Math.max(0, ...payLag).toFixed(0)} ms; quá 8 s chưa có: ${payTimeouts}`);
+  if (payLag.length || payTimeouts) console.log(`Thanh toán tạo bất đồng bộ (đặt đơn -> payment xuất hiện): ${payLag.length} đơn, p50/p95/max ${pct(payLag, 50).toFixed(0)}/${pct(payLag, 95).toFixed(0)}/${maxOf(payLag).toFixed(0)} ms; quá 8 s chưa có: ${payTimeouts}`);
   if (PROBE) {
     const e = PROBE.eventLoopMs, h = PROBE.hostCpuPct;
     if (e) console.log(`MÁY TẢI: độ trễ vòng lặp sự kiện node mean/p99/max ${e.mean}/${e.p99}/${e.max} ms${e.p99 > 100 ? '  <-- CẢNH BÁO: máy tải bị nghẽn, độ trễ đo bị cộng thêm' : ''}`);
     if (h) console.log(`TOÀN MÁY: CPU trung bình ${h.avg}%, đỉnh ${h.max}% (${h.samples} mẫu)${h.max > 75 ? '  <-- CẢNH BÁO: trên 75%, máy tải và hệ thống tranh nhau CPU, số đo kém tin cậy' : ''}; RAM trống thấp nhất ${PROBE.hostMemAvailableMinGiB} GiB`);
   }
+  printTimeline();
   console.log('\nĐỘ PHỦ (lời gọi tới từng container nghiệp vụ, gồm cả giai đoạn vào):');
   const missing = WANT.filter((a) => !areas[a]);
   for (const a of WANT) console.log(`  ${a.padEnd(20)} ${String(areas[a] ?? 0).padStart(6)}${areas[a] ? '' : '   <-- KHÔNG ĐƯỢC GỌI'}`);
@@ -546,14 +590,15 @@ function report(elapsed) {
     // Chỉ ghi số tổng hợp (không ghi từng mẫu độ trễ): đủ để tính lại % và so sánh giữa các lần đo
     const lab = {}, codes = {}; let calls = 0, errs = 0;
     for (const [name, st] of Object.entries(stats)) {
-      lab[name] = { n: st.n, ok: st.ok, expected: st.expected, limited: st.limited, err: st.err, p50: +pct(st.lat, 50).toFixed(1), p95: +pct(st.lat, 95).toFixed(1), p99: +pct(st.lat, 99).toFixed(1), max: +Math.max(0, ...st.lat).toFixed(1), codes: st.codes };
+      lab[name] = { n: st.n, ok: st.ok, expected: st.expected, limited: st.limited, err: st.err, p50: +pct(st.lat, 50).toFixed(1), p95: +pct(st.lat, 95).toFixed(1), p99: +pct(st.lat, 99).toFixed(1), max: +maxOf(st.lat).toFixed(1), codes: st.codes };
       if (!name.startsWith('(vào)')) { calls += st.n; errs += st.err; for (const [c, k] of Object.entries(st.codes)) codes[c] = (codes[c] ?? 0) + k; }
     }
-    const q = (a) => ({ n: a.length, p50: +pct(a, 50).toFixed(1), p95: +pct(a, 95).toFixed(1), max: +Math.max(0, ...a).toFixed(1) });
+    const q = (a) => ({ n: a.length, p50: +pct(a, 50).toFixed(1), p95: +pct(a, 95).toFixed(1), max: +maxOf(a).toFixed(1) });
     writeFileSync(OUT, JSON.stringify({
       steadyStartMs: phaseStart, steadyEndMs: phaseEnd || Date.now(), mode: ARRIVAL > 0 ? 'open' : 'closed', vus: VUS, arrivalRate: ARRIVAL || null, duration: DURATION, elapsed,
       steady: { calls, callsPerSec: +(calls / elapsed).toFixed(1), unexpectedErrors: errs, unexpectedErrorPct: calls ? +((100 * errs) / calls).toFixed(3) : 0, codes },
       open: ARRIVAL > 0 ? { started, dropped, peakActive } : null,
+      stages: STAGED ? { kind: VU_STAGES.length ? 'vu' : 'rate', list: VU_STAGES.length ? VU_STAGES : RATE_STAGES, jump: JUMP } : null, timeline: STAGED ? timelineRows() : null,
       labels: lab, areas, counters, ai: { ttfb: q(aiTtfb), total: q(aiTotal) }, payment: { lag: q(payLag), timeoutsOver8s: payTimeouts }, loadgen: PROBE, valid, missing,
     }, null, 1));
   }
@@ -569,16 +614,29 @@ function report(elapsed) {
     console.log(`\nCHẾ ĐỘ MỞ: nhịp ${ARRIVAL} phiên/s, đã bắt đầu ${started} phiên, bỏ ${dropped} (vượt MAX_ACTIVE=${MAX_ACTIVE}), đỉnh ${peakActive} phiên cùng lúc`);
     process.exit(report(measured) ? 0 : 1);
   }
-  console.log(`CCU ${VUS} VU, ${DURATION}s ổn định + ramp ${RAMP}s, API ${API}, frontend ${WEB}`);
+  console.log(VU_STAGES.length ? `SPIKE ĐÓNG: ${VU_STAGES.map((g) => `${g.target} VU x ${g.secs}s`).join(' -> ')} (vào trong ${JUMP}s mỗi lần tăng), API ${API}` : `CCU ${VUS} VU, ${DURATION}s ổn định + ramp ${RAMP}s, API ${API}, frontend ${WEB}`);
   let W;
   try { W = await setup(); } catch (e) { console.log('setup hỏng:', e.message); process.exit(1); }
-  const kinds = assign(W);
+  let kinds = assign(W);
+  if (VU_STAGES.length) { // xen kẽ loại VU theo MIX để bậc nền (VU đầu) cũng đủ loại, không toàn buyer
+    const seen = {}, tot = {}; for (const k of kinds) tot[k] = (tot[k] ?? 0) + 1;
+    kinds = kinds.map((k) => ({ k, key: ((seen[k] = (seen[k] ?? 0) + 1) - 0.5) / tot[k] })).sort((a, b) => a.key - b.key).map((x) => x.k);
+  }
   const counts = {}; for (const k of kinds) counts[k] = (counts[k] ?? 0) + 1;
   console.log('[chạy]', JSON.stringify(counts));
-  const t0 = Date.now(), steadyAt = t0 + RAMP * 1000 + 15000, endAt = steadyAt + DURATION * 1000;
-  setTimeout(() => { steady = true; phaseStart = Date.now(); startProbe(); console.log('[ổn định] bắt đầu đo'); }, steadyAt - t0);
+  const t0 = Date.now(), steadyAt = t0 + RAMP * 1000 + 15000, total = VU_STAGES.length ? VU_STAGES.reduce((a, g) => a + g.secs, 0) : DURATION, endAt = steadyAt + total * 1000;
+  TL.live = () => liveVus;
+  setTimeout(() => { steady = true; phaseStart = Date.now(); if (VU_STAGES.length) startTimeline(Date.now(), VU_STAGES, 'VU'); startProbe(); console.log('[ổn định] bắt đầu đo'); }, steadyAt - t0);
   const ticker = setInterval(() => { const t = Object.values(stats); console.log(`  t=${((Date.now() - t0) / 1000).toFixed(0)}s lời gọi=${t.reduce((a, s) => a + s.n, 0)} lỗi=${t.reduce((a, s) => a + s.err, 0)} 429=${t.reduce((a, s) => a + s.limited, 0)} đơn=${counters.orders}`); }, 10000);
-  await Promise.all(kinds.map((k, i) => vuLoop(i + 1, k, W, endAt, (RAMP * 1000 * i) / VUS)));
+  // Lịch từng VU: theo bậc thì VU i vào ở bậc đầu tiên có mục tiêu > i (bậc 1: rải theo ENTRY_RATE; bậc sau: rải trong JUMP giây) và dừng ở bậc sau đó có mục tiêu <= i
+  const sched = (i) => {
+    if (!VU_STAGES.length) return { delay: (RAMP * 1000 * i) / VUS, end: endAt };
+    let at = steadyAt, startIdx = VU_STAGES.findIndex((g) => g.target > i), start = steadyAt, stop = endAt, prev = 0;
+    for (let s = 0; s < VU_STAGES.length; s++) { if (s === startIdx) start = at; if (s > startIdx && VU_STAGES[s].target <= i && stop === endAt) stop = at; if (s < startIdx) prev = VU_STAGES[s].target; at += VU_STAGES[s].secs * 1000; }
+    if (startIdx === 0) return { delay: (RAMP * 1000 * i) / VU_STAGES[0].target, end: stop };
+    return { delay: Math.max(0, start - t0) + (JUMP * 1000 * (i - prev)) / Math.max(1, VU_STAGES[startIdx].target - prev), end: stop };
+  };
+  await Promise.all(kinds.map((k, i) => { const sc = sched(i); return vuLoop(i + 1, k, W, sc.end, sc.delay); }));
   clearInterval(ticker); PROBE = stopProbe();
   await teardown(W);
   process.exit(report((Date.now() - phaseStart) / 1000) ? 0 : 1);

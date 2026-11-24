@@ -19,17 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_ListAccounts_FullMethodName        = "/auth_service.pkb.pb.AuthService/ListAccounts"
-	AuthService_CreateStaffAccount_FullMethodName  = "/auth_service.pkb.pb.AuthService/CreateStaffAccount"
-	AuthService_DeleteStaffAccount_FullMethodName  = "/auth_service.pkb.pb.AuthService/DeleteStaffAccount"
-	AuthService_ResetStaffPassword_FullMethodName  = "/auth_service.pkb.pb.AuthService/ResetStaffPassword"
-	AuthService_Login_FullMethodName               = "/auth_service.pkb.pb.AuthService/Login"
-	AuthService_Register_FullMethodName            = "/auth_service.pkb.pb.AuthService/Register"
-	AuthService_RefreshToken_FullMethodName        = "/auth_service.pkb.pb.AuthService/RefreshToken"
-	AuthService_ChangePassword_FullMethodName      = "/auth_service.pkb.pb.AuthService/ChangePassword"
-	AuthService_RegisterSellerRoles_FullMethodName = "/auth_service.pkb.pb.AuthService/RegisterSellerRoles"
-	AuthService_GetStoreIDRoleById_FullMethodName  = "/auth_service.pkb.pb.AuthService/GetStoreIDRoleById"
-	AuthService_GetPwdVersion_FullMethodName       = "/auth_service.pkb.pb.AuthService/GetPwdVersion"
+	AuthService_ListAccounts_FullMethodName         = "/auth_service.pkb.pb.AuthService/ListAccounts"
+	AuthService_CreateStaffAccount_FullMethodName   = "/auth_service.pkb.pb.AuthService/CreateStaffAccount"
+	AuthService_DeleteStaffAccount_FullMethodName   = "/auth_service.pkb.pb.AuthService/DeleteStaffAccount"
+	AuthService_ResetStaffPassword_FullMethodName   = "/auth_service.pkb.pb.AuthService/ResetStaffPassword"
+	AuthService_Login_FullMethodName                = "/auth_service.pkb.pb.AuthService/Login"
+	AuthService_Register_FullMethodName             = "/auth_service.pkb.pb.AuthService/Register"
+	AuthService_RefreshToken_FullMethodName         = "/auth_service.pkb.pb.AuthService/RefreshToken"
+	AuthService_ChangePassword_FullMethodName       = "/auth_service.pkb.pb.AuthService/ChangePassword"
+	AuthService_RegisterSellerRoles_FullMethodName  = "/auth_service.pkb.pb.AuthService/RegisterSellerRoles"
+	AuthService_GetStoreIDRoleById_FullMethodName   = "/auth_service.pkb.pb.AuthService/GetStoreIDRoleById"
+	AuthService_GetPwdVersion_FullMethodName        = "/auth_service.pkb.pb.AuthService/GetPwdVersion"
+	AuthService_ListRecentPwdChanges_FullMethodName = "/auth_service.pkb.pb.AuthService/ListRecentPwdChanges"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -49,6 +50,7 @@ type AuthServiceClient interface {
 	RegisterSellerRoles(ctx context.Context, in *RegisterSellerRolesRequest, opts ...grpc.CallOption) (*RegisterSellerRolesResponse, error)
 	GetStoreIDRoleById(ctx context.Context, in *GetStoreIDRoleByIDRequest, opts ...grpc.CallOption) (*GetStoreIDRoleByIDResponse, error)
 	GetPwdVersion(ctx context.Context, in *GetPwdVersionRequest, opts ...grpc.CallOption) (*GetPwdVersionResponse, error)
+	ListRecentPwdChanges(ctx context.Context, in *ListRecentPwdChangesRequest, opts ...grpc.CallOption) (*ListRecentPwdChangesResponse, error)
 }
 
 type authServiceClient struct {
@@ -169,6 +171,16 @@ func (c *authServiceClient) GetPwdVersion(ctx context.Context, in *GetPwdVersion
 	return out, nil
 }
 
+func (c *authServiceClient) ListRecentPwdChanges(ctx context.Context, in *ListRecentPwdChangesRequest, opts ...grpc.CallOption) (*ListRecentPwdChangesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRecentPwdChangesResponse)
+	err := c.cc.Invoke(ctx, AuthService_ListRecentPwdChanges_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -186,6 +198,7 @@ type AuthServiceServer interface {
 	RegisterSellerRoles(context.Context, *RegisterSellerRolesRequest) (*RegisterSellerRolesResponse, error)
 	GetStoreIDRoleById(context.Context, *GetStoreIDRoleByIDRequest) (*GetStoreIDRoleByIDResponse, error)
 	GetPwdVersion(context.Context, *GetPwdVersionRequest) (*GetPwdVersionResponse, error)
+	ListRecentPwdChanges(context.Context, *ListRecentPwdChangesRequest) (*ListRecentPwdChangesResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -228,6 +241,9 @@ func (UnimplementedAuthServiceServer) GetStoreIDRoleById(context.Context, *GetSt
 }
 func (UnimplementedAuthServiceServer) GetPwdVersion(context.Context, *GetPwdVersionRequest) (*GetPwdVersionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPwdVersion not implemented")
+}
+func (UnimplementedAuthServiceServer) ListRecentPwdChanges(context.Context, *ListRecentPwdChangesRequest) (*ListRecentPwdChangesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListRecentPwdChanges not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -448,6 +464,24 @@ func _AuthService_GetPwdVersion_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_ListRecentPwdChanges_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRecentPwdChangesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ListRecentPwdChanges(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ListRecentPwdChanges_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ListRecentPwdChanges(ctx, req.(*ListRecentPwdChangesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -498,6 +532,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPwdVersion",
 			Handler:    _AuthService_GetPwdVersion_Handler,
+		},
+		{
+			MethodName: "ListRecentPwdChanges",
+			Handler:    _AuthService_ListRecentPwdChanges_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

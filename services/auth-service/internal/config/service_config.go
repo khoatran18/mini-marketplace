@@ -108,7 +108,7 @@ func initPostgresDB() (*gorm.DB, error) {
 		return nil, err
 	}
 	// 3 bản x 10 = 30 kết nối (trước đây 25 mỗi bản = 75); bcrypt là thứ nghẽn ở auth chứ không phải DB (R15)
-	dbpool.Apply(sqlDB, 10, 5)
+	dbpool.Apply(sqlDB, 10)
 	if err := migrate.Run(context.Background(), sqlDB); err != nil {
 		return nil, fmt.Errorf("migrate database: %w", err)
 	}

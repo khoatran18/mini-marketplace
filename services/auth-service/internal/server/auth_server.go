@@ -5,6 +5,7 @@ import (
 	"auth-service/internal/service"
 	"auth-service/pkg/pb"
 	"context"
+	"time"
 
 	"buf.build/go/protovalidate"
 	"go.uber.org/zap"
@@ -245,6 +246,22 @@ func (s *AuthServer) GetPwdVersion(ctx context.Context, req *authpb.GetPwdVersio
 		return nil, err
 	}
 	return &authpb.GetPwdVersionResponse{PwdVersion: v}, nil
+}
+
+// ListRecentPwdChanges returns the accounts whose password changed within the last within_seconds (database, not cache).
+func (s *AuthServer) ListRecentPwdChanges(ctx context.Context, req *authpb.ListRecentPwdChangesRequest) (*authpb.ListRecentPwdChangesResponse, error) {
+	if req.GetWithinSeconds() <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "within_seconds must be positive")
+	}
+	list, err := s.AuthService.ListRecentPwdChanges(ctx, time.Duration(req.GetWithinSeconds())*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	out := &authpb.ListRecentPwdChangesResponse{Changes: make([]*authpb.PwdChange, 0, len(list))}
+	for _, e := range list {
+		out.Changes = append(out.Changes, &authpb.PwdChange{UserId: e.UserID, PwdVersion: e.PwdVersion})
+	}
+	return out, nil
 }
 
 // ListAccounts returns accounts for the admin console (gateway restricts the caller to role admin).

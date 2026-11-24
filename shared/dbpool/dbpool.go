@@ -4,6 +4,10 @@
 // peak turns into hundreds of connections and Postgres refuses the excess ("sorry, too many clients already", R15).
 // With a cap the surplus callers wait inside the service (bounded by their own context deadline) instead.
 //
+// Idle = open by default. Postgres runs one process per connection, so a connection closed because the idle count was
+// reached must be re-forked on the next burst (R23: MaxIdle < MaxOpen turned a short Postgres slowdown into a connection
+// storm that pinned Postgres at 3 cores). Idle connections are cheap (a few MB each, sum of MaxOpen is bounded by the budget).
+//
 // Budget: the sum over all replicas of MaxOpen must stay clearly below Postgres max_connections (leave room for the
 // exporter, ops, analytics, a rolling update that starts the new replica before stopping the old one, and admin sessions).
 package dbpool
@@ -18,16 +22,17 @@ import (
 const (
 	maxEnvOpen   = 500
 	connLifetime = 30 * time.Minute
-	connIdleTime = 5 * time.Minute
+	connIdleTime = 30 * time.Minute
 )
 
-// Limits returns the pool size: DB_MAX_OPEN_CONNS / DB_MAX_IDLE_CONNS when set to a positive number, else the given defaults.
-// Idle is never above open.
-func Limits(defOpen, defIdle int) (open, idle int) {
-	open, idle = envInt("DB_MAX_OPEN_CONNS", defOpen), envInt("DB_MAX_IDLE_CONNS", defIdle)
+// Limits returns the pool size: DB_MAX_OPEN_CONNS when set to a positive number, else defOpen. Idle equals open unless
+// DB_MAX_IDLE_CONNS is set to a smaller positive number (use that only when the connection budget is exhausted or behind a pooler).
+func Limits(defOpen int) (open, idle int) {
+	open = envInt("DB_MAX_OPEN_CONNS", defOpen)
 	if open > maxEnvOpen {
 		open = maxEnvOpen
 	}
+	idle = envInt("DB_MAX_IDLE_CONNS", open)
 	if idle > open {
 		idle = open
 	}
@@ -35,8 +40,8 @@ func Limits(defOpen, defIdle int) (open, idle int) {
 }
 
 // Apply sets the pool limits on db (see Limits) and returns them.
-func Apply(db *sql.DB, defOpen, defIdle int) (open, idle int) {
-	open, idle = Limits(defOpen, defIdle)
+func Apply(db *sql.DB, defOpen int) (open, idle int) {
+	open, idle = Limits(defOpen)
 	db.SetMaxOpenConns(open)
 	db.SetMaxIdleConns(idle)
 	db.SetConnMaxLifetime(connLifetime)

@@ -1,0 +1,499 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 1250" width="1340" font-family="system-ui,Segoe UI,Roboto,sans-serif">
+<rect width="1340" height="1250" fill="#fcfcfb"/>
+<text x="16" y="28" font-size="18" font-weight="600" fill="#0b0b0b">CPU từng service theo mức tải mở</text>
+<text x="16" y="48" font-size="12" fill="#52514e">Trục X: mức tải (phiên/giây). Mỗi ô một service (các bản gộp), trục Y riêng, đơn vị core.</text>
+<line x1="16" y1="68" x2="42" y2="68" stroke="#2a78d6" stroke-width="2"/>
+<text x="48" y="72" font-size="12" fill="#52514e">mức dùng trung bình</text>
+<line x1="209" y1="68" x2="235" y2="68" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3"/>
+<text x="241" y="72" font-size="12" fill="#52514e">đỉnh (mẫu 3 s)</text>
+<line x1="367" y1="68" x2="393" y2="68" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="399" y="72" font-size="12" fill="#52514e">trần được cấp (tổng các bản)</text>
+<circle cx="636" cy="68" r="5" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<text x="655" y="72" font-size="12" fill="#52514e">throttle >= 10% chu kỳ CPU</text>
+<text x="18" y="106" font-size="13" font-weight="600" fill="#0b0b0b">traefik</text>
+<line x1="56" y1="244.0" x2="322" y2="244.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="248.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="56" y1="188.6" x2="322" y2="188.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="192.6" font-size="10" fill="#52514e" text-anchor="end">0,35</text>
+<line x1="56" y1="133.3" x2="322" y2="133.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="137.3" font-size="10" fill="#52514e" text-anchor="end">0,7</text>
+<text x="56.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="122.5" y="258" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="189.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="255.5" y="258" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="322.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="56" y1="133.3" x2="322" y2="133.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="322" y="129.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,7</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="56.0,214.6 122.5,197.0 189.0,183.4 255.5,174.2 322.0,158.3"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="56.0,224.5 122.5,207.6 189.0,192.1 255.5,181.7 322.0,170.1"/>
+<circle cx="56.0" cy="224.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="122.5" cy="207.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="189.0" cy="192.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="255.5" cy="181.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="322.0" cy="170.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="348" y="106" font-size="13" font-weight="600" fill="#0b0b0b">frontend</text>
+<line x1="386" y1="244.0" x2="652" y2="244.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="248.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="386" y1="188.6" x2="652" y2="188.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="192.6" font-size="10" fill="#52514e" text-anchor="end">0,35</text>
+<line x1="386" y1="133.3" x2="652" y2="133.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="137.3" font-size="10" fill="#52514e" text-anchor="end">0,7</text>
+<text x="386.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="452.5" y="258" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="519.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="585.5" y="258" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="652.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="386" y1="133.3" x2="652" y2="133.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="652" y="129.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,7</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="386.0,217.1 452.5,204.0 519.0,187.2 585.5,163.3 652.0,127.9"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="386.0,231.2 452.5,217.0 519.0,200.3 585.5,185.6 652.0,159.4"/>
+<circle cx="386.0" cy="231.2" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="452.5" cy="217.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="519.0" cy="200.3" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="585.5" cy="185.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="585.5" cy="185.6" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="652.0" cy="159.4" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="652.0" cy="159.4" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<text x="348" y="118" font-size="10" fill="#d03b3b">throttle từ 40</text>
+<text x="678" y="106" font-size="13" font-weight="600" fill="#0b0b0b">api-gateway</text>
+<line x1="716" y1="244.0" x2="982" y2="244.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="248.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="716" y1="188.6" x2="982" y2="188.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="192.6" font-size="10" fill="#52514e" text-anchor="end">0,6</text>
+<line x1="716" y1="133.3" x2="982" y2="133.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="137.3" font-size="10" fill="#52514e" text-anchor="end">1,2</text>
+<text x="716.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="782.5" y="258" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="849.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="915.5" y="258" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="982.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="716" y1="133.3" x2="982" y2="133.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="982" y="129.3" font-size="10" fill="#52514e" text-anchor="end">trần 1,2</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="716.0,221.0 782.5,198.1 849.0,182.1 915.5,168.0 982.0,155.7"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="716.0,224.9 782.5,205.0 849.0,188.4 915.5,175.8 982.0,166.2"/>
+<circle cx="716.0" cy="224.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="782.5" cy="205.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="849.0" cy="188.4" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="915.5" cy="175.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="982.0" cy="166.2" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="1008" y="106" font-size="13" font-weight="600" fill="#0b0b0b">auth-service</text>
+<line x1="1046" y1="244.0" x2="1312" y2="244.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="248.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="1046" y1="188.6" x2="1312" y2="188.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="192.6" font-size="10" fill="#52514e" text-anchor="end">2,5</text>
+<line x1="1046" y1="133.3" x2="1312" y2="133.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="137.3" font-size="10" fill="#52514e" text-anchor="end">5</text>
+<text x="1046.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="1112.5" y="258" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="1179.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="1245.5" y="258" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="1312.0" y="258" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="1046" y1="133.3" x2="1312" y2="133.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1312" y="129.3" font-size="10" fill="#52514e" text-anchor="end">trần 5</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="1046.0,216.8 1112.5,193.1 1179.0,170.6 1245.5,155.4 1312.0,129.0"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="1046.0,223.6 1112.5,204.1 1179.0,189.5 1245.5,168.3 1312.0,137.4"/>
+<circle cx="1046.0" cy="223.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1112.5" cy="204.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1179.0" cy="189.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1179.0" cy="189.5" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="1245.5" cy="168.3" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1245.5" cy="168.3" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="1312.0" cy="137.4" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1312.0" cy="137.4" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<text x="1008" y="118" font-size="10" fill="#d03b3b">throttle từ 30</text>
+<text x="18" y="296" font-size="13" font-weight="600" fill="#0b0b0b">user-service</text>
+<line x1="56" y1="434.0" x2="322" y2="434.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="438.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="56" y1="378.6" x2="322" y2="378.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="382.6" font-size="10" fill="#52514e" text-anchor="end">0,1</text>
+<line x1="56" y1="323.3" x2="322" y2="323.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="327.3" font-size="10" fill="#52514e" text-anchor="end">0,2</text>
+<text x="56.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="122.5" y="448" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="189.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="255.5" y="448" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="322.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="56" y1="323.3" x2="322" y2="323.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="322" y="319.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,2</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="56.0,416.3 122.5,403.0 189.0,393.0 255.5,377.0 322.0,337.7"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="56.0,424.0 122.5,414.6 189.0,408.0 255.5,396.9 322.0,369.8"/>
+<circle cx="56.0" cy="424.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="122.5" cy="414.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="189.0" cy="408.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="255.5" cy="396.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="322.0" cy="369.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="348" y="296" font-size="13" font-weight="600" fill="#0b0b0b">product-service</text>
+<line x1="386" y1="434.0" x2="652" y2="434.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="438.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="386" y1="378.6" x2="652" y2="378.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="382.6" font-size="10" fill="#52514e" text-anchor="end">0,35</text>
+<line x1="386" y1="323.3" x2="652" y2="323.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="327.3" font-size="10" fill="#52514e" text-anchor="end">0,7</text>
+<text x="386.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="452.5" y="448" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="519.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="585.5" y="448" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="652.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="386" y1="323.3" x2="652" y2="323.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="652" y="319.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,7</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="386.0,412.3 452.5,395.7 519.0,385.9 585.5,372.0 652.0,351.8"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="386.0,418.5 452.5,404.1 519.0,392.1 585.5,381.2 652.0,367.1"/>
+<circle cx="386.0" cy="418.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="452.5" cy="404.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="519.0" cy="392.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="585.5" cy="381.2" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="652.0" cy="367.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="678" y="296" font-size="13" font-weight="600" fill="#0b0b0b">order-service</text>
+<line x1="716" y1="434.0" x2="982" y2="434.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="438.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="716" y1="378.6" x2="982" y2="378.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="382.6" font-size="10" fill="#52514e" text-anchor="end">0,4</text>
+<line x1="716" y1="323.3" x2="982" y2="323.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="327.3" font-size="10" fill="#52514e" text-anchor="end">0,8</text>
+<text x="716.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="782.5" y="448" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="849.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="915.5" y="448" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="982.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="716" y1="323.3" x2="982" y2="323.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="982" y="319.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,8</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="716.0,412.0 782.5,393.2 849.0,378.2 915.5,364.5 982.0,339.8"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="716.0,416.3 782.5,401.1 849.0,385.6 915.5,375.6 982.0,359.4"/>
+<circle cx="716.0" cy="416.3" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="782.5" cy="401.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="849.0" cy="385.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="915.5" cy="375.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="982.0" cy="359.4" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="1008" y="296" font-size="13" font-weight="600" fill="#0b0b0b">payment-service</text>
+<line x1="1046" y1="434.0" x2="1312" y2="434.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="438.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="1046" y1="378.6" x2="1312" y2="378.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="382.6" font-size="10" fill="#52514e" text-anchor="end">0,2</text>
+<line x1="1046" y1="323.3" x2="1312" y2="323.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="327.3" font-size="10" fill="#52514e" text-anchor="end">0,4</text>
+<text x="1046.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="1112.5" y="448" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="1179.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="1245.5" y="448" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="1312.0" y="448" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="1046" y1="323.3" x2="1312" y2="323.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1312" y="319.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,4</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="1046.0,424.0 1112.5,414.9 1179.0,406.9 1245.5,403.3 1312.0,371.4"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="1046.0,427.1 1112.5,421.3 1179.0,415.5 1245.5,409.4 1312.0,389.7"/>
+<circle cx="1046.0" cy="427.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1112.5" cy="421.3" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1179.0" cy="415.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1245.5" cy="409.4" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1312.0" cy="389.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="18" y="486" font-size="13" font-weight="600" fill="#0b0b0b">analytics-service</text>
+<line x1="56" y1="624.0" x2="322" y2="624.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="628.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="56" y1="568.6" x2="322" y2="568.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="572.6" font-size="10" fill="#52514e" text-anchor="end">0,15</text>
+<line x1="56" y1="513.3" x2="322" y2="513.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="517.3" font-size="10" fill="#52514e" text-anchor="end">0,3</text>
+<text x="56.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="122.5" y="638" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="189.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="255.5" y="638" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="322.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="56" y1="513.3" x2="322" y2="513.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="322" y="509.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,3</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="56.0,606.7 122.5,611.1 189.0,594.5 255.5,587.8 322.0,587.1"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="56.0,615.1 122.5,614.0 189.0,604.4 255.5,598.9 322.0,598.2"/>
+<circle cx="56.0" cy="615.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="122.5" cy="614.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="189.0" cy="604.4" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="255.5" cy="598.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="322.0" cy="598.2" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="348" y="486" font-size="13" font-weight="600" fill="#0b0b0b">ops-service</text>
+<line x1="386" y1="624.0" x2="652" y2="624.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="628.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="386" y1="568.6" x2="652" y2="568.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="572.6" font-size="10" fill="#52514e" text-anchor="end">0,1</text>
+<line x1="386" y1="513.3" x2="652" y2="513.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="517.3" font-size="10" fill="#52514e" text-anchor="end">0,2</text>
+<text x="386.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="452.5" y="638" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="519.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="585.5" y="638" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="652.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="386" y1="513.3" x2="652" y2="513.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="652" y="509.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,2</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="386.0,610.7 452.5,605.7 519.0,604.6 585.5,606.8 652.0,606.3"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="386.0,622.9 452.5,618.5 519.0,619.0 585.5,618.5 652.0,618.5"/>
+<circle cx="386.0" cy="622.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="452.5" cy="618.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="519.0" cy="619.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="585.5" cy="618.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="652.0" cy="618.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="678" y="486" font-size="13" font-weight="600" fill="#0b0b0b">ai-agent</text>
+<line x1="716" y1="624.0" x2="982" y2="624.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="628.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="716" y1="568.6" x2="982" y2="568.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="572.6" font-size="10" fill="#52514e" text-anchor="end">0,5</text>
+<line x1="716" y1="513.3" x2="982" y2="513.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="517.3" font-size="10" fill="#52514e" text-anchor="end">1</text>
+<text x="716.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="782.5" y="638" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="849.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="915.5" y="638" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="982.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="716" y1="513.3" x2="982" y2="513.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="982" y="509.3" font-size="10" fill="#52514e" text-anchor="end">trần 1</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="716.0,591.7 782.5,574.2 849.0,546.9 915.5,517.9 982.0,511.1"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="716.0,598.9 782.5,581.8 849.0,555.9 915.5,533.1 982.0,521.5"/>
+<circle cx="716.0" cy="598.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="782.5" cy="581.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="849.0" cy="555.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="915.5" cy="533.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="915.5" cy="533.1" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="982.0" cy="521.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="982.0" cy="521.5" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<text x="678" y="498" font-size="10" fill="#d03b3b">throttle từ 40</text>
+<text x="1008" y="486" font-size="13" font-weight="600" fill="#0b0b0b">postgres</text>
+<line x1="1046" y1="624.0" x2="1312" y2="624.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="628.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="1046" y1="568.6" x2="1312" y2="568.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="572.6" font-size="10" fill="#52514e" text-anchor="end">1,5</text>
+<line x1="1046" y1="513.3" x2="1312" y2="513.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="517.3" font-size="10" fill="#52514e" text-anchor="end">3</text>
+<text x="1046.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="1112.5" y="638" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="1179.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="1245.5" y="638" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="1312.0" y="638" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="1046" y1="513.3" x2="1312" y2="513.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1312" y="509.3" font-size="10" fill="#52514e" text-anchor="end">trần 3</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="1046.0,613.3 1112.5,606.8 1179.0,599.4 1245.5,587.0 1312.0,514.2"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="1046.0,618.0 1112.5,612.0 1179.0,605.4 1245.5,595.7 1312.0,543.5"/>
+<circle cx="1046.0" cy="618.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1112.5" cy="612.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1179.0" cy="605.4" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1245.5" cy="595.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1312.0" cy="543.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1312.0" cy="543.5" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<text x="1008" y="498" font-size="10" fill="#d03b3b">throttle từ 50</text>
+<text x="18" y="676" font-size="13" font-weight="600" fill="#0b0b0b">redis</text>
+<line x1="56" y1="814.0" x2="322" y2="814.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="818.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="56" y1="758.6" x2="322" y2="758.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="762.6" font-size="10" fill="#52514e" text-anchor="end">0,1</text>
+<line x1="56" y1="703.3" x2="322" y2="703.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="707.3" font-size="10" fill="#52514e" text-anchor="end">0,2</text>
+<text x="56.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="122.5" y="828" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="189.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="255.5" y="828" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="322.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="56" y1="703.3" x2="322" y2="703.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="322" y="699.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,2</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="56.0,795.7 122.5,781.9 189.0,757.5 255.5,748.1 322.0,739.3"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="56.0,799.1 122.5,785.8 189.0,768.1 255.5,759.8 322.0,757.5"/>
+<circle cx="56.0" cy="799.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="122.5" cy="785.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="189.0" cy="768.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="255.5" cy="759.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="322.0" cy="757.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="348" y="676" font-size="13" font-weight="600" fill="#0b0b0b">kafka (3 broker)</text>
+<line x1="386" y1="814.0" x2="652" y2="814.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="818.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="386" y1="758.6" x2="652" y2="758.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="762.6" font-size="10" fill="#52514e" text-anchor="end">1,2</text>
+<line x1="386" y1="703.3" x2="652" y2="703.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="707.3" font-size="10" fill="#52514e" text-anchor="end">2,4</text>
+<text x="386.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="452.5" y="828" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="519.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="585.5" y="828" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="652.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="386" y1="703.3" x2="652" y2="703.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="652" y="699.3" font-size="10" fill="#52514e" text-anchor="end">trần 2,4</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="386.0,767.7 452.5,773.3 519.0,759.2 585.5,753.6 652.0,757.1"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="386.0,797.7 452.5,793.3 519.0,787.0 585.5,780.6 652.0,781.5"/>
+<circle cx="386.0" cy="797.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="452.5" cy="793.3" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="519.0" cy="787.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="585.5" cy="780.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="652.0" cy="781.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="678" y="676" font-size="13" font-weight="600" fill="#0b0b0b">clickhouse</text>
+<line x1="716" y1="814.0" x2="982" y2="814.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="818.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="716" y1="758.6" x2="982" y2="758.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="762.6" font-size="10" fill="#52514e" text-anchor="end">0,75</text>
+<line x1="716" y1="703.3" x2="982" y2="703.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="707.3" font-size="10" fill="#52514e" text-anchor="end">1,5</text>
+<text x="716.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="782.5" y="828" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="849.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="915.5" y="828" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="982.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="716" y1="703.3" x2="982" y2="703.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="982" y="699.3" font-size="10" fill="#52514e" text-anchor="end">trần 1,5</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="716.0,806.5 782.5,805.4 849.0,808.4 915.5,804.5 982.0,808.0"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="716.0,810.6 782.5,810.5 849.0,811.0 915.5,811.0 982.0,811.7"/>
+<circle cx="716.0" cy="810.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="782.5" cy="810.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="849.0" cy="811.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="915.5" cy="811.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="982.0" cy="811.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="1008" y="676" font-size="13" font-weight="600" fill="#0b0b0b">vector</text>
+<line x1="1046" y1="814.0" x2="1312" y2="814.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="818.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="1046" y1="758.6" x2="1312" y2="758.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="762.6" font-size="10" fill="#52514e" text-anchor="end">0,5</text>
+<line x1="1046" y1="703.3" x2="1312" y2="703.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="707.3" font-size="10" fill="#52514e" text-anchor="end">1</text>
+<text x="1046.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="1112.5" y="828" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="1179.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="1245.5" y="828" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="1312.0" y="828" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="1046" y1="703.3" x2="1312" y2="703.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1312" y="699.3" font-size="10" fill="#52514e" text-anchor="end">trần 1</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="1046.0,795.6 1112.5,778.0 1179.0,765.6 1245.5,755.2 1312.0,733.0"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="1046.0,797.8 1112.5,782.7 1179.0,770.3 1245.5,759.9 1312.0,743.8"/>
+<circle cx="1046.0" cy="797.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1112.5" cy="782.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1179.0" cy="770.3" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1245.5" cy="759.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1312.0" cy="743.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="18" y="866" font-size="13" font-weight="600" fill="#0b0b0b">prometheus</text>
+<line x1="56" y1="1004.0" x2="322" y2="1004.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="1008.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="56" y1="948.6" x2="322" y2="948.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="952.6" font-size="10" fill="#52514e" text-anchor="end">0,25</text>
+<line x1="56" y1="893.3" x2="322" y2="893.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="897.3" font-size="10" fill="#52514e" text-anchor="end">0,5</text>
+<text x="56.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="122.5" y="1018" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="189.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="255.5" y="1018" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="322.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="56" y1="893.3" x2="322" y2="893.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="322" y="889.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,5</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="56.0,1000.5 122.5,995.8 189.0,993.4 255.5,993.6 322.0,998.0"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="56.0,1002.9 122.5,1001.8 189.0,1001.3 255.5,1001.1 322.0,1002.0"/>
+<circle cx="56.0" cy="1002.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="122.5" cy="1001.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="189.0" cy="1001.3" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="255.5" cy="1001.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="322.0" cy="1002.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="348" y="866" font-size="13" font-weight="600" fill="#0b0b0b">loki</text>
+<line x1="386" y1="1004.0" x2="652" y2="1004.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="1008.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="386" y1="948.6" x2="652" y2="948.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="952.6" font-size="10" fill="#52514e" text-anchor="end">0,25</text>
+<line x1="386" y1="893.3" x2="652" y2="893.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="897.3" font-size="10" fill="#52514e" text-anchor="end">0,5</text>
+<text x="386.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="452.5" y="1018" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="519.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="585.5" y="1018" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="652.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="386" y1="893.3" x2="652" y2="893.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="652" y="889.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,5</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="386.0,1000.9 452.5,994.5 519.0,994.7 585.5,994.7 652.0,983.9"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="386.0,1002.7 452.5,1000.9 519.0,1001.6 585.5,1000.7 652.0,996.7"/>
+<circle cx="386.0" cy="1002.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="452.5" cy="1000.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="519.0" cy="1001.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="585.5" cy="1000.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="652.0" cy="996.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="678" y="866" font-size="13" font-weight="600" fill="#0b0b0b">tempo</text>
+<line x1="716" y1="1004.0" x2="982" y2="1004.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="1008.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="716" y1="948.6" x2="982" y2="948.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="952.6" font-size="10" fill="#52514e" text-anchor="end">0,15</text>
+<line x1="716" y1="893.3" x2="982" y2="893.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="711" y="897.3" font-size="10" fill="#52514e" text-anchor="end">0,3</text>
+<text x="716.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="782.5" y="1018" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="849.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="915.5" y="1018" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="982.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="716" y1="893.3" x2="982" y2="893.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="982" y="889.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,3</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="716.0,994.8 782.5,994.4 849.0,980.0 915.5,985.5 982.0,966.4"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="716.0,999.9 782.5,1001.0 849.0,999.2 915.5,999.2 982.0,997.4"/>
+<circle cx="716.0" cy="999.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="782.5" cy="1001.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="849.0" cy="999.2" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="915.5" cy="999.2" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="982.0" cy="997.4" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="1008" y="866" font-size="13" font-weight="600" fill="#0b0b0b">cadvisor</text>
+<line x1="1046" y1="1004.0" x2="1312" y2="1004.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="1008.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="1046" y1="948.6" x2="1312" y2="948.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="952.6" font-size="10" fill="#52514e" text-anchor="end">0,15</text>
+<line x1="1046" y1="893.3" x2="1312" y2="893.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="1041" y="897.3" font-size="10" fill="#52514e" text-anchor="end">0,3</text>
+<text x="1046.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="1112.5" y="1018" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="1179.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="1245.5" y="1018" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="1312.0" y="1018" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="1046" y1="893.3" x2="1312" y2="893.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="1312" y="889.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,3</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="1046.0,942.4 1112.5,976.0 1179.0,931.3 1245.5,907.3 1312.0,925.0"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="1046.0,994.8 1112.5,997.7 1179.0,994.8 1245.5,995.1 1312.0,995.5"/>
+<circle cx="1046.0" cy="994.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1112.5" cy="997.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1179.0" cy="994.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1179.0" cy="994.8" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="1245.5" cy="995.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1245.5" cy="995.1" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="1312.0" cy="995.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1312.0" cy="995.5" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<text x="1008" y="878" font-size="10" fill="#d03b3b">throttle từ 30</text>
+<text x="18" y="1056" font-size="13" font-weight="600" fill="#0b0b0b">grafana</text>
+<line x1="56" y1="1194.0" x2="322" y2="1194.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="1198.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="56" y1="1138.6" x2="322" y2="1138.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="1142.6" font-size="10" fill="#52514e" text-anchor="end">0,1</text>
+<line x1="56" y1="1083.3" x2="322" y2="1083.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="51" y="1087.3" font-size="10" fill="#52514e" text-anchor="end">0,2</text>
+<text x="56.0" y="1208" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="122.5" y="1208" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="189.0" y="1208" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="255.5" y="1208" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="322.0" y="1208" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="56" y1="1083.3" x2="322" y2="1083.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="322" y="1079.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,2</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="56.0,1176.8 122.5,1170.2 189.0,1175.7 255.5,1181.8 322.0,1176.3"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="56.0,1190.7 122.5,1190.7 189.0,1191.8 255.5,1192.9 322.0,1191.8"/>
+<circle cx="56.0" cy="1190.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="56.0" cy="1190.7" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="122.5" cy="1190.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="189.0" cy="1191.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="255.5" cy="1192.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="322.0" cy="1191.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="18" y="1068" font-size="10" fill="#d03b3b">throttle từ 10</text>
+<text x="348" y="1056" font-size="13" font-weight="600" fill="#0b0b0b">exporter (4)</text>
+<line x1="386" y1="1194.0" x2="652" y2="1194.0" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="1198.0" font-size="10" fill="#52514e" text-anchor="end">0</text>
+<line x1="386" y1="1138.6" x2="652" y2="1138.6" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="1142.6" font-size="10" fill="#52514e" text-anchor="end">0,4</text>
+<line x1="386" y1="1083.3" x2="652" y2="1083.3" stroke="#e3e2dc" stroke-width="1"/>
+<text x="381" y="1087.3" font-size="10" fill="#52514e" text-anchor="end">0,8</text>
+<text x="386.0" y="1208" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="452.5" y="1208" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="519.0" y="1208" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="585.5" y="1208" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="652.0" y="1208" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<line x1="386" y1="1083.3" x2="652" y2="1083.3" stroke="#52514e" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="652" y="1079.3" font-size="10" fill="#52514e" text-anchor="end">trần 0,8</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="386.0,1185.4 452.5,1183.1 519.0,1181.5 585.5,1181.1 652.0,1176.8"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" points="386.0,1192.8 452.5,1192.9 519.0,1192.1 585.5,1192.6 652.0,1192.5"/>
+<circle cx="386.0" cy="1192.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="386.0" cy="1192.8" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="452.5" cy="1192.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="452.5" cy="1192.9" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="519.0" cy="1192.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="519.0" cy="1192.1" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="585.5" cy="1192.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="585.5" cy="1192.6" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<circle cx="652.0" cy="1192.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="652.0" cy="1192.5" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<text x="348" y="1068" font-size="10" fill="#d03b3b">throttle từ 10</text>
+</svg>

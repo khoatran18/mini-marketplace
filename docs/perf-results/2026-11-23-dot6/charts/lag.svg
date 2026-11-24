@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 330" width="1000" font-family="system-ui,Segoe UI,Roboto,sans-serif">
+<rect width="1000" height="330" fill="#fcfcfb"/>
+<text x="16" y="28" font-size="18" font-weight="600" fill="#0b0b0b">Độ trễ payment (tạo đơn -> thanh toán xuất hiện), p95 và lớn nhất</text>
+<text x="16" y="46" font-size="12" fill="#52514e">Trục Y dạng log (ms). Đo bằng hỏi lại mỗi 500 ms nên các giá trị ~1008 là số lượng tử hoá. Không phải consumer lag Kafka (không được ghi trong các lượt này).</text>
+<text x="18" y="76" font-size="13" font-weight="600" fill="#0b0b0b">Đóng (VU)</text>
+<line x1="66" y1="260.2" x2="464" y2="260.2" stroke="#e3e2dc"/><text x="61" y="264.2" font-size="10" fill="#52514e" text-anchor="end">500</text>
+<line x1="66" y1="233.2" x2="464" y2="233.2" stroke="#e3e2dc"/><text x="61" y="237.2" font-size="10" fill="#52514e" text-anchor="end">1000</text>
+<line x1="66" y1="206.3" x2="464" y2="206.3" stroke="#e3e2dc"/><text x="61" y="210.3" font-size="10" fill="#52514e" text-anchor="end">2000</text>
+<line x1="66" y1="170.7" x2="464" y2="170.7" stroke="#e3e2dc"/><text x="61" y="174.7" font-size="10" fill="#52514e" text-anchor="end">5000</text>
+<line x1="66" y1="143.8" x2="464" y2="143.8" stroke="#e3e2dc"/><text x="61" y="147.8" font-size="10" fill="#52514e" text-anchor="end">10000</text>
+<line x1="66" y1="116.9" x2="464" y2="116.9" stroke="#e3e2dc"/><text x="61" y="120.9" font-size="10" fill="#52514e" text-anchor="end">20000</text>
+<text x="66.0" y="296" font-size="10" fill="#52514e" text-anchor="middle">100</text>
+<text x="122.9" y="296" font-size="10" fill="#52514e" text-anchor="middle">200</text>
+<text x="179.7" y="296" font-size="10" fill="#52514e" text-anchor="middle">300</text>
+<text x="236.6" y="296" font-size="10" fill="#52514e" text-anchor="middle">400</text>
+<text x="293.4" y="296" font-size="10" fill="#52514e" text-anchor="middle">500</text>
+<text x="350.3" y="296" font-size="10" fill="#52514e" text-anchor="middle">600</text>
+<text x="407.1" y="296" font-size="10" fill="#52514e" text-anchor="middle">700</text>
+<text x="464.0" y="296" font-size="10" fill="#52514e" text-anchor="middle">800</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="66.0,232.8 122.9,231.4 179.7,232.6 236.6,231.7 293.4,231.9 350.3,232.3 407.1,169.6 464.0,137.3"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" points="66.0,232.9 122.9,233.0 179.7,257.0 236.6,258.1 293.4,259.0 350.3,258.9 407.1,206.4 464.0,153.6"/>
+<circle cx="66.0" cy="232.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="122.9" cy="233.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="179.7" cy="257.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="236.6" cy="258.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="293.4" cy="259.0" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="350.3" cy="258.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="407.1" cy="206.4" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="464.0" cy="153.6" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="464.0" cy="153.6" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<line x1="70" y1="314" x2="96" y2="314" stroke="#2a78d6" stroke-width="2"/><text x="102" y="318" font-size="11" fill="#52514e">p95</text><line x1="150" y1="314" x2="176" y2="314" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3"/><text x="182" y="318" font-size="11" fill="#52514e">lớn nhất</text><circle cx="260" cy="314" r="5" fill="none" stroke="#d03b3b" stroke-width="2"/><text x="270" y="318" font-size="11" fill="#52514e">có đơn quá 8 s</text>
+<text x="508" y="76" font-size="13" font-weight="600" fill="#0b0b0b">Mở (phiên/giây)</text>
+<line x1="556" y1="260.2" x2="954" y2="260.2" stroke="#e3e2dc"/><text x="551" y="264.2" font-size="10" fill="#52514e" text-anchor="end">500</text>
+<line x1="556" y1="233.2" x2="954" y2="233.2" stroke="#e3e2dc"/><text x="551" y="237.2" font-size="10" fill="#52514e" text-anchor="end">1000</text>
+<line x1="556" y1="206.3" x2="954" y2="206.3" stroke="#e3e2dc"/><text x="551" y="210.3" font-size="10" fill="#52514e" text-anchor="end">2000</text>
+<line x1="556" y1="170.7" x2="954" y2="170.7" stroke="#e3e2dc"/><text x="551" y="174.7" font-size="10" fill="#52514e" text-anchor="end">5000</text>
+<line x1="556" y1="143.8" x2="954" y2="143.8" stroke="#e3e2dc"/><text x="551" y="147.8" font-size="10" fill="#52514e" text-anchor="end">10000</text>
+<line x1="556" y1="116.9" x2="954" y2="116.9" stroke="#e3e2dc"/><text x="551" y="120.9" font-size="10" fill="#52514e" text-anchor="end">20000</text>
+<text x="556.0" y="296" font-size="10" fill="#52514e" text-anchor="middle">10</text>
+<text x="655.5" y="296" font-size="10" fill="#52514e" text-anchor="middle">20</text>
+<text x="755.0" y="296" font-size="10" fill="#52514e" text-anchor="middle">30</text>
+<text x="854.5" y="296" font-size="10" fill="#52514e" text-anchor="middle">40</text>
+<text x="954.0" y="296" font-size="10" fill="#52514e" text-anchor="middle">50</text>
+<polyline fill="none" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3" points="556.0,231.6 655.5,232.8 755.0,231.2 854.5,230.0 954.0,113.2"/>
+<polyline fill="none" stroke="#2a78d6" stroke-width="2" points="556.0,232.9 655.5,257.7 755.0,257.5 854.5,253.1 954.0,128.8"/>
+<circle cx="556.0" cy="232.9" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="655.5" cy="257.7" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="755.0" cy="257.5" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="854.5" cy="253.1" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="954.0" cy="128.8" r="3" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="954.0" cy="128.8" r="6" fill="none" stroke="#d03b3b" stroke-width="2"/>
+<line x1="560" y1="314" x2="586" y2="314" stroke="#2a78d6" stroke-width="2"/><text x="592" y="318" font-size="11" fill="#52514e">p95</text><line x1="640" y1="314" x2="666" y2="314" stroke="#86b6ef" stroke-width="1.5" stroke-dasharray="1.5 3"/><text x="672" y="318" font-size="11" fill="#52514e">lớn nhất</text><circle cx="750" cy="314" r="5" fill="none" stroke="#d03b3b" stroke-width="2"/><text x="760" y="318" font-size="11" fill="#52514e">có đơn quá 8 s</text>
+</svg>

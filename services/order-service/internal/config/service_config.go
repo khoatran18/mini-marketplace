@@ -93,7 +93,7 @@ func initPostgresDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	dbpool.Apply(poolDB, 30, 10)
+	dbpool.Apply(poolDB, 30)
 
 	return db, nil
 }

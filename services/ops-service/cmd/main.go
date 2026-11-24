@@ -63,7 +63,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dbpool.Apply(db, 5, 2) // R15
+	dbpool.Apply(db, 5) // R15
 	if err := migrate.Run(context.Background(), db); err != nil {
 		log.Fatalf("Can not migrate database: %v", err)
 	}

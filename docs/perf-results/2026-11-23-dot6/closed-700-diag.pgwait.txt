@@ -1,0 +1,260 @@
+## 08:10:42
+## 08:10:44
+## 08:10:47
+## 08:10:49
+## 08:10:51
+## 08:10:53
+## 08:10:55
+## 08:10:57
+- | - | SELECT * FROM "product_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AND (NOT E | 1
+## 08:10:59
+IO | WALSync | commit | 1
+## 08:11:01
+## 08:11:03
+## 08:11:05
+## 08:11:07
+## 08:11:09
+## 08:11:11
+## 08:11:13
+## 08:11:15
+IO | WALSync | commit | 1
+## 08:11:17
+## 08:11:19
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+## 08:11:21
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+## 08:11:24
+## 08:11:26
+## 08:11:28
+## 08:11:30
+## 08:11:32
+## 08:11:34
+## 08:11:36
+IO | WALSync | commit | 1
+## 08:11:38
+Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_at","publi | 1
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sold = sold + | 1
+## 08:11:40
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+## 08:11:42
+## 08:11:44
+## 08:11:46
+## 08:11:48
+## 08:11:50
+## 08:11:52
+Client | ClientRead | SELECT * FROM "categories" WHERE active = $1 ORDER BY parent_id ASC, sort ASC, id ASC | 1
+## 08:11:54
+Client | ClientRead | begin | 1
+## 08:11:56
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+## 08:11:59
+Client | ClientRead | SELECT * FROM "order_status_histories" WHERE order_id = $1 ORDER BY id ASC | 1
+Client | ClientRead | SELECT count(*) FROM "validate_order_events" WHERE order_id = $1 AND processed = $2 | 1
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+## 08:12:01
+## 08:12:03
+IO | WALSync | commit | 1
+## 08:12:05
+IO | WALSync | commit | 1
+## 08:12:07
+IO | WALSync | commit | 1
+## 08:12:09
+LWLock | WALWrite | commit | 7
+IO | WALSync | commit | 1
+## 08:12:11
+IO | WALWrite | UPDATE "cart_items" SET "quantity"=$1,"updated_at"=$2 WHERE (user_id = $3 AND product_id = $4) AND " | 1
+## 08:12:13
+## 08:12:15
+Client | ClientRead | SELECT * FROM "products" WHERE id = $1 AND "products"."deleted_at" IS NULL ORDER BY "products"."id"  | 1
+## 08:12:17
+- | - | SELECT count(*) FROM "cart_items" WHERE user_id = $1 | 1
+Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 ORDER BY added_at ASC, product_id ASC | 1
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+## 08:12:19
+## 08:12:21
+## 08:12:23
+## 08:12:25
+## 08:12:27
+## 08:12:29
+IO | WALSync | commit | 1
+## 08:12:32
+Client | ClientRead | SELECT * FROM "orders" WHERE store_id = $1 AND status = $2 ORDER BY id DESC LIMIT $3 | 1
+## 08:12:34
+IO | WALSync | commit | 1
+## 08:12:36
+IO | WALSync | INSERT INTO "cart_items" ("user_id","product_id","quantity","added_at","updated_at") VALUES ($1,$2,$ | 1
+## 08:12:38
+- | - | SELECT count(*) FROM "products" WHERE status = $1 AND inventory > 0 AND "products"."deleted_at" IS N | 1
+Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+## 08:12:40
+- | - | SELECT CASE WHEN NOT pg_is_in_recovery() THEN 0 WHEN pg_last_wal_receive_lsn () = pg_last_wal_replay | 1
+## 08:12:42
+## 08:12:44
+Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+## 08:12:46
+Client | ClientRead | commit | 1
+## 08:12:48
+IO | WALSync | commit | 1
+LWLock | WALWrite | UPDATE "order_domain_events" SET "last_error"=$1,"published_at"=$2,"status"=$3 WHERE id IN ($4,$5,$6 | 1
+LWLock | WALWrite | commit | 1
+## 08:12:50
+IO | WALSync | commit | 1
+## 08:12:52
+IO | WALSync | commit | 1
+## 08:12:54
+- | - | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+## 08:12:56
+## 08:12:58
+## 08:13:00
+Client | ClientRead | commit | 1
+## 08:13:02
+## 08:13:05
+- | - | SELECT * FROM "products" WHERE status = $1 AND to_tsvector('simple', mm_unaccent(coalesce(name,'') | | 1
+Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL ORDER BY "ac | 1
+## 08:13:07
+IO | WALSync | commit | 2
+Client | ClientRead | commit | 1
+Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sold = sold + | 1
+## 08:13:09
+IO | WALSync | commit | 1
+## 08:13:11
+IO | WALSync | commit | 1
+## 08:13:13
+## 08:13:15
+## 08:13:17
+Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" = $1 | 1
+## 08:13:19
+LWLock | WALWrite | commit | 4
+Lock | transactionid | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sold = sold + | 2
+IO | WALSync | commit | 1
+## 08:13:21
+- | - | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_at","publi | 1
+Client | ClientRead | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sold = sold + | 1
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+## 08:13:23
+Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL ORDER BY "ac | 1
+## 08:13:25
+IO | WALSync | commit | 1
+## 08:13:27
+Client | ClientRead | SELECT * FROM "order_items" WHERE "order_items"."order_id" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) | 1
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+## 08:13:29
+## 08:13:31
+Client | ClientRead | DELETE FROM "cart_items" WHERE user_id = $1 AND product_id = $2 | 1
+## 08:13:33
+LWLock | WALWrite | commit | 2
+- | - | SELECT "validate_order_events"."order_id","validate_order_events"."success","validate_order_events". | 1
+- | - | SELECT count(*) FROM "orders" WHERE buyer_id = $1 AND status = $2 | 1
+IO | WALSync | commit | 1
+## 08:13:36
+## 08:13:38
+## 08:13:40
+LWLock | WALWrite | commit | 4
+- | - | SELECT * FROM "orders" WHERE checkout_id = $1 ORDER BY id ASC FOR UPDATE | 1
+IO | WALSync | commit | 1
+IO | WALWrite | commit | 1
+## 08:13:42
+Client | ClientRead | UPDATE ai_conversations SET active_run_id = NULL, active_since = NULL, updated_at = now() WHERE id = | 1
+IO | WALSync | commit | 1
+## 08:13:44
+## 08:13:46
+LWLock | WALWrite | commit | 2
+- | - | SELECT * FROM "order_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AND (NOT EXI | 1
+Client | ClientRead | commit | 1
+IO | WALSync | commit | 1
+## 08:13:48
+Client | ClientRead | SELECT * FROM "products" WHERE id IN ($1,$2,$3) AND "products"."deleted_at" IS NULL | 1
+## 08:13:50
+Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL ORDER BY "ac | 2
+Client | ClientRead | SELECT count(*) FROM "products" WHERE status = $1 AND to_tsvector('simple', mm_unaccent(coalesce(nam | 1
+LWLock | WALWrite | commit | 1
+## 08:13:52
+## 08:13:54
+Client | ClientRead | SELECT * FROM "cart_items" WHERE user_id = $1 ORDER BY added_at ASC, product_id ASC | 1
+Client | ClientRead | SELECT * FROM "orders" WHERE id = $1 AND store_id = $2 ORDER BY "orders"."id" LIMIT $3 | 1
+IO | WALSync | commit | 1
+## 08:13:56
+- | - | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL ORDER BY "ac | 1
+IO | WALSync | commit | 1
+## 08:13:58
+- | - | UPDATE products SET inventory = inventory + $1, reserved = GREATEST(reserved + $2, 0), sold = sold + | 1
+Client | ClientRead | INSERT INTO "payments" ("checkout_id","buyer_id","method","status","amount_minor","currency","provid | 1
+IO | WALSync | commit | 1
+## 08:14:00
+IO | WALSync | commit | 1
+## 08:14:02
+- | - | SELECT * FROM "payment_domain_events" WHERE (status IN ($1,$2) AND next_attempt_at <= $3) AND (NOT E | 1
+IO | WALSync | commit | 1
+## 08:14:04
+## 08:14:06
+- | - | commit | 1
+## 08:14:09
+Client | ClientRead | SELECT * FROM "products" WHERE id IN ($1,$2) AND "products"."deleted_at" IS NULL | 1
+Client | ClientRead | UPDATE "payments" SET "card_last4"=$1,"updated_at"=$2 WHERE "id" = $3 | 1
+## 08:14:11
+Client | ClientRead | commit | 1
+## 08:14:13
+LWLock | WALWrite | commit | 4
+- | - | UPDATE "orders" SET "paid_at"=$1,"payment_status"=$2,"status"=$3,"updated_at"=$4 WHERE id = $5 | 1
+IO | WALSync | commit | 1
+## 08:14:15
+## 08:14:17
+## 08:14:19
+IO | WALSync | commit | 1
+LWLock | WALWrite | commit | 1
+## 08:14:21
+Client | ClientRead | INSERT INTO "product_domain_events" ("topic","key","payload","status","attempts","created_at","publi | 1
+## 08:14:23
+Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL ORDER BY "ac | 1
+## 08:14:25
+## 08:14:27
+## 08:14:29
+LWLock | WALWrite | commit | 2
+- | - | INSERT INTO "inventory_ledgers" ("product_id","delta","reason","ref_type","ref_id","balance_after"," | 1
+IO | WALSync | commit | 1
+## 08:14:31
+- | - | SELECT count(*) FROM "orders" | 1
+## 08:14:33
+- | - | commit | 1
+IO | WALSync | commit | 1
+## 08:14:35
+IO | WALSync | commit | 1
+## 08:14:37
+Client | ClientRead | commit | 2
+Client | ClientRead | INSERT INTO "checkouts" ("id","buyer_id","idempotency_key","payment_method","total","created_at") VA | 1
+## 08:14:40
+LWLock | WALWrite | commit | 2
+Client | ClientRead | SELECT * FROM "accounts" WHERE "accounts"."id" = $1 AND "accounts"."deleted_at" IS NULL ORDER BY "ac | 1
+IO | WALSync | commit | 1
+## 08:14:42
+LWLock | WALWrite | commit | 3
+IO | WALSync | commit | 1
+## 08:14:44
+Client | ClientRead | SELECT * FROM "orders" WHERE buyer_id = $1 AND total_price >= $2 ORDER BY id DESC LIMIT $3 | 1
+Client | ClientRead | UPDATE "buyers" SET "name"=$1,"gender"=$2,"date_of_birth"=$3,"phone"=$4,"address"=$5 WHERE user_id = | 1
+## 08:14:46
+Client | ClientRead | INSERT INTO "checkouts" ("id","buyer_id","idempotency_key","payment_method","total","created_at") VA | 1
+IO | WALSync | INSERT INTO ops_audit_log (actor, event, subject_type, subject_id, details, request_id) VALUES ($1,$ | 1
+## 08:14:48
+## 08:14:50
+- | - | commit | 1
+Client | ClientRead | SELECT * FROM "products" WHERE (seller_id = $1 AND status IN ($2,$3) AND inventory <= COALESCE(NULLI | 1
+## 08:14:52
+## 08:14:54
+## 08:14:56
+IO | WALSync | commit | 1
+## 08:14:58
+## 08:15:00
+## 08:15:02
+## 08:15:04
+## 08:15:06

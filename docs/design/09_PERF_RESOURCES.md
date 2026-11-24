@@ -222,6 +222,10 @@ Mọi lần chỉnh phải ghi lại, vì kết quả chỉ so sánh được kh
 | Đợt 3 (2026-11-23): hạ trần CPU cho vừa máy và lấy THROTTLE làm số đo chạm trần | ở đợt 2 tổng trần ≈ 25,5 core mà máy chỉ có 16 luồng (≈ 10 core vật lý, máy tải chiếm 2): đóng 800/1000 máy hết CPU TRƯỚC khi service chạm trần của nó, nên mức dùng 46-79% của trần không phải "dư địa" và không chỉ ra được nút cổ chai; throttle cAdvisor cho thấy chỉ auth 9,8% / frontend 6,3% / clickhouse 4,4% / ai-agent 2,4% chu kỳ bị chặn ở đóng 1000. Trần mới (core): postgres 5→3, clickhouse 2→1,5, kafka 3 broker 1→0,4 mỗi bản (SAU đóng 500 lần đầu nâng lại 0,8: 0,4 làm broker3 bị throttle 47%, lag product 262-639, 218/704 đơn quá 8 s chưa có payment), redis 1→0,2, api-gateway 1→0,6 mỗi bản (2 bản), order 1,5→0,8, product 1,5→0,7, traefik 1→0,7, frontend 1→0,7, ai-agent 1→0,5 mỗi bản (2 bản), payment 0,5→0,4, analytics 0,5→0,3, user 0,5→0,2, ops 0,5→0,2, auth GIỮ 3×1 (đóng chỉ dùng ~0,6, mở 40 dùng ~3,1: hai chế độ không chạy cùng lúc nên một cấu hình cho cả hai); stack quan sát thêm trần ở `deploy/observability.perf.yml` (vector 1, prometheus 0,5, loki 0,5, cadvisor 0,3, tempo 0,3, grafana 0,2, bốn exporter 0,1 rồi nâng 0,2 vì bị throttle 37-50%). Tổng trần dịch vụ + hạ tầng ≈ 15, quan sát ≈ 2,8. `deploy-perf.sh` có thêm đích `obs`, `all` dựng cả ba stack; `perf-run.sh` in và lưu `<nhãn>.throttle.json` (% chu kỳ bị chặn theo service) | trần vừa máy thì service chạm trần trước máy, throttle chỉ thẳng nút cổ chai | đợt 3 là một đợt riêng, KHÔNG so lời gọi/s trực tiếp với đợt 1-2 (trần thấp hơn); chỉ đo đóng 500 và mở 20 trước |
 | Đợt 4 (2026-11-23): đổi hành vi tải của `ccu.mjs`, chưa đo | ở đợt 3 admin 8% + operator 8% VU, mỗi hành trình analytics gọi đủ 9 trang và operator đọc đủ ~14 điểm: `GET /admin/analytics/traffic` bị gọi ~6,5 lần/giây ở 1000 VU (nhiều hơn thực tế hàng chục lần) và làm ClickHouse chạm trần 1,5 core, 29 lỗi 504 ở đóng 500 (R22). Sửa: `MIX` mặc định admin 3, operator 2, ai_admin 2, ai_operator 1 (buyer 62, seller 14); `adminAnalytics` và `sellerAnalytics` chọn 1-3 trang theo trọng số (traffic 4, data-health 2 trên 100); `opsReads` chia 8 nhóm màn hình, mỗi lần ghé 2-4 nhóm theo trọng số; auth-service 3 → 5 bản x 1 core (đợt 3: throttle 46% ở mở 30, hỏng ở mở 40, R20), KHÔNG giảm trần service khác để bù (máy ở mở 40 chỉ 65%) | tải đa dạng và gần thực tế hơn, bớt đè lên một truy vấn | KHÔNG so lời gọi/s và cơ cấu tải với đợt 1-3 (thành phần người dùng khác); đợt 4 cần đo lại từ đầu |
 | Chốt cấu hình ai-agent (2026-11-23, sau đợt 5) | so 2 bản x 0,5 core với 1 bản x 1 core (cùng tổng 1 core), tải AI 400 VU xen kẽ A B A B: độ trễ không khác đo được, 0 lỗi; 2 x 0,5 bị throttle 37-41% nhưng không chậm hơn | giữ `replicas: 2`, `cpus: "0.5"` trong `deploy/services.perf.yml` (đã chốt, không chỉnh thêm); đổi lại RAM gấp đôi và `AI_RCA_ENABLED=false` (S9) | cấu hình service của đợt 4 là bản chốt cho đo tiếp theo |
+| Đợt 6 (2026-11-23): dải đo đầy đủ, mỗi mức dựng sạch | cấu hình KHÔNG đổi so với bản chốt; mỗi mức: gỡ stack + xoá volume -> `deploy-perf.sh all` -> chờ mọi service đủ bản + `/health` 200 -> nghỉ 60 s -> đo -> gỡ; dải đóng 100-800 (bước 100) và mở 10-50 (bước 10), 1 vòng mỗi mức; đóng 400 đo lại một lần (r2) vì r1 có CPU máy 71/95% | muốn số đo không dính dữ liệu và trạng thái của lượt trước, và có đường cong đủ mịn quanh điểm gãy | kết quả ở §5g; dữ liệu `docs/perf-results/2026-11-23-dot6/` |
+| Kiểm chứng R23 (2026-11-24): `DB_MAX_IDLE_CONNS=30` | trên stack ĐANG CHẠY, chạy `docker service update --env-add DB_MAX_IDLE_CONNS=30` cho order, product, payment, auth, user, api-gateway, ops (7 service dùng `shared/dbpool`; `Limits` ép số nhàn không vượt số mở nên mỗi service giữ nhàn = mở tối đa của nó: order/product 30, payment 15, auth/user 10, gateway/ops 5); KHÔNG sửa file trong repo; sau đó lặp đóng 800 bốn lượt (`closed-800-hf1..4`) | ở cấu hình gốc `MaxIdleConns` < `MaxOpenConns` (order/product 10 nhàn trên 30 mở...) nên khi Postgres chậm thoáng qua, kết nối thừa bị đóng rồi mở lại liên tục (bão kết nối, §5k) | 4/4 lượt không gãy (payment p95 523-535 ms, ~1000 lời gọi/s), kết nối mở mới 1,3-1,5 mỗi giây, CPU Postgres 0,96-1,23 core (đỉnh <= 2,3), 0% throttle; chi tiết §5l. Giá trị này vẫn đang đặt trên stack đang chạy, CHƯA đưa vào repo |
+| Sửa R23 trong mã (2026-11-24, CHƯA đo) | `shared/dbpool`: `Apply(db, defOpen)` và `Limits(defOpen)` (bỏ tham số mặc định nhàn): số nhàn = số mở, chỉ nhỏ hơn khi đặt `DB_MAX_IDLE_CONNS` nhỏ hơn; `connIdleTime` 5 -> 30 phút; 7 service đổi lời gọi (order/product 30, payment 15, auth/user 10, gateway/ops 5); test `Limits` đổi theo | `MaxIdle` < `MaxOpen` gây bão kết nối khi Postgres chậm thoáng qua (§5k, §5l); kết nối nhàn rẻ (vài MB), tổng mở ~150 < `max_connections` 200 | ĐÃ ĐO (đợt 7, §5o): 9/9 lượt đóng 700-1000 không gãy. `connIdleTime` 30 phút chưa đo riêng |
+| Đợt 7 (2026-11-24): đo lại sau sửa R23 | cấu hình tài nguyên KHÔNG đổi; chỉ mã `dbpool` mới (xem hàng trên); đóng 700 (2 vòng), 800 (3), 900 (2), 1000 (2); mở 40 (2), 50 (2); mỗi lượt dọn sạch + `deploy-perf.sh all`; mở có `perf-capture.py` | kiểm chứng sửa R23 trong mã và tìm trần mới | đóng 9/9 lượt không gãy (payment p95 522-567 ms), trần mới là frontend/api-gateway/order (~100% CPU ở 800-1000), Postgres <= 2 core; mở 40 hợp lệ 2/2, mở 50 gãy 2/2 do auth hết CPU (Postgres chỉ 0,8-0,9 core, hết bão kết nối). Chi tiết §5o |
 | traefik | 2 -> 1 core | đỉnh 42% | – |
 | analytics flush ClickHouse | 2 s -> 20 s (`ANALYTICS_FLUSH_INTERVAL_MS`) | ghi lẻ tẻ: 8960 lần ghi cho 422 nghìn dòng (~47 dòng/lần), CPU tốn vào gộp part; báo cáo trễ tối đa 20 s | chưa tách riêng được |
 | Cảnh báo | thêm `OutboxPublishLag` (`mm_outbox_oldest_pending_seconds > 5` trong 2 phút) | tín hiệu sớm của nghẽn Postgres/Kafka; gắn playbook `outbox-stuck`; cần nạp lại Prometheus | – |
@@ -334,3 +338,375 @@ Kết luận: thông lượng như nhau (tải đóng bị think time quyết đ
 Việc còn lại của §5f: chạy thêm vòng 2-3 của đợt 2 (cấu hình đã đổi nên đợt 2 là một đợt mới, mỗi mốc cần 3 vòng); phân tích mở 5/10/20/30/40 và so với đợt 1, đọc lag consumer (`kafka_consumergroup_lag`), `mm_outbox_oldest_pending_seconds`, FATAL của Postgres trong Loki (kỳ vọng 0), payment p50 ở đóng 1000, trần pool đã đủ chưa (`mm_db_pool_wait_seconds_total`), rồi cập nhật R13/R15 (đã đo hay chưa).
 
 **Việc tiếp theo đề xuất (chưa làm, chờ lệnh đo):** triển khai lại services (`./scripts/deploy-perf.sh services`) rồi đo lại đóng 500/800/1000 và mở 20/30/40, thêm đóng 600/700 và mở 25/35; chỉ thêm 1200/1500 và 50/60 nếu vẫn sạch.
+
+### 5g. Đợt 6: dải đo đầy đủ, mỗi mức dựng sạch (2026-11-23, vòng 1; dữ liệu `docs/perf-results/2026-11-23-dot6/`)
+
+Cấu hình là bản chốt (§6 dòng "Chốt cấu hình ai-agent"): auth 5 x 1 core, ai-agent 2 x 0,5, postgres 3, clickhouse 1,5, broker 3 x 0,8, frontend 0,7, mô hình AI giả (đã kiểm). Mỗi mức dựng lại stack từ volume trống (xem §6 dòng Đợt 6). Mỗi mức chỉ 1 vòng nên chưa đo được độ dao động; chỉ đóng 400 có 2 vòng.
+
+| Mức | Lời gọi/s | Lỗi | Payment p95 (ms) | AI cả lượt p95 (ms) | CPU máy tb / đỉnh | VU hỏng | Hợp lệ | Chạm trần (throttle >= 10%, trừ stack quan sát) |
+|---|---|---|---|---|---|---|---|---|
+| Đóng 100 | 127 | 0 | 1008 | 2644 | 19 / 27% | 0 | có | |
+| Đóng 200 | 255 | 0 | 1006 | 2656 | 27 / 33% | 0 | có | |
+| Đóng 300 | 379 | 0 | 542 | 2745 | 41 / 48% | 0 | có | |
+| Đóng 400 (r1) | 500 | 0 | 534 | 2787 | 71 / 95% (nhiễu) | 0 | có | |
+| Đóng 400 (r2) | 497 | 0 | 527 | 2791 | 41 / 53% | 0 | có | |
+| Đóng 500 | 623 | 0 | 515 | 2753 | 43 / 54% | 0 | có | |
+| Đóng 600 | 752 | 0 | 517 | 2789 | 49 / 62% | 0 | có | |
+| Đóng 700 | 861 | 0 | 1994 | 3152 | 55 / 72% | 0 | có | frontend 14% |
+| Đóng 800 | 920 | 0 | **7777** | 3429 | 62 / 84% | 0 | có | postgres 14%, frontend 11% |
+| Mở 10 | 199 | 0 | 1008 | 2634 | 28 / 36% | 0 | có | |
+| Mở 20 | 394 | 0 | 533 | 2711 | 42 / 54% | 0 | có | |
+| Mở 30 | 599 | 0 | 536 | 2986 | 56 / 65% | 0 | có | auth 17% |
+| Mở 40 | 797 | 0 | 599 | 3511 | 74 / 89% | 1 | **không** | auth 37%, ai-agent 21%, frontend 11% |
+| Mở 50 | 1123 | **2,7%** | **14724** | **9663** | 92 / 99% | 83 | **không** | auth 64%, ai-agent 50%, frontend 25%, postgres 13% |
+
+Payment p95 ~1008 ms ở đóng 100/200 và mở 10 là do `ccu.mjs` hỏi lại mỗi 500 ms (số lượng tử hoá), không phải hệ thống chậm.
+
+CPU trung bình từng service (core, cộng các bản; trần trong ngoặc):
+
+| Mốc | Các service dùng nhiều nhất |
+|---|---|
+| Đóng 600 | auth 0,85 (5), gateway 0,75 (1,2), postgres 0,73 (3), order 0,46 (0,8), ai-agent 0,41 (1), traefik 0,38 (0,7) |
+| Đóng 800 | postgres 1,63 (3), auth 1,06 (5), gateway 0,87 (1,2), order 0,54 (0,8), ai-agent 0,53 (1), traefik 0,42 (0,7) |
+| Mở 30 | auth 2,46 (5), ai-agent 0,61 (1), gateway 0,60 (1,2), postgres 0,51 (3), order 0,35 (0,8) |
+| Mở 40 | auth 3,42 (5), ai-agent 0,82 (1), postgres 0,77 (3), gateway 0,74 (1,2) |
+| Mở 50 | auth 4,81 (5), postgres 2,18 (3), ai-agent 0,93 (1), gateway 0,84 (1,2), frontend 0,54 (0,7) |
+
+**Biểu đồ đợt 6** (SVG, `docs/perf-results/2026-11-23-dot6/charts/`, sinh lại bằng `python3 scripts/load/perf-charts.py docs/perf-results/2026-11-23-dot6`). "Trần" là mức CPU/RAM mà `deploy/*.perf.yml` cấp cho service (limit trong Swarm) nhân số bản; service dùng chạm trần thì CPU bị throttle, RAM chạm trần thì bị kill. Các bản của một service gộp thành một đường (3 broker Kafka gộp một, 4 exporter gộp một). Đóng 400 vẽ từ vòng r2 (r1 nhiễu).
+
+**Biểu đồ chung** (một biểu đồ cho cả đóng hoặc cả mở, mọi service cùng một trục): Y là mức dùng chia cho trần (%), nên trần của mọi service là cùng một đường nét đứt ở 100% và thấy ngay service nào chạm trần trước. 7 service chính có màu cố định, các service còn lại màu xám (ghi tên nếu ở mức tải cuối quá 60% trần). Với CPU, đường liền là ĐỈNH của bản bận nhất chia cho trần mỗi bản (mẫu `docker stats` mỗi 3 giây; trần áp cho từng bản nên không lấy tổng các bản), đường chấm là CPU trung bình; vòng đỏ là mức tải bị throttle >= 10% chu kỳ CPU. Đỉnh có thể hơi quá 100% do lấy mẫu. Bản đầu của biểu đồ này vẽ trung bình chia trần nên trông như chưa service nào chạm trần ở đóng 800 (sai lệch đã sửa): trung bình che mất đỉnh, vì tải dồn cục. RAM vẽ đỉnh chia trần.
+
+CPU đóng:
+
+![CPU chung, đóng](../perf-results/2026-11-23-dot6/charts/closed-cpu-all.svg)
+
+CPU mở:
+
+![CPU chung, mở](../perf-results/2026-11-23-dot6/charts/open-cpu-all.svg)
+
+RAM đóng:
+
+![RAM chung, đóng](../perf-results/2026-11-23-dot6/charts/closed-ram-all.svg)
+
+RAM mở:
+
+![RAM chung, mở](../perf-results/2026-11-23-dot6/charts/open-ram-all.svg)
+
+**Biểu đồ từng service** (lưới ô nhỏ, mỗi ô một service, trục Y riêng theo đơn vị thật vì các service chênh nhau cả trăm lần): đường liền xanh đậm = mức dùng (CPU: trung bình lượt đo; RAM: đỉnh một bản nhân số bản), đường chấm xanh nhạt = đỉnh CPU (mẫu `docker stats` mỗi 3 giây, cao nhất trong lượt đo), nét đứt = trần được cấp, vòng đỏ = mức tải bị throttle >= 10%.
+
+CPU, tải đóng 100-800 VU:
+
+![CPU tải đóng](../perf-results/2026-11-23-dot6/charts/closed-cpu.svg)
+
+CPU, tải mở 10-50 phiên/giây:
+
+![CPU tải mở](../perf-results/2026-11-23-dot6/charts/open-cpu.svg)
+
+RAM, tải đóng:
+
+![RAM tải đóng](../perf-results/2026-11-23-dot6/charts/closed-ram.svg)
+
+RAM, tải mở:
+
+![RAM tải mở](../perf-results/2026-11-23-dot6/charts/open-ram.svg)
+
+Độ trễ payment (không phải consumer lag Kafka: các lượt này không ghi lag của consumer/outbox theo từng mức, Prometheus đã gỡ sau mỗi lượt; chỉ có thời gian từ lúc tạo đơn đến lúc thấy payment, đo bằng hỏi lại 500 ms):
+
+![Độ trễ payment](../perf-results/2026-11-23-dot6/charts/lag.svg)
+
+Đọc từ biểu đồ: (a) mở: auth chạm trần sớm nhất (throttle từ 30; ở 50 dùng 4,8 trên 5 core), kế đến ai-agent (từ 40; ở 50 đạt ~0,93 trên 1 core), frontend (từ 40), Postgres (từ 50, 2,2 trên 3 core); (b) đóng: chỉ frontend (từ 700) và Postgres (800, 1,6 trên 3 core) chạm trần, các service nghiệp vụ còn lại còn dư, và payment lag gãy trước khi service nào cạn (700-800); (c) RAM không phải giới hạn: cao nhất là traefik ~69% mức được cấp ở đóng 800 (tăng từ ~30 MB ở đóng 100 lên ~160 MB ở đóng 800, đáng theo dõi), kế đến broker Kafka ~45% và vector ~44%, còn lại dưới ~40%; (d) cadvisor, grafana và 4 exporter bị throttle >= 10% dù dùng dưới 0,05 core (tải dồn cục ngắn so với trần 0,2-0,3; như đã ghi ở §5f), không ảnh hưởng đường tải chính; (e) Postgres và ai-agent có đỉnh CPU chạm hoặc vượt trần được cấp trên biểu đồ do `docker stats` lấy mẫu mỗi 3 giây, không chính xác tuyệt đối.
+
+**Kết luận (vòng 1):**
+1. **Đóng:** ổn đến 600 VU (payment p95 ~515-540 ms, 0 lỗi). Điểm gãy đầu tiên là độ trễ payment: 2,0 s ở 700 và 7,8 s ở 800, dù 0 lỗi và CPU máy tối đa 84%. Ở 800 Postgres tăng lên 1,63 core (0,73 ở 600) và bị throttle 14%. Nguyên nhân độ trễ payment ở 700-800 CHƯA điều tra (nghi Postgres/outbox/Kafka; cần `pg_stat_statements` (R17) và lag outbox theo thời gian).
+2. **Mở:** ổn đến 30 phiên/s. Mở 40 không lỗi nhưng 1 VU hỏng nên bị đánh dấu không hợp lệ; auth dùng 3,42/5 core, throttle 37%. Mở 50 hỏng: lỗi 2,7%, 83 VU hỏng, CPU máy 92-99%, auth 4,81 core (throttle 64%), ai-agent 0,93/1 core (50%), Postgres 2,18 core. Tải mở bị auth chặn trước (đúng R20), ai-agent đi theo; nguyên nhân gốc là bcrypt chưa được profile.
+3. **Đóng 400 r1 là nhiễu:** CPU máy 71/95% nhưng r2 cùng cấu hình chỉ 41/53% với số lời gọi và payment p95 gần như giống (500 so với 497/s; 534 so với 527 ms). Không dùng CPU máy của r1; số lời gọi/s và payment không bị ảnh hưởng đo được.
+4. **Frontend bị throttle nhưng không phải nút cổ chai.** Frontend (Next.js, `output: standalone`) bị throttle 14% ở đóng 700, 11% ở mở 40, 25% ở mở 50, dù CPU trung bình chỉ ~39% của 1 core (đỉnh 65%, trần 0,7). Hai số không mâu thuẫn: `docker stats` lấy mẫu mỗi 3 s, còn throttle đếm theo từng chu kỳ 100 ms (quota 70 ms), nên tải dồn cục vượt quota thoáng qua mà trung bình vẫn thấp. Khi bị chặn, tiến trình chỉ dừng đến chu kỳ sau (thêm tối đa ~30 ms), không sập; trang HTML vẫn p95 ~120 ms ở đóng 700, 0 lỗi. Throttle này có từ đợt 4 (đóng 600: 16%, mở 30: 12%) và chủ yếu do đợt 3 hạ trần frontend từ 1 xuống 0,7 core; ở đợt 6 CPU dùng của frontend bằng đợt 4 ở cùng mức tải. `ccu.mjs` chỉ tải HTML (~9% số lời gọi, ~50 trang/s ở đóng 700), không chạy JS trình duyệt. Chưa đo với trần 1 core và chưa kiểm xem các trang đang render tĩnh hay động; nếu muốn tối ưu thì trang `/products/:id` (chiếm ~50% số lượt trang) là ứng viên cache. Quyết định: giữ nguyên, ghi nhận.
+5. **So với đợt 4** (cùng cấu hình, DB không sạch): đóng 600 nay 752 lời gọi/s và payment p95 517 ms (đợt 4: 717 và 6,3 s); mở 30 và 40 cho số gần như giống (599 và 797 lời gọi/s). Khác biệt ở đóng 600 có thể do DB sạch hoặc nhiễu; cần vòng 2-3 mới kết luận.
+
+**Chưa làm:** vòng 2-3 cho các mức; điều tra payment lag ở đóng 700-800; profile bcrypt; kiểm trang frontend tĩnh/động. Tổng trần CPU các service ~18 core trên máy 16 luồng nên các mức cao (đóng 700+, mở 40+) có CPU máy 72-99%, kém tin cậy hơn các mức thấp.
+
+### 5h. Đợt 6 vòng 2 và chẩn đoán payment lag (2026-11-24; dữ liệu `docs/perf-results/2026-11-23-dot6/`, nhãn `*-r2` và `*-diag`)
+
+Cùng cấu hình, mỗi mức dựng sạch (xoá volume) như vòng 1; đóng 400 giữ r2 đã có. Thêm 2 lượt chẩn đoán (`closed-700-diag`, `closed-800-diag`) có lấy mẫu `pg_stat_activity` mỗi 2 giây (`*.pgwait.txt`), vì `pg_stat_statements` chưa bật (R17) và không đổi cấu hình hạ tầng giữa đợt. Sau mỗi lượt, `scripts/load/perf-diag.py` lấy từ Prometheus lag outbox, lag consumer Kafka, kết nối Postgres, chờ pool, commit/s (`*.diag.json`).
+
+| Mức | Lời gọi/s r1 / r2 | Payment p95 r1 / r2 (ms) | Lỗi r1 / r2 | Hợp lệ r1 / r2 |
+|---|---|---|---|---|
+| Đóng 100 | 127 / 129 | 1008 / 516 | 0 / 0 | có / có |
+| Đóng 200 | 255 / 252 | 1006 / 515 | 0 / 0 | có / có |
+| Đóng 300 | 379 / 377 | 542 / 1006 | 0 / 0 | có / có |
+| Đóng 400 | 500 / 497 | 534 / 527 | 0 / 0 | có / có |
+| Đóng 500 | 623 / 627 | 515 / 512 | 0 / 0 | có / có |
+| Đóng 600 | 752 / 756 | 516 / 521 | 0 / 0 | có / có |
+| Đóng 700 | 861 / 874 (diag 865) | **1994** / 525 (diag 518) | 0 / 0 | có / có |
+| Đóng 800 | 920 / 875 (diag **1011**) | **7777 / 7392** (diag 525) | 0 / 0 | có / có |
+| Mở 10 | 199 / 198 | 1008 / 1008 | 0 / 0 | có / có |
+| Mở 20 | 394 / 397 | 532 / 1008 | 0 / 0 | có / có |
+| Mở 30 | 599 / 593 | 536 / 565 | 0 / 0 | có / có |
+| Mở 40 | 797 / 807 | 599 / 614 | 0 / 0 | **không** (1 VU hỏng) / có |
+| Mở 50 | 1123 / 1054 | 14724 / 8840 | 2,7% / 3,4% | không / không |
+
+**Kết luận từ vòng 2 và chẩn đoán:**
+1. **Thông lượng ổn định giữa các vòng** (lệch < 2% ở hầu hết mức đóng, mở 10-40). Mở 50 hỏng ở cả hai vòng (lỗi 3-3,4%, 64-83 VU hỏng, CPU máy 90-99%); mở 40 hợp lệ ở r2 nhưng r1 có 1 VU hỏng nên là ngưỡng biên. Payment p95 ~1006-1008 và ~512-565 là hai giá trị lượng tử hoá của chu kỳ hỏi 500 ms, không phải khác biệt thật.
+2. **Payment lag ở đóng 700-800 KHÔNG tất định.** Đóng 700: r1 1,99 s, r2 và diag ~520 ms. Đóng 800: gãy ở r1 (7,8 s) và r2 (7,4 s) nhưng KHÔNG gãy ở lượt diag (525 ms, 1011 lời gọi/s, cao nhất). Tức "gãy từ 700" của §5g là nhiễu một phần; ở 800 gãy 2 trên 3 lượt. Chưa biết biến nào quyết định (lượt diag là lần thứ 3 ở mức đó, có thêm mẫu Postgres mỗi 2 s).
+3. **Cơ chế khi gãy (đóng 800 r2, từ Prometheus):** lag consumer `order-service-validate-result` (topic `product.validate_order`) lên đỉnh 930 message (trung bình 131; ở r2 đóng 700 chỉ 2, ở diag 5), thời gian chờ pool DB cộng dồn đỉnh 76 s mỗi giây (trung bình 15; bình thường ~0,006), kết nối "idle in transaction" lên 22. Lag publish outbox tối đa chỉ 0,6 s nên outbox KHÔNG phải nguyên nhân. Đỉnh chờ pool (+70 s kể từ đầu giai đoạn ổn định) và đỉnh lag outbox (+55 s) cùng nằm trong một đoạn ngắn, hình dạng một cú đứng tạm thời chứ không phải quá tải đều. Số kết nối Postgres không chạm 200 (tối đa 80 nhàn + 29 đang chạy), không có deadlock.
+4. **Postgres đang chờ gì (mẫu `pg_stat_activity` ở diag, tổng số truy vấn đang chạy theo từng loại chờ):** ở cả 700 và 800 phần lớn thời gian chờ là ghi nhật ký giao dịch khi `commit`: `IO WALSync` (44 và 42 lần) và `LWLock WALWrite` (42 và 32 lần), tức fsync WAL, trong khi Postgres làm 3000-4700 commit/giây. Ở 700 còn thấy `Lock transactionid` trên `UPDATE products SET inventory ...` (khoá dòng sản phẩm nóng). Đây là tín hiệu nghẽn ghi/commit của Postgres, KHÔNG phải truy vấn chậm. NHƯNG lượt diag không gãy nên chưa quan sát được các mẫu của lúc gãy; mối liên hệ giữa WAL sync và cú đứng ở r1/r2 là GIẢ THUYẾT chưa kiểm chứng (cần ghi `pg_stat_bgwriter`/`log_checkpoints` trong lúc gãy: nghi checkpoint hoặc fsync đột ngột chậm).
+5. **auth ở tải mở do bcrypt, đã kiểm:** `bcrypt.DefaultCost` (cost 10) trong `auth_service.go`; đo trên máy (một luồng, lúc rảnh) băm 56 ms và so 56 ms mỗi lần (`go run` bằng `golang.org/x/crypto` v0.54.0). Một phiên mở đăng ký rồi đăng nhập = 2 lần bcrypt ≈ 0,11 core; mở 40 phiên/giây ≈ 4,5 core bcrypt so với auth đo được 3,4 core trung bình (đỉnh gần 5). Khớp thứ tự độ lớn, nên bcrypt là nguyên nhân chính của R20; không cần profile thêm. Muốn giảm chỉ có hạ cost (cost 8 ≈ nhanh gấp 4, ước từ phép nhân 2^cost, chưa đo, và yếu đi 4 lần khi bị dò mật khẩu): không khuyên đổi cho môi trường thật; nếu chỉ dùng cho perf thì thêm biến môi trường trong `services.perf.yml` (chưa làm).
+6. **Frontend không cache được trang:** `apps/frontend/app/layout.tsx` gọi `cookies()` (cookie giao diện sáng/tối) nên mọi trang render động; header thật qua Traefik (`frontend-headers.txt`) đều là `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate` cho `/`, `/products`, `/cart`, `/login`. Muốn cache các trang như `/products/:id` phải bỏ `cookies()` khỏi layout (đọc theme ở trình duyệt); chưa làm vì là đổi thiết kế giao diện.
+
+**Chưa làm:** bắt lúc gãy ở đóng 800 (chạy lặp đóng 800 cho đến khi gãy, ghi `pg_stat_bgwriter`, `log_checkpoints` và mẫu chờ của Postgres); bật `pg_stat_statements` (R17); biểu đồ §5g vẽ từ vòng 1, chưa vẽ lại trung bình hai vòng.
+
+### 5i. Chẩn đoán cú đứng của Postgres ở đóng 800 (2026-11-24; dữ liệu `docs/perf-results/2026-11-24-hunt/`)
+
+Chạy lặp đóng 800 (dựng sạch mỗi lượt) với bộ lấy mẫu `scripts/load/perf-pgsample.sh` (mỗi giây: checkpoint, WAL, đĩa `/proc/diskstats`, số truy vấn đang chờ WAL, truy vấn không rảnh kèm sự kiện chờ; mỗi 5 giây: bảng bị quét tuần tự nhiều nhất) và `perf-diag.py` (Prometheus). Bật thêm `log_checkpoints`, `track_io_timing`, `track_wal_io_timing` bằng `ALTER SYSTEM` + `pg_reload_conf()` ngay sau khi dựng (chỉ trong các lượt chẩn đoán; không sửa file cấu hình). Kết quả đóng 800 tính đến nay: gãy 5 trên 8 lượt (đợt 6 r1 7,8 s, r2 7,4 s, hunt3 7,7 s, hb1 5,1 s, hc1 7,8 s; không gãy: diag, hunt1, hunt2, ~530 ms).
+
+**Hiện tượng khi gãy (đã đo):**
+- Cú đứng kéo dài khoảng 20-55 giây rồi tự hết: hunt3 từ +56 s đến +91 s, hb1 từ +0 s đến +20 s, hc1 từ +35 s đến +90 s (kể từ đầu giai đoạn ổn định).
+- Trong cú đứng CPU của container Postgres ghim ở ~300% (trần 3 core; mẫu 296-313%), trước và sau chỉ ~100-125%; lượt không gãy không bao giờ qua ~210%. Postgres bị throttle 5,6-7,6% chu kỳ ở lượt gãy so với 0,2% ở lượt khỏe.
+- Thời gian một lần fsync WAL tính từ Postgres tăng từ ~1,05 ms lên 3-14 ms (gấp 3-14 lần), số fsync mỗi giây giảm từ ~480 xuống 100-290, số kết nối đang chạy tăng từ 2-8 lên 20-43, và số kết nối chờ `LWLock WALWrite` khi `commit` tăng từ ~0,1 lên ~3,8 mỗi giây (hc1). Kết nối `idle in transaction` lên tới 21-22 (khỏe: 4).
+- Sau đó pool DB của order/product cạn, lag consumer `order-service-validate-result` lên hàng trăm đến 930 message, và payment lag lên 5-8 s (xem §5h mục 3).
+
+**Đã loại (có số đo):**
+- Kế hoạch truy vấn xấu vì thiếu thống kê: số lần quét tuần tự và số dòng đọc của `orders`, `products`, ... giống hệt giữa lượt gãy và lượt khỏe (ví dụ `orders` ~21,7-22,9 triệu dòng đọc cả hai), autoanalyze chạy 4-5 lần mỗi bảng ở cả hai.
+- Bão checkpoint: mỗi lượt chỉ 1 checkpoint theo giờ + 1 theo WAL đầy, thời gian ghi/sync checkpoint gần 0, `buffers_full` = 0.
+- Khối lượng WAL: chỉ ~1 MB/s (tổng ghi đĩa ~17 MB/s, còn lại là Kafka, ClickHouse, Loki, vector...), trong cú đứng không tăng.
+- Đĩa chậm: ở cấp thiết bị, thời gian mỗi yêu cầu flush gần như không đổi (0,94 ms bình thường, 1,15 ms trong cú đứng; hunt3), băng thông ghi đĩa không đổi đáng kể. Cái chậm là fsync nhìn từ Postgres.
+- Outbox: lag publish tối đa 0,6 s.
+- Ghi đĩa của một service khác tăng đột biến: tốc độ ghi theo service (cAdvisor) ổn định theo từng bước, không có đợt ghi lớn trùng cú đứng (độ phân giải 15 s nên chưa loại hẳn các đợt ngắn).
+
+**Giả thuyết chính (CHƯA kiểm chứng):** hội tụ về "Postgres hết 3 core, bị CFS chặn, đường commit tắc". Khi cgroup hết hạn ngạch CPU trong chu kỳ 100 ms, mọi tiến trình của container bị dừng đến hết chu kỳ, kể cả tiến trình đang giữ khoá WAL (`WALWrite`), nên các kết nối khác phải chờ theo; mỗi lần như vậy cộng thêm vài đến hàng chục ms vào commit, kết nối chất đống, tiêu thêm CPU, càng bị chặn (vòng tự khuếch đại, tự hết khi tải dồn cục qua đi). Khớp với: cú đứng chỉ có khi CPU Postgres ở trần, fsync nhìn từ Postgres chậm trong khi đĩa bình thường, hàng chờ `WALWrite`.
+- **Điều khởi phát một cú đứng chưa biết.** Ở hc1, một autovacuum (`VACUUM ANALYZE` trên `orders` lúc +31 s, `cart_items` kèm `VacuumTruncate` lúc +33 s) xảy ra ngay đầu cú đứng (CPU lên 305% ở +29 s), nhưng mỗi lượt autovacuum chỉ thấy trong ~1 giây và có autovacuum khác lúc -29 s mà không gây cú đứng, nên chưa kết luận là nguyên nhân; hunt3 và hb1 không có dữ liệu truy vấn đang chạy để so (bộ lấy mẫu truy vấn mới chỉ có ở hc1).
+- **Điều chưa đo được:** tiến trình nào tốn 3 core trong cú đứng (`top` của busybox trong container chỉ cho CPU tích luỹ, không dùng được).
+
+**Việc quyết định, CHƯA làm (đợi lệnh):** (1) nâng trần CPU Postgres từ 3 lên 5-6 core rồi chạy lặp đóng 800: nếu hết gãy qua vài lượt thì giả thuyết CFS đúng, và đây cũng là cách giảm rủi ro trực tiếp; (2) thử `commit_delay`/`commit_siblings` hoặc `synchronous_commit=off` cho bảng outbox (không dùng cho tiền) để giảm số fsync; (3) bật `log_autovacuum_min_duration=0` và `pg_stat_statements` (R17) để xác định truy vấn đốt CPU; (4) đo bằng `perf`/`pidstat` trong container để biết tiến trình tốn CPU. Kết luận thực tế hiện tại: cấu hình này an toàn đến đóng 600 (không gãy ở cả 3 lượt) và đóng 700 gãy 1/3 lượt; ở 800 gãy hơn một nửa số lượt.
+
+### 5j. Đọc log của lượt gãy `closed-800-hd1` (2026-11-24; stack được GIỮ lại để xem log; dữ liệu `docs/perf-results/2026-11-24-hunt/closed-800-hd1.*`, log thô ngoài repo)
+
+Lượt hd1 (đóng 800, DB dựng mới, cấu hình không đổi) gãy: payment p95 4,9 s, max 6,5 s, 971 lời gọi/s, 0 lỗi. Bắt đầu giai đoạn ổn định lúc 04:18:52 UTC. Khác hunt3 và hc1 (một cú đứng dài), hd1 có **hai cú đứng ngắn** (~10 giây): +13 s đến +24 s (04:19:05-04:19:16 UTC) và +77 s đến +86 s (04:20:09-04:20:18 UTC); CPU Postgres 297-311% trong hai đoạn đó, ~105-160% ngoài. Fsync WAL chậm (> 3 ms) ở 14 giây trong lượt.
+
+Log đã đọc (service Go qua `docker service logs --since`, các service còn lại từ bản lưu sau lượt đo): so bốn đoạn thời gian (trước, cú đứng 1, giữa, cú đứng 2).
+
+**Kết quả:**
+1. **Không có log lỗi giải thích cú đứng.** Log Postgres chỉ có dòng checkpoint (không có lock timeout, deadlock, hay cảnh báo). Gateway: 0 dòng mức `error`, 0 phản hồi 5xx, 0 deadline exceeded, các dòng `warn` (~1,4-5,9 mỗi giây) toàn là lỗi 422 nghiệp vụ dự kiến (từ chối trả hàng, chuyển trạng thái không hợp lệ). Broker Kafka chỉ cảnh báo ở lúc khởi động (04:13-04:14, `UnknownHostException` và `UNKNOWN_TOPIC_ID` trước khi DNS và topic sẵn sàng), không có gì trong lúc đo.
+2. **Truy vấn chậm lúc đứng là truy vấn thường, không phải một truy vấn xấu:** trong hai cú đứng có 8 + 28 truy vấn >= 100 ms ở order, 19 + 34 ở product, 12 + 3 ở payment (tối đa 207-392 ms), ngoài cú đứng gần như không có. Loại: tra theo khoá (`products WHERE id IN`, `payments WHERE checkout_id`, `checkouts WHERE buyer_id AND idempotency_key`, `UPDATE validate_order_events`, `categories`). Mọi truy vấn chậm cùng lúc cho thấy Postgres chậm toàn cục, khớp với §5i; vẫn chưa biết nguyên nhân.
+3. **Payment-service gọi nhiều hơn khi trễ:** dòng `record not found` của `payments WHERE checkout_id` tăng từ ~41/giây (bình thường) lên 112-140/giây trong cú đứng, vì client hỏi lại mỗi 500 ms khi payment chưa xuất hiện. Đây là hệ quả, không phải nguyên nhân.
+4. **Phát hiện mới (nhiễu log, R24):** GORM ghi `record not found` ở mức lỗi (kèm mã ANSI và câu SQL) cho các tra cứu "không có" là bình thường: order-service ~144-169 dòng/giây (3 vị trí: `repository/cart.go:41` 13.798 lần, `repository/orders.go:86` 3.886 lần trong 2 phút) và payment-service 40-140 dòng/giây (`service/queries.go:89`, 6.330 lần). Không có `IgnoreRecordNotFound` ở service nào (kiểm bằng `grep`). Hậu quả đo được gián tiếp: `vector` (chuyển log) dùng ~0,5 core và ghi ~3,6 MB/s xuống đĩa trong lượt đo. Tỉ lệ thuộc về nhiễu này chưa tách riêng được.
+5. **Chưa kết luận được nguyên nhân cú đứng từ log.** Hướng còn lại như §5i: nâng trần CPU Postgres 3 -> 5-6 core rồi lặp đóng 800 (bạn đã bảo KHÔNG nâng), `log_autovacuum_min_duration=0`, `pg_stat_statements`, `perf` trong container.
+
+Ghi chú vận hành: lúc đầu các script chẩn đoán tự gỡ stack và xoá volume sau mỗi lượt nên log service bị mất; lượt hd1 giữ stack. Lệnh `docker service logs` không có `--until`, và treo khoảng 13 phút ở log ai-agent trong script lưu log (đã kill lệnh treo; log ai-agent lưu dở).
+
+### 5k. Nguyên nhân cú đứng của Postgres: bão kết nối (2026-11-24; lượt `closed-800-he1` có thu mọi chỉ số mỗi giây; `docs/perf-results/2026-11-24-hunt/closed-800-he1.capture.jsonl`)
+
+Chạy lại đóng 800 trên stack đang chạy (không dựng lại) với `scripts/load/perf-capture.py` (mỗi giây: CPU và chuyển ngữ cảnh từng tiến trình Postgres tách user/kernel, cgroup CPU/throttle/IO mọi container, PSI, journal ext4, xung nhịp/nhiệt độ CPU, trang bẩn, tiến trình khác trên máy, `pg_stat_wal/bgwriter/io/database`, truy vấn đang chạy theo sự kiện chờ, khoá chưa cấp). Lượt này gãy (payment p95 9,0 s, 925 lời gọi/s, 0 lỗi); cú đứng từ +33 s đến +91 s kể từ đầu giai đoạn ổn định, có một khoảng hồi phục ngắn quanh +61-63 s rồi đứng lại.
+
+**Đo được (đối chiếu bình thường +0..+28 s với cú đứng +36..+58 s):**
+| Chỉ số | Bình thường | Cú đứng |
+|---|---|---|
+| Tiến trình mới sinh (kết nối mới) mỗi giây trong Postgres | 1,2 | **47** (thoát cũng ~47/giây) |
+| Số tiến trình Postgres | 67 | 110 (115-130 lúc đỉnh) |
+| CPU container Postgres | ~1,0 core (user 0,7 + kernel 0,3) | **3,00 core ghim trần** (user 1,5 + **kernel 1,5**) |
+| Chu kỳ CFS bị throttle | 0/10 | **10/10 chu kỳ mỗi giây**, tổng 4,3-7,1 giây chờ mỗi giây |
+| `postmaster` (tiến trình fork kết nối) CPU kernel | 0,2 tick/giây | 6,1 tick/giây (30 lần) |
+| fsync WAL mỗi giây / mỗi lần (nhìn từ Postgres) | ~450 / 1,0 ms | 54-160 / 5-11 ms |
+| Kết nối đang chạy / chờ `LWLock WALWrite` | 1-5 / ~0 | 15-38 / 4-29 |
+| CPU toàn máy | 62-73%, iowait 1,4-1,6% | 63-72%, iowait 0,1-0,6% (thấp hơn) |
+| PSI CPU (có tác vụ chờ CPU) / Dirty pages | 18% / 117 MB | 76% / 65 MB |
+| CPU service ứng dụng (order 0,6, product 0,5, payment 0,1-0,2, gateway 0,4) | không đổi | không đổi (cú đứng bắt đầu ở Postgres, không phải do app tăng tải) |
+| Tích luỹ `pg_stat_database.sessions` sau hd1 + he1 | | 12.758 kết nối đã mở trong khi bình thường chỉ vài trăm |
+
+**Chuỗi nhân quả (đo được từng bước):** một đợt kết nối mở/đóng dồn cục (+27,7 s: 14 kết nối trong một giây, CPU Postgres 2,15 core) và các đợt nhỏ sau đó (+29,7, +30,7 s) -> từ +32,7 s số kết nối mới sinh vọt lên 30-51 mỗi giây -> mỗi kết nối mới là một `fork` kèm khởi tạo backend (tốn CPU kernel: kernel từ 0,3 lên 1,5 core, `postmaster` tăng 30 lần) -> Postgres hết hạn ngạch 3 core, bị CFS dừng ở MỌI chu kỳ 100 ms -> tiến trình giữ khoá ghi WAL bị dừng theo, hàng chờ `WALWrite` dài (15-38 kết nối), mỗi fsync đo từ Postgres chậm 5-11 ms (gồm cả thời gian bị dừng) -> pool DB của order/product cạn (order-service: chờ pool tích luỹ 2.133 giây so với product 134 giây, payment 24 giây, auth/user vài giây) -> consumer `order-service-validate-result` lag -> payment lag. Tự hết khi dòng yêu cầu dồn cục đi qua.
+
+**Đã loại bằng số đo:** đĩa (iowait thấp hơn trong cú đứng, trang bẩn giảm, journal ext4 ~4,5-4,9 ms/lần như bình thường, không có đợt ghi lớn), CPU toàn máy hết (chỉ 63-72%), xung nhịp CPU (3,4-3,6 GHz trước và trong), kế hoạch truy vấn xấu, checkpoint, khối lượng WAL, autovacuum (không phải điều kiện cần), lag outbox, lỗi ứng dụng. Nhiệt độ cảm biến cao nhất ~99-105 độ C CẢ trước lẫn trong cú đứng (máy chạy sát ngưỡng nhiệt liên tục; không khác biệt giữa hai trạng thái nên không phải thủ phạm, nhưng làm số đo nhiễu và đáng để ý).
+
+**Nguyên nhân gốc (suy luận có cơ sở; đã kiểm chứng ở §5l):** pool kết nối của các service đặt `MaxIdleConns` thấp hơn `MaxOpenConns` (`shared/dbpool.Apply`: order/product 30 mở/10 nhàn, payment 15/5, auth 10/5 mỗi bản, user 10/3, gateway và ops 5/2). `database/sql` đóng ngay kết nối vừa trả về nếu số kết nối nhàn đã đủ `MaxIdleConns`. Bình thường truy vấn rất nhanh nên đồng thời dưới mức nhàn và không có xáo trộn; khi Postgres chậm thoáng qua (một cú chớp CPU hay fsync), số truy vấn đồng thời vượt mức nhàn, mọi kết nối thừa bị đóng rồi mở lại liên tục: mỗi kết nối mở lại là một fork, làm Postgres chậm thêm, đồng thời càng cao. Đây là hệ hai trạng thái (nhanh/chậm) tự khuếch đại, giải thích vì sao gãy không tất định (5 trên 9 lượt đóng 800), tự hết, chỉ xảy ra khi tải cao (hơn nữa pool cạn tập trung ở order-service). Chưa đo trực tiếp service nào mở các kết nối mới: bản thu này cắt địa chỉ client khỏi tiêu đề tiến trình (cần ghi `client_addr` ở lần sau), nên "order-service là nguồn chính" mới dựa trên chờ pool, không phải đếm kết nối.
+
+**Cách kiểm chứng (ĐÃ làm, kết quả ở §5l) và giảm rủi ro (không phải nâng trần CPU):** đặt `DB_MAX_IDLE_CONNS` bằng `DB_MAX_OPEN_CONNS` cho mọi service (biến đã có sẵn trong `deploy/services.yml`, không cần sửa mã; hoặc đổi mặc định trong `Apply(...)` cho từng service), rồi lặp đóng 800 vài lượt: nếu số tiến trình mới sinh luôn ~1/giây và hết gãy thì kết luận đúng. Cần cân đối: giữ nhiều kết nối nhàn hơn đồng nghĩa dùng nhiều kết nối hơn khi rảnh, trong khi tổng trần kết nối cần dưới `max_connections=200` (xem ngân sách ở §6/R15). Thay đổi này cũng cần ghi lại ở §6. Bản `perf-capture.py` nên bổ sung `client_addr` của kết nối mới sinh trước khi dùng lại.
+
+### 5l. Kiểm chứng: `MaxIdleConns` = `MaxOpenConns` hết bão kết nối (2026-11-24; `closed-800-hf1..4`, `docs/perf-results/2026-11-24-hunt/`)
+
+Thay đổi duy nhất: `DB_MAX_IDLE_CONNS=30` cho 7 service dùng pool (xem §6), áp lên stack đang chạy bằng `docker service update --env-add` (cuộn lại từng bản, 2 phút, nghỉ thêm 60 giây), cùng DB và cùng điều kiện lượt `he1`. Mỗi lượt đóng 800 như cũ, có `perf-capture.py` (bản mới đếm `pg_stat_database.sessions` mỗi giây). Vòng lặp được đặt dừng ngay ở lượt gãy đầu tiên (nếu có thì giả thuyết bị bác) hoặc sau 4 lượt.
+
+| Lượt | Payment p95 | Lời gọi/s | Kết nối mở mới/s (`sessions`) | Tiến trình Postgres mới/s tb (đỉnh) | CPU Postgres tb (đỉnh) | CPU kernel Postgres | Throttle Postgres | Tiến trình Postgres tb | Kết nối client tb (tối đa) |
+|---|---|---|---|---|---|---|---|---|---|
+| `he1` (TRƯỚC khi đổi, gãy) | 9043 ms | 925 | n/a (bản thu cũ chưa có) | 25,5 (66) | 2,06 (3,19) | 0,97 | 54,7% | 92 (130) | 86 (117) |
+| `hf1` (SAU) | 523 ms | 1006 | 1,3 | 0,0 (2) | 0,96 (1,92) | 0,27 | 0,0% | 104 | 99 (100) |
+| `hf2` | 535 ms | 996 | 1,5 | 0,2 (14) | 1,07 (2,05) | 0,28 | 0,0% | 116 | 111 (120) |
+| `hf3` | 523 ms | 1004 | 1,3 | 0,0 (1) | 1,16 (2,29) | 0,28 | 0,0% | 106 | 101 (114) |
+| `hf4` | 524 ms | 998 | 1,4 | 0,2 (6) | 1,23 (2,25) | 0,27 | 0,0% | 101 | 96 (105) |
+
+**Kết quả:** cả 4 lượt không gãy, lag consumer `order-service-validate-result` tối đa 1-3 message, chờ pool DB gần 0 (tối đa ~0,007 giây mỗi giây), 0 lỗi, hợp lệ. Số kết nối mở mới giảm từ 47 mỗi giây khi gãy xuống ~1,4 mỗi giây, CPU Postgres không bao giờ chạm 3 core (đỉnh một giây <= 2,3), throttle 0%, CPU kernel của Postgres 0,27 core (khi gãy 1,5). Thông lượng ~1000 lời gọi/giây, cao hơn các lượt gãy (875-925) và bằng lượt khỏe `hunt1`. Đổi lại Postgres giữ nhiều kết nối nhàn hơn (96-111 so với 67 lúc rảnh trước đó), vẫn thấp hơn `max_connections=200` (tổng trần pool ~150).
+
+**Mức tin cậy:** tỉ lệ gãy ở đóng 800 trước đó là 6 trên 9 lượt; 4 lượt liền không gãy nếu tỉ lệ vẫn như vậy có xác suất ~1%, nên đây là bằng chứng mạnh nhưng chưa phải chắc chắn (n=4). Chưa loại hẳn yếu tố "service vừa khởi động lại": tuy nhiên các lượt gãy trước đó (`hunt3`, `hc1`, `hd1`) cũng xảy ra ngay sau khi dựng mới, nên trạng thái "service mới chạy" không tự tránh được cú đứng. Chưa có lượt đối chứng "khởi động lại nhưng giữ cấu hình cũ" và chưa thử ở đóng 900-1000 hay mở 40-50. Chưa đếm kết nối mới theo từng service (địa chỉ client của một số kết nối trên mạng overlay hiện là địa chỉ endpoint `10.0.1.4` chứ không phải IP của service).
+
+**Việc nên làm tiếp (chưa làm):** (1) đưa vào repo: đổi giá trị mặc định trong `shared/dbpool.Apply`/mỗi `service_config.go` để số nhàn bằng số mở (hoặc đặt `DB_MAX_IDLE_CONNS=30` trong `services.yml`/`services.perf.yml`), thêm test cho `Limits` và cập nhật ngân sách kết nối ở R15; (2) cân nhắc `ConnMaxIdleTime` (đang 5 phút) và `ConnMaxLifetime` (30 phút) để không giữ kết nối nhàn quá lâu khi rảnh; (3) đo lại đóng 900-1000 và mở 40-50 với cấu hình này; (4) lượt đối chứng khởi động lại. Với bản gốc (`MaxIdle` < `MaxOpen`) chỉ nên tin số đo đóng đến 600 VU.
+
+### 5m. Giải thích cơ chế: pool kết nối, fork của Postgres, và các biến liên quan (2026-11-24)
+
+**Postgres: mỗi kết nối là một tiến trình.** Khi service mở kết nối mới, `postmaster` `fork` một tiến trình con (backend): xác thực, dựng vùng nhớ, nạp cache catalog, gắn vào `shared_buffers`; khi kết nối đóng, tiến trình đó phải thoát (giải phóng khoá/bộ nhớ, `postmaster` thu dọn). Tạo và thoát đều tốn CPU, chủ yếu CPU kernel (fork, lỗi trang bộ nhớ, thoát tiến trình). Kết nối đã mở sẵn rồi dùng lại thì gần như không tốn gì. Số đo lượt `he1`: ~47 tiến trình mới sinh và ~47 thoát mỗi giây khi gãy (bình thường 1,2); ~2 core CPU tăng thêm / 47 kết nối mỗi giây ≈ 40 ms CPU cho mỗi kết nối mở rồi đóng (ước tính thô, gồm cả chi phí tranh chấp phát sinh).
+
+**Pool của service Go (`database/sql`, đặt trong `shared/dbpool.Apply`):**
+| Biến | Giá trị | Nghĩa và tác động |
+|---|---|---|
+| `MaxOpenConns` (`DB_MAX_OPEN_CONNS`) | mặc định theo service (bảng dưới) | Số kết nối mở CÙNG LÚC tối đa (gồm đang chạy và đang nhàn). Đủ số này thì yêu cầu xếp hàng chờ pool (`mm_db_pool_wait_seconds_total`; order-service chờ tích luỹ 2.133 giây ở đóng 800). Không giới hạn số lần mở/đóng. |
+| `MaxIdleConns` (`DB_MAX_IDLE_CONNS`) | mặc định theo service (bảng dưới) | Số kết nối được GIỮ LẠI nằm chờ sau khi dùng xong. Kết nối trả về khi pool đã đủ số nhàn thì bị ĐÓNG ngay. Nếu thấp hơn số truy vấn đồng thời lúc cao điểm thì mỗi đợt tải sinh ra đóng rồi mở lại kết nối (bão kết nối, R23). Hàm `Limits` ép số nhàn không vượt số mở. |
+| `connIdleTime` | 5 phút (hằng trong mã) | Kết nối nhàn quá 5 phút không dùng thì bị đóng (xáo trộn rất chậm, không phải thủ phạm). |
+| `connLifetime` | 30 phút (hằng trong mã) | Kết nối sống quá 30 phút thì bị đóng và thay mới (xáo trộn rất chậm). |
+| `max_connections` của Postgres | 200 (`deploy/infra.perf.yml`) | Tổng trần toàn cụm; tổng `MaxOpen` các service ~150 phải dưới số này, còn dư cho postgres-exporter, backup, phiên quản trị. |
+
+`DB_MAX_OPEN_CONNS`/`DB_MAX_IDLE_CONNS` trong `deploy/services.yml` là MỘT giá trị chung cho mọi service (rỗng = mặc định riêng từng service trong mã). Mặc định và giá trị sau khi đặt `DB_MAX_IDLE_CONNS=30`:
+| Service | Mở tối đa | Nhàn tối đa TRƯỚC (mặc định) | Số bản | Nhàn SAU (`=30`, ép về số mở) |
+|---|---|---|---|---|
+| order-service | 30 | 10 | 1 | 30 |
+| product-service | 30 | 10 | 1 | 30 |
+| payment-service | 15 | 5 | 1 | 15 |
+| auth-service | 10 | 5 | 5 | 10 mỗi bản |
+| user-service | 10 | 3 | 1 | 10 |
+| api-gateway | 5 | 2 | 2 | 5 mỗi bản |
+| ops-service | 5 | 2 | 1 | 5 |
+Tổng nhàn trước ~59 (khớp 54-59 kết nối nhàn đo được lúc bình thường); tổng mở tối đa ~150.
+
+**Vì sao không phải "quá nhiều kết nối song song":** tổng tiến trình Postgres lúc gãy chỉ 110-130 < 200, `MaxOpen` vẫn được tuân thủ. Cái vọt lên là TỐC ĐỘ mở/đóng (1,2 -> 47 mỗi giây). Ví dụ order-service (mở 30, nhàn 10): bình thường truy vấn ~1 ms nên chỉ vài truy vấn chạy cùng lúc, đủ 10 kết nối nhàn để dùng lại; khi Postgres chậm thoáng qua, 25 truy vấn chồng nhau (vẫn dưới 30 nên không bị chặn), xong việc pool chỉ giữ 10 và đóng 15, đợt sau lại phải mở mới 15; lặp mỗi đợt ở nhiều service. Mỗi lần mở là một fork, làm Postgres chậm thêm, truy vấn chồng nhiều hơn: vòng tự khuếch đại cho đến khi Postgres hết 3 core. Đặt nhàn = mở thì pool không đóng kết nối thừa nên vòng lặp không bắt đầu (§5l).
+
+**Cái giá và lựa chọn khác:** (a) giữ nhiều kết nối nhàn hơn = Postgres có nhiều tiến trình nhàn hơn, mỗi cái chiếm bộ nhớ (cỡ vài MB) và một chỗ trong `max_connections` (số kết nối client trung bình từ ~59 lên ~96-111 lúc tải cao). (b) Postgres chạy tốt nhất khi số kết nối đang hoạt động không lớn so với số core; ~150 kết nối trên trần 3 core là nhiều; cách chuẩn trong ngành là thêm lớp gom kết nối như PgBouncer (chưa đo, chưa đề xuất làm). (c) `MaxOpen` vẫn có vai trò riêng: là điểm nghẽn mềm (xếp hàng chờ pool) ở tải rất cao.
+
+**Chưa đo / chưa chắc:** 40 ms CPU mỗi kết nối là ước tính thô; chưa đếm kết nối mới theo từng service (client_addr của một số kết nối là endpoint overlay `10.0.1.4`, không phải IP service) nên "order-service là nguồn chính" suy ra từ chờ pool; mới 4 lượt kiểm chứng.
+
+### 5n. Ghi chú vận hành đợt 6 (để người sau khỏi mắc lại)
+
+- **Trạng thái cuối phiên (2026-11-24):** Swarm đang chạy đủ stack (infra, obs, services) với `DB_MAX_IDLE_CONNS=30` đặt BẰNG `docker service update --env-add` cho order, product, payment, auth, user, api-gateway, ops (KHÔNG có trong repo). Về cấu hình gốc: `docker service update --env-add DB_MAX_IDLE_CONNS= marketplace_<service>` (rỗng = mặc định trong mã), hoặc gỡ stack (`./scripts/teardown.sh -y`, thêm `--volumes` thì xoá cả dữ liệu) rồi `./scripts/deploy-perf.sh all`.
+- **Log bị mất khi script tự dọn:** các script chẩn đoán đầu tiên (`hunt*`) gỡ stack và xoá volume sau mỗi lượt nên mất log service (Loki/Prometheus/Postgres); đã sửa bằng cách GIỮ stack ở lượt gãy. Từ nay: trước khi gỡ phải lưu log (`docker service logs --since ...`; lệnh này KHÔNG có `--until`, và có thể treo rất lâu với log lớn như api-gateway/ai-agent, nên đặt `timeout` hoặc dùng `--since` và lọc theo giờ), và hỏi người dùng trước khi xoá volume.
+- **Công cụ mới (scripts/load/):** `perf-diag.py` (Prometheus theo cửa sổ lượt đo: lag outbox/consumer, kết nối, chờ pool, ghi đĩa theo container), `perf-pgsample.sh` (mỗi giây checkpoint/WAL/đĩa/truy vấn đang chạy), `perf-capture.py` (mỗi giây: CPU+chuyển ngữ cảnh từng tiến trình Postgres tách user/kernel, cgroup CPU/throttle/IO mọi container, PSI, journal ext4, xung nhịp/nhiệt, tiến trình khác, `pg_stat_wal/bgwriter/io/database`, kết nối theo trạng thái/địa chỉ, `sessions`), `perf-charts.py` (biểu đồ SVG). `perf` không dùng được (`perf_event_paranoid=4`, không có sudo); thu từ `/proc` và cgroup thay thế.
+- **Nhiễu trên máy đo:** trong lúc đo có tiến trình PyCharm `chatter observe` (repo khác) chiếm ~1 core, GoLand/WebStorm/PyCharm mỗi cái 7-10% CPU, Chrome; cảm biến nhiệt cao nhất ~99-105 độ C cả lúc rảnh lẫn lúc tải (máy chạy sát ngưỡng nhiệt). Nên tắt các IDE và tiến trình ngoài khi đo nghiêm túc.
+- **Quy tắc đã vấp:** không dùng `pkill -f <tên>` từ shell có chứa tên đó trong dòng lệnh (tự kill, đã xảy ra một lần); không dùng `rm` với glob khi chỉ cần đọc log; số đo `docker stats` lấy mẫu 3 giây che các đợt ngắn, dùng throttle (cAdvisor/cgroup) để biết chạm trần.
+
+### 5o. Đợt 7 (2026-11-24): đo lại đóng 700-1000 sau khi sửa R23 trong mã (`docs/perf-results/2026-11-24-dot7/`)
+
+Cấu hình: như đợt 6 (giới hạn tài nguyên không đổi), khác duy nhất là mã `shared/dbpool` (nhàn = mở mặc định, `connIdleTime` 30 phút), image dựng lại, mỗi lượt dọn sạch rồi `deploy-perf.sh all` (không còn bản vá tay `DB_MAX_IDLE_CONNS=30`). Mô hình AI là bản giả.
+
+| mức | vòng | payment p95 (ms) | lỗi | VU hỏng | kết nối nhàn (đỉnh) |
+|---|---|---|---|---|---|
+| đóng 700 | r1 / r2 | 522 / 525 | 0% / 0% | 0 / 0 | 125 / 128 |
+| đóng 800 | r1 / r2 / r3 | 529 / 532 / 536 | 0% | 1* / 0 / 0 | 119 / 139 / 134 |
+| đóng 900 | r1 / r2 | 542 / 545 | 0% | 0 / 0 | 144 / 136 |
+| đóng 1000 | r1 / r2 | 562 / 567 | 0,03% | 0 / 0 | 144 / 146 |
+
+\* VU 470 đăng ký bị 409 (lỗi của script tải, không phải hệ thống); phép đo ghi "chưa hợp lệ" theo tiêu chí VU hỏng = 0 nhưng p95 và lỗi vẫn sạch.
+
+- **Kết luận:** 9/9 lượt không gãy (trước đây 6/9 lượt đóng 800 gãy với p95 5-9 s). Payment lag tăng đều, nhẹ theo tải (522 -> 567 ms), không có cú đứng nào; không đơn nào quá 8 s; lag outbox đỉnh <= 0,37 s; lag consumer đỉnh <= 11.
+- Số kết nối nhàn đỉnh 119-146 xác nhận pool đã giữ kết nối (nhàn = mở); tổng vẫn dưới `max_connections` 200.
+- **Trần mới:** ở đóng 1000 đã sát trần ở các lớp phía trước, không phải Postgres: đỉnh CPU của bản bận nhất / trần là frontend 106%, api-gateway 103-104%, order-service 96-100%, traefik 91-96%, ai-agent 93-95%. Throttle (trung bình cửa sổ) cao nhất ở frontend 0,54-0,56. Postgres không còn là điểm nghẽn ở mức này. Chưa đo trên 1000.
+- Giới hạn: n = 2-3 mỗi mức; không có lượt đối chứng khởi động lại với cấu hình cũ (đã nêu ở §5l); `connIdleTime` 30 phút không đo riêng; chưa đo mở 40-50 (nghẽn auth/bcrypt, R20, không dính Postgres) nên chưa đo lại.
+
+**Tải mở 40/50 sau sửa R23 (2026-11-24, cùng cấu hình tài nguyên; `open-{40,50}-r{1,2}` trong `2026-11-24-dot7/`, có `*.capture.jsonl`):**
+
+| mức | vòng | payment p95 (ms) | lỗi | VU hỏng | hợp lệ | auth 5 bản (trung bình / đỉnh, core) | Postgres (trung bình / đỉnh, core) |
+|---|---|---|---|---|---|---|---|
+| mở 40 | r1 / r2 | 609 / 606 | 0% / 0% | 0 / 0 | có / có | 3,42 / 3,89 ; 3,45 / 4,11 | 0,67 / 0,85 ; 0,66 / 0,82 |
+| mở 50 | r1 / r2 | 3279 / 2415 | 3,59% / 1,92% | 100 / 72 | không / không | 4,65 / 5,13 ; 4,68 / 5,11 | 0,82 / 1,07 ; 0,89 / 1,20 |
+
+- Mở 40 hợp lệ ở cả hai vòng (đợt 6: một vòng có 1 VU hỏng). Mở 50 vẫn gãy ở cả hai vòng, nhưng nhẹ hơn đợt 6 (đợt 6: lỗi 2,7% và 3,4%, p95 14,7 s và 8,8 s; Postgres 2,2 core trung bình, đỉnh 2,97 sát trần).
+- **Đính chính:** trước khi đo, ghi chú "sửa R23 gần như không đổi tải mở" là suy luận SAI một phần. Ở đợt 6 mở 50, Postgres dùng 2,2 core trung bình (đỉnh 2,97) và nay chỉ 0,8-0,9 (đỉnh 1,1-1,2), tiến trình Postgres mới sinh ~0,1-0,2 mỗi giây (bão kết nối là ~47 mỗi giây). Vậy bão kết nối đã hết ở tải mở.
+- Phần còn lại của lỗi ở mở 50 là auth hết CPU (4,65-4,68 trên 5 core trung bình, đỉnh >5; R20, bcrypt). `db_pool_wait` đỉnh 650-690 s/s (bình thường ~0) nhưng CHƯA xác định được service nào chờ (kết nối đi qua điểm overlay `10.0.1.4` nên `client_addr` không tách được); chưa kết luận auth là nơi chờ pool.
+- Giới hạn: n = 2 mỗi mức; capture chỉ phủ ~3 phút (170-180 mẫu) mỗi lượt.
+
+### 5p. Việc đo còn lại (2026-11-24, sau đợt 7)
+
+Đã đo và có kết luận: đóng 100-1000 (sạch; trần mới là frontend, api-gateway, order-service), mở 10-50 (trần ~40-45 phiên/s do auth/bcrypt), nguyên nhân và bản sửa R23.
+
+| # | Cần đo | Vì sao | Ghi chú |
+|---|---|---|---|
+| 1 | Đóng 1100-1300 | đóng 1000 chưa gãy, điểm gãy thật chưa biết; frontend (106%), api-gateway (103%), order (100%) đã chạm trần | chỉ biết sau khi đo; nâng trần các service này là việc khác, cấu hình hiện "final" |
+| 2 | Tách `db_pool_wait` theo service ở mở 50 | đỉnh 650-690 s/s nhưng chưa biết service nào chờ (kết nối qua `10.0.1.4` che `client_addr`) | cần query Prometheus theo `service`/`job` ngay trong lượt đo hoặc ghi lại endpoint overlay |
+| 3 | Mở 50 với bcrypt cost thấp chỉ cho perf (hoặc thêm bản auth) | xác nhận auth/bcrypt là nghẽn duy nhất ở mở 50 | đổi cost qua biến môi trường chỉ cho perf, không đổi production; hiện cấu hình giữ nguyên |
+| 4 | `connIdleTime` 30 phút | chưa đo riêng; muốn biết kết nối nhàn có bị đóng rồi mở lại sau khi yên | tải ngắt quãng: chạy, nghỉ, chạy lại, đếm tiến trình Postgres mới |
+| 5 | Lượt đối chứng cấu hình cũ (khởi động lại, MaxIdle < MaxOpen) | bằng chứng gãy/không gãy hiện là so sánh giữa các đợt, không phải cùng một lúc | tùy chọn |
+| 6 | Tải dài (soak, 30-60 phút) | mọi lượt hiện chỉ có ramp 140 s + 90 s ổn định (ghi trong script); chưa thấy rò RAM, kết nối, lag tích lũy theo thời gian | chưa làm |
+| 7 | Tải tăng đột ngột (spike) | tải đóng/mở đều tăng dần; chưa biết phản ứng khi tải nhảy | chưa làm |
+| 8 | Biểu đồ đợt 7 (`perf-charts.py`) | đợt 7 chưa vẽ | rẻ, không cần đo lại |
+
+Việc không phải đo: R24 (`IgnoreRecordNotFound`), cập nhật ngân sách kết nối R15 cho khớp idle = open, R17 `pg_stat_statements`, R22 truy vấn ClickHouse, commit. Tự phục hồi của Swarm: đã quyết tạm bỏ.
+
+### 5q. Đợt 8 (2026-11-24): đóng 1100-1200, soak 30 phút (`docs/perf-results/2026-11-24-dot8/`)
+
+Cấu hình tài nguyên không đổi so với đợt 7 (chỉ đo). Mỗi lượt dọn sạch + `deploy-perf.sh all`; có `perf-capture.py` và chuỗi thời gian Prometheus (`perf-series.py`, công cụ mới).
+
+**Điểm gãy của tải đóng (1 vòng mỗi mức, chưa lặp):**
+
+| mức | payment p50/p95/max (ms) | đơn chưa có payment sau 8 s | lỗi | VU hỏng | hợp lệ |
+|---|---|---|---|---|---|
+| đóng 1100 | 520 / 1084 / 1742 | 0 | 0,03% | 0 | có |
+| đóng 1200 | 7702 / 10461 / 11321 | 1624 | 0,03% | 1 | không |
+
+- Đóng 1100 sạch nhưng đã xuống cấp (p95 562 -> 1084 ms); frontend/ai-agent/api-gateway ~105-108% trần, order 98%.
+- Đóng 1200 gãy: lag consumer `order-service-validate-result` tăng từ giây ~210 lên 1022 và KHÔNG hồi (khác cú đứng tự hết của R23 ở 800); `db_pool_wait` 30-44 s/s từ giây ~225; 10-19 kết nối "idle in transaction".
+- Đã loại trừ ở 1200: bão kết nối (tiến trình Postgres mới 0/giây, Postgres 1,0 core trung bình, đỉnh 1,47); order-service không throttle, CPU đỉnh 68% trần. Chỉ ai-agent chạm 101%. NGUYÊN NHÂN CHƯA BIẾT. Giả thuyết còn mở: pool 30 kết nối hoặc luồng consumer của order-service là giới hạn (chưa xác nhận: order-service chỉ thấy 18 kết nối, thấp hơn trần 30; kết nối qua `10.0.1.4` che nguồn).
+- Mới 1 vòng mỗi mức; 800 từng gãy không tất định nên cần lặp 1100 và 1200 để biết gãy chắc chắn hay do may rủi. Không chạy 1300+ vì dò dừng ở mức gãy đầu tiên.
+
+**Soak 30 phút (đóng 800, 1980 s):** thông lượng đều (~137 nghìn lời gọi và ~4.100 đơn mỗi 120 s từ đầu đến cuối), 0 lỗi, RAM service ứng dụng phẳng (ai-agent 177->193, gateway 116->131, auth 109->120 MiB), kết nối Postgres nhàn 127-146 ổn định, goroutine phẳng (1.143-1.402), lag outbox <= 0,4 s, lag consumer <= 8, chờ pool ~0. Không thấy rò rỉ hay xuống cấp dần trong 30 phút.
+- 429 từ giây ~600, toàn bộ ở `POST /ai/chat` (~24 nghìn): rất có thể là trần token mỗi ngày mỗi người dùng (`limits.daily_tokens`), chưa kiểm nội dung phản hồi; hệ quả là tải AI của soak giảm sau ~10 phút.
+- Tempo không có trần RAM trong `observability.perf.yml` (chỉ CPU 0,3): RAM tăng 34 -> 340 MiB trong ~27 phút rồi nhảy 1-2 GiB ở vài phút cuối (nguyên nhân chưa biết). Rủi ro cho quan sát, không phải ứng dụng.
+- Lỗi script tải đã sửa: `ccu.mjs` dùng `Math.max(...mảng)` tràn ngăn xếp khi mảng > ~100 nghìn phần tử, nên lượt soak mất JSON kết quả và dòng payment p95 (chỉ còn log tiến độ, bảng route đến chỗ lỗi, Prometheus, capture). Đã thay bằng `maxOf` (reduce); chưa chạy lại soak.
+
+**Spike (mục 6), 1 vòng mỗi mức (`spike-600-ramp10`, `spike-800-ramp10`):** kịch bản = đóng 600/800 VU vào trong 10 s (`--ramp=10`, thay vì 160 s), giữ 120 s. Đây là đợt vào dồn từ trạng thái trống, KHÔNG phải tải nhảy trên hệ thống đang chạy; thống kê tổng hợp chỉ tính sau ramp nên đoạn spike đọc từ log tiến độ + Prometheus (`*.series.json`).
+
+| mức | lỗi trong ~20 s đầu (toàn 503) | VU không vào được (bước hỏng) | ổn định 134 s (lời gọi/s, lỗi) | payment p95 sau spike | chờ pool DB đỉnh | auth CPU đỉnh (core) |
+|---|---|---|---|---|---|---|
+| 600 | 82 | 16/600 = 2,7% (15 ở "địa chỉ", 1 tạo operator) | 746,8 /s, 0% | 523 ms | ~43 s/s (giây 30-60) | ~1,7 |
+| 800 | 335 | 92/800 = 11,5% (74 "địa chỉ", 9 tạo admin, 4 tạo operator, 5 đăng ký 409 do script) | 889,2 /s, 0% | 533 ms | ~106 s/s (giây 30-60) | ~2,4 |
+
+- Cả hai lượt hồi phục hoàn toàn: sau giây ~20 không còn lỗi, chờ pool về 0 từ giây ~75, lag consumer ~0, payment p95 như tải ổn định (523-533 ms). Lỗi chỉ xảy ra trong 20 s đầu và tăng nhanh theo mức spike (82 -> 335).
+- Auth KHÔNG hết CPU trong spike (đỉnh 1,7-2,4 trên 5 core). ĐÍNH CHÍNH: bước hỏng nhiều nhất là "địa chỉ" chỉ vì đó là bước VU đang làm lúc spike; lỗi 503 (và vài 504) nằm RẢI RÁC ở nhiều route (`GET /cart` 20, `/orders/summary` 14, `/seller/orders` 20, `/admin/*`, `/ops/*`, `/seller/analytics/*`), nhiều route có max ~3003 ms (quá hạn gRPC 3 s) và `/seller/*` 4,4-5,7 s kèm 504, không dồn vào một service. Trong ~20 s đầu CPU gateway chỉ 0,07-0,15 core, user-service 0,02-0,05, auth 0,7-1,0 (800 lần bcrypt lẽ ra cần ~4,5 core nếu dồn trong 10 s): chưa hết CPU mà request đã quá hạn, nên nghi một giới hạn song song (bcrypt đồng thời, pool, ngắt mạch ở gateway) nhưng CHƯA XÁC NHẬN. NGUYÊN NHÂN 503 CHƯA BIẾT và không tra lại được: dải đo tự dọn stack sau mỗi lượt và KHÔNG lưu log service/gateway trước khi dọn (lặp lại lỗi đã ghi ở §5n). Lần sau phải dump `docker service logs --since` của api-gateway/user-service/auth/order trước khi `teardown`.
+- Giới hạn: n = 1; không có độ trễ trong lúc spike; chưa làm kịch bản "nền rồi nhảy" (xem đề xuất ở hội thoại: nền 200 VU 60 s, nhảy thêm 600 trong 10 s, độ trễ/lỗi theo cửa sổ 10 s, thời gian hồi phục).
+
+**Sự cố hạ tầng khi đo spike:** mạng overlay `marketplace-net` kẹt trong daemon Docker sau lượt soak (`network ls`/`inspect` còn thấy, `network rm` báo not found, `network create` báo already exists; `swarm leave` + `init` không xóa được). Không khởi động lại Docker vì máy còn container khác. Tạm đổi sang `marketplace-net2` (tạo tay, dải `10.0.8.0/24` vì `10.0.1.0/24` trùng dải mạng cũ: task bị từ chối `Pool overlaps with other one on this address space`). Sửa tạm 6 file (chưa commit, PHẢI trả lại): `deploy/infra.yml`, `observability.yml`, `services.yml`, `services.perf.yml` (tên mạng, lệnh Traefik, `TRUSTED_PROXIES` 10.0.1.0/24 -> 10.0.8.0/24), `scripts/wait-ready.sh`, `scripts/teardown.sh`. Trả lại bằng `git checkout -- <6 file>` sau khi xử lý xong mạng cũ.
+
+### 5r. Nguyên nhân lỗi 503 của spike (2026-11-24, `spike-800-r2` + log trong `logs-spike-800-r2/`; stack được giữ lại để phân tích)
+
+`spike-800-r2` lặp lại `spike-800-ramp10`: 363 lỗi trong ~20 s đầu, 107/800 VU không vào được (13,4%; lượt 1: 335 lỗi, 92 VU), sau đó 0 lỗi, 863 lời gọi/s, payment p95 525 ms. Mọi lỗi 503 do cùng một nguyên nhân (đã đọc log gateway và auth):
+
+1. **Gateway chạy ở chế độ "hỏi DB" cho MỌI request có đăng nhập.** `services/api-gateway/internal/middleware/pwdversion.go`: Redis chỉ là đường nhanh; khi khóa canh `pwd_version:safe_after` chưa có (Redis mới dựng hoặc mất dữ liệu), gateway tạo khóa này với giá trị "bây giờ + `JWT_EXPIRE_TIME` (5 phút) + 1 phút" và trong 6 phút đó mỗi request hỏi auth-service (`GetPwdVersion` qua gRPC, rồi Postgres). Mỗi lượt đo dựng Redis mới nên cả lượt (<6 phút) nằm trong cửa sổ này: kiểm trực tiếp trên stack còn sống, `safe_after` = 1795523394, đặt lúc 12:23:54 UTC (đúng lúc bắt đầu đo) và còn hiệu lực đến 12:29:54.
+2. **Pool DB của auth-service cạn.** `mm_db_pool_wait_seconds_total` theo service: chỉ auth-service > 0 (5 bản cộng dồn 811 / 1060 / 1051 / 1585 / 1201 s), mọi service khác 0 (order, product, payment, user: 0). Pool của auth là 10 kết nối mỗi bản (tổng 50) và phải phục vụ cùng lúc 800 đăng ký/đăng nhập (bcrypt) và `GetPwdVersion` của mọi request.
+3. **Quá hạn 3 giây rồi gateway đóng cửa (fail closed).** `verify` có timeout 3 s; không đọc được từ DB thì trả 503 (cố ý, để client thử lại thay vì coi là bị đăng xuất). Log gateway: 309 dòng "cannot read pwd version from database: DeadlineExceeded" và 311 dòng "cannot verify pwd version (Redis and database both unavailable)" khớp 313 lỗi 503; log auth: 264 "GetPwdVersion error: context canceled" + 7 "deadline exceeded". Các 503 rải khắp route (`/cart`, `/orders`, `/seller/*`, `/admin/*`, `/ops/*`, địa chỉ...) vì tất cả đều đi qua middleware này.
+4. Loại trừ: không phải CPU (auth 0,7-2,4 core trên 5 core, gateway 0,07-0,15 core trong 20 s đầu), không phải bão kết nối Postgres, không phải user-service (CPU ~0,05 core, pool wait 0).
+5. 503 dừng sau ~12 s (12:24:01-12:24:12 UTC) khi hàng đợi đăng nhập dồn xong; chờ pool còn đến giây ~75.
+
+**Tác động lên MỌI kết quả đã đo:** vì mỗi lượt dựng Redis mới và kéo dài <6 phút, mọi lượt đóng/mở/spike đều đo ở chế độ "hỏi DB mỗi request" (trừ phần sau phút thứ 6 của soak). Soak xác nhận: giây 180-330 (trong cửa sổ) auth CPU 1,33 core và Postgres 3.676 commit/s, sau cửa sổ (420-600 s) auth 0,75 core và 2.894 commit/s (giảm ~44% CPU auth, ~21% commit). Hệ quả: số đo hiện tại là TRƯỜNG HỢP XẤU (như vừa mất dữ liệu Redis); trạng thái ổn định bình thường nhẹ hơn cho auth và Postgres. Nghẽn auth của tải mở (R20, 4,7/5 core) gồm cả `GetPwdVersion`, không chỉ bcrypt, nên trần mở ~40-45 phiên/s có thể thấp hơn thực tế.
+
+**Cũng là rủi ro thật ngoài perf test:** mỗi lần Redis khởi động lại, 6 phút đầu mọi request có đăng nhập đổ vào auth-service + Postgres; gặp tải đăng nhập dồn (như spike) sẽ có 503 hàng loạt.
+
+**Hướng sửa (chưa làm, cần quyết định):** (a) đo ở trạng thái ổn định bằng cách đặt `SET pwd_version:safe_after 0` sau khi Redis lên (Redis được tin ngay), đo cả hai chế độ; (b) tăng pool auth-service (đang 10 mỗi bản; ngân sách R15 tổng 200); (c) cache ngắn (vài giây) phiên bản mật khẩu trong gateway để không hỏi mỗi request; (d) làm ấm khóa canh khi khởi động thay vì đợi request đầu tiên. Kiểm chứng đề xuất: đặt `safe_after` về 0 trên stack đang chạy và lặp spike 800; nếu 503 biến mất là xác nhận chuỗi nhân quả trên.
+
+**Kiểm chứng (2026-11-24, `spike-800-r3-safe0`, cùng stack còn sống, chỉ đổi `SET pwd_version:safe_after 0` để Redis được tin ngay; log trong `logs-spike-800-r3-safe0/`):**
+
+| | spike 800 r1 / r2 (chế độ hỏi DB) | spike 800 r3, `safe_after`=0 |
+|---|---|---|
+| lỗi trong ~20 s đầu | 335 / 363 | 88 |
+| 503 do không xác minh được phiên bản mật khẩu | 313 (r2) | 0 (không còn dòng "cannot verify pwd version") |
+| VU không vào được | 92 / 107 (11-13%) | 5 (cả 5 là `register 409` do script tải trùng tên, không phải hệ thống) |
+| ổn định (lời gọi/s) | 889 / 863 | 1026 (chú ý: r3 chạy trên stack đã ấm, không so tuyệt đối được) |
+| payment p95 | 533 / 525 ms | 520 ms |
+| chờ pool DB đỉnh (s/s) | ~106-113 | ~62-74 |
+| CPU auth đỉnh (core, cửa sổ 15 s) | 2,3 | 3,1 (làm được nhiều bcrypt hơn) |
+
+- XÁC NHẬN chuỗi nhân quả: bỏ chế độ "hỏi DB mỗi request" thì toàn bộ 503 của middleware pwd_version biến mất; VU hỏng thật giảm từ 92-107 xuống 0.
+- Còn 88 lỗi là 504 (quá hạn 3 s ở gateway) ở các route phụ thuộc auth-service: `POST /auth/register` (26, p95 9,5 s, max 10 s), `POST /auth/login` (2, p95 6,2 s), `/auth/change-password` (2), và các route `/seller/*` và `POST /products` (cần `GetStoreIDRoleById` ở auth). Log auth: `Register/GetStoreIDRoleById ... context canceled` và vài `publish to Kafka failure ... deadline exceeded`. Pool DB của auth-service (10 mỗi bản) vẫn cạn trong spike (chỉ auth có chờ pool: tổng cộng dồn ~9.000 s qua 3 lượt, các service khác 0) nên đăng ký/đăng nhập dồn (bcrypt + giao dịch) vẫn xếp hàng. Đây là điểm nghẽn thật thứ hai của spike, độc lập với `safe_after`.
+- Giới hạn: n = 1 cho mỗi chế độ; r3 chạy trên stack đã chạy một lượt spike (đã có dữ liệu, tài khoản, cache ấm) nên thông lượng không so tuyệt đối được. Cần lặp trên stack mới dựng + `safe_after`=0 để so sạch.
+
+### 5s. Trạng thái cuối phiên 2026-11-24 và việc còn lại
+
+**Đã xong trong ngày:** sửa R23 trong mã (`shared/dbpool` idle = open, `connIdleTime` 30 phút) và đo lại (§5o: đóng 700-1000 sạch 9/9; mở 40 hợp lệ 2/2, mở 50 gãy do auth); đợt 8 (§5q: đóng 1100 sạch nhưng yếu, đóng 1200 gãy, soak 30 phút sạch, spike 600/800); tìm ra nguyên nhân 503 của spike (§5r, R25: chế độ hỏi DB của `pwd_version` + pool auth cạn) và kiểm chứng bằng `safe_after`=0 (503 pwd_version 313 -> 0).
+
+**Việc đo trong §5p đã làm:** 1 (đóng 1100-1200: điểm gãy ở 1200, 1 vòng), 5 -> soak (§5q), 6 -> spike (§5q-§5r). Còn lại: lặp 1100 và 1200 để biết gãy chắc chắn hay do may rủi và tìm nguyên nhân gãy ở 1200 (lag `order-service-validate-result` không hồi; có thể liên quan pool order 30 hoặc luồng consumer; cần đọc log lượt gãy NGAY khi gãy, theo quy tắc trong CLAUDE.md); mở 50 và spike lặp trên stack mới + `safe_after`=0; mở 40-50 sau khi sửa R25; tách `db_pool_wait` theo service (đã làm được: nhãn `service` có sẵn trong `mm_db_pool_wait_seconds_total`); bcrypt cost thấp chỉ cho perf; `connIdleTime` 30 phút; lượt đối chứng cấu hình cũ; spike chuẩn (nền 200 VU rồi nhảy lên 800, thống kê theo cửa sổ 10 s, đo thời gian hồi phục; cần sửa `ccu.mjs`); đóng 1300+ chỉ sau khi hiểu 1200.
+
+**Việc không phải đo:** R25 (xem `01_OPEN_ISSUES.md`: thiết kế dựng lại Redis từ DB, tăng pool auth, cần xác nhận trước vì code bảo mật; cần đọc xem `pwd_version_events` có xóa dòng sau publish không); R24; ngân sách kết nối R15 (idle = open, tổng mở ~150); Tempo không có trần RAM trong `observability.perf.yml` (tăng 34 -> 340 MiB trong 27 phút rồi 1-2 GiB ở vài phút cuối); lỗi 429 của `POST /ai/chat` từ giây ~600 trong soak (nghi trần token mỗi ngày mỗi người dùng, chưa kiểm nội dung 429); biểu đồ đợt 7-8 (`perf-charts.py` chưa vẽ).
+
+**Công cụ mới trong ngày:** `scripts/load/perf-one.sh` (một lượt đo đúng quy tắc CLAUDE.md: dựng, đo, lưu capture/series/diag/log từng service, KHÔNG dọn); `scripts/load/perf-series.py` (chuỗi thời gian Prometheus); `ccu.mjs` đã sửa `Math.max(...mảng)` tràn ngăn xếp ở lượt dài (mảng > ~100 nghìn phần tử làm mất JSON và báo cáo; thay bằng `maxOf`). Quy tắc mới trong `CLAUDE.md`: sau mỗi lượt đo phân tích hết, lưu log, ghi md, rồi mới dọn.
+
+**Sự cố hạ tầng (CHƯA xử lý xong, cần làm sau):** mạng overlay `marketplace-net` kẹt trong daemon Docker (không `rm` được, không `create` lại được; `swarm leave` + `init` không xóa); chưa khởi động lại Docker vì máy còn container khác (`tam-*`). Đang dùng tạm `marketplace-net2` (dải `10.0.8.0/24`, tạo tay, `external: true`) với 6 file sửa TẠM chưa commit: `deploy/infra.yml`, `observability.yml`, `services.yml`, `services.perf.yml` (tên mạng, lệnh Traefik, `TRUSTED_PROXIES` 10.0.8.0/24), `scripts/wait-ready.sh`, `scripts/teardown.sh`. Khi Docker được khởi động lại: `docker network create` không còn cần, `git checkout -- <6 file>` để trả lại (các file này không có sửa đổi nào khác chưa commit). Nếu tạo lại mạng sau khi trả file thì mạng cũ phải được xóa (không thì lỗi `Pool overlaps`).
+
+**Trạng thái máy khi kết thúc:** Swarm hoạt động, rỗng (0 service, 0 volume `deploy_*`), mạng `marketplace-net2` còn; image `marketplace/*` còn (dựng lại 7 image Go trong ngày). Chưa commit gì; nên commit: `shared/dbpool`, 7 `service_config.go`/`main.go`, `deploy/.env.example`, `CLAUDE.md`, docs, `scripts/load/*` (perf-capture, perf-charts, perf-diag, perf-pgsample, perf-series, perf-one, ccu.mjs), dữ liệu thô nhỏ; KHÔNG commit 6 file sửa tạm cho `net2` và cân nhắc không commit `docs/perf-results/2026-11-24-dot8/logs-*` (~163 MB).
+
+### 5t. Spike thật và sửa R25: đã chuyển sang file riêng
+
+Từ đợt 9 (2026-11-24), kết quả spike (nhảy tải đóng/mở, bậc thang), sửa logic `safe_after` (R25) và các lượt đo kèm nằm ở [`10_PERF_SPIKE.md`](10_PERF_SPIKE.md); file này (09) đã quá dài nên không ghi thêm.
+
+Trạng thái cuối đợt 9, việc còn lại và lệnh commit: xem [`10_PERF_SPIKE.md`](10_PERF_SPIKE.md) mục 8.

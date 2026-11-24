@@ -1,0 +1,12 @@
+2026-11-24T04:13:36.790702575Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:13:36.790 UTC [35] WARNING:  no usable system locales were found
+2026-11-24T04:13:37.635227031Z marketplace-infra_postgres.1@ubuntu-desktop    | initdb: warning: enabling "trust" authentication for local connections
+2026-11-24T04:13:37.779701060Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:13:37.779 UTC [42] LOG:  checkpoint starting: shutdown immediate
+2026-11-24T04:13:37.805668895Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:13:37.805 UTC [42] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.010 s, sync=0.002 s, total=0.031 s; sync files=2, longest=0.002 s, average=0.001 s; distance=0 kB, estimate=0 kB; lsn=0/1508F28, redo lsn=0/1508F28
+2026-11-24T04:14:19.272527122Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:14:19.272 UTC [128] ERROR:  duplicate key value violates unique constraint "pg_type_typname_nsp_index"
+2026-11-24T04:14:19.272548078Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:14:19.272 UTC [128] DETAIL:  Key (typname, typnamespace)=(checkpoint_migrations, 2200) already exists.
+2026-11-24T04:14:19.272551307Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:14:19.272 UTC [128] STATEMENT:  CREATE TABLE IF NOT EXISTS checkpoint_migrations (
+2026-11-24T04:14:30.018778801Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:14:30.018 UTC [149] ERROR:  relation "order_status_histories" does not exist at character 201
+2026-11-24T04:14:36.360819437Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:14:36.360 UTC [163] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T04:14:36.381321545Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:14:36.381 UTC [164] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T04:15:52.440090432Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:15:52.440 UTC [1] LOG:  configuration file "/var/lib/postgresql/data/postgresql.conf" contains errors; unaffected changes were applied
+2026-11-24T04:18:37.541069771Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 04:18:37.540 UTC [53] LOG:  checkpoint starting: time

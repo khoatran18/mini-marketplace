@@ -1,0 +1,9 @@
+2026-11-24T03:46:32.059597246Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:46:32.059 UTC [35] WARNING:  no usable system locales were found
+2026-11-24T03:46:32.919704289Z marketplace-infra_postgres.1@ubuntu-desktop    | initdb: warning: enabling "trust" authentication for local connections
+2026-11-24T03:46:33.103035438Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:46:33.102 UTC [42] LOG:  checkpoint starting: shutdown immediate
+2026-11-24T03:46:33.134084115Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:46:33.133 UTC [42] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.014 s, sync=0.002 s, total=0.036 s; sync files=2, longest=0.002 s, average=0.001 s; distance=0 kB, estimate=0 kB; lsn=0/1508F28, redo lsn=0/1508F28
+2026-11-24T03:47:47.046646006Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:47:47.046 UTC [184] ERROR:  duplicate key value violates unique constraint "pg_type_typname_nsp_index"
+2026-11-24T03:47:47.046673151Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:47:47.046 UTC [184] DETAIL:  Key (typname, typnamespace)=(checkpoint_migrations, 2200) already exists.
+2026-11-24T03:47:47.046676763Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:47:47.046 UTC [184] STATEMENT:  CREATE TABLE IF NOT EXISTS checkpoint_migrations (
+2026-11-24T03:49:13.571144319Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:49:13.571 UTC [1] LOG:  configuration file "/var/lib/postgresql/data/postgresql.conf" contains errors; unaffected changes were applied
+2026-11-24T03:51:33.671303128Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:51:33.671 UTC [53] LOG:  checkpoint starting: time

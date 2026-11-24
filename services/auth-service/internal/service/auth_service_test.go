@@ -247,6 +247,37 @@ func TestGetPwdVersionReadsTheDatabase(t *testing.T) {
 	}
 }
 
+func TestListRecentPwdChangesReturnsOnlyRecentOnes(t *testing.T) {
+	s := testService(t)
+	ctx := context.Background()
+	for _, u := range []string{"alice", "bob"} {
+		if err := register(t, s, u, "password123", "buyer"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if list, err := s.ListRecentPwdChanges(ctx, 6*time.Minute); err != nil || len(list) != 0 {
+		t.Fatalf("chưa ai đổi mật khẩu: want rỗng, got %v err=%v", list, err)
+	}
+	alice, _ := s.AccountRepo.GetAccountByUsernameRole(ctx, "alice", "buyer")
+	for i, pw := range []string{"newpassword1", "newpassword2"} { // hai lần đổi: dòng bị ghi đè, phải trả version mới nhất
+		old := []string{"password123", "newpassword1"}[i]
+		if _, err := s.ChangePassword(ctx, &dto.ChangePasswordInput{Username: "alice", Role: "buyer", OldPassword: old, NewPassword: pw}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	list, err := s.ListRecentPwdChanges(ctx, 6*time.Minute)
+	if err != nil || len(list) != 1 || list[0].UserID != alice.ID || list[0].PwdVersion != 2 {
+		t.Fatalf("want [alice v2], got %+v err=%v", list, err)
+	}
+	// dòng cũ hơn cửa sổ không được trả về (changed_at là lần đổi gần nhất, không phải created_at)
+	if err := s.AccountRepo.DB.Exec("UPDATE pwd_version_events SET changed_at = now() - interval '10 minutes'").Error; err != nil {
+		t.Fatal(err)
+	}
+	if list, _ := s.ListRecentPwdChanges(ctx, 6*time.Minute); len(list) != 0 {
+		t.Fatalf("đổi cách đây 10 phút, cửa sổ 6 phút: want rỗng, got %+v", list)
+	}
+}
+
 func TestLoginWithoutRoleAndUsernameUnique(t *testing.T) {
 	s := testService(t)
 	ctx := context.Background()

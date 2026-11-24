@@ -890,6 +890,148 @@ func (x *GetPwdVersionResponse) GetPwdVersion() int64 {
 	return 0
 }
 
+// Accounts whose password changed within the last `within_seconds` (current version each). The gateway calls it once when
+// Redis lost its data, to rebuild the deny entries of the last access-token lifetime.
+type ListRecentPwdChangesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WithinSeconds int64                  `protobuf:"varint,1,opt,name=within_seconds,json=withinSeconds,proto3" json:"within_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRecentPwdChangesRequest) Reset() {
+	*x = ListRecentPwdChangesRequest{}
+	mi := &file_auth_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRecentPwdChangesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRecentPwdChangesRequest) ProtoMessage() {}
+
+func (x *ListRecentPwdChangesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRecentPwdChangesRequest.ProtoReflect.Descriptor instead.
+func (*ListRecentPwdChangesRequest) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ListRecentPwdChangesRequest) GetWithinSeconds() int64 {
+	if x != nil {
+		return x.WithinSeconds
+	}
+	return 0
+}
+
+type PwdChange struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        uint64                 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PwdVersion    int64                  `protobuf:"varint,2,opt,name=pwd_version,json=pwdVersion,proto3" json:"pwd_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PwdChange) Reset() {
+	*x = PwdChange{}
+	mi := &file_auth_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PwdChange) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PwdChange) ProtoMessage() {}
+
+func (x *PwdChange) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PwdChange.ProtoReflect.Descriptor instead.
+func (*PwdChange) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *PwdChange) GetUserId() uint64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *PwdChange) GetPwdVersion() int64 {
+	if x != nil {
+		return x.PwdVersion
+	}
+	return 0
+}
+
+type ListRecentPwdChangesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Changes       []*PwdChange           `protobuf:"bytes,1,rep,name=changes,proto3" json:"changes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRecentPwdChangesResponse) Reset() {
+	*x = ListRecentPwdChangesResponse{}
+	mi := &file_auth_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRecentPwdChangesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRecentPwdChangesResponse) ProtoMessage() {}
+
+func (x *ListRecentPwdChangesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRecentPwdChangesResponse.ProtoReflect.Descriptor instead.
+func (*ListRecentPwdChangesResponse) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListRecentPwdChangesResponse) GetChanges() []*PwdChange {
+	if x != nil {
+		return x.Changes
+	}
+	return nil
+}
+
 // Account management (platform admin only; the gateway enforces the caller's role).
 type AccountInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -903,7 +1045,7 @@ type AccountInfo struct {
 
 func (x *AccountInfo) Reset() {
 	*x = AccountInfo{}
-	mi := &file_auth_proto_msgTypes[15]
+	mi := &file_auth_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -915,7 +1057,7 @@ func (x *AccountInfo) String() string {
 func (*AccountInfo) ProtoMessage() {}
 
 func (x *AccountInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[15]
+	mi := &file_auth_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -928,7 +1070,7 @@ func (x *AccountInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountInfo.ProtoReflect.Descriptor instead.
 func (*AccountInfo) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{15}
+	return file_auth_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *AccountInfo) GetId() uint64 {
@@ -972,7 +1114,7 @@ type ListAccountsRequest struct {
 
 func (x *ListAccountsRequest) Reset() {
 	*x = ListAccountsRequest{}
-	mi := &file_auth_proto_msgTypes[16]
+	mi := &file_auth_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -984,7 +1126,7 @@ func (x *ListAccountsRequest) String() string {
 func (*ListAccountsRequest) ProtoMessage() {}
 
 func (x *ListAccountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[16]
+	mi := &file_auth_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -997,7 +1139,7 @@ func (x *ListAccountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountsRequest.ProtoReflect.Descriptor instead.
 func (*ListAccountsRequest) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{16}
+	return file_auth_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListAccountsRequest) GetRole() string {
@@ -1030,7 +1172,7 @@ type ListAccountsResponse struct {
 
 func (x *ListAccountsResponse) Reset() {
 	*x = ListAccountsResponse{}
-	mi := &file_auth_proto_msgTypes[17]
+	mi := &file_auth_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1042,7 +1184,7 @@ func (x *ListAccountsResponse) String() string {
 func (*ListAccountsResponse) ProtoMessage() {}
 
 func (x *ListAccountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[17]
+	mi := &file_auth_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1055,7 +1197,7 @@ func (x *ListAccountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountsResponse.ProtoReflect.Descriptor instead.
 func (*ListAccountsResponse) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{17}
+	return file_auth_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListAccountsResponse) GetAccounts() []*AccountInfo {
@@ -1076,7 +1218,7 @@ type CreateStaffAccountRequest struct {
 
 func (x *CreateStaffAccountRequest) Reset() {
 	*x = CreateStaffAccountRequest{}
-	mi := &file_auth_proto_msgTypes[18]
+	mi := &file_auth_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1088,7 +1230,7 @@ func (x *CreateStaffAccountRequest) String() string {
 func (*CreateStaffAccountRequest) ProtoMessage() {}
 
 func (x *CreateStaffAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[18]
+	mi := &file_auth_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1101,7 +1243,7 @@ func (x *CreateStaffAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateStaffAccountRequest.ProtoReflect.Descriptor instead.
 func (*CreateStaffAccountRequest) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{18}
+	return file_auth_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *CreateStaffAccountRequest) GetUsername() string {
@@ -1138,7 +1280,7 @@ type StaffAccountRequest struct {
 
 func (x *StaffAccountRequest) Reset() {
 	*x = StaffAccountRequest{}
-	mi := &file_auth_proto_msgTypes[19]
+	mi := &file_auth_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1150,7 +1292,7 @@ func (x *StaffAccountRequest) String() string {
 func (*StaffAccountRequest) ProtoMessage() {}
 
 func (x *StaffAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[19]
+	mi := &file_auth_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1163,7 +1305,7 @@ func (x *StaffAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StaffAccountRequest.ProtoReflect.Descriptor instead.
 func (*StaffAccountRequest) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{19}
+	return file_auth_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *StaffAccountRequest) GetId() uint64 {
@@ -1197,7 +1339,7 @@ type StaffAccountResponse struct {
 
 func (x *StaffAccountResponse) Reset() {
 	*x = StaffAccountResponse{}
-	mi := &file_auth_proto_msgTypes[20]
+	mi := &file_auth_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1209,7 +1351,7 @@ func (x *StaffAccountResponse) String() string {
 func (*StaffAccountResponse) ProtoMessage() {}
 
 func (x *StaffAccountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[20]
+	mi := &file_auth_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1222,7 +1364,7 @@ func (x *StaffAccountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StaffAccountResponse.ProtoReflect.Descriptor instead.
 func (*StaffAccountResponse) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{20}
+	return file_auth_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *StaffAccountResponse) GetMessage() string {
@@ -1300,7 +1442,15 @@ const file_auth_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\x04R\x06userId\"8\n" +
 	"\x15GetPwdVersionResponse\x12\x1f\n" +
 	"\vpwd_version\x18\x01 \x01(\x03R\n" +
-	"pwdVersion\"h\n" +
+	"pwdVersion\"D\n" +
+	"\x1bListRecentPwdChangesRequest\x12%\n" +
+	"\x0ewithin_seconds\x18\x01 \x01(\x03R\rwithinSeconds\"E\n" +
+	"\tPwdChange\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x04R\x06userId\x12\x1f\n" +
+	"\vpwd_version\x18\x02 \x01(\x03R\n" +
+	"pwdVersion\"X\n" +
+	"\x1cListRecentPwdChangesResponse\x128\n" +
+	"\achanges\x18\x01 \x03(\v2\x1e.auth_service.pkb.pb.PwdChangeR\achanges\"h\n" +
 	"\vAccountInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x12\n" +
@@ -1322,7 +1472,8 @@ const file_auth_proto_rawDesc = "" +
 	"\fnew_password\x18\x03 \x01(\tB\x1e\xbaH\x1b\xd8\x01\x01r\x162\x14^[a-zA-Z0-9_]{3,16}$R\vnewPassword\"J\n" +
 	"\x14StaffAccountResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess2\x8b\t\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess2\x88\n" +
+	"\n" +
 	"\vAuthService\x12c\n" +
 	"\fListAccounts\x12(.auth_service.pkb.pb.ListAccountsRequest\x1a).auth_service.pkb.pb.ListAccountsResponse\x12o\n" +
 	"\x12CreateStaffAccount\x12..auth_service.pkb.pb.CreateStaffAccountRequest\x1a).auth_service.pkb.pb.StaffAccountResponse\x12i\n" +
@@ -1334,7 +1485,8 @@ const file_auth_proto_rawDesc = "" +
 	"\x0eChangePassword\x12*.auth_service.pkb.pb.ChangePasswordRequest\x1a+.auth_service.pkb.pb.ChangePasswordResponse\x12x\n" +
 	"\x13RegisterSellerRoles\x12/.auth_service.pkb.pb.RegisterSellerRolesRequest\x1a0.auth_service.pkb.pb.RegisterSellerRolesResponse\x12u\n" +
 	"\x12GetStoreIDRoleById\x12..auth_service.pkb.pb.GetStoreIDRoleByIDRequest\x1a/.auth_service.pkb.pb.GetStoreIDRoleByIDResponse\x12f\n" +
-	"\rGetPwdVersion\x12).auth_service.pkb.pb.GetPwdVersionRequest\x1a*.auth_service.pkb.pb.GetPwdVersionResponseB\x15Z\x13auth-service/authpbb\x06proto3"
+	"\rGetPwdVersion\x12).auth_service.pkb.pb.GetPwdVersionRequest\x1a*.auth_service.pkb.pb.GetPwdVersionResponse\x12{\n" +
+	"\x14ListRecentPwdChanges\x120.auth_service.pkb.pb.ListRecentPwdChangesRequest\x1a1.auth_service.pkb.pb.ListRecentPwdChangesResponseB\x15Z\x13auth-service/authpbb\x06proto3"
 
 var (
 	file_auth_proto_rawDescOnce sync.Once
@@ -1348,59 +1500,65 @@ func file_auth_proto_rawDescGZIP() []byte {
 	return file_auth_proto_rawDescData
 }
 
-var file_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_auth_proto_goTypes = []any{
-	(*Account)(nil),                     // 0: auth_service.pkb.pb.Account
-	(*LoginRequest)(nil),                // 1: auth_service.pkb.pb.LoginRequest
-	(*LoginResponse)(nil),               // 2: auth_service.pkb.pb.LoginResponse
-	(*RegisterRequest)(nil),             // 3: auth_service.pkb.pb.RegisterRequest
-	(*RegisterResponse)(nil),            // 4: auth_service.pkb.pb.RegisterResponse
-	(*RefreshTokenRequest)(nil),         // 5: auth_service.pkb.pb.RefreshTokenRequest
-	(*RefreshTokenResponse)(nil),        // 6: auth_service.pkb.pb.RefreshTokenResponse
-	(*ChangePasswordRequest)(nil),       // 7: auth_service.pkb.pb.ChangePasswordRequest
-	(*ChangePasswordResponse)(nil),      // 8: auth_service.pkb.pb.ChangePasswordResponse
-	(*RegisterSellerRolesRequest)(nil),  // 9: auth_service.pkb.pb.RegisterSellerRolesRequest
-	(*RegisterSellerRolesResponse)(nil), // 10: auth_service.pkb.pb.RegisterSellerRolesResponse
-	(*GetStoreIDRoleByIDRequest)(nil),   // 11: auth_service.pkb.pb.GetStoreIDRoleByIDRequest
-	(*GetStoreIDRoleByIDResponse)(nil),  // 12: auth_service.pkb.pb.GetStoreIDRoleByIDResponse
-	(*GetPwdVersionRequest)(nil),        // 13: auth_service.pkb.pb.GetPwdVersionRequest
-	(*GetPwdVersionResponse)(nil),       // 14: auth_service.pkb.pb.GetPwdVersionResponse
-	(*AccountInfo)(nil),                 // 15: auth_service.pkb.pb.AccountInfo
-	(*ListAccountsRequest)(nil),         // 16: auth_service.pkb.pb.ListAccountsRequest
-	(*ListAccountsResponse)(nil),        // 17: auth_service.pkb.pb.ListAccountsResponse
-	(*CreateStaffAccountRequest)(nil),   // 18: auth_service.pkb.pb.CreateStaffAccountRequest
-	(*StaffAccountRequest)(nil),         // 19: auth_service.pkb.pb.StaffAccountRequest
-	(*StaffAccountResponse)(nil),        // 20: auth_service.pkb.pb.StaffAccountResponse
+	(*Account)(nil),                      // 0: auth_service.pkb.pb.Account
+	(*LoginRequest)(nil),                 // 1: auth_service.pkb.pb.LoginRequest
+	(*LoginResponse)(nil),                // 2: auth_service.pkb.pb.LoginResponse
+	(*RegisterRequest)(nil),              // 3: auth_service.pkb.pb.RegisterRequest
+	(*RegisterResponse)(nil),             // 4: auth_service.pkb.pb.RegisterResponse
+	(*RefreshTokenRequest)(nil),          // 5: auth_service.pkb.pb.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),         // 6: auth_service.pkb.pb.RefreshTokenResponse
+	(*ChangePasswordRequest)(nil),        // 7: auth_service.pkb.pb.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil),       // 8: auth_service.pkb.pb.ChangePasswordResponse
+	(*RegisterSellerRolesRequest)(nil),   // 9: auth_service.pkb.pb.RegisterSellerRolesRequest
+	(*RegisterSellerRolesResponse)(nil),  // 10: auth_service.pkb.pb.RegisterSellerRolesResponse
+	(*GetStoreIDRoleByIDRequest)(nil),    // 11: auth_service.pkb.pb.GetStoreIDRoleByIDRequest
+	(*GetStoreIDRoleByIDResponse)(nil),   // 12: auth_service.pkb.pb.GetStoreIDRoleByIDResponse
+	(*GetPwdVersionRequest)(nil),         // 13: auth_service.pkb.pb.GetPwdVersionRequest
+	(*GetPwdVersionResponse)(nil),        // 14: auth_service.pkb.pb.GetPwdVersionResponse
+	(*ListRecentPwdChangesRequest)(nil),  // 15: auth_service.pkb.pb.ListRecentPwdChangesRequest
+	(*PwdChange)(nil),                    // 16: auth_service.pkb.pb.PwdChange
+	(*ListRecentPwdChangesResponse)(nil), // 17: auth_service.pkb.pb.ListRecentPwdChangesResponse
+	(*AccountInfo)(nil),                  // 18: auth_service.pkb.pb.AccountInfo
+	(*ListAccountsRequest)(nil),          // 19: auth_service.pkb.pb.ListAccountsRequest
+	(*ListAccountsResponse)(nil),         // 20: auth_service.pkb.pb.ListAccountsResponse
+	(*CreateStaffAccountRequest)(nil),    // 21: auth_service.pkb.pb.CreateStaffAccountRequest
+	(*StaffAccountRequest)(nil),          // 22: auth_service.pkb.pb.StaffAccountRequest
+	(*StaffAccountResponse)(nil),         // 23: auth_service.pkb.pb.StaffAccountResponse
 }
 var file_auth_proto_depIdxs = []int32{
-	15, // 0: auth_service.pkb.pb.ListAccountsResponse.accounts:type_name -> auth_service.pkb.pb.AccountInfo
-	16, // 1: auth_service.pkb.pb.AuthService.ListAccounts:input_type -> auth_service.pkb.pb.ListAccountsRequest
-	18, // 2: auth_service.pkb.pb.AuthService.CreateStaffAccount:input_type -> auth_service.pkb.pb.CreateStaffAccountRequest
-	19, // 3: auth_service.pkb.pb.AuthService.DeleteStaffAccount:input_type -> auth_service.pkb.pb.StaffAccountRequest
-	19, // 4: auth_service.pkb.pb.AuthService.ResetStaffPassword:input_type -> auth_service.pkb.pb.StaffAccountRequest
-	1,  // 5: auth_service.pkb.pb.AuthService.Login:input_type -> auth_service.pkb.pb.LoginRequest
-	3,  // 6: auth_service.pkb.pb.AuthService.Register:input_type -> auth_service.pkb.pb.RegisterRequest
-	5,  // 7: auth_service.pkb.pb.AuthService.RefreshToken:input_type -> auth_service.pkb.pb.RefreshTokenRequest
-	7,  // 8: auth_service.pkb.pb.AuthService.ChangePassword:input_type -> auth_service.pkb.pb.ChangePasswordRequest
-	9,  // 9: auth_service.pkb.pb.AuthService.RegisterSellerRoles:input_type -> auth_service.pkb.pb.RegisterSellerRolesRequest
-	11, // 10: auth_service.pkb.pb.AuthService.GetStoreIDRoleById:input_type -> auth_service.pkb.pb.GetStoreIDRoleByIDRequest
-	13, // 11: auth_service.pkb.pb.AuthService.GetPwdVersion:input_type -> auth_service.pkb.pb.GetPwdVersionRequest
-	17, // 12: auth_service.pkb.pb.AuthService.ListAccounts:output_type -> auth_service.pkb.pb.ListAccountsResponse
-	20, // 13: auth_service.pkb.pb.AuthService.CreateStaffAccount:output_type -> auth_service.pkb.pb.StaffAccountResponse
-	20, // 14: auth_service.pkb.pb.AuthService.DeleteStaffAccount:output_type -> auth_service.pkb.pb.StaffAccountResponse
-	20, // 15: auth_service.pkb.pb.AuthService.ResetStaffPassword:output_type -> auth_service.pkb.pb.StaffAccountResponse
-	2,  // 16: auth_service.pkb.pb.AuthService.Login:output_type -> auth_service.pkb.pb.LoginResponse
-	4,  // 17: auth_service.pkb.pb.AuthService.Register:output_type -> auth_service.pkb.pb.RegisterResponse
-	6,  // 18: auth_service.pkb.pb.AuthService.RefreshToken:output_type -> auth_service.pkb.pb.RefreshTokenResponse
-	8,  // 19: auth_service.pkb.pb.AuthService.ChangePassword:output_type -> auth_service.pkb.pb.ChangePasswordResponse
-	10, // 20: auth_service.pkb.pb.AuthService.RegisterSellerRoles:output_type -> auth_service.pkb.pb.RegisterSellerRolesResponse
-	12, // 21: auth_service.pkb.pb.AuthService.GetStoreIDRoleById:output_type -> auth_service.pkb.pb.GetStoreIDRoleByIDResponse
-	14, // 22: auth_service.pkb.pb.AuthService.GetPwdVersion:output_type -> auth_service.pkb.pb.GetPwdVersionResponse
-	12, // [12:23] is the sub-list for method output_type
-	1,  // [1:12] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	16, // 0: auth_service.pkb.pb.ListRecentPwdChangesResponse.changes:type_name -> auth_service.pkb.pb.PwdChange
+	18, // 1: auth_service.pkb.pb.ListAccountsResponse.accounts:type_name -> auth_service.pkb.pb.AccountInfo
+	19, // 2: auth_service.pkb.pb.AuthService.ListAccounts:input_type -> auth_service.pkb.pb.ListAccountsRequest
+	21, // 3: auth_service.pkb.pb.AuthService.CreateStaffAccount:input_type -> auth_service.pkb.pb.CreateStaffAccountRequest
+	22, // 4: auth_service.pkb.pb.AuthService.DeleteStaffAccount:input_type -> auth_service.pkb.pb.StaffAccountRequest
+	22, // 5: auth_service.pkb.pb.AuthService.ResetStaffPassword:input_type -> auth_service.pkb.pb.StaffAccountRequest
+	1,  // 6: auth_service.pkb.pb.AuthService.Login:input_type -> auth_service.pkb.pb.LoginRequest
+	3,  // 7: auth_service.pkb.pb.AuthService.Register:input_type -> auth_service.pkb.pb.RegisterRequest
+	5,  // 8: auth_service.pkb.pb.AuthService.RefreshToken:input_type -> auth_service.pkb.pb.RefreshTokenRequest
+	7,  // 9: auth_service.pkb.pb.AuthService.ChangePassword:input_type -> auth_service.pkb.pb.ChangePasswordRequest
+	9,  // 10: auth_service.pkb.pb.AuthService.RegisterSellerRoles:input_type -> auth_service.pkb.pb.RegisterSellerRolesRequest
+	11, // 11: auth_service.pkb.pb.AuthService.GetStoreIDRoleById:input_type -> auth_service.pkb.pb.GetStoreIDRoleByIDRequest
+	13, // 12: auth_service.pkb.pb.AuthService.GetPwdVersion:input_type -> auth_service.pkb.pb.GetPwdVersionRequest
+	15, // 13: auth_service.pkb.pb.AuthService.ListRecentPwdChanges:input_type -> auth_service.pkb.pb.ListRecentPwdChangesRequest
+	20, // 14: auth_service.pkb.pb.AuthService.ListAccounts:output_type -> auth_service.pkb.pb.ListAccountsResponse
+	23, // 15: auth_service.pkb.pb.AuthService.CreateStaffAccount:output_type -> auth_service.pkb.pb.StaffAccountResponse
+	23, // 16: auth_service.pkb.pb.AuthService.DeleteStaffAccount:output_type -> auth_service.pkb.pb.StaffAccountResponse
+	23, // 17: auth_service.pkb.pb.AuthService.ResetStaffPassword:output_type -> auth_service.pkb.pb.StaffAccountResponse
+	2,  // 18: auth_service.pkb.pb.AuthService.Login:output_type -> auth_service.pkb.pb.LoginResponse
+	4,  // 19: auth_service.pkb.pb.AuthService.Register:output_type -> auth_service.pkb.pb.RegisterResponse
+	6,  // 20: auth_service.pkb.pb.AuthService.RefreshToken:output_type -> auth_service.pkb.pb.RefreshTokenResponse
+	8,  // 21: auth_service.pkb.pb.AuthService.ChangePassword:output_type -> auth_service.pkb.pb.ChangePasswordResponse
+	10, // 22: auth_service.pkb.pb.AuthService.RegisterSellerRoles:output_type -> auth_service.pkb.pb.RegisterSellerRolesResponse
+	12, // 23: auth_service.pkb.pb.AuthService.GetStoreIDRoleById:output_type -> auth_service.pkb.pb.GetStoreIDRoleByIDResponse
+	14, // 24: auth_service.pkb.pb.AuthService.GetPwdVersion:output_type -> auth_service.pkb.pb.GetPwdVersionResponse
+	17, // 25: auth_service.pkb.pb.AuthService.ListRecentPwdChanges:output_type -> auth_service.pkb.pb.ListRecentPwdChangesResponse
+	14, // [14:26] is the sub-list for method output_type
+	2,  // [2:14] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_auth_proto_init() }
@@ -1414,7 +1572,7 @@ func file_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_proto_rawDesc), len(file_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

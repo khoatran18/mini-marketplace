@@ -108,7 +108,7 @@ func initPostgresDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	dbpool.Apply(poolDB, 5, 2)
+	dbpool.Apply(poolDB, 5)
 
 	db.AutoMigrate()
 

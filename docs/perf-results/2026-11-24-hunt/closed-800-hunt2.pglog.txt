@@ -1,0 +1,19 @@
+2026-11-24T02:50:09.223689377Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:50:09.223 UTC [35] WARNING:  no usable system locales were found
+2026-11-24T02:50:10.078233199Z marketplace-infra_postgres.1@ubuntu-desktop    | initdb: warning: enabling "trust" authentication for local connections
+2026-11-24T02:50:10.260302595Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:50:10.260 UTC [42] LOG:  checkpoint starting: shutdown immediate
+2026-11-24T02:50:10.291283649Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:50:10.291 UTC [42] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.014 s, sync=0.003 s, total=0.036 s; sync files=2, longest=0.002 s, average=0.002 s; distance=0 kB, estimate=0 kB; lsn=0/1508F28, redo lsn=0/1508F28
+2026-11-24T02:50:42.342991482Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:50:42.342 UTC [105] ERROR:  relation "order_status_histories" does not exist at character 201
+2026-11-24T02:50:44.830330618Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:50:44.830 UTC [114] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T02:50:44.856207030Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:50:44.855 UTC [115] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T02:50:44.945286014Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:50:44.945 UTC [116] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T02:50:45.051992399Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:50:45.051 UTC [117] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T02:51:06.796256641Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:51:06.796 UTC [167] ERROR:  duplicate key value violates unique constraint "pg_type_typname_nsp_index"
+2026-11-24T02:51:06.796285223Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:51:06.796 UTC [167] DETAIL:  Key (typname, typnamespace)=(checkpoints, 2200) already exists.
+2026-11-24T02:51:06.796290284Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:51:06.796 UTC [167] STATEMENT:  CREATE TABLE IF NOT EXISTS checkpoints (
+2026-11-24T02:51:06.796296285Z marketplace-infra_postgres.1@ubuntu-desktop    | 	    checkpoint_ns TEXT NOT NULL DEFAULT '',
+2026-11-24T02:51:06.796299031Z marketplace-infra_postgres.1@ubuntu-desktop    | 	    checkpoint_id TEXT NOT NULL,
+2026-11-24T02:51:06.796301527Z marketplace-infra_postgres.1@ubuntu-desktop    | 	    parent_checkpoint_id TEXT,
+2026-11-24T02:51:06.796306230Z marketplace-infra_postgres.1@ubuntu-desktop    | 	    checkpoint JSONB NOT NULL,
+2026-11-24T02:51:06.796311149Z marketplace-infra_postgres.1@ubuntu-desktop    | 	    PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id)
+2026-11-24T02:52:33.251206713Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:52:33.251 UTC [1] LOG:  configuration file "/var/lib/postgresql/data/postgresql.conf" contains errors; unaffected changes were applied
+2026-11-24T02:55:10.352346133Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:55:10.352 UTC [53] LOG:  checkpoint starting: time

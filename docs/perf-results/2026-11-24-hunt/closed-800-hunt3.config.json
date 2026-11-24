@@ -1,0 +1,174 @@
+{
+ "marketplace-infra_broker1": {
+  "replicas": 1,
+  "cpu_limit": 0.8,
+  "ram_limit_mib": 1536,
+  "image": "apache/kafka:3.9.0"
+ },
+ "marketplace-infra_broker2": {
+  "replicas": 1,
+  "cpu_limit": 0.8,
+  "ram_limit_mib": 1536,
+  "image": "apache/kafka:3.9.0"
+ },
+ "marketplace-infra_broker3": {
+  "replicas": 1,
+  "cpu_limit": 0.8,
+  "ram_limit_mib": 1536,
+  "image": "apache/kafka:3.9.0"
+ },
+ "marketplace-infra_clickhouse": {
+  "replicas": 1,
+  "cpu_limit": 1.5,
+  "ram_limit_mib": 2048,
+  "image": "clickhouse/clickhouse-server:24.8"
+ },
+ "marketplace-infra_postgres": {
+  "replicas": 1,
+  "cpu_limit": 3.0,
+  "ram_limit_mib": 4096,
+  "image": "postgres:16-alpine"
+ },
+ "marketplace-infra_redis": {
+  "replicas": 1,
+  "cpu_limit": 0.2,
+  "ram_limit_mib": 512,
+  "image": "redis:8.2.1-alpine"
+ },
+ "marketplace-obs_cadvisor": {
+  "replicas": null,
+  "cpu_limit": 0.3,
+  "ram_limit_mib": 384,
+  "image": "ghcr.io/google/cadvisor:v0.60.6"
+ },
+ "marketplace-obs_grafana": {
+  "replicas": 1,
+  "cpu_limit": 0.2,
+  "ram_limit_mib": 384,
+  "image": "grafana/grafana:11.3.0"
+ },
+ "marketplace-obs_kafka-exporter": {
+  "replicas": 1,
+  "cpu_limit": 0.2,
+  "ram_limit_mib": 64,
+  "image": "danielqsj/kafka-exporter:v1.8.0"
+ },
+ "marketplace-obs_loki": {
+  "replicas": 1,
+  "cpu_limit": 0.5,
+  "ram_limit_mib": 512,
+  "image": "grafana/loki:3.2.1"
+ },
+ "marketplace-obs_node-exporter": {
+  "replicas": null,
+  "cpu_limit": 0.2,
+  "ram_limit_mib": 128,
+  "image": "prom/node-exporter:v1.8.2"
+ },
+ "marketplace-obs_postgres-exporter": {
+  "replicas": 1,
+  "cpu_limit": 0.2,
+  "ram_limit_mib": 64,
+  "image": "quay.io/prometheuscommunity/postgres-exporter:v0.15.0"
+ },
+ "marketplace-obs_prometheus": {
+  "replicas": 1,
+  "cpu_limit": 0.5,
+  "ram_limit_mib": 768,
+  "image": "prom/prometheus:v2.55.1"
+ },
+ "marketplace-obs_redis-exporter": {
+  "replicas": 1,
+  "cpu_limit": 0.2,
+  "ram_limit_mib": 64,
+  "image": "oliver006/redis_exporter:v1.62.0"
+ },
+ "marketplace-obs_tempo": {
+  "replicas": 1,
+  "cpu_limit": 0.3,
+  "ram_limit_mib": 1024,
+  "image": "grafana/tempo:2.6.1"
+ },
+ "marketplace-obs_vector": {
+  "replicas": null,
+  "cpu_limit": 1.0,
+  "ram_limit_mib": 128,
+  "image": "timberio/vector:0.41.1-alpine"
+ },
+ "marketplace_ai-agent": {
+  "replicas": 2,
+  "cpu_limit": 0.5,
+  "ram_limit_mib": 768,
+  "image": "marketplace/ai-agent:latest"
+ },
+ "marketplace_analytics-service": {
+  "replicas": 1,
+  "cpu_limit": 0.3,
+  "ram_limit_mib": 256,
+  "image": "marketplace/analytics-service:latest"
+ },
+ "marketplace_api-gateway": {
+  "replicas": 2,
+  "cpu_limit": 0.6,
+  "ram_limit_mib": 512,
+  "image": "marketplace/api-gateway:latest"
+ },
+ "marketplace_auth-service": {
+  "replicas": 5,
+  "cpu_limit": 1.0,
+  "ram_limit_mib": 384,
+  "image": "marketplace/auth-service:latest"
+ },
+ "marketplace_frontend": {
+  "replicas": 1,
+  "cpu_limit": 0.7,
+  "ram_limit_mib": 512,
+  "image": "marketplace/frontend:latest"
+ },
+ "marketplace_ops-service": {
+  "replicas": 1,
+  "cpu_limit": 0.2,
+  "ram_limit_mib": 96,
+  "image": "marketplace/ops-service:latest"
+ },
+ "marketplace_order-service": {
+  "replicas": 1,
+  "cpu_limit": 0.8,
+  "ram_limit_mib": 384,
+  "image": "marketplace/order-service:latest"
+ },
+ "marketplace_payment-service": {
+  "replicas": 1,
+  "cpu_limit": 0.4,
+  "ram_limit_mib": 256,
+  "image": "marketplace/payment-service:latest"
+ },
+ "marketplace_product-service": {
+  "replicas": 1,
+  "cpu_limit": 0.7,
+  "ram_limit_mib": 384,
+  "image": "marketplace/product-service:latest"
+ },
+ "marketplace_traefik": {
+  "replicas": 1,
+  "cpu_limit": 0.7,
+  "ram_limit_mib": 512,
+  "image": "traefik:v3.6"
+ },
+ "marketplace_user-service": {
+  "replicas": 1,
+  "cpu_limit": 0.2,
+  "ram_limit_mib": 256,
+  "image": "marketplace/user-service:latest"
+ },
+ "_meta": {
+  "git": "517dcdb",
+  "dirty": true,
+  "cores": 16,
+  "loadgen_note": "m\u00e1y t\u1ea3i v\u00e0 h\u1ec7 th\u1ed1ng d\u00f9ng chung m\u1ed9t m\u00e1y",
+  "platform_profile": "balanced",
+  "cpu_governor": "powersave",
+  "on_ac": "1",
+  "max_temp_c_at_start": 74
+ }
+}

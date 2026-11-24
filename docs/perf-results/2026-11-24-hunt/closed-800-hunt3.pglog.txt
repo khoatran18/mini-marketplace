@@ -1,0 +1,15 @@
+2026-11-24T02:57:51.655184606Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:57:51.655 UTC [35] WARNING:  no usable system locales were found
+2026-11-24T02:57:52.511477181Z marketplace-infra_postgres.1@ubuntu-desktop    | initdb: warning: enabling "trust" authentication for local connections
+2026-11-24T02:57:52.781300786Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:57:52.781 UTC [42] LOG:  checkpoint starting: shutdown immediate
+2026-11-24T02:57:52.823776786Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:57:52.823 UTC [42] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.011 s, sync=0.002 s, total=0.050 s; sync files=2, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=0 kB; lsn=0/1508F28, redo lsn=0/1508F28
+2026-11-24T02:58:28.232156871Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:58:28.232 UTC [111] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T02:58:28.316610548Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:58:28.316 UTC [112] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T02:58:28.366733681Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:58:28.366 UTC [113] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T02:58:28.374205203Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:58:28.374 UTC [112] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T02:58:28.424198808Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:58:28.424 UTC [113] ERROR:  duplicate key value violates unique constraint "uni_accounts_username_role"
+2026-11-24T02:58:36.275277329Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:58:36.275 UTC [123] ERROR:  relation "order_status_histories" does not exist at character 201
+2026-11-24T02:58:46.455461836Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:58:46.455 UTC [150] ERROR:  duplicate key value violates unique constraint "pg_type_typname_nsp_index"
+2026-11-24T02:58:46.455485975Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:58:46.455 UTC [150] DETAIL:  Key (typname, typnamespace)=(checkpoint_migrations, 2200) already exists.
+2026-11-24T02:58:46.455489356Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 02:58:46.455 UTC [150] STATEMENT:  CREATE TABLE IF NOT EXISTS checkpoint_migrations (
+2026-11-24T03:00:13.574155039Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:00:13.573 UTC [1] LOG:  configuration file "/var/lib/postgresql/data/postgresql.conf" contains errors; unaffected changes were applied
+2026-11-24T03:02:52.675093851Z marketplace-infra_postgres.1@ubuntu-desktop    | 2026-11-24 03:02:52.674 UTC [53] LOG:  checkpoint starting: time

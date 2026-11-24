@@ -22,10 +22,21 @@ import (
 //     future. The sentinel is created without TTL as "now + window"; for one window after (re)creation the deny entries of
 //     the last window may have been lost, so the database decides.
 //
+// Rebuilding instead of asking on every request: when the sentinel is missing and the database source can list recent
+// changes (PwdRecentSource), the first request takes a short lock, asks auth-service ONCE for every account whose password
+// changed in the last window, writes their `<userID>:pwd_version` entries back (SetNX: never overwrites a newer value the
+// Kafka consumer wrote) and sets the sentinel to "now", so Redis is trusted again at once. Only when that call fails does
+// the old behaviour apply: sentinel = now + window and the database decides every request until it passes.
+//
 // If neither Redis nor the database can answer, the request is refused (fail closed) with 503, not 401, so clients retry
 // instead of treating it as "logged out".
 
-const pwdSafeAfterKey = "pwd_version:safe_after"
+const (
+	pwdSafeAfterKey    = "pwd_version:safe_after"
+	pwdRebuildLockKey  = "pwd_version:rebuild_lock"
+	pwdRebuildLockTTL  = 15 * time.Second
+	pwdRebuildCallWait = 10 * time.Second
+)
 
 var (
 	errPwdChanged   = errors.New("pwd version changed")
@@ -35,6 +46,18 @@ var (
 // PwdVersionSource returns the current password version from the source of truth (auth-service -> database).
 type PwdVersionSource interface {
 	GetPwdVersion(ctx context.Context, userID uint64) (int64, error)
+}
+
+// PwdChange is one account whose password changed recently, with its current version.
+type PwdChange struct {
+	UserID     uint64
+	PwdVersion int64
+}
+
+// PwdRecentSource is optionally implemented by a PwdVersionSource: it lists the accounts whose password changed within
+// the last `within`, so a Redis that lost its data can be repopulated in one call.
+type PwdRecentSource interface {
+	ListRecentPwdChanges(ctx context.Context, within time.Duration) ([]PwdChange, error)
 }
 
 // AuthOption configures AuthMiddleware.
@@ -69,6 +92,49 @@ func (c *pwdChecker) fromDB(ctx context.Context, userID uint64, tokenVersion int
 	return nil
 }
 
+type rebuildResult int
+
+const (
+	rebuildUnsupported rebuildResult = iota // the source cannot list changes: use the sentinel window
+	rebuildBusy                             // another request is rebuilding right now: ask the database, create nothing
+	rebuildFailed                           // this request tried and failed: use the sentinel window
+	rebuildDone                             // deny entries written and sentinel = now: Redis is trusted
+)
+
+// rebuild repopulates the deny entries of the last window from the database and trusts Redis again. Only one caller
+// rebuilds at a time (lock); the others must NOT create the sentinel, or the window would block the rebuild's own sentinel.
+func (c *pwdChecker) rebuild(ctx context.Context) rebuildResult {
+	rec, ok := c.src.(PwdRecentSource)
+	if !ok || c.window <= 0 {
+		return rebuildUnsupported
+	}
+	if got, err := c.rdb.SetNX(ctx, pwdRebuildLockKey, 1, pwdRebuildLockTTL).Result(); err != nil {
+		return rebuildFailed
+	} else if !got {
+		return rebuildBusy
+	}
+	defer c.rdb.Del(context.WithoutCancel(ctx), pwdRebuildLockKey)
+	callCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), pwdRebuildCallWait)
+	defer cancel()
+	changes, err := rec.ListRecentPwdChanges(callCtx, c.window)
+	if err != nil {
+		c.logger.Warn("Middleware: cannot list recent password changes, falling back to the database window", zap.Error(err))
+		return rebuildFailed
+	}
+	pipe := c.rdb.Pipeline()
+	for _, ch := range changes {
+		pipe.SetNX(callCtx, fmt.Sprintf("%d:pwd_version", ch.UserID), ch.PwdVersion, c.window)
+	}
+	// Sentinel last: only once the deny entries are in Redis is it safe to trust it.
+	pipe.SetNX(callCtx, pwdSafeAfterKey, c.now().Unix(), 0)
+	if _, err := pipe.Exec(callCtx); err != nil {
+		c.logger.Warn("Middleware: cannot write rebuilt pwd version entries", zap.Error(err))
+		return rebuildFailed
+	}
+	c.logger.Info("Middleware: Redis pwd version entries rebuilt from the database", zap.Int("accounts", len(changes)))
+	return rebuildDone
+}
+
 // verify returns nil when the token's password version is current.
 func (c *pwdChecker) verify(ctx context.Context, userID uint64, tokenVersion int64) error {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -91,7 +157,12 @@ func (c *pwdChecker) verify(ctx context.Context, userID uint64, tokenVersion int
 			}
 		}
 		if !ok {
-			// Redis is fresh or lost its data: deny entries of the last window may be gone. Start the window, ask the database.
+			// Redis is fresh or lost its data: deny entries of the last window may be gone. Rebuild them from the database
+			// once; if that is not possible, start the window and let the database decide every request until it passes.
+			res := c.rebuild(ctx)
+			if res == rebuildDone || res == rebuildBusy {
+				return c.fromDB(ctx, userID, tokenVersion) // this one request: the key it read may predate the rebuild
+			}
 			if c.window > 0 {
 				_ = c.rdb.SetNX(ctx, pwdSafeAfterKey, c.now().Add(c.window).Unix(), 0).Err()
 			}

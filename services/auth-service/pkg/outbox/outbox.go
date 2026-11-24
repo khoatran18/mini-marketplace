@@ -7,6 +7,7 @@ type PwdVersionEvent struct {
 	PwdVersion int64     `gorm:"notnull"`
 	Status     string    `gorm:"notnull;default:'PENDING';index:idx_status_created_at,priority:1"` // PENDING, FAILED, SUCCESS
 	CreatedAt  time.Time `gorm:"notnull;index:idx_status_created_at,priority:2"`
+	ChangedAt  time.Time `gorm:"notnull"` // last password change (CreatedAt is only the first one); migration 00005
 }
 
 type PwdVersionKafkaEvent struct {

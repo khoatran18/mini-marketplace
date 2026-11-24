@@ -4,6 +4,7 @@ import (
 	"auth-service/pkg/outbox"
 	"context"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -15,6 +16,7 @@ func (r *AccountRepository) CreateOrUpdatePwdVersionEvent(tx *gorm.DB, userID ui
 				UserID:     userID,
 				PwdVersion: pwdVersion,
 				Status:     "PENDING",
+				ChangedAt:  time.Now(),
 			}
 			if err = tx.Create(pwdVersionEvent).Error; err != nil {
 				return err
@@ -26,6 +28,7 @@ func (r *AccountRepository) CreateOrUpdatePwdVersionEvent(tx *gorm.DB, userID ui
 	return tx.Model(&outbox.PwdVersionEvent{}).Where("user_id = ?", userID).Updates(map[string]interface{}{
 		"pwd_version": pwdVersion,
 		"status":      "PENDING",
+		"changed_at":  time.Now(),
 	}).Error
 }
 
@@ -39,4 +42,13 @@ func (r *AccountRepository) GetPwdVersionEventNotPublish(limit int) ([]*outbox.P
 func (r *AccountRepository) UpdatePwdVersionEventStatus(ctx context.Context, userID uint64, status string) error {
 	return r.DB.WithContext(ctx).Model(&outbox.PwdVersionEvent{}).Where("user_id = ?", userID).
 		Updates(map[string]interface{}{"status": status}).Error
+}
+
+// ListPwdChangesSince returns the accounts whose password changed at or after `since`, with their current version.
+// The gateway uses it to rebuild its Redis deny entries after Redis lost its data.
+func (r *AccountRepository) ListPwdChangesSince(ctx context.Context, since time.Time) ([]*outbox.PwdVersionKafkaEvent, error) {
+	var out []*outbox.PwdVersionKafkaEvent
+	err := r.DB.WithContext(ctx).Model(&outbox.PwdVersionEvent{}).Select("user_id", "pwd_version").
+		Where("changed_at >= ?", since).Find(&out).Error
+	return out, err
 }
