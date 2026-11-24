@@ -87,6 +87,35 @@ Log gateway của lượt 1200 mất phần giữa, nhưng log Traefik (có cả
 - p95 gộp của ccu (`calls/s`, p95 cột "p95") là p95 của TẤT CẢ lời gọi (api + trang frontend + AI chat). Lời gọi chậm (trang frontend ~4% + `/ai/chat` ~1,4%) xấp xỉ ngưỡng 5%, nên p95 gộp dao động giữa ~100 ms và ~1,8 s tuỳ cửa sổ có vượt 5% hay không (giây 110: 1.847 ms; giây 90, 100: 62-127 ms). Cửa sổ giây 110 vì vậy KHÔNG phải sự cố riêng, là hệ quả của frontend quá tải kéo dài + cách tính p95 gộp.
 - Hàm ý cho báo cáo: khi nói "p95 của hệ thống", tách API và frontend; ở 1000-1200 VU điểm yếu về độ trễ người dùng thấy là trang frontend (Next.js, giới hạn CPU), không phải gateway/backend.
 
+## 4c. Đóng 200 -> 1200 (GIỮ 300 s) -> 200 (`hold-closed-200-1200-300s-200`, n=1, stack mới, mặc định) - kiểm chứng giả thuyết "giữ lâu thì gãy"
+
+Mục đích: spike 1200 ở mục 4 chỉ giữ 80 s; ccu đóng 1200 kiểu tăng dần ở đợt 8 thì gãy. Lượt này giữ 1200 VU 300 s (`--vu-stages=200:60,1200:300,200:60`, 448.635 lời gọi, 1.035/s trung bình).
+
+| giai đoạn (giây ccu) | calls/s | lỗi | p95 |
+|---|---|---|---|
+| 0-50 (200 VU) | ~280 | 0 | 12-14 ms |
+| 60-80 (cú nhảy 200 -> 1200, 10 s) | 530 -> 1.376 | 51 + 474 + 58 = 583 (504 535, 503 32, 409 16) | 2,1 - 6,8 s |
+| 90-350 (giữ 1200, 260 s) | ~1.340-1.510 | **0** | 84 - 2.338 ms (dao động) |
+| 360-420 (về 200) | 657 -> 295 | 0 | 14 ms sau 20 s |
+
+- **Kết quả:** CHƯA hợp lệ theo ngưỡng của công cụ (VU hỏng 26, lỗi 0,14% < 1% nhưng có 117 lần 429), nhưng toàn bộ lỗi nằm trong ~25 s của cú nhảy; 260 s giữ 1200 sau đó sạch hoàn toàn. Không có dấu hiệu "lag tích lũy rồi gãy" trong 300 s. Giả thuyết "spike 80 s ngắn nên chưa gãy" KHÔNG được chứng thực: giữ 5 phút vẫn không gãy.
+- **Cú nhảy:** cùng nguyên nhân các lượt trước: 1.000 VU mới đăng ký cùng lúc, auth 4,4 nhân trung bình trong 30 s đó, lỗi chủ yếu ở `/auth/register` (203/967), `/auth/login`, `/admin/accounts`, route seller (504 đơn lẻ). Sau cú nhảy auth chỉ ~1,0-1,2 nhân. Log gateway của lượt này chỉ bắt đầu ở 15:13:57 (xoay vòng; cú nhảy ở ~15:09:45) nên không đếm được `DeadlineExceeded`/`circuit open` trong cú nhảy (0 trong phần log còn lại).
+- **Trong lúc giữ 1200:** gateway ~1,0 nhân, frontend 0,70 nhân (throttle 62%), order 0,72 nhân, auth ~1,0 nhân. p95 gộp dao động 84-2.338 ms: log Traefik (phần cuối lượt, ~2 phút) cho `api@swarm` p95 39 ms, 0% lời gọi >1 s; `frontend@swarm` p95 3.875 ms, 71,8% >1 s; `/ai/chat` 92% >1 s (fake LLM ~2,7 s). Tức độ trễ cao do frontend (đã chạm trần CPU) và AI, API vẫn nhanh.
+- **429 (117 lần, chỉ ở `POST /ai/chat (buyer)`, từ 15:15):** là trần token theo ngày của persona buyer (`limits.daily_tokens.buyer`, 150.000): log ai-agent "daily token limit reached ... used 151554, limit 150000" cho 21 tài khoản. Nguyên nhân là mỗi VU được dùng lại qua nhiều hành trình trong 5 phút, nên một số tài khoản dùng hết hạn mức trong ngày. Đây là cơ chế bảo vệ chạy đúng, không phải lỗi hiệu năng.
+- **Hệ quả cho cách phát biểu:** có thể nói "giữ 1200 VU 260 s sau cú nhảy, không lỗi, API p95 ~40 ms, frontend là nút thắt (CPU 62% throttle)"; vẫn KHÔNG nói "1200 bền vững lâu dài" vì mới đo 5 phút, n=1. Nguyên nhân vụ gãy ở đợt 8 (ramp 1200) vẫn chưa rõ: khác ở chỗ ramp đăng ký 1.200 VU dần dần thay vì dồn một lúc, và máy lúc đó có thể khác (không có dữ liệu để kết luận).
+
+**Lặp ccu đóng 1200 kiểu cũ (`ramp-closed-1200-r2`, `--vus=1200 --ramp=240`, 90 s ổn định, cùng cách chạy với đợt 8 `closed-1200-r1`): HỢP LỆ, SẠCH.** 131.588 lời gọi (1.273/s), 37 lỗi (0,03%, toàn bộ là 401 lúc dọn cuối lượt), 429 = 0, VU hỏng 0. Thanh toán bất đồng bộ p50/p95/max 511/1.023/1.081 ms, quá 8 s chưa có payment: 0 (đợt 8: 1.624). Lag consumer `order-service-validate-result` tối đa 3 (đợt 8: 1.022), `db_pool_wait` tối đa 0,04 s/s (đợt 8: 30-44 s/s), outbox lag tối đa 0,35 s. Frontend throttle 66,3%, CPU toàn máy đỉnh 84,3% (cảnh báo >75%).
+- Tổng hợp 1200 đóng: gãy 1/2 vòng ramp (đợt 8, kẹt consumer order-service chưa rõ nguyên nhân), sạch 1/2 vòng ramp (r2) và 1/1 lượt giữ 300 s. Gãy ở đợt 8 là thiểu số nhưng có thật; vì không lặp được ở 2 lượt sau, nguyên nhân vẫn chưa xác định. Cách phát biểu: "1200 đóng: 2/3 lượt sạch, 1/3 gãy ở luồng bất đồng bộ order-service".
+
+## 4d. ccu đóng 1500 (ramp 240 s, 90 s ổn định; `ramp-closed-1500`, n=1) - GÃY Ở FRONTEND, API VÀ LUỒNG BẤT ĐỒNG BỘ VẪN SẠCH
+
+Chạy theo lệnh của người dùng để xem KIỂU HỎNG khi vượt 1200 (CPU toàn máy đỉnh 87,7% > 75%, nên không dùng để nói "chịu được bao nhiêu"). 130.054 lời gọi ổn định (1.254/s), lỗi ngoài dự kiến 1.348 (1,04%, vượt ngưỡng 1% nên CHƯA hợp lệ), VU hỏng 0, 429 = 0.
+
+- **Lỗi nằm gần như toàn bộ ở trang web (`WEB /`, `/cart`, `/login`, `/products`, `/products/:id`):** mã 502, 404 và timeout (status 0, 30 s), p95 trang 1,9-3,9 s ở mọi cửa sổ có lỗi và p99 15-30 s. Mọi route API (kể cả đặt đơn, thanh toán, seller) không có lỗi, chỉ có các mã 422 dự kiến và 46 lỗi 401 lúc dọn cuối lượt.
+- **Nguyên nhân (đã xác minh):** task frontend bị Swarm GIẾT rồi dựng lại. Container cũ thoát mã 137, `OOMKilled=false` (không phải hết RAM: RAM chỉ 100-170 MiB trên trần 512 MiB), trạng thái `unhealthy` với `FailingStreak=5`. Nhật ký health check của container đó: 5 lần liên tiếp (22:39:02 đến 22:40:22, mỗi 15 s) báo "Health check exceeded timeout (5s)". Health check cấu hình `interval 15s, timeout 5s, retries 5` (`deploy/services.yml`): frontend (CPU trần 0,7 nhân, throttle 72%) quá tải đến mức `GET /api/healthz` không trả lời kịp 5 s, nên Swarm coi là hỏng và kill ở 22:40:39. Container mới chạy lại sau khoảng 28 s (capture không thấy frontend trong khoảng giây 242-268), trong thời gian đó Traefik trả 502/404 cho các trang.
+- **Cái gì KHÔNG hỏng ở 1500:** thanh toán bất đồng bộ p50/p95/max 511/1.018/1.186 ms, quá 8 s chưa có payment: 0; lag consumer `order-service-validate-result` tối đa 12; `db_pool_wait` tối đa 6 s/s; outbox lag tối đa 0,35 s; auth throttle chỉ 5,9%; AI 3.397 xong, 0 lỗi. Tức vụ gãy order-service của đợt 8 (1200) KHÔNG tái hiện ở 1500; nó vẫn là sự cố hiếm chưa giải thích.
+- **Kết luận:** điểm gãy thấy được của tải đóng khi tăng lên 1500 là frontend (1 bản, trần 0,7 nhân) bị health check giết; tầng API/Kafka/Postgres vẫn chịu được. Nếu muốn sửa: nới `timeout`/`retries` của health check frontend hoặc thêm bản frontend (không làm: trần tài nguyên đã chốt).
+
 ## 5. Spike mở 10 -> 30 -> 10 phiên/s (`spike-open-10-30-10`, n=1, stack mới, mặc định) - HỢP LỆ, SẠCH
 
 Nhịp phiên MỚI đổi đột ngột ngay ranh giới bậc (không tăng dần): 10 phiên/s 60 s -> 30 phiên/s 60 s -> 10 phiên/s 60 s (sau 30 s khởi động ở 10 phiên/s). 3.301 phiên, đỉnh 505 phiên cùng lúc, 59.885 lời gọi.
@@ -112,7 +141,39 @@ Nhịp phiên mới: 10 phiên/s 60 s -> 50 phiên/s 60 s -> 10 phiên/s 60 s. 4
 - **So với CCU mở ổn định 50 phiên/s đã gãy 2/2 (đợt 7):** hai kết quả KHÔNG mâu thuẫn. Ở đây chỉ giữ 50 phiên/s 60 s và bắt đầu từ nền 10; CCU ổn định giữ 50 phiên/s liền từ đầu (30 s khởi động + 90 s đo, auth trung bình 4,65-4,68 core, lỗi 1,9-3,6%). Spike 50 chịu được 60 s với độ trễ tăng, nhưng 50 phiên/s kéo dài thì auth không theo kịp. (Giả thuyết đối chiếu, n=1 mỗi cách, chưa kiểm chứng bằng lượt giữ 50 phiên/s lâu hơn sau nền 10.)
 - Cửa sổ giây 130-140 có p95 gộp 2,4-2,5 s: cùng hiệu ứng thống kê như mục 5b (tỉ lệ `/ai/chat` trong tổng lời gọi 6,6% và 6,1% > 5%, các cửa sổ khác 1,7-4,3%), không phải lỗi.
 - Toàn máy CPU đỉnh 91,5% (trung bình 47%), trên ngưỡng tin cậy 75% (máy tải dùng chung máy): độ trễ có thể bị cộng thêm.
-- Chưa chạy 10 -> 60 -> 10 (không nằm trong chuỗi đã chốt): 60 phiên/s sẽ vượt hẳn trần auth (50 đã chạm 5,5/5 core).
+- 10 -> 60 -> 10 đã chạy sau chuỗi đã chốt: gãy vì vượt trần auth (xem 5d).
+
+## 5d. Spike mở 10 -> 60 -> 10 phiên/s (`spike-open-10-60-10`, n=1, stack mới, mặc định) - CHƯA HỢP LỆ (GÃY)
+
+Nhảy tức thì từ 10 lên 60 phiên/s, giữ 60 s rồi về 10 (30 s khởi động + 180 s đo, 97.474 lời gọi). Kết quả: lỗi ngoài dự kiến 2.676 (2,75%, ngưỡng 1%), 92 phiên vào thất bại (VU hỏng), 429 = 0, CPU toàn máy đỉnh 91,8%.
+
+| cửa sổ (giây) | bậc | calls/s | lỗi | p95 (ms) | mã lỗi |
+|---|---|---|---|---|---|
+| 0-50 | 10 | ~200 | 0 | ~60 | - |
+| 60 | 60 | 533 | 0 | 1.562 | - |
+| 70 | 60 | 793 | 61 | 3.001 | 504 |
+| 80 | 60 | 925 | 242 | 3.523 | 504 228, 503 12, 409 2 |
+| 90 | 60 | 1.062 | 457 | 3.958 | 504 395, 503 50, 409 12 |
+| 100 | 60 | 1.085 | 712 | 4.356 | 504 509, 503 199 |
+| 110 | 60 | 1.138 | 700 | 4.666 | 504 525, 503 169 |
+| 120 | 10 | 1.191 | 493 | 4.198 | 504 382, 503 100 |
+| 130 | 10 | 875 | 11 | 1.495 | 504 10 |
+| 140 | 10 | 316 | 0 | 2.469 (AI) | - |
+| 150-170 | 10 | ~210 | 0 | 72 - 2.403 | - |
+
+**Nguyên nhân (đã kiểm chứng bằng capture cgroup + log):**
+- auth-service (5 bản x 1 nhân) chạm trần: CPU 0,8 nhân ở bậc 10, rồi 3,4 nhân (cửa sổ 100), và 4,9-5,1 nhân liên tục trong ~70 s (cửa sổ 110-170, trần 5). Throttle auth 37,1% (lượt 10->50 là 24,1%). Các service khác chỉ 0,1-0,8 nhân (gateway 0,81, frontend 0,52, order 0,54): không phải nút thắt.
+- Đây là bcrypt: 60 phiên/s đều đăng ký/đăng nhập mới. Lỗi tập trung ở đúng các route đi qua auth: `POST /auth/login` (410 lỗi/5.602), `/auth/register` (310/1.434), `/auth/change-password`, `/auth/register-seller-roles`, `/admin/accounts`, `/users/sellers`, và MỌI route seller (gateway gọi auth lấy store_id/role mỗi lời gọi, `GetStoreIDRoleById`): `GET /seller/orders` 158/704, `/seller/products` 241, v.v. Route không đụng auth gần như sạch (`POST /checkout/preview` 1 lỗi trên 2.869; mọi route mua hàng, giỏ, đơn, thanh toán 0 lỗi).
+- Log gateway: 3.667 `DeadlineExceeded` (deadline 3 s cho route seller, 10 s cho login/register) và 934 `circuit open: AuthClient` (503 nhanh khi breaker mở). Auth chờ pool DB tối đa 507 s/s.
+- 409 ở bước vào KHÔNG phải lỗi dữ liệu: ccu thử lại bước vào khi 5xx/timeout (`ccu.mjs` dòng 153); lần 1 hết hạn ở gateway nhưng auth vẫn tạo xong tài khoản, lần 2 gặp "account already exists" (log gateway: 64 `AlreadyExists`).
+- Phục hồi: sau khi về 10 phiên/s (giây 120), auth còn ~5 nhân đến giây 170 vì phải xả hàng đợi (1.656 phiên đang chạy ở đỉnh); lỗi về 11 ở cửa sổ 130 và 0 từ cửa sổ 140. Tức hệ thống tự hồi phục, không cần can thiệp, nhưng mất khoảng 20 s sau khi tải hạ để hết lỗi.
+- Kafka/outbox/Postgres không phải nguyên nhân: outbox lag tối đa 0,33 s, consumer lag tối đa 13, thanh toán bất đồng bộ p95 546 ms, quá 8 s = 0. AI 2.656 xong, 0 lỗi.
+
+**Kết luận:** mở 50 phiên/s (giữ 60 s) là mốc sạch; 60 phiên/s đã quá năng lực auth (bcrypt 5 nhân) nên lỗi 504/503 ở mọi route qua auth. Chế độ hỏng giống spike đóng 1000-1200 (cùng nguyên nhân, cùng cách hồi phục). Không sửa (auth là giới hạn tài nguyên theo quyết định đã ghi ở mục 8).
+
+**Đối chiếu hai điểm còn nghi (sau khi nhận xét, từ log Traefik đã lưu và capture cgroup):**
+- *p95 ~2,4 s ở cửa sổ 140-150 khi không có lỗi:* đếm theo bin 10 s trong log Traefik, tỷ lệ `/ai/chat` là 1-3,5% suốt lượt nhưng lên 5,0% / 6,5% / 5,9% ở ba bin cuối (khi lời gọi khác thưa đi), đúng các bin có p95 ~2,4 s; bin AI 3,9% hoặc thấp hơn thì p95 vài chục ms. Cùng cơ chế "AI chat chiếm >=5% lời gọi thì p95 gộp rơi vào dải 2,4 s" đã ghi ở 5b. Các bin lỗi (bin 90-160 trong log) có 11-16% lời gọi KHÔNG phải AI mà chậm hơn 1 s (gần như chỉ là đợt quá hạn 3 s/10 s của auth).
+- *Auth còn ~5 nhân sau khi tải hạ:* cùng kiểu ở lượt 10->50->10: auth còn 4,1-4,2 nhân ở giây 130-150 và hết ở giây 170; lượt 60 còn 4,9-5,1 nhân đến giây 160 rồi hết ở giây 180. Tức xả hàng đợi mất khoảng 40-50 s sau khi tải hạ ở cả hai mức, lâu hơn khi cú nhảy lớn hơn. Không bất thường.
 
 ## 6. Cách phát biểu kết quả (QUY ƯỚC KHI VIẾT BÁO CÁO)
 
@@ -131,9 +192,13 @@ Nhịp phiên mới: 10 phiên/s 60 s -> 50 phiên/s 60 s -> 10 phiên/s 60 s. 4
 | đóng 200 -> 800 -> 200 | hợp lệ | 56 (31 là 5xx trong cú nhảy) | 29 lỗi | auth CPU/bcrypt, route seller |
 | đóng 200 -> 1000 -> 200 | CHƯA hợp lệ (11 VU hỏng) | 226 | 168 lỗi (1,6%) | auth CPU, circuit breaker mở |
 | đóng 200 -> 1200 -> 200 | CHƯA hợp lệ (25 VU hỏng) | 713 | 496 lỗi (5,2%) | auth CPU; frontend chạm trần |
+| đóng 200 -> 1200 (giữ 300 s) -> 200 | lỗi chỉ ở cú nhảy; 260 s giữ sạch (26 VU hỏng, 117 lần 429 do trần token AI) | 610 | 474 lỗi/10 s ở cú nhảy | auth lúc nhảy; frontend throttle 62% |
+| đóng ramp 1200 vòng 2 | hợp lệ, sạch | 37 (401 lúc dọn) | - | frontend throttle 66% |
+| đóng ramp 1500 | CHƯA hợp lệ (1,04%) | 1.348 (gần hết là trang web) | trang p95 1,9-3,9 s, frontend bị Swarm kill (health check) | frontend |
 | mở 10 -> 30 -> 10 | sạch | 0 | p95 70 ms | - |
 | mở 10 -> 40 -> 10 | sạch (1 lỗi script 409) | 1 | p95 157 ms | auth throttle 11% |
 | mở 10 -> 50 -> 10 | hợp lệ (0 lỗi) | 0 | p95 1,45 s | auth 5,5/5 core, throttle 24% |
+| mở 10 -> 60 -> 10 | CHƯA hợp lệ (gãy, 92 VU hỏng) | 2.676 (2,75%) | 712 lỗi/10 s, p95 4,7 s | auth 5/5 core liên tục ~70 s, throttle 37% |
 
 Nguyên nhân chung của mọi lỗi: auth-service (5 bản x 1 core) hết CPU khi đợt đăng ký/đăng nhập dồn (bcrypt); các route seller phụ thuộc auth (`GetStoreIDRoleById` mỗi request) và circuit breaker của gateway phản ứng theo. Frontend (Next.js) là điểm chậm thứ hai ở 1000-1200 VU (mục 4b). Không còn lỗi `pwd_version`/Redis (R25 đã sửa, 0 lỗi 503 loại đó trong cả chuỗi).
 
@@ -143,7 +208,7 @@ Nguyên nhân chung của mọi lỗi: auth-service (5 bản x 1 core) hết CPU
 
 **Việc còn lại (không bắt buộc, chờ quyết định):**
 - Kiểm chứng giả thuyết: giữ 1200 VU khoảng 5 phút sau nền 200; giữ 50 phiên/s lâu hơn sau nền 10; lặp ramp 1200 (đợt 8 gãy n=1, nguyên nhân chưa biết).
-- Lặp mỗi lượt spike thêm vòng (n=1 hiện tại); spike 10 -> 60 -> 10 (vượt trần auth) nếu muốn xem quá tải sâu.
+- Lặp mỗi lượt spike thêm vòng (n=1 hiện tại).
 - Giảm lỗi auth (đã bàn, quyết định KHÔNG làm vì auth là giới hạn tài nguyên đã chốt): đưa `store_id`/role vào JWT hoặc cache ở gateway; semaphore giới hạn bcrypt song song (bỏ bcrypt cho request đã bị gateway hủy); rate limit đăng nhập theo tài khoản.
 - Log Swarm của gateway bị xoay vòng ở lượt nặng (mất phần cú nhảy của lượt 1200): nâng giới hạn log của gateway khi đo, hoặc dump log giữa lượt.
 - Chịu lỗi (kill một bản, restart Redis dưới tải), dữ liệu lớn, soak dài: bàn xong là không cần cho dự án mô phỏng (chỉ làm nếu muốn).
