@@ -2,7 +2,7 @@
 # Một lượt đo: chạy ccu.mjs (gắn vào 2 core riêng), ghi tài nguyên từng container, chụp cấu hình Swarm, tổng hợp ra JSON.
 #   scripts/load/perf-run.sh NHÃN [tham số ccu.mjs...]     vd: perf-run.sh closed-500-r1 --vus=500 --duration=90
 #                                                           vd: perf-run.sh open-20-r1 --arrival-rate=20 --duration=90
-# Biến: OUT_DIR (mặc định docs/perf-results/<ngày>), LOADGEN_CPUS (mặc định 14,15; rỗng = không gắn core).
+# Biến: LOAD_SCRIPT (mặc định ccu.mjs; svc.mjs = đo từng service), OUT_DIR (mặc định docs/perf-results/<ngày>), LOADGEN_CPUS (mặc định 14,15; rỗng = không gắn core).
 # Kết quả trong OUT_DIR: NHÃN.json (ccu.mjs), NHÃN.resources.json, NHÃN.config.json, NHÃN.txt (nhật ký), NHÃN.stats.txt (docker stats thô).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"; cd "$root"
@@ -37,7 +37,7 @@ PY
 ( while true; do date +%s; docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' | grep -E '^marketplace' || true; sleep 3; done > "$out/$label.stats.txt" 2>&1 ) & sampler=$!
 trap 'kill $sampler 2>/dev/null || true' EXIT
 pin=(); [ -n "$cpus" ] && pin=(taskset -c "$cpus")
-rc=0; "${pin[@]}" node scripts/load/ccu.mjs "$@" --out="$out/$label.json" > "$out/$label.txt" 2>&1 || rc=$?
+rc=0; "${pin[@]}" node "scripts/load/${LOAD_SCRIPT:-ccu.mjs}" "$@" --out="$out/$label.json" > "$out/$label.txt" 2>&1 || rc=$?
 kill $sampler 2>/dev/null || true; wait $sampler 2>/dev/null || true
 # Số lần container bị throttle (chạm trần CPU) trong lượt đo: chính xác hơn docker stats vì docker stats lấy mẫu cách quãng nên che các đợt chạm trần ngắn.
 prom=$(docker ps -q -f name=marketplace-obs_prometheus | head -1)

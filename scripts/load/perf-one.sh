@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Một lượt đo ĐÚNG QUY TẮC CLAUDE.md: dựng sạch -> đo -> lưu mọi số liệu và log -> GIỮ NGUYÊN stack để phân tích. KHÔNG tự dọn.
 #   scripts/load/perf-one.sh NHÃN [tham số ccu.mjs...]       vd: perf-one.sh spike-800-r2 --vus=800 --ramp=10
+# Đo từng service: LOAD_SCRIPT=svc.mjs scripts/load/perf-one.sh NHÃN --target=a,b,c  (svc.mjs, perf-svc-report.py; docs/design/12_PERF_SERVICE.md).
 # Biến: OUT_DIR (mặc định docs/perf-results/<ngày>), DUR (giây ổn định, 90), CAP_IV (giây giữa hai mẫu capture, 1), SER_STEP (bước chuỗi Prometheus, 15),
 #       DEPLOY=0 để đo trên stack đang chạy (không dọn, không dựng lại), LOG_TIMEOUT (giây tối đa cho mỗi service khi dump log, 120).
 # Kết quả trong OUT_DIR: NHÃN.* (perf-run), NHÃN.capture.jsonl, NHÃN.series.json, NHÃN.diag.json, logs-NHÃN/<service>.log.
@@ -39,6 +40,7 @@ if [ -n "${FAULT:-}" ]; then
 fi
 python3 scripts/load/perf-series.py "$OUT_DIR/$label.series.json" "$T0" "$(date +%s)" "${SER_STEP:-15}" 2>&1 | tail -1
 python3 scripts/load/perf-diag.py "$OUT_DIR" "$label" 2>&1 | tee -a "$OUT_DIR/$label.txt" | tail -3
+[ "${LOAD_SCRIPT:-}" = svc.mjs ] && python3 scripts/load/perf-svc-report.py "$OUT_DIR" "$label" 2>&1 | tee -a "$OUT_DIR/$label.txt" | tail -40
 # log từng service từ lúc bắt đầu đo (song song, có timeout: `docker service logs` có thể treo và không có --until)
 ld="$OUT_DIR/logs-$label"; mkdir -p "$ld"
 for svc in marketplace_api-gateway marketplace_auth-service marketplace_user-service marketplace_product-service marketplace_order-service \
