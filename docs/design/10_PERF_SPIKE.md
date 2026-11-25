@@ -213,7 +213,7 @@ Nguyên nhân chung của mọi lỗi: auth-service (5 bản x 1 core) hết CPU
 - Giảm lỗi auth (đã bàn, quyết định KHÔNG làm vì auth là giới hạn tài nguyên đã chốt): đưa `store_id`/role vào JWT hoặc cache ở gateway; semaphore giới hạn bcrypt song song (bỏ bcrypt cho request đã bị gateway hủy); rate limit đăng nhập theo tài khoản.
 - Log Swarm của gateway bị xoay vòng ở lượt nặng (mất phần cú nhảy của lượt 1200): nâng giới hạn log của gateway khi đo, hoặc dump log giữa lượt.
 - Chịu lỗi (kill một bản, restart Redis dưới tải), dữ liệu lớn, soak dài: bàn xong là không cần cho dự án mô phỏng (chỉ làm nếu muốn).
-- Trả lại 6 file sửa tạm của `marketplace-net2` sau khi Docker khởi động lại: `git checkout -- deploy/infra.yml deploy/observability.yml deploy/services.yml deploy/services.perf.yml scripts/wait-ready.sh scripts/teardown.sh` (xem 09 §5s).
+- ĐÃ LÀM (2026-11-25): Docker đã khởi động lại, `marketplace-net2` đã xóa, 6 file đã trả về `marketplace-net`. (Việc cần làm lúc đó:) `git checkout -- deploy/infra.yml deploy/observability.yml deploy/services.yml deploy/services.perf.yml scripts/wait-ready.sh scripts/teardown.sh` (xem 09 §5s).
 
 **Commit (người dùng chạy; KHÔNG đưa 6 file sửa tạm net2; log không vào commit vì `.gitignore` đã chặn `*.log`, và `*.capture.jsonl` (~94 MB dữ liệu thô 1 Hz) cũng loại ra):**
 ```
